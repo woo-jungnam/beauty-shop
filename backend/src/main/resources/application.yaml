@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: beautyshop
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/beautyshop?createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:Sql@123456}
+    driver-class-name: ${DB_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        dialect: ${JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
+
+jwt:
+  secret: ${JWT_SECRET:beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
