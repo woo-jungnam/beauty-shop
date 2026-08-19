@@ -13,6 +13,10 @@ spring:
     properties:
       hibernate:
         dialect: ${JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    validate-on-migrate: true
 
 jwt:
   secret: ${JWT_SECRET:beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!}
