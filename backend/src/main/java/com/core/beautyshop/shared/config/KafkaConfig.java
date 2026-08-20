@@ -2,23 +2,82 @@ package com.core.beautyshop.shared.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
-import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.KafkaOperations;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.FixedBackOff;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Configuration
 @EnableKafka
 public class KafkaConfig {
+
+    @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
+    private String bootstrapServers;
+
+    @Value("${spring.kafka.consumer.group-id:beautyshop-group}")
+    private String defaultGroupId;
+
+    // ==========================================
+    // PRODUCER CONFIGURATION
+    // ==========================================
+
+    @Bean
+    public ProducerFactory<String, Object> producerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        configProps.put(ProducerConfig.ACKS_CONFIG, "all");
+        configProps.put(ProducerConfig.RETRIES_CONFIG, 3);
+        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+
+    // ==========================================
+    // CONSUMER CONFIGURATION
+    // ==========================================
+
+    @Bean
+    public ConsumerFactory<String, Object> consumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, defaultGroupId);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        // Key Deserializer
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+
+        // Value Deserializer with ErrorHandling wrapper
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+        props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class.getName());
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.core.beautyshop.*,java.util.*,java.lang.*");
+        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, true);
+
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
 
     // ==========================================
     // TOPIC DEFINITIONS (Auto-created by Spring)
@@ -60,21 +119,15 @@ public class KafkaConfig {
     // ERROR HANDLER & DEAD LETTER TOPIC (DLT)
     // ==========================================
 
-    /**
-     * Cấu hình ErrorHandler cho Kafka Consumer:
-     * - Khi Consumer xử lý tin nhắn gặp lỗi: Retry 3 lần (khoảng cách 1 giây).
-     * - Nếu sau 3 lần vẫn lỗi: Tự động chuyển message sang Dead Letter Topic (.DLT)
-     *   giúp tránh nghẽn luồng xử lý và không làm mất dữ liệu.
-     */
     @Bean
-    public CommonErrorHandler errorHandler(KafkaOperations<Object, Object> kafkaOperations) {
-        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaOperations);
-        
+    public CommonErrorHandler errorHandler(KafkaTemplate<String, Object> kafkaTemplate) {
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
+
         // 3 retry attempts, 1000ms delay between retries
         FixedBackOff backOff = new FixedBackOff(1000L, 3L);
-        
+
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
-        
+
         errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {
             log.warn("Kafka Consumer retry attempt #{} for topic={}, partition={}, offset={}, error={}",
                     deliveryAttempt, record.topic(), record.partition(), record.offset(), ex.getMessage());
@@ -83,15 +136,12 @@ public class KafkaConfig {
         return errorHandler;
     }
 
-    /**
-     * Gán CommonErrorHandler vào Kafka Listener Container Factory
-     */
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<Object, Object> kafkaListenerContainerFactory(
-            ConsumerFactory<Object, Object> consumerFactory,
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
+            ConsumerFactory<String, Object> consumerFactory,
             CommonErrorHandler errorHandler) {
-        
-        ConcurrentKafkaListenerContainerFactory<Object, Object> factory =
+
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(errorHandler);
