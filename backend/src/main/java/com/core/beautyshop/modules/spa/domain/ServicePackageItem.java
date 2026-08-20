@@ -22,5 +22,5 @@ public class ServicePackageItem extends Base {
     private BeautyService service;
 
     @Column(name = "quantity", nullable = false)
-    private Integer quantity; // e.g., 10 sessions
+    private Integer quantity;
 }

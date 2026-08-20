@@ -7,16 +7,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
-/**
- * Kafka Consumer chịu trách nhiệm xử lý thông báo & email cho các sự kiện Đơn hàng.
- * Tách biệt hoàn toàn khỏi luồng checkout chính (Non-blocking & Asynchronous).
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -79,9 +74,6 @@ public class OrderNotificationKafkaListener {
         );
     }
 
-    /**
-     * DltHandler: Nhận các message bị lỗi từ Dead Letter Topic khi đã retry thất bại
-     */
     @DltHandler
     public void handleDltMessage(Object payload,
                                  @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,

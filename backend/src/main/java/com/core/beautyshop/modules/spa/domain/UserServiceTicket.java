@@ -24,7 +24,7 @@ public class UserServiceTicket extends Base {
     private ServicePackage servicePackage;
 
     @Column(name = "order_id")
-    private Long orderId; // Link to the order where this package was purchased
+    private Long orderId;
 
     @Column(name = "total_sessions", nullable = false)
     private Integer totalSessions;

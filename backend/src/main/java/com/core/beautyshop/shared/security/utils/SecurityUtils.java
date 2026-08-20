@@ -11,12 +11,8 @@ import java.util.Optional;
 public class SecurityUtils {
 
     private SecurityUtils() {
-        // Private constructor for utility class
     }
 
-    /**
-     * Lấy ID người dùng đang đăng nhập từ JWT Token (Ném UnauthorizedException nếu chưa đăng nhập)
-     */
     public static Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
@@ -28,9 +24,6 @@ public class SecurityUtils {
         throw new UnauthorizedException("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại!");
     }
 
-    /**
-     * Lấy ID người dùng (trả về Optional nếu là khách vãng lai)
-     */
     public static Optional<Long> getCurrentUserIdOptional() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
@@ -42,9 +35,6 @@ public class SecurityUtils {
         return Optional.empty();
     }
 
-    /**
-     * Lấy Username người dùng đang đăng nhập từ JWT Token
-     */
     public static String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
@@ -53,9 +43,6 @@ public class SecurityUtils {
         return auth.getName();
     }
 
-    /**
-     * Kiểm tra xem user hiện tại có phải là ADMIN hay không
-     */
     public static boolean isAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {

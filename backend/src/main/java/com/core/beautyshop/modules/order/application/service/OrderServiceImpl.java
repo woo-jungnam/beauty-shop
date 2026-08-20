@@ -77,7 +77,6 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // Publish OrderCreatedEvent (listeners will handle clearing cart, etc.)
         eventPublisher.publishEvent(OrderEvents.OrderCreatedEvent.builder()
                 .orderId(savedOrder.getId())
                 .orderNumber(savedOrder.getOrderNumber())
@@ -95,7 +94,6 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
 
-        // Kiểm tra quyền truy cập (chỉ chủ đơn hàng hoặc Admin)
         if (order.getUserId() != null) {
             Long currentUserId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
             if (!SecurityUtils.isAdmin() && (currentUserId == null || !order.getUserId().equals(currentUserId))) {
@@ -142,7 +140,6 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(request.getStatus());
         createStatusHistory(order, request.getStatus(), request.getNotes());
 
-        // If order is cancelled, release reserved stock via event
         if (request.getStatus() == OrderStatus.CANCELLED && previousStatus != OrderStatus.CANCELLED) {
             publishOrderCancelledEvent(order);
         }
@@ -172,7 +169,6 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
 
-        // Verify user owns the order or is Admin
         if (order.getUserId() != null && !order.getUserId().equals(userId) && !SecurityUtils.isAdmin()) {
             throw new AccessDeniedException("Bạn không có quyền hủy đơn hàng này!");
         }
@@ -198,8 +194,6 @@ public class OrderServiceImpl implements OrderService {
 
         return orderMapper.toOrderResponse(saved);
     }
-
-    // ---- Private helpers ----
 
     private CartResponse validateCart(Long userId, String sessionId) {
         CartResponse cart = cartFacade.getCart(userId, sessionId);

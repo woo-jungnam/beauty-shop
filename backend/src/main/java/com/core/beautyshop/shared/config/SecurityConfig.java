@@ -72,19 +72,16 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Swagger / OpenAPI Docs
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        // 2. Auth & Webhook
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/payment/sepay-webhook",
                                 "/api/v1/test/public"
                         ).permitAll()
-                        // 3. Public GET endpoints for browsing store
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/categories/**",
@@ -93,18 +90,15 @@ public class SecurityConfig {
                                 "/api/v1/tags/**",
                                 "/api/v1/spa/services/**"
                         ).permitAll()
-                        // 4. Cart & Checkout (Guest or Authenticated)
                         .requestMatchers(
                                 "/api/v1/cart/**",
                                 "/api/v1/orders/checkout"
                         ).permitAll()
-                        // 5. Admin endpoints
                         .requestMatchers(
                                 "/api/v1/admin/**",
                                 "/api/v1/roles/**",
                                 "/api/v1/test/admin"
                         ).hasRole("ADMIN")
-                        // 6. Any other request is protected and requires authentication
                         .anyRequest().authenticated()
                 );
 

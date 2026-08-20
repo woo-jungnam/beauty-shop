@@ -17,11 +17,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-/**
- * Bridge kết nối Spring Application Events sang Apache Kafka.
- * Sử dụng TransactionPhase.AFTER_COMMIT để đảm bảo tính nhất quán dữ liệu (giải quyết triệt để lỗi Dual-Write):
- * Message CHỈ được gửi lên Kafka sau khi Database Transaction đã commit thành công 100%.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor

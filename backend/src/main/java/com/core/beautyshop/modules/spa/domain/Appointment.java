@@ -22,7 +22,7 @@ public class Appointment extends Base {
     private Long userId;
 
     @Column(name = "order_id")
-    private Long orderId; // Link to the order if they paid for this session
+    private Long orderId;
 
     @Column(name = "appointment_date", nullable = false)
     private LocalDate appointmentDate;

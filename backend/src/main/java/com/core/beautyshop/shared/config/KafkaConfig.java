@@ -35,10 +35,6 @@ public class KafkaConfig {
     @Value("${spring.kafka.consumer.group-id:beautyshop-group}")
     private String defaultGroupId;
 
-    // ==========================================
-    // PRODUCER CONFIGURATION
-    // ==========================================
-
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -56,10 +52,6 @@ public class KafkaConfig {
         return new KafkaTemplate<>(producerFactory);
     }
 
-    // ==========================================
-    // CONSUMER CONFIGURATION
-    // ==========================================
-
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -67,10 +59,8 @@ public class KafkaConfig {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, defaultGroupId);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-        // Key Deserializer
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 
-        // Value Deserializer with ErrorHandling wrapper
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
         props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class.getName());
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.core.beautyshop.*,java.util.*,java.lang.*");
@@ -78,10 +68,6 @@ public class KafkaConfig {
 
         return new DefaultKafkaConsumerFactory<>(props);
     }
-
-    // ==========================================
-    // TOPIC DEFINITIONS (Auto-created by Spring)
-    // ==========================================
 
     @Bean
     public NewTopic orderCreatedTopic() {
@@ -115,17 +101,10 @@ public class KafkaConfig {
                 .build();
     }
 
-    // ==========================================
-    // ERROR HANDLER & DEAD LETTER TOPIC (DLT)
-    // ==========================================
-
     @Bean
     public CommonErrorHandler errorHandler(KafkaTemplate<String, Object> kafkaTemplate) {
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
-
-        // 3 retry attempts, 1000ms delay between retries
         FixedBackOff backOff = new FixedBackOff(1000L, 3L);
-
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
 
         errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {

@@ -14,7 +14,7 @@ import lombok.*;
 public class Facility extends Base {
 
     @Column(name = "name", nullable = false, length = 100)
-    private String name; // e.g., "Room 1", "Bed A"
+    private String name;
 
     @Column(name = "description", length = 250)
     private String description;
@@ -22,6 +22,4 @@ public class Facility extends Base {
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
-
-    // Optional: add fields like capacity or location if scaling to multiple branches
 }

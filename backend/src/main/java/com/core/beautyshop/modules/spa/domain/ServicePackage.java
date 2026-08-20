@@ -26,7 +26,7 @@ public class ServicePackage extends Base {
     private BigDecimal price;
 
     @Column(name = "validity_days")
-    private Integer validityDays; // How long the package is valid after purchase
+    private Integer validityDays;
 
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;

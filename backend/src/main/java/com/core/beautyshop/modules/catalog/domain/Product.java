@@ -15,6 +15,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
@@ -28,7 +29,17 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "products")
+@Table(
+    name = "products",
+    indexes = {
+        @Index(name = "idx_products_status_deleted", columnList = "status, is_deleted"),
+        @Index(name = "idx_products_brand_deleted", columnList = "brand_id, is_deleted"),
+        @Index(name = "idx_products_created_at", columnList = "created_at"),
+        @Index(name = "idx_products_featured_deleted", columnList = "is_featured, is_deleted"),
+        @Index(name = "idx_products_base_price", columnList = "base_price"),
+        @Index(name = "idx_products_total_sold", columnList = "total_sold")
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor

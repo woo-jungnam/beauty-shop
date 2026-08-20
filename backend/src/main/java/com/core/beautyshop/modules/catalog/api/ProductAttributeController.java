@@ -62,7 +62,6 @@ public class ProductAttributeController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    // Values endpoints
     @Operation(summary = "Lấy danh sách giá trị theo định nghĩa thuộc tính")
     @GetMapping("/{id}/values")
     public ResponseEntity<ApiResponse<List<AttributeValueResponse>>> getValuesByDefinitionId(@PathVariable Long id) {
