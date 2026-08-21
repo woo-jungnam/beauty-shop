@@ -41,20 +41,6 @@ services:
     networks:
       - beautyshop_net
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: beautyshop_kafka_ui
-    ports:
-      - "8088:8080"
-    environment:
-      DYNAMIC_CONFIG_ENABLED: 'true'
-      KAFKA_CLUSTERS_0_NAME: beautyshop-cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    depends_on:
-      - kafka
-    networks:
-      - beautyshop_net
-
 volumes:
   mysql_data:
   kafka_data:
