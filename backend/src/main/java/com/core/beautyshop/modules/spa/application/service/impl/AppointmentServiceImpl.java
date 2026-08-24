@@ -65,6 +65,22 @@ public class AppointmentServiceImpl implements AppointmentService {
             int totalDuration = service.getDurationMinutes() + service.getPreparationTimeMinutes();
             LocalTime itemEndTime = currentStartTime.plusMinutes(totalDuration);
 
+            if (staff != null) {
+                boolean isOverlapping = appointmentRepository.existsOverlappingAppointmentForStaff(
+                        staff.getId(),
+                        request.getAppointmentDate(),
+                        currentStartTime,
+                        itemEndTime
+                );
+                if (isOverlapping) {
+                    throw new BusinessException(
+                            "Nhân viên đã có lịch hẹn trong khung giờ "
+                                    + currentStartTime + " - " + itemEndTime
+                                    + " ngày " + request.getAppointmentDate()
+                                    + ". Vui lòng chọn khung giờ hoặc nhân viên khác!");
+                }
+            }
+
             AppointmentItem item = AppointmentItem.builder()
                     .appointment(appointment)
                     .service(service)

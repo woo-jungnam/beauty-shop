@@ -1,0 +1,7 @@
+.env
+*.env
+.DS_Store
+Thumbs.db
+target/
+.idea/
+.vscode/

@@ -30,4 +30,9 @@ public class InventoryFacadeImpl implements InventoryFacade {
     public void releaseStock(Long variantId, int quantityToRelease) {
         inventoryService.releaseStock(variantId, quantityToRelease);
     }
+
+    @Override
+    public void deductStock(Long variantId, int quantityToDeduct) {
+        inventoryService.deductStock(variantId, quantityToDeduct);
+    }
 }

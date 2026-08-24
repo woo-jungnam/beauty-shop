@@ -8,8 +8,7 @@ import lombok.Data;
 
 @Data
 public class CheckoutRequest {
-    
-    // In a real app, user is fetched from SecurityContext (JWT token), but we might need sessionId for guest checkout
+
     private String sessionId;
 
     @NotBlank(message = "Tên khách hàng không được để trống")

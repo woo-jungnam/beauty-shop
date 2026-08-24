@@ -77,7 +77,6 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // Publish OrderCreatedEvent (listeners will handle clearing cart, etc.)
         eventPublisher.publishEvent(OrderEvents.OrderCreatedEvent.builder()
                 .orderId(savedOrder.getId())
                 .orderNumber(savedOrder.getOrderNumber())
@@ -95,7 +94,6 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
 
-        // Kiểm tra quyền truy cập (chỉ chủ đơn hàng hoặc Admin)
         if (order.getUserId() != null) {
             Long currentUserId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
             if (!SecurityUtils.isAdmin() && (currentUserId == null || !order.getUserId().equals(currentUserId))) {
@@ -139,12 +137,19 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
 
         OrderStatus previousStatus = order.getStatus();
-        order.setStatus(request.getStatus());
-        createStatusHistory(order, request.getStatus(), request.getNotes());
+        OrderStatus newStatus = request.getStatus();
 
-        // If order is cancelled, release reserved stock via event
-        if (request.getStatus() == OrderStatus.CANCELLED && previousStatus != OrderStatus.CANCELLED) {
+        validateStatusTransition(previousStatus, newStatus);
+
+        order.setStatus(newStatus);
+        createStatusHistory(order, newStatus, request.getNotes());
+
+        if (newStatus == OrderStatus.CANCELLED && previousStatus != OrderStatus.CANCELLED) {
             publishOrderCancelledEvent(order);
+        }
+
+        if (newStatus == OrderStatus.DELIVERED && previousStatus != OrderStatus.DELIVERED) {
+            publishOrderDeliveredEvent(order);
         }
 
         Order saved = orderRepository.save(order);
@@ -172,7 +177,6 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
 
-        // Verify user owns the order or is Admin
         if (order.getUserId() != null && !order.getUserId().equals(userId) && !SecurityUtils.isAdmin()) {
             throw new AccessDeniedException("Bạn không có quyền hủy đơn hàng này!");
         }
@@ -198,8 +202,6 @@ public class OrderServiceImpl implements OrderService {
 
         return orderMapper.toOrderResponse(saved);
     }
-
-    // ---- Private helpers ----
 
     private CartResponse validateCart(Long userId, String sessionId) {
         CartResponse cart = cartFacade.getCart(userId, sessionId);
@@ -280,5 +282,41 @@ public class OrderServiceImpl implements OrderService {
         response.setPaymentInstruction(instruction);
 
         return response;
+    }
+
+    private void publishOrderDeliveredEvent(Order order) {
+        if (order.getItems() != null) {
+            List<OrderEvents.OrderItemSummary> itemSummaries = order.getItems().stream()
+                    .map(item -> OrderEvents.OrderItemSummary.builder()
+                            .variantId(item.getProductVariantId())
+                            .quantity(item.getQuantity())
+                            .build())
+                    .collect(Collectors.toList());
+
+            eventPublisher.publishEvent(OrderEvents.OrderDeliveredEvent.builder()
+                    .orderId(order.getId())
+                    .orderNumber(order.getOrderNumber())
+                    .items(itemSummaries)
+                    .build());
+        }
+    }
+
+    private void validateStatusTransition(OrderStatus from, OrderStatus to) {
+        if (from == to) return;
+
+        boolean valid = switch (to) {
+            case CONFIRMED -> from == OrderStatus.PENDING;
+            case PROCESSING -> from == OrderStatus.CONFIRMED || from == OrderStatus.PENDING;
+            case SHIPPED -> from == OrderStatus.PROCESSING;
+            case DELIVERED -> from == OrderStatus.SHIPPED;
+            case CANCELLED -> from != OrderStatus.DELIVERED && from != OrderStatus.CANCELLED;
+            case RETURNED -> from == OrderStatus.DELIVERED;
+            default -> false;
+        };
+
+        if (!valid) {
+            throw new BusinessException(
+                    "Không thể chuyển trạng thái đơn hàng từ " + from + " sang " + to);
+        }
     }
 }

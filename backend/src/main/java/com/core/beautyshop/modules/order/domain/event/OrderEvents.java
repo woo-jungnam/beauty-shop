@@ -52,4 +52,18 @@ public class OrderEvents {
         private Long variantId;
         private Integer quantity;
     }
+
+    /**
+     * Event khi đơn hàng được giao thành công (DELIVERED).
+     * Trigger khấu trừ tồn kho thực tế.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OrderDeliveredEvent {
+        private Long orderId;
+        private String orderNumber;
+        private List<OrderItemSummary> items;
+    }
 }

@@ -20,16 +20,14 @@ public class BankPaymentStrategy implements PaymentStrategy {
     @Value("${sepay.bank.account-number:123456789}")
     private String bankAccountNumber;
 
-    @Value("${sepay.bank.bin:970422}") // MBBank BIN default
+    @Value("${sepay.bank.bin:970422}")
     private String bankBin;
 
     @Override
     public PaymentInstruction processPayment(PaymentOrderDto order) {
-        String transferSyntax = order.getOrderNumber(); // e.g. ORD-12345678
+        String transferSyntax = order.getOrderNumber();
         String amount = order.getTotalAmount() != null ? order.getTotalAmount().toBigInteger().toString() : "0";
-        
-        // Generate VietQR URL
-        // https://img.vietqr.io/image/<BIN>-<ACC>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>&accountName=<NAME>
+
         String encodedAccountName = URLEncoder.encode(bankAccountName, StandardCharsets.UTF_8);
         String encodedAddInfo = URLEncoder.encode(transferSyntax, StandardCharsets.UTF_8);
         String qrCodeUrl = String.format("https://img.vietqr.io/image/%s-%s-compact.jpg?amount=%s&addInfo=%s&accountName=%s",

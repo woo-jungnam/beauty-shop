@@ -5,4 +5,5 @@ public interface InventoryFacade {
     int getAvailableQuantity(Long variantId);
     void reserveStock(Long variantId, int quantityToReserve);
     void releaseStock(Long variantId, int quantityToRelease);
+    void deductStock(Long variantId, int quantityToDeduct);
 }

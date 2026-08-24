@@ -29,4 +29,20 @@ public class InventoryOrderEventListener {
             }
         }
     }
+
+    @EventListener
+    public void handleOrderDelivered(OrderEvents.OrderDeliveredEvent event) {
+        log.info("OrderDeliveredEvent received for orderId={}, deducting stock for {} items",
+                event.getOrderId(), event.getItems() != null ? event.getItems().size() : 0);
+
+        if (event.getItems() != null) {
+            for (OrderEvents.OrderItemSummary item : event.getItems()) {
+                try {
+                    inventoryFacade.deductStock(item.getVariantId(), item.getQuantity());
+                } catch (Exception e) {
+                    log.error("Failed to deduct stock for variantId={}: {}", item.getVariantId(), e.getMessage(), e);
+                }
+            }
+        }
+    }
 }

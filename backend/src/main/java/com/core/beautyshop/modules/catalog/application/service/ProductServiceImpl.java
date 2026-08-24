@@ -8,6 +8,8 @@ import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -44,30 +46,36 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "products_page", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
     public Page<ProductListResponse> getAllProducts(Pageable pageable) {
-        return productRepository.findByIsDeletedFalse(pageable).map(this::mapToProductListResponse);
+        // Sử dụng DTO Projection: truy vấn trực tiếp ra DTO, không load full entity
+        return productRepository.findAllProductList(pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> searchProducts(String keyword, Pageable pageable) {
-        return productRepository.searchByKeyword(keyword, pageable).map(this::mapToProductListResponse);
+        // Sử dụng DTO Projection cho tìm kiếm
+        return productRepository.searchProductList(keyword, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getProductsByCategory(Long categoryId, Pageable pageable) {
-        return productRepository.findByCategoryId(categoryId, pageable).map(this::mapToProductListResponse);
+        // Sử dụng DTO Projection cho lọc theo danh mục
+        return productRepository.findProductListByCategoryId(categoryId, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getProductsByBrand(Long brandId, Pageable pageable) {
-        return productRepository.findByBrandIdAndIsDeletedFalse(brandId, pageable).map(this::mapToProductListResponse);
+        // Sử dụng DTO Projection cho lọc theo thương hiệu
+        return productRepository.findProductListByBrandId(brandId, pageable);
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "products_page", allEntries = true)
     public ProductResponse createProduct(CreateProductRequest request) {
         if (productRepository.existsBySlug(request.getSlug())) {
             throw new BusinessException("Slug sản phẩm đã tồn tại: " + request.getSlug());
@@ -148,6 +156,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "products_page", allEntries = true)
     public ProductResponse updateProduct(Long id, UpdateProductRequest request) {
         Product product = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
@@ -195,6 +204,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "products_page", allEntries = true)
     public void deleteProduct(Long id) {
         Product product = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));

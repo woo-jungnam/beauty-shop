@@ -24,6 +24,4 @@ public class StaffServiceSkill extends Base {
     @Column(name = "is_certified")
     @Builder.Default
     private Boolean isCertified = false;
-
-    // Additional fields like experience level could be added here
 }

@@ -6,6 +6,7 @@ import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import com.core.beautyshop.modules.order.domain.enums.PaymentStatus;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -26,6 +27,8 @@ public class OrderFactory {
                 .paymentStatus(PaymentStatus.PENDING)
                 .status(OrderStatus.PENDING)
                 .notes(request.getNotes())
+                .shippingFee(BigDecimal.ZERO)
+                .discountAmount(BigDecimal.ZERO)
                 .items(new ArrayList<>())
                 .statusHistories(new ArrayList<>())
                 .build();

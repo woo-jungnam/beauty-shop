@@ -6,6 +6,9 @@ import com.core.beautyshop.modules.payment.application.service.PaymentWebhookSer
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,16 +16,45 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/payment")
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentController {
 
     private final PaymentWebhookService paymentWebhookService;
 
+    @Value("${sepay.webhook.api-key}")
+    private String sePayWebhookApiKey;
+
     @Operation(summary = "Tiếp nhận webhook thanh toán tự động từ SePay")
     @PostMapping("/sepay-webhook")
     public ResponseEntity<ApiResponse<String>> handleSePayWebhook(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody SePayWebhookRequest request
     ) {
+        if (!isValidWebhookApiKey(authorization)) {
+            log.warn("Webhook rejected: Invalid or missing API Key from IP request");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED.value(),
+                            "Unauthorized: Invalid webhook API key", null));
+        }
+
         paymentWebhookService.processSePayWebhook(request);
         return ResponseEntity.ok(ApiResponse.success("Webhook processed successfully"));
+    }
+
+    private boolean isValidWebhookApiKey(String authorization) {
+        if (authorization == null || authorization.isBlank()) {
+            return false;
+        }
+
+        String apiKey;
+        if (authorization.toLowerCase().startsWith("apikey ")) {
+            apiKey = authorization.substring(7).trim();
+        } else if (authorization.toLowerCase().startsWith("bearer ")) {
+            apiKey = authorization.substring(7).trim();
+        } else {
+            apiKey = authorization.trim();
+        }
+
+        return sePayWebhookApiKey.equals(apiKey);
     }
 }

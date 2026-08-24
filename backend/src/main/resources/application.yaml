@@ -1,18 +1,46 @@
+server:
+  port: ${SERVER_PORT:8080}
+  tomcat:
+    threads:
+      max: ${TOMCAT_MAX_THREADS:200}
+      min-spare: ${TOMCAT_MIN_SPARE_THREADS:50}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:2000}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:10000}
+    connection-timeout: 10000
+
 spring:
   application:
     name: beautyshop
+  threads:
+    virtual:
+      enabled: true
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/beautyshop?createDatabaseIfNotExist=true}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:Sql@123456}
     driver-class-name: ${DB_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:15}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      idle-timeout: 30000
+      connection-timeout: 10000
+      max-lifetime: 1800000
+      leak-detection-threshold: 5000
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:true}
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: ${JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
+        jdbc:
+          batch_size: 50
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        query:
+          in_clause_parameter_padding: true
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
     baseline-on-migrate: true
@@ -43,3 +71,12 @@ jwt:
   secret: ${JWT_SECRET:beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+
+sepay:
+  webhook:
+    api-key: ${SEPAY_WEBHOOK_API_KEY:your-sepay-api-key-here}
+  bank:
+    name: ${SEPAY_BANK_NAME:MBBank}
+    account-name: ${SEPAY_BANK_ACCOUNT_NAME:BEAUTY SHOP}
+    account-number: ${SEPAY_BANK_ACCOUNT_NUMBER:123456789}
+    bin: ${SEPAY_BANK_BIN:970422}

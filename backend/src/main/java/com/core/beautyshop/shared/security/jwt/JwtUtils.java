@@ -64,6 +64,43 @@ public class JwtUtils {
                 .getSubject();
     }
 
+    @SuppressWarnings("unchecked")
+    public UserDetailsImpl getUserPrincipalFromJwtToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        String username = claims.getSubject();
+        Long id = null;
+        Object idObj = claims.get("id");
+        if (idObj instanceof Number number) {
+            id = number.longValue();
+        } else if (idObj instanceof String idStr) {
+            id = Long.parseLong(idStr);
+        }
+
+        String email = (String) claims.get("email");
+
+        List<GrantedAuthority> authorities = List.of();
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof List<?> roleList) {
+            authorities = roleList.stream()
+                    .map(Object::toString)
+                    .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        return new UserDetailsImpl(
+                id,
+                username,
+                email,
+                "",
+                authorities
+        );
+    }
+
     public boolean validateJwtToken(String authToken) {
         try {
             Jwts.parser().verifyWith(key()).build().parseSignedClaims(authToken);

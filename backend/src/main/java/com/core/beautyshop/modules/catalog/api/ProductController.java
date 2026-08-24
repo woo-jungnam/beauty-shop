@@ -98,8 +98,6 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    // --- Variant Endpoints ---
-
     @GetMapping("/{id}/variants")
     public ResponseEntity<ApiResponse<java.util.List<com.core.beautyshop.modules.catalog.application.dto.response.ProductVariantResponse>>> getProductVariants(
             @PathVariable Long id) {
@@ -134,8 +132,6 @@ public class ProductController {
         productVariantService.deleteVariant(variantId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
-
-    // --- Image Endpoints ---
 
     @GetMapping("/{id}/images")
     public ResponseEntity<ApiResponse<java.util.List<com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse>>> getProductImages(

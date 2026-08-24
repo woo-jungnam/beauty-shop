@@ -36,7 +36,7 @@ public class BeautyService extends Base {
 
     @Column(name = "preparation_time_minutes")
     @Builder.Default
-    private Integer preparationTimeMinutes = 15; // Time to clean/prepare room before/after
+    private Integer preparationTimeMinutes = 15;
 
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
