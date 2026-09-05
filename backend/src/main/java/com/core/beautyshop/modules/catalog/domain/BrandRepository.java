@@ -1,6 +1,5 @@
 package com.core.beautyshop.modules.catalog.domain;
-
-import com.core.beautyshop.modules.catalog.domain.Brand;
+ 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

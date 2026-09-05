@@ -8,9 +8,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import com.core.beautyshop.modules.payment.domain.PaymentTransactionRepository;
 import java.math.BigDecimal;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -20,6 +20,12 @@ class PaymentWebhookServiceImplTest {
 
     @Mock
     private OrderFacade orderFacade;
+
+    @Mock
+    private PaymentTransactionRepository paymentTransactionRepository;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private PaymentWebhookServiceImpl paymentWebhookService;

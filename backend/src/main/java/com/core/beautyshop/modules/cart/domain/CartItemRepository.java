@@ -1,6 +1,5 @@
 package com.core.beautyshop.modules.cart.domain;
 
-import com.core.beautyshop.modules.cart.domain.CartItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

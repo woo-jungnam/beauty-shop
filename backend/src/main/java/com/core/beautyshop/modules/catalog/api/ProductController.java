@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.catalog.api;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.shared.dto.PageResponse;
@@ -31,6 +31,7 @@ public class ProductController {
     private final com.core.beautyshop.modules.catalog.application.service.ProductVariantService productVariantService;
     private final com.core.beautyshop.modules.catalog.application.service.ProductImageService productImageService;
 
+    @Operation(summary = "Lấy danh sách tất cả sản phẩm (phân trang)")
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ProductListResponse>>> getAllProducts(
            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
@@ -38,18 +39,21 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @Operation(summary = "Xem chi tiết sản phẩm theo ID")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductById(@PathVariable Long id) {
         ProductResponse product = productService.getProductById(id);
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
-    @GetMapping("/{slug}")
+    @Operation(summary = "Xem chi tiết sản phẩm theo Slug")
+    @GetMapping("/slug/{slug}")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductBySlug(@PathVariable String slug) {
         ProductResponse product = productService.getProductBySlug(slug);
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
+    @Operation(summary = "Tìm kiếm sản phẩm theo từ khóa")
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PageResponse<ProductListResponse>>> searchProducts(
             @RequestParam String keyword,
@@ -58,6 +62,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @Operation(summary = "Lấy danh sách sản phẩm theo danh mục")
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<ApiResponse<PageResponse<ProductListResponse>>> getProductsByCategory(
             @PathVariable Long categoryId,
@@ -66,6 +71,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @Operation(summary = "Lấy danh sách sản phẩm theo thương hiệu")
     @GetMapping("/brand/{brandId}")
     public ResponseEntity<ApiResponse<PageResponse<ProductListResponse>>> getProductsByBrand(
             @PathVariable Long brandId,
@@ -74,14 +80,16 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @Operation(summary = "Tạo sản phẩm mới (Admin)")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @Valid @RequestBody CreateProductRequest request) {
         ProductResponse product = productService.createProduct(request);
-        return ResponseEntity.status(201).body(ApiResponse.created(product, "Product created successfully"));
+        return ResponseEntity.status(201).body(ApiResponse.created(product, "Tạo sản phẩm thành công"));
     }
 
+    @Operation(summary = "Cập nhật thông tin sản phẩm (Admin)")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
@@ -91,6 +99,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 
+    @Operation(summary = "Xóa sản phẩm (Admin)")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
@@ -98,6 +107,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @Operation(summary = "Lấy danh sách biến thể của sản phẩm")
     @GetMapping("/{id}/variants")
     public ResponseEntity<ApiResponse<java.util.List<com.core.beautyshop.modules.catalog.application.dto.response.ProductVariantResponse>>> getProductVariants(
             @PathVariable Long id) {
@@ -105,15 +115,17 @@ public class ProductController {
                 productVariantService.getVariantsByProductId(id)));
     }
 
+    @Operation(summary = "Thêm biến thể mới cho sản phẩm (Admin)")
     @PostMapping("/{id}/variants")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<com.core.beautyshop.modules.catalog.application.dto.response.ProductVariantResponse>> addProductVariant(
             @PathVariable Long id,
             @Valid @RequestBody com.core.beautyshop.modules.catalog.application.dto.request.ProductVariantRequest request) {
         return ResponseEntity.status(201).body(ApiResponse.created(
-                productVariantService.addVariant(id, request), "Variant added successfully"));
+                productVariantService.addVariant(id, request), "Thêm biến thể thành công"));
     }
 
+    @Operation(summary = "Cập nhật biến thể sản phẩm (Admin)")
     @PutMapping("/{id}/variants/{variantId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<com.core.beautyshop.modules.catalog.application.dto.response.ProductVariantResponse>> updateProductVariant(
@@ -124,6 +136,7 @@ public class ProductController {
                 productVariantService.updateVariant(variantId, request)));
     }
 
+    @Operation(summary = "Xóa biến thể sản phẩm (Admin)")
     @DeleteMapping("/{id}/variants/{variantId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteProductVariant(
@@ -133,6 +146,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @Operation(summary = "Lấy danh sách hình ảnh của sản phẩm")
     @GetMapping("/{id}/images")
     public ResponseEntity<ApiResponse<java.util.List<com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse>>> getProductImages(
             @PathVariable Long id) {
@@ -140,15 +154,17 @@ public class ProductController {
                 productImageService.getImagesByProductId(id)));
     }
 
+    @Operation(summary = "Thêm hình ảnh cho sản phẩm (Admin)")
     @PostMapping("/{id}/images")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse>> addProductImage(
             @PathVariable Long id,
             @Valid @RequestBody com.core.beautyshop.modules.catalog.application.dto.request.ProductImageRequest request) {
         return ResponseEntity.status(201).body(ApiResponse.created(
-                productImageService.addImage(id, request), "Image added successfully"));
+                productImageService.addImage(id, request), "Thêm hình ảnh thành công"));
     }
 
+    @Operation(summary = "Xóa hình ảnh của sản phẩm (Admin)")
     @DeleteMapping("/{id}/images/{imageId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteProductImage(

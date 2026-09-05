@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.payment.application.strategy;
 
 import com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto;
-import com.core.beautyshop.modules.payment.application.dto.response.PaymentInstruction;
+import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import org.springframework.stereotype.Service;
 
 @Service("codPaymentStrategy")

@@ -22,4 +22,18 @@ public class CategoryResponse {
     private Integer displayOrder;
     private Boolean isActive;
     private List<CategoryResponse> children;
+
+    public CategoryResponse(Long id, String name, String slug, String description, String imageUrl,
+                            Long parentId, String parentName, Integer displayOrder, Boolean isActive) {
+        this.id = id;
+        this.name = name;
+        this.slug = slug;
+        this.description = description;
+        this.imageUrl = imageUrl;
+        this.parentId = parentId;
+        this.parentName = parentName;
+        this.displayOrder = displayOrder;
+        this.isActive = isActive;
+    }
 }
+

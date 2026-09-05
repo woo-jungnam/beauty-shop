@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.catalog.api;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.shared.dto.PageResponse;
@@ -19,6 +19,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 @Tag(name = "Quản lý thương hiệu", description = "API quản lý thương hiệu")
 @RestController
 @RequestMapping("/api/v1/brands")
@@ -27,6 +28,7 @@ public class BrandController {
 
     private final BrandService brandService;
 
+    @Operation(summary = "Lấy danh sách tất cả thương hiệu (phân trang)")
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<BrandResponse>>> getAllBrands(
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
@@ -34,26 +36,30 @@ public class BrandController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @Operation(summary = "Xem chi tiết thương hiệu theo ID")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<BrandResponse>> getBrandById(@PathVariable Long id) {
         BrandResponse brand = brandService.getBrandById(id);
         return ResponseEntity.ok(ApiResponse.success(brand));
     }
 
-    @GetMapping("/{slug}")
+    @Operation(summary = "Xem chi tiết thương hiệu theo Slug")
+    @GetMapping("/slug/{slug}")
     public ResponseEntity<ApiResponse<BrandResponse>> getBrandBySlug(@PathVariable String slug) {
         BrandResponse brand = brandService.getBrandBySlug(slug);
         return ResponseEntity.ok(ApiResponse.success(brand));
     }
 
+    @Operation(summary = "Tạo thương hiệu mới (Admin)")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BrandResponse>> createBrand(
             @Valid @RequestBody CreateBrandRequest request) {
         BrandResponse brand = brandService.createBrand(request);
-        return ResponseEntity.status(201).body(ApiResponse.created(brand, "Brand created successfully"));
+        return ResponseEntity.status(201).body(ApiResponse.created(brand, "Tạo thương hiệu thành công"));
     }
 
+    @Operation(summary = "Cập nhật thông tin thương hiệu (Admin)")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BrandResponse>> updateBrand(
@@ -63,6 +69,7 @@ public class BrandController {
         return ResponseEntity.ok(ApiResponse.success(brand));
     }
 
+    @Operation(summary = "Xóa thương hiệu (Admin)")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteBrand(@PathVariable Long id) {

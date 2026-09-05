@@ -1,20 +1,17 @@
 package com.core.beautyshop.modules.order.application.listener;
 
-import com.core.beautyshop.modules.order.domain.event.OrderEvents;
+import com.core.beautyshop.modules.order.api.event.OrderEvents;
 import com.core.beautyshop.shared.config.KafkaTopicConstants;
 import com.core.beautyshop.shared.event.OrderKafkaMessage;
+import com.core.beautyshop.shared.outbox.application.service.OutboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -22,11 +19,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderKafkaProducerBridge {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxService outboxService;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onOrderCreated(OrderEvents.OrderCreatedEvent event) {
-        log.info("DB Transaction committed. Bridging OrderCreatedEvent to Kafka for orderId={}", event.getOrderId());
+        log.info("Ghi nhận OrderCreatedEvent vào Outbox cho orderId={}", event.getOrderId());
 
         OrderKafkaMessage.OrderCreatedKafkaMessage message = OrderKafkaMessage.OrderCreatedKafkaMessage.builder()
                 .orderId(event.getOrderId())
@@ -39,28 +36,18 @@ public class OrderKafkaProducerBridge {
 
         String messageKey = String.valueOf(event.getOrderId());
 
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(
+        outboxService.recordEvent(
+                "ORDER",
+                String.valueOf(event.getOrderId()),
                 KafkaTopicConstants.ORDER_CREATED_TOPIC,
                 messageKey,
                 message
         );
-
-        future.whenComplete((result, ex) -> {
-            if (ex != null) {
-                log.error("Failed to send OrderCreatedKafkaMessage to Kafka topic={} for orderId={}: {}",
-                        KafkaTopicConstants.ORDER_CREATED_TOPIC, event.getOrderId(), ex.getMessage(), ex);
-            } else {
-                log.info("Successfully sent OrderCreatedKafkaMessage to Kafka topic={} partition={} offset={}",
-                        result.getRecordMetadata().topic(),
-                        result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset());
-            }
-        });
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onOrderCancelled(OrderEvents.OrderCancelledEvent event) {
-        log.info("DB Transaction committed. Bridging OrderCancelledEvent to Kafka for orderId={}", event.getOrderId());
+        log.info("Ghi nhận OrderCancelledEvent vào Outbox cho orderId={}", event.getOrderId());
 
         List<OrderKafkaMessage.OrderItemSummaryMessage> itemMessages = event.getItems() != null
                 ? event.getItems().stream()
@@ -80,28 +67,18 @@ public class OrderKafkaProducerBridge {
 
         String messageKey = String.valueOf(event.getOrderId());
 
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(
+        outboxService.recordEvent(
+                "ORDER",
+                String.valueOf(event.getOrderId()),
                 KafkaTopicConstants.ORDER_CANCELLED_TOPIC,
                 messageKey,
                 message
         );
-
-        future.whenComplete((result, ex) -> {
-            if (ex != null) {
-                log.error("Failed to send OrderCancelledKafkaMessage to Kafka topic={} for orderId={}: {}",
-                        KafkaTopicConstants.ORDER_CANCELLED_TOPIC, event.getOrderId(), ex.getMessage(), ex);
-            } else {
-                log.info("Successfully sent OrderCancelledKafkaMessage to Kafka topic={} partition={} offset={}",
-                        result.getRecordMetadata().topic(),
-                        result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset());
-            }
-        });
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onOrderStatusChanged(OrderEvents.OrderStatusChangedEvent event) {
-        log.info("DB Transaction committed. Bridging OrderStatusChangedEvent to Kafka for orderId={}, status {} -> {}",
+        log.info("Ghi nhận OrderStatusChangedEvent vào Outbox cho orderId={}, trạng thái {} -> {}",
                 event.getOrderId(), event.getPreviousStatus(), event.getNewStatus());
 
         OrderKafkaMessage.OrderStatusChangedKafkaMessage message = OrderKafkaMessage.OrderStatusChangedKafkaMessage.builder()
@@ -114,22 +91,12 @@ public class OrderKafkaProducerBridge {
 
         String messageKey = String.valueOf(event.getOrderId());
 
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(
+        outboxService.recordEvent(
+                "ORDER",
+                String.valueOf(event.getOrderId()),
                 KafkaTopicConstants.ORDER_STATUS_CHANGED_TOPIC,
                 messageKey,
                 message
         );
-
-        future.whenComplete((result, ex) -> {
-            if (ex != null) {
-                log.error("Failed to send OrderStatusChangedKafkaMessage to Kafka topic={} for orderId={}: {}",
-                        KafkaTopicConstants.ORDER_STATUS_CHANGED_TOPIC, event.getOrderId(), ex.getMessage(), ex);
-            } else {
-                log.info("Successfully sent OrderStatusChangedKafkaMessage to Kafka topic={} partition={} offset={}",
-                        result.getRecordMetadata().topic(),
-                        result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset());
-            }
-        });
     }
 }

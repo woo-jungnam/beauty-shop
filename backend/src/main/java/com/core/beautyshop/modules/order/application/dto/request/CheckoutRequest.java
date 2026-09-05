@@ -1,6 +1,6 @@
 package com.core.beautyshop.modules.order.application.dto.request;
 
-import com.core.beautyshop.modules.order.domain.enums.PaymentMethod;
+import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;

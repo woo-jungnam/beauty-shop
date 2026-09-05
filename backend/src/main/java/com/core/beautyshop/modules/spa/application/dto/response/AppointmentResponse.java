@@ -36,6 +36,8 @@ public class AppointmentResponse {
                         .map(item -> AppointmentItemResponse.builder()
                                 .serviceName(item.getService() != null ? item.getService().getName() : null)
                                 .staffName(item.getStaff() != null ? "Staff #" + item.getStaff().getId() : "No preference")
+                                .ticketId(item.getTicket() != null ? item.getTicket().getId() : null)
+                                .isTicketUsed(item.getTicket() != null)
                                 .price(item.getPrice())
                                 .startTime(item.getStartTime())
                                 .endTime(item.getEndTime())

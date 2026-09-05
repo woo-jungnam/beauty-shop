@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.inventory.application.service;
 
 import com.core.beautyshop.modules.inventory.domain.WarehouseStock;
-import com.core.beautyshop.modules.inventory.domain.exception.InsufficientStockException;
+import com.core.beautyshop.modules.inventory.api.exception.InsufficientStockException;
 import com.core.beautyshop.modules.inventory.domain.WarehouseStockRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +33,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional
     public void reserveStock(Long variantId, int quantityToReserve) {
-        List<WarehouseStock> stocks = warehouseStockRepository.findByProductVariantId(variantId);
+        List<WarehouseStock> stocks = warehouseStockRepository.findByProductVariantIdOrderByIdAsc(variantId);
 
         int totalAvailable = stocks.stream()
                 .mapToInt(s -> Math.max(0, s.getQuantity() - s.getReservedQuantity()))
@@ -63,13 +63,13 @@ public class InventoryServiceImpl implements InventoryService {
                     "Không đủ hàng trong kho cho ID biến thể: " + variantId + " do tồn kho vừa thay đổi. Vui lòng thử lại!");
         }
 
-        log.info("Reserved {} units for variantId={}", quantityToReserve, variantId);
+        log.info("Đã giữ trước (reserve) {} sản phẩm cho biến thể variantId={}", quantityToReserve, variantId);
     }
 
     @Override
     @Transactional
     public void releaseStock(Long variantId, int quantityToRelease) {
-        List<WarehouseStock> stocks = warehouseStockRepository.findByProductVariantId(variantId);
+        List<WarehouseStock> stocks = warehouseStockRepository.findByProductVariantIdOrderByIdAsc(variantId);
         int remainingToRelease = quantityToRelease;
 
         for (WarehouseStock stock : stocks) {
@@ -84,13 +84,13 @@ public class InventoryServiceImpl implements InventoryService {
             if (remainingToRelease <= 0) break;
         }
 
-        log.info("Released {} units for variantId={}", quantityToRelease, variantId);
+        log.info("Đã hoàn lại (release) {} sản phẩm cho biến thể variantId={}", quantityToRelease, variantId);
     }
 
     @Override
     @Transactional
     public void deductStock(Long variantId, int quantityToDeduct) {
-        List<WarehouseStock> stocks = warehouseStockRepository.findByProductVariantId(variantId);
+        List<WarehouseStock> stocks = warehouseStockRepository.findByProductVariantIdOrderByIdAsc(variantId);
         int remainingToDeduct = quantityToDeduct;
 
         for (WarehouseStock stock : stocks) {
@@ -105,6 +105,6 @@ public class InventoryServiceImpl implements InventoryService {
             if (remainingToDeduct <= 0) break;
         }
 
-        log.info("Deducted {} units for variantId={}", quantityToDeduct, variantId);
+        log.info("Đã trừ tồn kho (deduct) {} sản phẩm cho biến thể variantId={}", quantityToDeduct, variantId);
     }
 }

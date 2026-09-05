@@ -2,7 +2,7 @@ package com.core.beautyshop.modules.cart.api;
 
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.modules.cart.application.dto.request.AddToCartRequest;
-import com.core.beautyshop.modules.cart.application.dto.response.CartResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.cart.application.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,5 +57,14 @@ public class CartController {
     public ResponseEntity<ApiResponse<Void>> clearCart() {
         cartService.clearCart();
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @Operation(summary = "Gộp giỏ hàng khách vãng lai (sessionId) vào tài khoản khi đăng nhập")
+    @PostMapping("/merge")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<CartResponse>> mergeCart(@RequestParam String sessionId) {
+        Long userId = com.core.beautyshop.shared.security.utils.SecurityUtils.getCurrentUserId();
+        CartResponse updatedCart = cartService.mergeCart(sessionId, userId);
+        return ResponseEntity.ok(ApiResponse.success(updatedCart, "Gộp giỏ hàng thành công"));
     }
 }

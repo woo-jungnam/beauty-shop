@@ -1,4 +1,4 @@
-package com.core.beautyshop.modules.cart.application.dto.response;
+package com.core.beautyshop.modules.cart.api.dto;
 
 import com.core.beautyshop.modules.cart.domain.CartItem;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;

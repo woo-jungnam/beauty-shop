@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.cart.application.service;
 
 import com.core.beautyshop.modules.cart.application.dto.request.AddToCartRequest;
-import com.core.beautyshop.modules.cart.application.dto.response.CartResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 
 public interface CartService {
     CartResponse getCart(String sessionId);
@@ -14,5 +14,6 @@ public interface CartService {
     CartResponse removeCartItem(Long cartId, Long itemId);
     void clearCart();
     void clearCart(Long cartId);
+    CartResponse mergeCart(String sessionId, Long userId);
 }
 

@@ -43,6 +43,14 @@ public class SecurityUtils {
         return auth.getName();
     }
 
+    public static Optional<String> getCurrentUsernameOptional() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(auth.getName());
+    }
+
     public static boolean isAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {

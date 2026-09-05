@@ -64,7 +64,6 @@ public class JwtUtils {
                 .getSubject();
     }
 
-    @SuppressWarnings("unchecked")
     public UserDetailsImpl getUserPrincipalFromJwtToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key())
@@ -106,13 +105,13 @@ public class JwtUtils {
             Jwts.parser().verifyWith(key()).build().parseSignedClaims(authToken);
             return true;
         } catch (MalformedJwtException e) {
-            log.error("Invalid JWT token: {}", e.getMessage());
+            log.error("Token JWT không đúng định dạng: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
-            log.error("JWT token is expired: {}", e.getMessage());
+            log.error("Token JWT đã hết hạn: {}", e.getMessage());
         } catch (UnsupportedJwtException e) {
-            log.error("JWT token is unsupported: {}", e.getMessage());
+            log.error("Token JWT không được hỗ trợ: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.error("JWT claims string is empty: {}", e.getMessage());
+            log.error("Chuỗi JWT claims rỗng: {}", e.getMessage());
         }
         return false;
     }

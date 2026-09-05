@@ -31,18 +31,18 @@ public class PaymentController {
             @RequestBody SePayWebhookRequest request
     ) {
         if (!isValidWebhookApiKey(authorization)) {
-            log.warn("Webhook rejected: Invalid or missing API Key from IP request");
+            log.warn("Từ chối webhook: API Key không hợp lệ hoặc bị thiếu từ yêu cầu IP");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(HttpStatus.UNAUTHORIZED.value(),
-                            "Unauthorized: Invalid webhook API key", null));
+                            "Không có quyền: API key webhook không hợp lệ", null));
         }
 
         paymentWebhookService.processSePayWebhook(request);
-        return ResponseEntity.ok(ApiResponse.success("Webhook processed successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Xử lý webhook thành công"));
     }
 
     private boolean isValidWebhookApiKey(String authorization) {
-        if (authorization == null || authorization.isBlank()) {
+        if (authorization == null || authorization.isBlank() || sePayWebhookApiKey == null) {
             return false;
         }
 
@@ -55,6 +55,9 @@ public class PaymentController {
             apiKey = authorization.trim();
         }
 
-        return sePayWebhookApiKey.equals(apiKey);
+        return java.security.MessageDigest.isEqual(
+                sePayWebhookApiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                apiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
     }
 }

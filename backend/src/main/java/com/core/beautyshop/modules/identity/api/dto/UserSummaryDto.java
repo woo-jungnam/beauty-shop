@@ -16,4 +16,6 @@ public class UserSummaryDto {
     private String email;
     private String phone;
     private String avatarUrl;
+    private com.core.beautyshop.modules.identity.domain.enums.MembershipTier membershipTier;
+    private Integer loyaltyPoints;
 }

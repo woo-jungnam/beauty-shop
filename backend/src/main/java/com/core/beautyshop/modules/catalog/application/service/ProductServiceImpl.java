@@ -280,21 +280,4 @@ public class ProductServiceImpl implements ProductService {
                         .collect(Collectors.toList()) : List.of())
                 .build();
     }
-
-    private ProductListResponse mapToProductListResponse(Product product) {
-        return ProductListResponse.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .slug(product.getSlug())
-                .shortDescription(product.getShortDescription())
-                .thumbnailUrl(product.getThumbnailUrl())
-                .basePrice(product.getBasePrice())
-                .status(product.getStatus())
-                .isFeatured(product.getIsFeatured())
-                .averageRating(product.getAverageRating())
-                .totalReviews(product.getTotalReviews())
-                .totalSold(product.getTotalSold())
-                .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
-                .build();
-    }
 }

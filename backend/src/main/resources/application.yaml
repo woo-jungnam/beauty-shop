@@ -9,6 +9,10 @@ server:
     connection-timeout: 10000
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
   application:
     name: beautyshop
   threads:
@@ -34,6 +38,7 @@ spring:
     properties:
       hibernate:
         dialect: ${JPA_DIALECT:org.hibernate.dialect.MySQLDialect}
+        default_batch_fetch_size: 50
         jdbc:
           batch_size: 50
           batch_versioned_data: true
@@ -41,10 +46,7 @@ spring:
         order_updates: true
         query:
           in_clause_parameter_padding: true
-  flyway:
-    enabled: ${FLYWAY_ENABLED:true}
-    baseline-on-migrate: true
-    validate-on-migrate: true
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -66,6 +68,24 @@ spring:
     listener:
       ack-mode: record
       missing-topics-fatal: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+app:
+  outbox:
+    poll-interval-ms: ${OUTBOX_POLL_INTERVAL_MS:1500}
 
 jwt:
   secret: ${JWT_SECRET:beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!}

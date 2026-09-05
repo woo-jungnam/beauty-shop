@@ -40,7 +40,7 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
         
         ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryById(request.getProductVariantId());
 
-        Optional<WarehouseStock> existingStock = stockRepository.findByWarehouseIdAndProductVariantId(warehouseId, variant.getId());
+        Optional<WarehouseStock> existingStock = stockRepository.findByWarehouseIdAndProductVariantIdAndBatchCode(warehouseId, variant.getId(), request.getBatchCode());
 
         WarehouseStock stock;
         if (existingStock.isPresent()) {
@@ -53,6 +53,8 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                     .productVariantId(variant.getId())
                     .quantity(request.getQuantity())
                     .reservedQuantity(request.getReservedQuantity() != null ? request.getReservedQuantity() : 0)
+                    .batchCode(request.getBatchCode())
+                    .expirationDate(request.getExpirationDate())
                     .build();
         }
 
@@ -81,6 +83,8 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                 .sku(sku)
                 .quantity(stock.getQuantity())
                 .reservedQuantity(stock.getReservedQuantity())
+                .batchCode(stock.getBatchCode())
+                .expirationDate(stock.getExpirationDate())
                 .createdAt(stock.getCreatedAt())
                 .updatedAt(stock.getUpdatedAt())
                 .build();

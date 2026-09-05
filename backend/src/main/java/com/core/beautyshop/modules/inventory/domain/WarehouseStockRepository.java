@@ -15,6 +15,8 @@ public interface WarehouseStockRepository extends JpaRepository<WarehouseStock, 
 
     List<WarehouseStock> findByProductVariantId(Long productVariantId);
 
+    List<WarehouseStock> findByProductVariantIdOrderByIdAsc(Long productVariantId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ws FROM WarehouseStock ws WHERE ws.productVariantId = :variantId")
     List<WarehouseStock> findByProductVariantIdWithLock(@Param("variantId") Long productVariantId);
@@ -39,5 +41,5 @@ public interface WarehouseStockRepository extends JpaRepository<WarehouseStock, 
 
     List<WarehouseStock> findByWarehouseId(Long warehouseId);
 
-    Optional<WarehouseStock> findByWarehouseIdAndProductVariantId(Long warehouseId, Long productVariantId);
+    Optional<WarehouseStock> findByWarehouseIdAndProductVariantIdAndBatchCode(Long warehouseId, Long productVariantId, String batchCode);
 }

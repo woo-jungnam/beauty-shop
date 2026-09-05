@@ -20,11 +20,11 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendEmail(EmailMessageDto emailMessageDto) {
-        log.info("========== [EMAIL DISPATCHED VIA NOTIFICATION SERVICE] ==========");
-        log.info("To: {} <{}>", emailMessageDto.getRecipientName(), emailMessageDto.getRecipientEmail());
-        log.info("Subject: {}", emailMessageDto.getSubject());
-        log.info("Template: {}", emailMessageDto.getTemplateCode());
-        log.info("Parameters: {}", emailMessageDto.getParameters());
+        log.info("========== [EMAIL ĐÃ ĐƯỢC GỬI QUA DỊCH VỤ THÔNG BÁO] ==========");
+        log.info("Gửi tới: {} <{}>", emailMessageDto.getRecipientName(), emailMessageDto.getRecipientEmail());
+        log.info("Tiêu đề: {}", emailMessageDto.getSubject());
+        log.info("Mẫu (Template): {}", emailMessageDto.getTemplateCode());
+        log.info("Tham số: {}", emailMessageDto.getParameters());
         log.info("==================================================================");
     }
 
@@ -59,11 +59,11 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendOrderStatusUpdateNotification(Long orderId, String orderNumber, String previousStatus, String newStatus) {
-        log.info("Notification sent: Order #{} changed status from {} to {}", orderNumber, previousStatus, newStatus);
+        log.info("Đã gửi thông báo: Đơn hàng #{} thay đổi trạng thái từ {} sang {}", orderNumber, previousStatus, newStatus);
     }
 
     @Override
     public void sendOrderCancelledNotification(Long orderId, String orderNumber) {
-        log.info("Notification sent: Order #{} has been cancelled successfully", orderNumber);
+        log.info("Đã gửi thông báo: Đơn hàng #{} đã được hủy thành công", orderNumber);
     }
 }

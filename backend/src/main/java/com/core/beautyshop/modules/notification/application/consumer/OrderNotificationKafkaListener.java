@@ -27,7 +27,7 @@ public class OrderNotificationKafkaListener {
                                    @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                    @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
                                    @Header(KafkaHeaders.OFFSET) long offset) {
-        log.info("Kafka Consumer received OrderCreatedKafkaMessage from topic={}, partition={}, offset={}, orderId={}",
+        log.info("Kafka Consumer đã nhận OrderCreatedKafkaMessage từ topic={}, partition={}, offset={}, orderId={}",
                 topic, partition, offset, message.getOrderId());
 
         notificationService.sendOrderConfirmationNotification(
@@ -46,7 +46,7 @@ public class OrderNotificationKafkaListener {
                                          @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                          @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
                                          @Header(KafkaHeaders.OFFSET) long offset) {
-        log.info("Kafka Consumer received OrderStatusChangedKafkaMessage from topic={}, partition={}, offset={}, orderId={}, status {} -> {}",
+        log.info("Kafka Consumer đã nhận OrderStatusChangedKafkaMessage từ topic={}, partition={}, offset={}, orderId={}, trạng thái {} -> {}",
                 topic, partition, offset, message.getOrderId(), message.getPreviousStatus(), message.getNewStatus());
 
         notificationService.sendOrderStatusUpdateNotification(
@@ -65,7 +65,7 @@ public class OrderNotificationKafkaListener {
                                      @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                      @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
                                      @Header(KafkaHeaders.OFFSET) long offset) {
-        log.info("Kafka Consumer received OrderCancelledKafkaMessage from topic={}, partition={}, offset={}, orderId={}",
+        log.info("Kafka Consumer đã nhận OrderCancelledKafkaMessage từ topic={}, partition={}, offset={}, orderId={}",
                 topic, partition, offset, message.getOrderId());
 
         notificationService.sendOrderCancelledNotification(
@@ -79,7 +79,7 @@ public class OrderNotificationKafkaListener {
                                  @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                  @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
                                  @Header(KafkaHeaders.OFFSET) long offset) {
-        log.error("CRITICAL: Message received in DEAD LETTER TOPIC (DLT)! Topic: {}, Partition: {}, Offset: {}, Payload: {}",
+        log.error("NGHIÊM TRỌNG: Tin nhắn rơi vào DEAD LETTER TOPIC (DLT)! Topic: {}, Partition: {}, Offset: {}, Nội dung: {}",
                 topic, partition, offset, payload);
     }
 }

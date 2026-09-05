@@ -1,9 +1,9 @@
 package com.core.beautyshop.modules.order.application.dto.response;
 
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
-import com.core.beautyshop.modules.order.domain.enums.PaymentMethod;
+import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import com.core.beautyshop.modules.order.domain.enums.PaymentStatus;
-import com.core.beautyshop.modules.payment.application.dto.response.PaymentInstruction;
+import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import lombok.Builder;
 import lombok.Data;
 

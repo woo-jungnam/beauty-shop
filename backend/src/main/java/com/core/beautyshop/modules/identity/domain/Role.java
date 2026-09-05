@@ -17,9 +17,25 @@ import jakarta.persistence.Table;
 @AllArgsConstructor
 @Builder
 public class Role extends Base {
-    @Column(name = "role_name",length = 50, unique = true, nullable=false)
-    private String roleName;
-    @Column(name="description", length = 255)
+    @Column(name = "name", length = 50, unique = true, nullable = false)
+    private String name;
+
+    @Column(name = "description", length = 255)
     private String description;
+
+    public String getRoleName() {
+        return this.name;
+    }
+
+    public void setRoleName(String roleName) {
+        this.name = roleName;
+    }
+
+    public static class RoleBuilder {
+        public RoleBuilder roleName(String roleName) {
+            this.name = roleName;
+            return this;
+        }
+    }
 }
 

@@ -24,4 +24,6 @@ public class UserProfileResponse {
     private Gender gender;
     private LocalDate dateOfBirth;
     private List<String> roles;
+    private com.core.beautyshop.modules.identity.domain.enums.MembershipTier membershipTier;
+    private Integer loyaltyPoints;
 }

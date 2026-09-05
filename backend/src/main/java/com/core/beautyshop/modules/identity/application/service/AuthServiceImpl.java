@@ -75,12 +75,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         List<Role> roles = new ArrayList<>();
-        Role userRole = roleRepository.findByRoleName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name())
+        Role defaultRole = roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_CUSTOMER.name())
+                .or(() -> roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name()))
                 .orElseGet(() -> roleRepository.save(Role.builder()
-                        .roleName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name())
-                        .description("Default User Role")
+                        .name(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_CUSTOMER.name())
+                        .description("Default Customer Role")
                         .build()));
-        roles.add(userRole);
+        roles.add(defaultRole);
 
         User user = userFactory.createNewUser(request, roles);
         userRepository.save(user);

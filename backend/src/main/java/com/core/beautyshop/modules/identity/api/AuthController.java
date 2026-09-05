@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.identity.api;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 
@@ -26,6 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
 
+    @Operation(summary = "Đăng nhập tài khoản & nhận JWT Token")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest loginRequest
@@ -34,14 +36,16 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
+    @Operation(summary = "Đăng ký tài khoản khách hàng mới")
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody RegisterRequest registerRequest
     ) {
         AuthResponse authResponse = authService.register(registerRequest);
-        return ResponseEntity.status(201).body(ApiResponse.created(authResponse, "User registered successfully"));
+        return ResponseEntity.status(201).body(ApiResponse.created(authResponse, "Đăng ký tài khoản thành công"));
     }
 
+    @Operation(summary = "Làm mới Access Token bằng Refresh Token")
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest refreshTokenRequest
@@ -50,6 +54,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
+    @Operation(summary = "Lấy thông tin hồ sơ người dùng đang đăng nhập")
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getCurrentUser() {

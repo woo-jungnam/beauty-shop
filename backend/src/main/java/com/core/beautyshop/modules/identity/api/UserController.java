@@ -42,6 +42,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(profile));
     }
 
+    @Operation(summary = "Lấy danh sách tất cả người dùng (Admin)")
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<UserProfileResponse>>> getAllUsers(
@@ -50,6 +51,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @Operation(summary = "Xem thông tin người dùng theo ID (Admin)")
     @GetMapping("/admin/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getUserById(

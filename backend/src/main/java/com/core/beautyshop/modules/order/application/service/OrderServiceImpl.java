@@ -1,8 +1,8 @@
 package com.core.beautyshop.modules.order.application.service;
 
 import com.core.beautyshop.modules.cart.api.CartFacade;
-import com.core.beautyshop.modules.cart.application.dto.response.CartItemResponse;
-import com.core.beautyshop.modules.cart.application.dto.response.CartResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartItemResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
@@ -17,10 +17,10 @@ import com.core.beautyshop.modules.order.domain.OrderItem;
 import com.core.beautyshop.modules.order.domain.OrderRepository;
 import com.core.beautyshop.modules.order.domain.OrderStatusHistory;
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
-import com.core.beautyshop.modules.order.domain.event.OrderEvents;
-import com.core.beautyshop.modules.payment.application.dto.response.PaymentInstruction;
-import com.core.beautyshop.modules.payment.application.strategy.PaymentStrategy;
-import com.core.beautyshop.modules.payment.application.strategy.PaymentStrategyFactory;
+import com.core.beautyshop.modules.order.api.event.OrderEvents;
+import com.core.beautyshop.modules.payment.api.PaymentFacade;
+import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
+import com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
@@ -47,7 +47,7 @@ public class OrderServiceImpl implements OrderService {
     private final IdentityFacade identityFacade;
     private final OrderFactory orderFactory;
     private final OrderMapper orderMapper;
-    private final PaymentStrategyFactory paymentStrategyFactory;
+    private final PaymentFacade paymentFacade;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -70,10 +70,22 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal subTotal = buildOrderItems(order, cart);
 
+        BigDecimal membershipDiscount = BigDecimal.ZERO;
+        if (userId != null) {
+            com.core.beautyshop.modules.identity.api.dto.UserSummaryDto userSummary = identityFacade.getUserSummaryById(userId);
+            if (userSummary.getMembershipTier() != null && userSummary.getMembershipTier().getDiscountPercentage() > 0) {
+                BigDecimal discountPercent = BigDecimal.valueOf(userSummary.getMembershipTier().getDiscountPercentage()).divide(BigDecimal.valueOf(100));
+                membershipDiscount = subTotal.multiply(discountPercent);
+            }
+        }
+        
+        BigDecimal totalDiscount = order.getDiscountAmount() != null ? order.getDiscountAmount().add(membershipDiscount) : membershipDiscount;
+        order.setDiscountAmount(totalDiscount);
+
         order.setSubTotal(subTotal);
         order.setTotalAmount(subTotal.add(order.getShippingFee()).subtract(order.getDiscountAmount()));
 
-        createStatusHistory(order, OrderStatus.PENDING, "Order created via checkout");
+        createStatusHistory(order, OrderStatus.PENDING, "Đơn hàng được tạo khi thanh toán");
 
         Order savedOrder = orderRepository.save(order);
 
@@ -187,7 +199,7 @@ public class OrderServiceImpl implements OrderService {
 
         OrderStatus previousStatus = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
-        createStatusHistory(order, OrderStatus.CANCELLED, "Order cancelled by customer");
+        createStatusHistory(order, OrderStatus.CANCELLED, "Khách hàng hủy đơn hàng");
 
         publishOrderCancelledEvent(order);
 
@@ -214,10 +226,28 @@ public class OrderServiceImpl implements OrderService {
     private BigDecimal buildOrderItems(Order order, CartResponse cart) {
         BigDecimal subTotal = BigDecimal.ZERO;
 
-        for (CartItemResponse item : cart.getItems()) {
-            inventoryFacade.reserveStock(item.getVariantId(), item.getQuantity());
+        // 1. Thu thập và sắp xếp các variantId theo thứ tự tăng dần (Chống Deadlock khi nhiều đơn hàng cùng checkout)
+        List<Long> variantIds = cart.getItems().stream()
+                .map(CartItemResponse::getVariantId)
+                .sorted()
+                .distinct()
+                .collect(Collectors.toList());
 
-            ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryById(item.getVariantId());
+        // 2. Nạp hàng loạt thông tin biến thể trong 1 câu truy vấn duy nhất (Batch Projection)
+        java.util.Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
+
+        // 3. Sắp xếp danh sách cart item theo variantId và thực hiện giữ kho + tạo OrderItem
+        List<CartItemResponse> sortedItems = cart.getItems().stream()
+                .sorted(java.util.Comparator.comparing(CartItemResponse::getVariantId))
+                .toList();
+
+        for (CartItemResponse item : sortedItems) {
+            ProductVariantSummaryDto variant = variantMap.get(item.getVariantId());
+            if (variant == null) {
+                throw new ResourceNotFoundException("Không tìm thấy thông tin biến thể với ID: " + item.getVariantId());
+            }
+
+            inventoryFacade.reserveStock(item.getVariantId(), item.getQuantity());
 
             BigDecimal price = variant.getDiscountPrice() != null
                     ? variant.getDiscountPrice()
@@ -272,13 +302,12 @@ public class OrderServiceImpl implements OrderService {
     private OrderResponse buildOrderResponse(Order savedOrder) {
         OrderResponse response = orderMapper.toOrderResponse(savedOrder);
 
-        PaymentStrategy strategy = paymentStrategyFactory.getStrategy(savedOrder.getPaymentMethod());
-        com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto paymentOrderDto = com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto.builder()
+        PaymentOrderDto paymentOrderDto = PaymentOrderDto.builder()
                 .orderNumber(savedOrder.getOrderNumber())
                 .totalAmount(savedOrder.getTotalAmount())
                 .customerName(savedOrder.getCustomerName())
                 .build();
-        PaymentInstruction instruction = strategy.processPayment(paymentOrderDto);
+        PaymentInstruction instruction = paymentFacade.processPayment(savedOrder.getPaymentMethod(), paymentOrderDto);
         response.setPaymentInstruction(instruction);
 
         return response;

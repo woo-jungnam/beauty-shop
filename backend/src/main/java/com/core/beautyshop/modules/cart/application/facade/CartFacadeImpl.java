@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.cart.application.facade;
 
 import com.core.beautyshop.modules.cart.api.CartFacade;
-import com.core.beautyshop.modules.cart.application.dto.response.CartResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.cart.application.service.CartService;
 import com.core.beautyshop.modules.cart.domain.CartRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,5 +31,10 @@ public class CartFacadeImpl implements CartFacade {
         } else if (sessionId != null) {
             cartRepository.findBySessionId(sessionId).ifPresent(cart -> cartService.clearCart(cart.getId()));
         }
+    }
+
+    @Override
+    public CartResponse mergeCart(String sessionId, Long userId) {
+        return cartService.mergeCart(sessionId, userId);
     }
 }

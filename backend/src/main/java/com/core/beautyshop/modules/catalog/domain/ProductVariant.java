@@ -1,19 +1,16 @@
 package com.core.beautyshop.modules.catalog.domain;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import com.core.beautyshop.shared.domain.Base;
 import com.core.beautyshop.shared.domain.BaseProductAttribute;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

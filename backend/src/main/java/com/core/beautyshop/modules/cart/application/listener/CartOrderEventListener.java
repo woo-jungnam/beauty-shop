@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.cart.application.listener;
 
 import com.core.beautyshop.modules.cart.api.CartFacade;
-import com.core.beautyshop.modules.order.domain.event.OrderEvents;
+import com.core.beautyshop.modules.order.api.event.OrderEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -16,12 +16,12 @@ public class CartOrderEventListener {
 
     @EventListener
     public void handleOrderCreated(OrderEvents.OrderCreatedEvent event) {
-        log.info("OrderCreatedEvent received for orderId={}, clearing cart for userId={}, sessionId={}",
+        log.info("Đã nhận sự kiện OrderCreatedEvent cho orderId={}, tiến hành xóa giỏ hàng cho userId={}, sessionId={}",
                 event.getOrderId(), event.getUserId(), event.getSessionId());
         try {
             cartFacade.clearCartByUserIdOrSessionId(event.getUserId(), event.getSessionId());
         } catch (Exception e) {
-            log.error("Failed to clear cart after order creation: {}", e.getMessage(), e);
+            log.error("Lỗi khi xóa giỏ hàng sau khi tạo đơn hàng: {}", e.getMessage(), e);
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.core.beautyshop.modules.identity.domain;
 
-import com.core.beautyshop.modules.identity.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

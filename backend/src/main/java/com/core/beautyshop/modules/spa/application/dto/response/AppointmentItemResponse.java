@@ -11,6 +11,8 @@ import java.time.LocalTime;
 public class AppointmentItemResponse {
     private String serviceName;
     private String staffName;
+    private Long ticketId;
+    private Boolean isTicketUsed;
     private BigDecimal price;
     private LocalTime startTime;
     private LocalTime endTime;

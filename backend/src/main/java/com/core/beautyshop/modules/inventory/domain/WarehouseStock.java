@@ -19,8 +19,8 @@ import lombok.Setter;
 @Table(
     name = "warehouse_stocks",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_warehouse_variant",
-        columnNames = {"warehouse_id", "product_variant_id"}
+        name = "uk_warehouse_variant_batch",
+        columnNames = {"warehouse_id", "product_variant_id", "batch_code"}
     )
 )
 @Getter
@@ -54,4 +54,10 @@ public class WarehouseStock extends Base {
 
     @Column(name = "location", length = 100)
     private String location;
+
+    @Column(name = "expiration_date")
+    private java.time.LocalDate expirationDate;
+
+    @Column(name = "batch_code", length = 100)
+    private String batchCode;
 }

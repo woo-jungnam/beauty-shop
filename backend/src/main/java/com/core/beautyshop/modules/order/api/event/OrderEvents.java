@@ -1,4 +1,4 @@
-package com.core.beautyshop.modules.order.domain.event;
+package com.core.beautyshop.modules.order.api.event;
 
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import lombok.AllArgsConstructor;

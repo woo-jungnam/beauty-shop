@@ -13,7 +13,7 @@ public interface CategoryService {
     List<CategoryResponse> getRootCategories();
 
     CategoryResponse getCategoryById(Long id);
-
+    
     CategoryResponse getCategoryBySlug(String slug);
 
     CategoryResponse createCategory(CreateCategoryRequest request);

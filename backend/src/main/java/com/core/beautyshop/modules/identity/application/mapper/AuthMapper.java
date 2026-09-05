@@ -47,6 +47,8 @@ public class AuthMapper {
                 .gender(user.getGender())
                 .dateOfBirth(user.getDateOfBirth())
                 .roles(roles)
+                .membershipTier(user.getMembershipTier())
+                .loyaltyPoints(user.getLoyaltyPoints())
                 .build();
     }
 }

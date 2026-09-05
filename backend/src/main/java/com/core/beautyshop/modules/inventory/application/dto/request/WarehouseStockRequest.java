@@ -3,6 +3,7 @@ package com.core.beautyshop.modules.inventory.application.dto.request;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import java.time.LocalDate;
 
 @Data
 public class WarehouseStockRequest {
@@ -15,4 +16,8 @@ public class WarehouseStockRequest {
 
     @Min(value = 0, message = "Số lượng đặt trước phải lớn hơn hoặc bằng 0")
     private Integer reservedQuantity = 0;
+
+    private LocalDate expirationDate;
+
+    private String batchCode;
 }

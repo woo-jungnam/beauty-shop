@@ -2,13 +2,16 @@ package com.core.beautyshop.modules.catalog.application.facade;
 
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
-import com.core.beautyshop.modules.catalog.domain.ProductVariant;
 import com.core.beautyshop.modules.catalog.domain.ProductVariantRepository;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -21,18 +24,25 @@ public class CatalogFacadeImpl implements CatalogFacade {
         if (variantId == null) {
             return Optional.empty();
         }
-        return productVariantRepository.findByIdAndIsDeletedFalse(variantId)
-                .map(this::mapToSummary);
+        return productVariantRepository.findVariantSummaryByIdDto(variantId);
     }
 
     @Override
     public ProductVariantSummaryDto getVariantSummaryById(Long variantId) {
         if (variantId == null) {
-            throw new ResourceNotFoundException("Variant id cannot be null");
+            throw new ResourceNotFoundException("ID biến thể không được để trống");
         }
-        return productVariantRepository.findByIdAndIsDeletedFalse(variantId)
-                .map(this::mapToSummary)
+        return productVariantRepository.findVariantSummaryByIdDto(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm với id: " + variantId));
+    }
+
+    @Override
+    public Map<Long, ProductVariantSummaryDto> getVariantSummariesByIds(Collection<Long> variantIds) {
+        if (variantIds == null || variantIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return productVariantRepository.findVariantSummariesByIds(variantIds).stream()
+                .collect(Collectors.toMap(ProductVariantSummaryDto::getId, dto -> dto, (existing, replacing) -> existing));
     }
 
     @Override
@@ -41,18 +51,5 @@ public class CatalogFacadeImpl implements CatalogFacade {
             return false;
         }
         return productVariantRepository.findByIdAndIsDeletedFalse(variantId).isPresent();
-    }
-
-    private ProductVariantSummaryDto mapToSummary(ProductVariant variant) {
-        return ProductVariantSummaryDto.builder()
-                .id(variant.getId())
-                .productId(variant.getProduct() != null ? variant.getProduct().getId() : null)
-                .productName(variant.getProduct() != null ? variant.getProduct().getName() : null)
-                .sku(variant.getSku())
-                .variantName(variant.getVariantName())
-                .price(variant.getPrice())
-                .discountPrice(variant.getDiscountPrice())
-                .isActive(variant.getIsActive())
-                .build();
     }
 }

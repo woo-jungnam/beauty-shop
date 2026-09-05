@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,33 +24,48 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
-        return categoryRepository.findByIsDeletedFalseOrderByDisplayOrderAsc().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return categoryRepository.findAllCategoryDtoList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CategoryResponse> getRootCategories() {
-        return categoryRepository.findByParentCategoryIsNullAndIsDeletedFalseOrderByDisplayOrderAsc().stream()
-                .map(this::mapToResponseWithChildren)
+        List<CategoryResponse> allCategories = categoryRepository.findAllCategoryDtoList();
+
+        Map<Long, List<CategoryResponse>> childrenByParentId = allCategories.stream()
+                .filter(c -> c.getParentId() != null)
+                .collect(Collectors.groupingBy(CategoryResponse::getParentId));
+
+        return allCategories.stream()
+                .filter(c -> c.getParentId() == null)
+                .peek(root -> root.setChildren(childrenByParentId.getOrDefault(root.getId(), List.of())))
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryById(Long id) {
-        Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
+        CategoryResponse category = categoryRepository.findCategoryDtoById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
-        return mapToResponseWithChildren(category);
+        
+        List<CategoryResponse> children = categoryRepository.findAllCategoryDtoList().stream()
+                .filter(c -> id.equals(c.getParentId()))
+                .collect(Collectors.toList());
+        category.setChildren(children);
+        return category;
     }
 
     @Override
     @Transactional(readOnly = true)
     public CategoryResponse getCategoryBySlug(String slug) {
-        Category category = categoryRepository.findBySlugAndIsDeletedFalse(slug)
+        CategoryResponse category = categoryRepository.findCategoryDtoBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với slug: " + slug));
-        return mapToResponseWithChildren(category);
+        
+        List<CategoryResponse> children = categoryRepository.findAllCategoryDtoList().stream()
+                .filter(c -> category.getId().equals(c.getParentId()))
+                .collect(Collectors.toList());
+        category.setChildren(children);
+        return category;
     }
 
     @Override
@@ -128,24 +144,6 @@ public class CategoryServiceImpl implements CategoryService {
                 .parentName(category.getParentCategory() != null ? category.getParentCategory().getName() : null)
                 .displayOrder(category.getDisplayOrder())
                 .isActive(category.getIsActive())
-                .build();
-    }
-
-    private CategoryResponse mapToResponseWithChildren(Category category) {
-        List<Category> children = categoryRepository
-                .findByParentCategoryIdAndIsDeletedFalseOrderByDisplayOrderAsc(category.getId());
-
-        return CategoryResponse.builder()
-                .id(category.getId())
-                .name(category.getName())
-                .slug(category.getSlug())
-                .description(category.getDescription())
-                .imageUrl(category.getImageUrl())
-                .parentId(category.getParentCategory() != null ? category.getParentCategory().getId() : null)
-                .parentName(category.getParentCategory() != null ? category.getParentCategory().getName() : null)
-                .displayOrder(category.getDisplayOrder())
-                .isActive(category.getIsActive())
-                .children(children.stream().map(this::mapToResponse).collect(Collectors.toList()))
                 .build();
     }
 }

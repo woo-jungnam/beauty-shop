@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.order.api;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.shared.dto.PageResponse;
@@ -19,7 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Quản lý đơn hàng", description = "API quản lý đơn hàng")
+@Tag(name = "Quản lý đơn hàng (Admin)", description = "API quản lý đơn hàng dành riêng cho Quản trị viên")
 @RestController
 @RequestMapping("/api/v1/admin/orders")
 @PreAuthorize("hasRole('ADMIN')")
@@ -28,6 +28,7 @@ public class AdminOrderController {
 
     private final OrderService orderService;
 
+    @Operation(summary = "Lấy tất cả đơn hàng trong hệ thống (Admin)")
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<OrderResponse>>> getAllOrders(
            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
@@ -35,12 +36,14 @@ public class AdminOrderController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @Operation(summary = "Xem chi tiết bất kỳ đơn hàng nào theo ID (Admin)")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(@PathVariable Long id) {
         OrderResponse order = orderService.getOrderById(id);
         return ResponseEntity.ok(ApiResponse.success(order));
     }
 
+    @Operation(summary = "Cập nhật trạng thái luân chuyển đơn hàng (Admin)")
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
             @PathVariable Long id,

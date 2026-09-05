@@ -1,4 +1,4 @@
-package com.core.beautyshop.modules.cart.application.dto.response;
+package com.core.beautyshop.modules.cart.api.dto;
 
 import com.core.beautyshop.modules.cart.domain.Cart;
 import lombok.AllArgsConstructor;

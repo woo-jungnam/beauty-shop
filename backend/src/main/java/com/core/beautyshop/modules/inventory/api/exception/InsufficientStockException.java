@@ -1,4 +1,4 @@
-package com.core.beautyshop.modules.inventory.domain.exception;
+package com.core.beautyshop.modules.inventory.api.exception;
 
 import com.core.beautyshop.shared.exception.BusinessException;
 

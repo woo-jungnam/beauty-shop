@@ -27,7 +27,7 @@ public class IdentityFacadeImpl implements IdentityFacade {
     @Override
     public UserSummaryDto getUserSummaryById(Long userId) {
         if (userId == null) {
-            throw new ResourceNotFoundException("User id cannot be null");
+            throw new ResourceNotFoundException("ID người dùng không được để trống");
         }
         return userRepository.findById(userId)
                 .map(this::mapToSummary)
@@ -50,6 +50,8 @@ public class IdentityFacadeImpl implements IdentityFacade {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
+                .membershipTier(user.getMembershipTier())
+                .loyaltyPoints(user.getLoyaltyPoints())
                 .build();
     }
 }

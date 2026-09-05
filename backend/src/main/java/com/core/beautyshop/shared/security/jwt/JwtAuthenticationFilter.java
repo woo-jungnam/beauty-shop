@@ -1,6 +1,5 @@
 package com.core.beautyshop.shared.security.jwt;
 
-import com.core.beautyshop.shared.security.services.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            log.error("Cannot set user authentication: {}", e.getMessage());
+            log.error("Không thể thiết lập xác thực người dùng: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

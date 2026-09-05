@@ -1,17 +1,17 @@
 package com.core.beautyshop.modules.cart.application.service;
 
 import com.core.beautyshop.modules.cart.application.dto.request.AddToCartRequest;
-import com.core.beautyshop.modules.cart.application.dto.response.CartItemResponse;
-import com.core.beautyshop.modules.cart.application.dto.response.CartResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartItemResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.cart.domain.Cart;
 import com.core.beautyshop.modules.cart.domain.CartItem;
 import com.core.beautyshop.modules.cart.domain.CartItemRepository;
 import com.core.beautyshop.modules.cart.domain.CartRepository;
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
-import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
-import com.core.beautyshop.modules.inventory.domain.exception.InsufficientStockException;
+import com.core.beautyshop.modules.inventory.api.exception.InsufficientStockException;
+import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +31,6 @@ public class CartServiceImpl implements CartService {
     private final CartItemRepository cartItemRepository;
     private final CatalogFacade catalogFacade;
     private final InventoryFacade inventoryFacade;
-    private final IdentityFacade identityFacade;
 
     @Override
     @Transactional(readOnly = true)
@@ -66,6 +65,10 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartResponse addToCart(Long userId, AddToCartRequest request) {
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new BusinessException("Số lượng sản phẩm thêm vào giỏ hàng phải lớn hơn 0");
+        }
+
         ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryById(request.getVariantId());
 
         if (!inventoryFacade.isStockAvailable(variant.getId(), request.getQuantity())) {
@@ -135,6 +138,10 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional
     public CartResponse updateCartItem(Long cartId, Long itemId, Integer quantity) {
+        if (quantity == null) {
+            throw new BusinessException("Số lượng không được để trống");
+        }
+
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giỏ hàng"));
 
@@ -188,12 +195,74 @@ public class CartServiceImpl implements CartService {
 
     private CartResponse mapToCartResponse(Cart cart) {
         if (cart == null) return null;
-        List<CartItemResponse> itemResponses = cart.getItems() != null
-                ? cart.getItems().stream().map(item -> {
-                    ProductVariantSummaryDto variant = catalogFacade.findVariantSummaryById(item.getProductVariantId()).orElse(null);
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            return CartResponse.of(cart, List.of());
+        }
+
+        List<Long> variantIds = cart.getItems().stream()
+                .map(CartItem::getProductVariantId)
+                .collect(Collectors.toList());
+
+        java.util.Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
+
+        List<CartItemResponse> itemResponses = cart.getItems().stream()
+                .map(item -> {
+                    ProductVariantSummaryDto variant = variantMap.get(item.getProductVariantId());
                     return CartItemResponse.of(item, variant);
-                }).collect(Collectors.toList())
-                : List.of();
+                })
+                .collect(Collectors.toList());
+
         return CartResponse.of(cart, itemResponses);
+    }
+
+    @Override
+    @Transactional
+    public CartResponse mergeCart(String sessionId, Long userId) {
+        if (sessionId == null || sessionId.trim().isEmpty() || userId == null) {
+            return getCart(userId, sessionId);
+        }
+
+        Optional<Cart> guestCartOpt = cartRepository.findBySessionId(sessionId);
+        if (guestCartOpt.isEmpty() || guestCartOpt.get().getItems() == null || guestCartOpt.get().getItems().isEmpty()) {
+            return getCart(userId, null);
+        }
+
+        Cart guestCart = guestCartOpt.get();
+        if (userId.equals(guestCart.getUserId())) {
+            return mapToCartResponse(guestCart);
+        }
+
+        Cart userCart = cartRepository.findByUserId(userId).orElseGet(() -> {
+            Cart newCart = Cart.builder()
+                    .userId(userId)
+                    .items(new ArrayList<>())
+                    .build();
+            return cartRepository.save(newCart);
+        });
+
+        for (CartItem guestItem : guestCart.getItems()) {
+            Optional<CartItem> existingUserItem = cartItemRepository.findByCartIdAndProductVariantId(
+                    userCart.getId(), guestItem.getProductVariantId());
+
+            if (existingUserItem.isPresent()) {
+                CartItem item = existingUserItem.get();
+                item.setQuantity(item.getQuantity() + guestItem.getQuantity());
+                cartItemRepository.save(item);
+            } else {
+                CartItem newItem = CartItem.builder()
+                        .cart(userCart)
+                        .productVariantId(guestItem.getProductVariantId())
+                        .quantity(guestItem.getQuantity())
+                        .build();
+                cartItemRepository.save(newItem);
+            }
+        }
+
+        // Xóa giỏ hàng vãng lai sau khi gộp
+        cartItemRepository.deleteAll(guestCart.getItems());
+        cartRepository.delete(guestCart);
+
+        Cart updatedUserCart = cartRepository.findById(userCart.getId()).orElse(userCart);
+        return mapToCartResponse(updatedUserCart);
     }
 }

@@ -1,8 +1,7 @@
 package com.core.beautyshop.modules.payment.application.strategy;
 
-import com.core.beautyshop.modules.order.domain.enums.PaymentMethod;
+import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import com.core.beautyshop.shared.exception.BusinessException;
-import com.core.beautyshop.modules.payment.application.strategy.PaymentStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -23,7 +22,7 @@ public class PaymentStrategyFactory {
 
     public PaymentStrategy getStrategy(PaymentMethod method) {
         if (method == null) {
-            throw new BusinessException("Payment method is required");
+            throw new BusinessException("Phương thức thanh toán là bắt buộc");
         }
         
         switch (method) {
@@ -32,7 +31,7 @@ public class PaymentStrategyFactory {
             case BANK:
                 return bankPaymentStrategy;
             default:
-                throw new BusinessException("Unsupported payment method: " + method);
+                throw new BusinessException("Phương thức thanh toán không được hỗ trợ: " + method);
         }
     }
 }

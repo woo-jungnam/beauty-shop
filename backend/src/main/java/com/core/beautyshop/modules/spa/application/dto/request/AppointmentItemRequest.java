@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class AppointmentItemRequest {
 
-    @NotNull(message = "Service ID is required")
+    @NotNull(message = "Mã dịch vụ không được để trống")
     private Long serviceId;
 
     private Long staffId;

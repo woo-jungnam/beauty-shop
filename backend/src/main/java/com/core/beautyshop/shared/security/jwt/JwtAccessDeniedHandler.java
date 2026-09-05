@@ -27,7 +27,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletResponse response,
             AccessDeniedException accessDeniedException
     ) throws IOException, ServletException {
-        log.error("Access denied error: {}", accessDeniedException.getMessage());
+        log.error("Lỗi từ chối quyền truy cập (Access Denied): {}", accessDeniedException.getMessage());
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);

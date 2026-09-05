@@ -1,7 +1,6 @@
 package com.core.beautyshop.modules.catalog.domain;
 
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse;
-import com.core.beautyshop.modules.catalog.domain.Product;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

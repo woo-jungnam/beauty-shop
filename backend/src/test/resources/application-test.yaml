@@ -13,6 +13,9 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false
+  kafka:
+    listener:
+      auto-startup: false
 
 jwt:
   secret: beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!

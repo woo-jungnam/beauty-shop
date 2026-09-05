@@ -56,10 +56,12 @@ public class JwtAuthIntegrationTest {
                 .apply(SecurityMockMvcConfigurers.springSecurity())
                 .build();
 
-        Role adminRole = roleRepository.findByRoleName("ROLE_ADMIN").orElseGet(() ->
-                roleRepository.save(Role.builder().roleName("ROLE_ADMIN").description("Admin").build()));
-        Role userRole = roleRepository.findByRoleName("ROLE_USER").orElseGet(() ->
-                roleRepository.save(Role.builder().roleName("ROLE_USER").description("User").build()));
+        Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseGet(() ->
+                roleRepository.save(Role.builder().name("ROLE_ADMIN").description("Admin").build()));
+        Role userRole = roleRepository.findByName("ROLE_USER").orElseGet(() ->
+                roleRepository.save(Role.builder().name("ROLE_USER").description("User").build()));
+        roleRepository.findByName("ROLE_CUSTOMER").orElseGet(() ->
+                roleRepository.save(Role.builder().name("ROLE_CUSTOMER").description("Customer").build()));
 
         if (!userRepository.existsByUsername("admin")) {
             userRepository.save(User.builder()
@@ -88,7 +90,7 @@ public class JwtAuthIntegrationTest {
         mockMvc.perform(get("/api/v1/test/public"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data.message").value("Public content accessible to everyone"));
+                .andExpect(jsonPath("$.data.message").value("Nội dung công khai có thể truy cập bởi mọi người"));
     }
 
     @Test
@@ -117,7 +119,7 @@ public class JwtAuthIntegrationTest {
         mockMvc.perform(get("/api/v1/test/admin")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.message").value("Admin content accessible ONLY to ADMIN role"));
+                .andExpect(jsonPath("$.data.message").value("Nội dung quản trị viên CHỈ có thể truy cập bởi vai trò ADMIN"));
     }
 
     @Test
@@ -138,7 +140,7 @@ public class JwtAuthIntegrationTest {
         mockMvc.perform(get("/api/v1/test/user")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.message").value("User content accessible to USER and ADMIN roles"));
+                .andExpect(jsonPath("$.data.message").value("Nội dung người dùng có thể truy cập bởi vai trò USER và ADMIN"));
 
         // User accessing admin endpoint -> 403 Forbidden
         mockMvc.perform(get("/api/v1/test/admin")
@@ -161,6 +163,6 @@ public class JwtAuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.username").value("testuser1"))
-                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_USER"));
+                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_CUSTOMER"));
     }
 }

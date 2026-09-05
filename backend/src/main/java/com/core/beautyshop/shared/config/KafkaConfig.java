@@ -108,7 +108,7 @@ public class KafkaConfig {
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
 
         errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {
-            log.warn("Kafka Consumer retry attempt #{} for topic={}, partition={}, offset={}, error={}",
+            log.warn("Kafka Consumer thử lại lần #{} cho topic={}, partition={}, offset={}, lỗi={}",
                     deliveryAttempt, record.topic(), record.partition(), record.offset(), ex.getMessage());
         });
 

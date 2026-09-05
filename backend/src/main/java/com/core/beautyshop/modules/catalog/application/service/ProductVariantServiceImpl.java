@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,17 +22,16 @@ public class ProductVariantServiceImpl implements ProductVariantService {
     private final ProductRepository productRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductVariantResponse> getVariantsByProductId(Long productId) {
-        return variantRepository.findByProductIdAndIsDeletedFalse(productId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return variantRepository.findVariantResponsesByProductId(productId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductVariantResponse getVariantById(Long variantId) {
-        ProductVariant variant = variantRepository.findByIdAndIsDeletedFalse(variantId)
+        return variantRepository.findVariantResponseById(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với id: " + variantId));
-        return mapToResponse(variant);
     }
 
     @Override

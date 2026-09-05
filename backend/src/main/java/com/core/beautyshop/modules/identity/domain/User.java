@@ -53,4 +53,13 @@ public class User extends Base {
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private List<Role> roles;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "membership_tier", length = 20)
+    @Builder.Default
+    private com.core.beautyshop.modules.identity.domain.enums.MembershipTier membershipTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.MEMBER;
+
+    @Column(name = "loyalty_points")
+    @Builder.Default
+    private Integer loyaltyPoints = 0;
 }

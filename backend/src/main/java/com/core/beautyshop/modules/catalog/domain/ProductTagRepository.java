@@ -1,6 +1,5 @@
 package com.core.beautyshop.modules.catalog.domain;
 
-import com.core.beautyshop.modules.catalog.domain.ProductTag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

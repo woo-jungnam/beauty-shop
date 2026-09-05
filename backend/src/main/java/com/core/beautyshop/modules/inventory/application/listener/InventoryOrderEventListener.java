@@ -1,7 +1,7 @@
 package com.core.beautyshop.modules.inventory.application.listener;
 
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
-import com.core.beautyshop.modules.order.domain.event.OrderEvents;
+import com.core.beautyshop.modules.order.api.event.OrderEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -16,7 +16,7 @@ public class InventoryOrderEventListener {
 
     @EventListener
     public void handleOrderCancelled(OrderEvents.OrderCancelledEvent event) {
-        log.info("OrderCancelledEvent received for orderId={}, releasing stock for {} items",
+        log.info("Đã nhận sự kiện OrderCancelledEvent cho orderId={}, tiến hành hoàn lại tồn kho cho {} mục sản phẩm",
                 event.getOrderId(), event.getItems() != null ? event.getItems().size() : 0);
 
         if (event.getItems() != null) {
@@ -24,7 +24,7 @@ public class InventoryOrderEventListener {
                 try {
                     inventoryFacade.releaseStock(item.getVariantId(), item.getQuantity());
                 } catch (Exception e) {
-                    log.error("Failed to release stock for variantId={}: {}", item.getVariantId(), e.getMessage(), e);
+                    log.error("Lỗi khi hoàn lại tồn kho cho variantId={}: {}", item.getVariantId(), e.getMessage(), e);
                 }
             }
         }
@@ -32,7 +32,7 @@ public class InventoryOrderEventListener {
 
     @EventListener
     public void handleOrderDelivered(OrderEvents.OrderDeliveredEvent event) {
-        log.info("OrderDeliveredEvent received for orderId={}, deducting stock for {} items",
+        log.info("Đã nhận sự kiện OrderDeliveredEvent cho orderId={}, tiến hành trừ tồn kho cho {} mục sản phẩm",
                 event.getOrderId(), event.getItems() != null ? event.getItems().size() : 0);
 
         if (event.getItems() != null) {
@@ -40,7 +40,7 @@ public class InventoryOrderEventListener {
                 try {
                     inventoryFacade.deductStock(item.getVariantId(), item.getQuantity());
                 } catch (Exception e) {
-                    log.error("Failed to deduct stock for variantId={}: {}", item.getVariantId(), e.getMessage(), e);
+                    log.error("Lỗi khi trừ tồn kho cho variantId={}: {}", item.getVariantId(), e.getMessage(), e);
                 }
             }
         }
