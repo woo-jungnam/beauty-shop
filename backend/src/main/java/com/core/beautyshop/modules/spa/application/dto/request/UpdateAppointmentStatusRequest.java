@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateAppointmentStatusRequest {
+    @jakarta.validation.constraints.Size(max = 50)
+    private java.util.Map<Long, Long> staffAssignments;
 
     @NotNull(message = "Trạng thái lịch hẹn không được để trống")
     private AppointmentStatus status;

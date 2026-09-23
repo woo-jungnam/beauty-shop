@@ -7,9 +7,11 @@ import com.core.beautyshop.modules.catalog.domain.*;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
+import com.core.beautyshop.shared.dto.CacheablePage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "product_detail", key = "'id:' + #id")
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("không tìm thấy sản phẩm với ID: " + id));
@@ -38,6 +41,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "product_detail", key = "'slug:' + #slug")
     public ProductResponse getProductBySlug(String slug) {
         Product product = productRepository.findBySlugAndIsDeletedFalse(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với slug: " + slug));
@@ -48,38 +52,39 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     @Cacheable(value = "products_page", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
     public Page<ProductListResponse> getAllProducts(Pageable pageable) {
-        // Sử dụng DTO Projection: truy vấn trực tiếp ra DTO, không load full entity
-        return productRepository.findAllProductList(pageable);
+        return CacheablePage.from(productRepository.findAllProductList(pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> searchProducts(String keyword, Pageable pageable) {
-        // Sử dụng DTO Projection cho tìm kiếm
         return productRepository.searchProductList(keyword, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getProductsByCategory(Long categoryId, Pageable pageable) {
-        // Sử dụng DTO Projection cho lọc theo danh mục
         return productRepository.findProductListByCategoryId(categoryId, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getProductsByBrand(Long brandId, Pageable pageable) {
-        // Sử dụng DTO Projection cho lọc theo thương hiệu
         return productRepository.findProductListByBrandId(brandId, pageable);
     }
 
     @Override
     @Transactional
-    @CacheEvict(value = "products_page", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public ProductResponse createProduct(CreateProductRequest request) {
         if (productRepository.existsBySlug(request.getSlug())) {
             throw new BusinessException("Slug sản phẩm đã tồn tại: " + request.getSlug());
         }
+
+        validateVariants(request.getVariants());
 
         Product product = Product.builder()
                 .name(request.getName())
@@ -154,9 +159,36 @@ public class ProductServiceImpl implements ProductService {
         return mapToProductResponse(saved);
     }
 
+    private void validateVariants(List<CreateProductRequest.VariantRequest> variants) {
+        if (variants == null || variants.isEmpty()) {
+            return;
+        }
+
+        long defaultCount = variants.stream()
+                .filter(variant -> Boolean.TRUE.equals(variant.getIsDefault()))
+                .count();
+        if (defaultCount > 1) {
+            throw new BusinessException("Mỗi sản phẩm chỉ được có một biến thể mặc định");
+        }
+
+        for (CreateProductRequest.VariantRequest variant : variants) {
+            if (variant.getPrice() == null || variant.getPrice().signum() < 0) {
+                throw new BusinessException("Giá biến thể phải lớn hơn hoặc bằng 0");
+            }
+            if (variant.getDiscountPrice() != null
+                    && (variant.getDiscountPrice().signum() < 0
+                    || variant.getDiscountPrice().compareTo(variant.getPrice()) > 0)) {
+                throw new BusinessException("Giá khuyến mãi phải nằm trong khoảng từ 0 đến giá gốc");
+            }
+        }
+    }
+
     @Override
     @Transactional
-    @CacheEvict(value = "products_page", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public ProductResponse updateProduct(Long id, UpdateProductRequest request) {
         Product product = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
@@ -204,7 +236,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "products_page", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public void deleteProduct(Long id) {
         Product product = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
@@ -247,37 +282,111 @@ public class ProductServiceImpl implements ProductService {
                                 .name(c.getName())
                                 .slug(c.getSlug())
                                 .build())
-                        .collect(Collectors.toList()) : List.of())
+                        .collect(Collectors.toList()) : new ArrayList<>())
+                .hasFragrance(product.getHasFragrance())
+                .hasAlcohol(product.getHasAlcohol())
+                .keyActivesSummary(product.getKeyActivesSummary())
                 .variants(product.getVariants() != null ? product.getVariants().stream()
                         .map(v -> ProductResponse.VariantResponse.builder()
                                 .id(v.getId())
                                 .sku(v.getSku())
                                 .variantName(v.getVariantName())
                                 .price(v.getPrice())
+                                .originalPrice(v.getOriginalPrice() != null ? v.getOriginalPrice() : v.getPrice())
                                 .discountPrice(v.getDiscountPrice())
+                                .currency(v.getCurrency() != null ? v.getCurrency() : "VND")
                                 .volume(v.getVolume())
+                                .volumeValue(v.getVolumeValue())
+                                .volumeUnit(v.getVolumeUnit())
                                 .color(v.getColor())
                                 .barcode(v.getBarcode())
                                 .isDefault(v.getIsDefault())
                                 .isActive(v.getIsActive())
                                 .build())
-                        .collect(Collectors.toList()) : List.of())
+                        .collect(Collectors.toList()) : new ArrayList<>())
                 .images(product.getImages() != null ? product.getImages().stream()
                         .map(img -> ProductResponse.ImageResponse.builder()
                                 .id(img.getId())
                                 .imageUrl(img.getImageUrl())
                                 .altText(img.getAltText())
+                                .imageType(img.getImageType())
                                 .displayOrder(img.getDisplayOrder())
                                 .isPrimary(img.getIsPrimary())
                                 .build())
-                        .collect(Collectors.toList()) : List.of())
+                        .collect(Collectors.toList()) : new ArrayList<>())
                 .tags(product.getTags() != null ? product.getTags().stream()
                         .map(t -> ProductResponse.TagResponse.builder()
                                 .id(t.getId())
                                 .name(t.getName())
                                 .slug(t.getSlug())
                                 .build())
-                        .collect(Collectors.toList()) : List.of())
+                        .collect(Collectors.toList()) : new ArrayList<>())
+                .ingredientsList(product.getProductIngredients() != null ? product.getProductIngredients().stream()
+                        .map(pi -> ProductResponse.IngredientDetailResponse.builder()
+                                .ingredientId(pi.getIngredient() != null ? pi.getIngredient().getId() : null)
+                                .name(pi.getIngredient() != null ? pi.getIngredient().getName() : null)
+                                .inciName(pi.getIngredient() != null ? pi.getIngredient().getInciName() : null)
+                                .concentration(pi.getConcentration())
+                                .concentrationUnit(pi.getConcentrationUnit())
+                                .isKeyActive(pi.getIsKeyActive())
+                                .function(pi.getIngredient() != null && pi.getIngredient().getFunctions() != null
+                                        ? new ArrayList<>(pi.getIngredient().getFunctions()) : new ArrayList<>())
+                                .benefits(pi.getIngredient() != null && pi.getIngredient().getBenefits() != null
+                                        ? new ArrayList<>(pi.getIngredient().getBenefits()) : new ArrayList<>())
+                                .potentialConcerns(pi.getIngredient() != null && pi.getIngredient().getPotentialConcerns() != null
+                                        ? new ArrayList<>(pi.getIngredient().getPotentialConcerns()) : new ArrayList<>())
+                                .build())
+                        .collect(Collectors.toList()) : new ArrayList<>())
+                .ingredientSummary(ProductResponse.IngredientSummaryResponse.builder()
+                        .keyActives(product.getProductIngredients() != null ? product.getProductIngredients().stream()
+                                .filter(pi -> Boolean.TRUE.equals(pi.getIsKeyActive()) && pi.getIngredient() != null)
+                                .map(pi -> pi.getIngredient().getName())
+                                .collect(Collectors.toList()) : new ArrayList<>())
+                        .hydratingIngredients(product.getProductIngredients() != null ? product.getProductIngredients().stream()
+                                .filter(pi -> pi.getIngredient() != null && pi.getIngredient().getFunctions() != null && pi.getIngredient().getFunctions().contains("humectant"))
+                                .map(pi -> pi.getIngredient().getName())
+                                .collect(Collectors.toList()) : new ArrayList<>())
+                        .exfoliatingIngredients(product.getProductIngredients() != null ? product.getProductIngredients().stream()
+                                .filter(pi -> pi.getIngredient() != null && pi.getIngredient().getFunctions() != null && pi.getIngredient().getFunctions().contains("exfoliant"))
+                                .map(pi -> pi.getIngredient().getName())
+                                .collect(Collectors.toList()) : new ArrayList<>())
+                        .fragrance(Boolean.TRUE.equals(product.getHasFragrance()))
+                        .alcohol(Boolean.TRUE.equals(product.getHasAlcohol()))
+                        .build())
+                .skinCompatibility(product.getSkinCompatibilities() != null ? ProductResponse.SkinCompatibilityResponse.builder()
+                        .recommendedSkinTypes(product.getSkinCompatibilities().stream()
+                                .filter(sc -> Boolean.TRUE.equals(sc.getIsRecommended()) && sc.getSkinType() != null)
+                                .map(sc -> ProductResponse.RecommendedSkinType.builder()
+                                        .skinTypeId(sc.getSkinType().getId())
+                                        .code(sc.getSkinType().getCode())
+                                        .name(sc.getSkinType().getName())
+                                        .score(sc.getScore())
+                                        .build())
+                                .collect(Collectors.toList()))
+                        .notIdealFor(product.getSkinCompatibilities().stream()
+                                .filter(sc -> Boolean.FALSE.equals(sc.getIsRecommended()) && sc.getSkinType() != null)
+                                .map(sc -> ProductResponse.NotIdealForSkinType.builder()
+                                        .skinTypeId(sc.getSkinType().getId())
+                                        .skinType(sc.getSkinType().getName())
+                                        .reason(sc.getContraindicationReason())
+                                        .build())
+                                .collect(Collectors.toList()))
+                        .build() : null)
+                .skinConcerns(product.getSkinConcerns() != null ? product.getSkinConcerns().stream()
+                        .map(psc -> ProductResponse.SkinConcernResponse.builder()
+                                .concernId(psc.getConcern() != null ? psc.getConcern().getId() : null)
+                                .code(psc.getConcern() != null ? psc.getConcern().getCode() : null)
+                                .name(psc.getConcern() != null ? psc.getConcern().getName() : null)
+                                .score(psc.getScore())
+                                .notes(psc.getNotes())
+                                .build())
+                        .collect(Collectors.toList()) : new ArrayList<>())
+                .usage(product.getUsageDetail() != null ? ProductResponse.UsageDetailResponse.builder()
+                        .whenToUse(product.getUsageDetail().getWhenToUse())
+                        .frequency(product.getUsageDetail().getFrequency())
+                        .instructions(product.getUsageDetail().getInstructions())
+                        .warnings(product.getUsageDetail().getWarnings())
+                        .build() : null)
                 .build();
     }
 }

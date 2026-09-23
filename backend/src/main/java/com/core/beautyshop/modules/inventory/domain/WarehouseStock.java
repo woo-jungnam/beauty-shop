@@ -45,6 +45,10 @@ public class WarehouseStock extends Base {
     @Builder.Default
     private Integer reservedQuantity = 0;
 
+    @Column(name = "quarantined_quantity", nullable = false)
+    @Builder.Default
+    private Integer quarantinedQuantity = 0;
+
     @Column(name = "min_quantity")
     @Builder.Default
     private Integer minQuantity = 0;

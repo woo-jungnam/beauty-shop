@@ -25,6 +25,7 @@ public class UserServiceTicketResponse {
     private Instant expiryDate;
     private TicketStatus status;
     private Instant createdAt;
+    private java.util.Map<Long, Integer> remainingByService;
 
     public static UserServiceTicketResponse of(UserServiceTicket ticket) {
         if (ticket == null) return null;
@@ -40,6 +41,8 @@ public class UserServiceTicketResponse {
                 .totalSessions(ticket.getTotalSessions())
                 .usedSessions(ticket.getUsedSessions())
                 .remainingSessions(remaining)
+                .remainingByService(ticket.getEntitlements().entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                        java.util.Map.Entry::getKey, entry -> Math.max(0, entry.getValue().getTotal() - entry.getValue().getUsed()))))
                 .expiryDate(ticket.getExpiryDate())
                 .status(ticket.getStatus())
                 .createdAt(ticket.getCreatedAt())

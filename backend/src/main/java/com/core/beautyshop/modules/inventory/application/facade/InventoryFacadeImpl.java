@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 public class InventoryFacadeImpl implements InventoryFacade {
 
     private final InventoryService inventoryService;
+    private final com.core.beautyshop.modules.inventory.application.service.StockAllocationService allocations;
 
     @Override
     public boolean isStockAvailable(Long variantId, int requiredQuantity) {
@@ -22,17 +23,22 @@ public class InventoryFacadeImpl implements InventoryFacade {
     }
 
     @Override
-    public void reserveStock(Long variantId, int quantityToReserve) {
-        inventoryService.reserveStock(variantId, quantityToReserve);
+    public void reserveStock(String orderNumber, Long variantId, int quantityToReserve) {
+        allocations.reserve(orderNumber, variantId, quantityToReserve);
     }
 
     @Override
-    public void releaseStock(Long variantId, int quantityToRelease) {
-        inventoryService.releaseStock(variantId, quantityToRelease);
+    public void releaseStock(String orderNumber, Long variantId, int quantityToRelease) {
+        allocations.transition(orderNumber, variantId, quantityToRelease, com.core.beautyshop.modules.inventory.domain.StockAllocation.Status.RELEASED);
     }
 
     @Override
-    public void deductStock(Long variantId, int quantityToDeduct) {
-        inventoryService.deductStock(variantId, quantityToDeduct);
+    public void deductStock(String orderNumber, Long variantId, int quantityToDeduct) {
+        allocations.transition(orderNumber, variantId, quantityToDeduct, com.core.beautyshop.modules.inventory.domain.StockAllocation.Status.DEDUCTED);
+    }
+
+    @Override
+    public void returnStock(String orderNumber, Long variantId, int quantityToReturn) {
+        allocations.transition(orderNumber, variantId, quantityToReturn, com.core.beautyshop.modules.inventory.domain.StockAllocation.Status.QUARANTINED);
     }
 }

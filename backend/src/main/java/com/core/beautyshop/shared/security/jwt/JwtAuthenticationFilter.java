@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.core.beautyshop.shared.security.services.UserDetailsImpl;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -23,6 +23,12 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private final AccessTokenRevocationChecker accessTokenRevocationChecker;
+
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        return "/api/v1/payment/sepay-webhook".equals(request.getServletPath());
+    }
 
     @Override
     protected void doFilterInternal(
@@ -32,8 +38,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                UserDetails userDetails = jwtUtils.getUserPrincipalFromJwtToken(jwt);
+            java.util.Optional<UserDetailsImpl> principal = jwt == null
+                    ? java.util.Optional.empty()
+                    : jwtUtils.parseAccessToken(jwt);
+            if (principal.isPresent()) {
+                UserDetailsImpl userDetails = principal.get();
+                if (!accessTokenRevocationChecker.isCurrent(
+                        userDetails.getId(), userDetails.getTokenVersion())) {
+                    log.debug("Access token đã bị thu hồi cho userId={}", userDetails.getId());
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,

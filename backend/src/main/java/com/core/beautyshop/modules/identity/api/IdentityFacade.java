@@ -7,4 +7,5 @@ public interface IdentityFacade {
     Optional<UserSummaryDto> findUserSummaryById(Long userId);
     UserSummaryDto getUserSummaryById(Long userId);
     boolean existsById(Long userId);
+    java.util.Map<Long, UserSummaryDto> findUserSummaries(java.util.Collection<Long> ids);
 }

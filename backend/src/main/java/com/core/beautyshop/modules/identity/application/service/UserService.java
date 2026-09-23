@@ -17,4 +17,8 @@ public interface UserService {
     Page<UserProfileResponse> getAllUsers(Pageable pageable);
 
     UserProfileResponse getUserById(Long id);
+
+    void reverseLoyaltyPoints(Long userId, Long orderId);
+
+    void addLoyaltyPoints(Long userId, Long orderId, int pointsToAdd);
 }

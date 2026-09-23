@@ -12,6 +12,7 @@ public interface OrderService {
     OrderResponse checkout(Long userId, CheckoutRequest request);
 
     OrderResponse getOrderById(Long id);
+    OrderResponse getOrderById(Long id, String guestSessionId);
 
     Page<OrderResponse> getMyOrders(Pageable pageable);
 

@@ -8,11 +8,17 @@ import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.catalog.domain.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,12 +29,14 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "categories", key = "'all'")
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAllCategoryDtoList();
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "categories", key = "'roots'")
     public List<CategoryResponse> getRootCategories() {
         List<CategoryResponse> allCategories = categoryRepository.findAllCategoryDtoList();
 
@@ -38,12 +46,13 @@ public class CategoryServiceImpl implements CategoryService {
 
         return allCategories.stream()
                 .filter(c -> c.getParentId() == null)
-                .peek(root -> root.setChildren(childrenByParentId.getOrDefault(root.getId(), List.of())))
+                .peek(root -> root.setChildren(childrenByParentId.getOrDefault(root.getId(), new ArrayList<>())))
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "categories", key = "'id:' + #id")
     public CategoryResponse getCategoryById(Long id) {
         CategoryResponse category = categoryRepository.findCategoryDtoById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
@@ -57,6 +66,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "categories", key = "'slug:' + #slug")
     public CategoryResponse getCategoryBySlug(String slug) {
         CategoryResponse category = categoryRepository.findCategoryDtoBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với slug: " + slug));
@@ -70,6 +80,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "categories", allEntries = true),
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public CategoryResponse createCategory(CreateCategoryRequest request) {
         if (categoryRepository.existsBySlug(request.getSlug())) {
             throw new BusinessException("Slug danh mục đã tồn tại: " + request.getSlug());
@@ -95,6 +110,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "categories", allEntries = true),
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public CategoryResponse updateCategory(Long id, UpdateCategoryRequest request) {
         Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
@@ -111,12 +131,16 @@ public class CategoryServiceImpl implements CategoryService {
         if (request.getDisplayOrder() != null) category.setDisplayOrder(request.getDisplayOrder());
         if (request.getIsActive() != null) category.setIsActive(request.getIsActive());
 
+        if (request.isParentIdSpecified() && request.getParentId() == null) {
+            category.setParentCategory(null);
+        }
         if (request.getParentId() != null) {
             if (request.getParentId().equals(id)) {
                 throw new BusinessException("Danh mục không thể là danh mục cha của chính nó");
             }
             Category parent = categoryRepository.findByIdAndIsDeletedFalse(request.getParentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục cha với id: " + request.getParentId()));
+            validateParentDoesNotCreateCycle(category, parent);
             category.setParentCategory(parent);
         }
 
@@ -126,9 +150,19 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "categories", allEntries = true),
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
+
+        if (categoryRepository.existsByParentCategoryIdAndIsDeletedFalse(id)) {
+            throw new BusinessException("Không thể xóa danh mục đang có danh mục con hoạt động");
+        }
+
         category.setIsDeleted(true);
         categoryRepository.save(category);
     }
@@ -145,5 +179,20 @@ public class CategoryServiceImpl implements CategoryService {
                 .displayOrder(category.getDisplayOrder())
                 .isActive(category.getIsActive())
                 .build();
+    }
+
+    private void validateParentDoesNotCreateCycle(Category category, Category proposedParent) {
+        Set<Long> visited = new HashSet<>();
+        Category current = proposedParent;
+
+        while (current != null) {
+            if (java.util.Objects.equals(category.getId(), current.getId())) {
+                throw new BusinessException("Không thể chọn danh mục con làm danh mục cha");
+            }
+            if (current.getId() != null && !visited.add(current.getId())) {
+                throw new BusinessException("Cây danh mục hiện có chu trình không hợp lệ");
+            }
+            current = current.getParentCategory();
+        }
     }
 }

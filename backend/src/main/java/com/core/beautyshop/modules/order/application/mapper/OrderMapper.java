@@ -29,6 +29,10 @@ public class OrderMapper {
                 .shippingFee(order.getShippingFee())
                 .discountAmount(order.getDiscountAmount())
                 .totalAmount(order.getTotalAmount())
+                .paidAmount(order.getPaidAmount())
+                .refundedAmount(order.getRefundedAmount())
+                .refundReference(order.getRefundReference())
+                .paymentDeadline(order.getPaymentDeadline())
                 .createdAt(order.getCreatedAt())
                 .items(order.getItems() != null ? 
                         order.getItems().stream().map(this::toOrderItemResponse).collect(Collectors.toList()) 

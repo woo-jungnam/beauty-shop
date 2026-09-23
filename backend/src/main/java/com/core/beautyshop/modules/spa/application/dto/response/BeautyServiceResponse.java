@@ -6,9 +6,13 @@ import com.core.beautyshop.modules.spa.domain.BeautyService;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BeautyServiceResponse {
     private Long id;
     private String name;

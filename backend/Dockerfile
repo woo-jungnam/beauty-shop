@@ -1,12 +1,15 @@
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+WORKDIR /build
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+COPY src ./src
+RUN mvn -B -DskipTests package
+
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-
-# Tạo user bảo mật không đặc quyền để chạy Spring Boot
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
-
-# Copy trực tiếp file JAR đã đóng gói sẵn
-COPY target/*.jar app.jar
+COPY --from=build /build/target/*.jar app.jar
 
 EXPOSE 8080
 

@@ -11,13 +11,28 @@ spring:
       ddl-auto: create-drop
     show-sql: false
     database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false
   kafka:
+    admin:
+      auto-create: false
     listener:
       auto-startup: false
 
+app:
+  jobs:
+    enabled: false
+  cache:
+    provider: local
+
 jwt:
   secret: beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!
-  expiration-ms: 86400000
+  expiration-ms: 900000
   refresh-expiration-ms: 604800000
+
+sepay:
+  webhook:
+    api-key: test-sepay-api-key

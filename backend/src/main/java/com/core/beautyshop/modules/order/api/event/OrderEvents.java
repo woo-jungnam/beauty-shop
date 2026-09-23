@@ -48,15 +48,32 @@ public class OrderEvents {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class OrderPaidEvent {
+        private Long orderId;
+        private Long userId;
+        private Long servicePackageId;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OrderReturnedEvent {
+        private Long orderId;
+        private Long userId;
+        private String orderNumber;
+        private List<OrderItemSummary> items;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class OrderItemSummary {
         private Long variantId;
         private Integer quantity;
     }
 
-    /**
-     * Event khi đơn hàng được giao thành công (DELIVERED).
-     * Trigger khấu trừ tồn kho thực tế.
-     */
     @Data
     @Builder
     @NoArgsConstructor
@@ -64,6 +81,8 @@ public class OrderEvents {
     public static class OrderDeliveredEvent {
         private Long orderId;
         private String orderNumber;
+        private Long userId;
+        private BigDecimal totalAmount;
         private List<OrderItemSummary> items;
     }
 }

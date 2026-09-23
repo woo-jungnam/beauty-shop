@@ -21,6 +21,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -95,6 +96,17 @@ public class Product extends Base {
     @Column(name = "volume", length = 50)
     private String volume;
 
+    @Column(name = "has_fragrance", nullable = false)
+    @Builder.Default
+    private Boolean hasFragrance = false;
+
+    @Column(name = "has_alcohol", nullable = false)
+    @Builder.Default
+    private Boolean hasAlcohol = false;
+
+    @Column(name = "key_actives_summary", length = 500)
+    private String keyActivesSummary;
+
     @Column(name = "is_featured", nullable = false)
     @Builder.Default
     private Boolean isFeatured = false;
@@ -139,4 +151,16 @@ public class Product extends Base {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductAttributeValue> attributeValues;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductIngredient> productIngredients;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductSkinCompatibility> skinCompatibilities;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductSkinConcern> skinConcerns;
+
+    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private ProductUsageDetail usageDetail;
 }

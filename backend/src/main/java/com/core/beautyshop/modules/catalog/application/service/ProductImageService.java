@@ -9,4 +9,5 @@ public interface ProductImageService {
     List<ProductImageResponse> getImagesByProductId(Long productId);
     ProductImageResponse addImage(Long productId, ProductImageRequest request);
     void deleteImage(Long imageId);
+    void deleteImage(Long productId, Long imageId);
 }

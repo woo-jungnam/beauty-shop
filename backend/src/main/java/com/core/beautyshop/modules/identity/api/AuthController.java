@@ -1,8 +1,8 @@
 package com.core.beautyshop.modules.identity.api;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.modules.identity.application.dto.request.LoginRequest;
@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Quản lý đăng nhập và đăng ký", description = "API cho phần quản lý đăng nhập và đăng ký tài khoản")
+@Tag(name = "Xác thực & Người dùng", description = "Các API đăng nhập, đăng ký, cấp mới token và truy xuất hồ sơ tài khoản")
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -27,7 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
 
-    @Operation(summary = "Đăng nhập tài khoản & nhận JWT Token")
+    @Operation(summary = "Đăng nhập tài khoản & nhận JWT Token", description = "Xác thực bằng username hoặc email kết hợp mật khẩu. Trả về access token và refresh token.")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest loginRequest
@@ -36,7 +36,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
-    @Operation(summary = "Đăng ký tài khoản khách hàng mới")
+    @Operation(summary = "Đăng ký tài khoản khách hàng mới", description = "Tạo tài khoản khách hàng mới với vai trò ROLE_CUSTOMER.")
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody RegisterRequest registerRequest
@@ -45,7 +45,7 @@ public class AuthController {
         return ResponseEntity.status(201).body(ApiResponse.created(authResponse, "Đăng ký tài khoản thành công"));
     }
 
-    @Operation(summary = "Làm mới Access Token bằng Refresh Token")
+    @Operation(summary = "Làm mới Access Token bằng Refresh Token", description = "Sử dụng Refresh Token hợp lệ để nhận cặp token mới khi Access Token hết hạn mà không bắt người dùng đăng nhập lại (Silent Refresh).")
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest refreshTokenRequest
@@ -54,7 +54,16 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
-    @Operation(summary = "Lấy thông tin hồ sơ người dùng đang đăng nhập")
+    @Operation(summary = "Đăng xuất và thu hồi Refresh Token")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @Valid @RequestBody RefreshTokenRequest refreshTokenRequest
+    ) {
+        authService.logout(refreshTokenRequest);
+        return ResponseEntity.ok(ApiResponse.success(null, "Đăng xuất thành công"));
+    }
+
+    @Operation(summary = "Lấy thông tin hồ sơ người dùng đang đăng nhập", description = "Yêu cầu Header Authorization: Bearer <access_token>.")
     @GetMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getCurrentUser() {

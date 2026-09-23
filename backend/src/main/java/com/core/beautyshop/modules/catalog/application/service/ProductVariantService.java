@@ -9,5 +9,7 @@ public interface ProductVariantService {
     ProductVariantResponse getVariantById(Long variantId);
     ProductVariantResponse addVariant(Long productId, ProductVariantRequest request);
     ProductVariantResponse updateVariant(Long variantId, ProductVariantRequest request);
+    ProductVariantResponse updateVariant(Long productId, Long variantId, ProductVariantRequest request);
     void deleteVariant(Long variantId);
+    void deleteVariant(Long productId, Long variantId);
 }

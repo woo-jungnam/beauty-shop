@@ -3,6 +3,9 @@ package com.core.beautyshop.modules.identity.application.service;
 import com.core.beautyshop.modules.identity.application.dto.request.UpdateProfileRequest;
 import com.core.beautyshop.modules.identity.application.dto.response.UserProfileResponse;
 import com.core.beautyshop.modules.identity.domain.User;
+import com.core.beautyshop.modules.identity.domain.LoyaltyPointAward;
+import com.core.beautyshop.modules.identity.domain.LoyaltyPointAwardRepository;
+import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.exception.UnauthorizedException;
 import com.core.beautyshop.modules.identity.application.mapper.AuthMapper;
@@ -14,6 +17,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final LoyaltyPointAwardRepository loyaltyPointAwardRepository;
     private final AuthMapper authMapper;
 
     private String getAuthenticatedUsername() {
@@ -64,7 +69,7 @@ public class UserServiceImpl implements UserService {
             throw new UnauthorizedException("Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!");
         }
 
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsernameForUpdate(username)
                 .orElseThrow(() -> new UnauthorizedException("Phiên làm việc không hợp lệ (người dùng không tồn tại). Vui lòng đăng nhập lại!"));
 
         if (request.getFullName() != null) user.setFullName(request.getFullName());
@@ -90,5 +95,68 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với id: " + id));
         return authMapper.toUserProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public void reverseLoyaltyPoints(Long userId, Long orderId) {
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        loyaltyPointAwardRepository.findByOrderId(orderId).ifPresent(award -> {
+            if (award.isReversed()) return;
+            if (!userId.equals(award.getUserId())) throw new BusinessException("Loyalty award owner mismatch");
+            int points = Math.max(0, user.getLoyaltyPoints() - award.getPoints());
+            user.setLoyaltyPoints(points);
+            user.setMembershipTier(java.util.Arrays.stream(com.core.beautyshop.modules.identity.domain.enums.MembershipTier.values())
+                    .filter(tier -> points >= tier.getRequiredPoints())
+                    .max(java.util.Comparator.comparingInt(com.core.beautyshop.modules.identity.domain.enums.MembershipTier::getRequiredPoints))
+                    .orElse(com.core.beautyshop.modules.identity.domain.enums.MembershipTier.MEMBER));
+            award.setReversed(true);
+            loyaltyPointAwardRepository.save(award);
+            userRepository.save(user);
+        });
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void addLoyaltyPoints(Long userId, Long orderId, int pointsToAdd) {
+        if (userId == null || orderId == null || pointsToAdd <= 0) {
+            return;
+        }
+
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với id: " + userId));
+
+        if (loyaltyPointAwardRepository.existsByOrderId(orderId)) {
+            return;
+        }
+
+        int currentPoints = user.getLoyaltyPoints() != null ? user.getLoyaltyPoints() : 0;
+        long calculatedTotal = (long) currentPoints + pointsToAdd;
+        if (calculatedTotal > Integer.MAX_VALUE) {
+            throw new BusinessException("Điểm tích lũy vượt quá giới hạn hệ thống");
+        }
+
+        int newTotalPoints = (int) calculatedTotal;
+        user.setLoyaltyPoints(newTotalPoints);
+
+        com.core.beautyshop.modules.identity.domain.enums.MembershipTier newTier;
+        if (newTotalPoints >= com.core.beautyshop.modules.identity.domain.enums.MembershipTier.PLATINUM.getRequiredPoints()) {
+            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.PLATINUM;
+        } else if (newTotalPoints >= com.core.beautyshop.modules.identity.domain.enums.MembershipTier.GOLD.getRequiredPoints()) {
+            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.GOLD;
+        } else if (newTotalPoints >= com.core.beautyshop.modules.identity.domain.enums.MembershipTier.SILVER.getRequiredPoints()) {
+            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.SILVER;
+        } else {
+            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.MEMBER;
+        }
+
+        user.setMembershipTier(newTier);
+        userRepository.save(user);
+        loyaltyPointAwardRepository.save(LoyaltyPointAward.builder()
+                .orderId(orderId)
+                .userId(userId)
+                .points(pointsToAdd)
+                .build());
     }
 }

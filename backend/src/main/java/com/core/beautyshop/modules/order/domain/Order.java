@@ -33,8 +33,30 @@ public class Order extends Base {
     @Column(name = "order_number", nullable = false, unique = true, length = 50)
     private String orderNumber;
 
+    @Column(name = "checkout_key", length = 64, unique = true)
+    private String checkoutKey;
+
+    @Column(name = "checkout_hash", length = 64)
+    private String checkoutHash;
+
+    @Column(name = "payment_deadline")
+    private java.time.Instant paymentDeadline;
+
+    @Column(name = "refunded_amount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal refundedAmount = BigDecimal.ZERO;
+
+    @Column(name = "refund_reference", length = 100)
+    private String refundReference;
+
     @Column(name = "user_id")
     private Long userId;
+
+    @Column(name = "guest_session_id", length = 255)
+    private String guestSessionId;
+
+    @Column(name = "service_package_id")
+    private Long servicePackageId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -81,6 +103,10 @@ public class Order extends Base {
 
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
+
+    @Column(name = "paid_amount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal paidAmount = BigDecimal.ZERO;
 
     @Column(name = "notes", length = 500)
     private String notes;

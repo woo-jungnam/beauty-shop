@@ -11,4 +11,8 @@ public interface AuthService {
     AuthResponse register(RegisterRequest request);
 
     AuthResponse refreshToken(RefreshTokenRequest request);
+
+    void logout(RefreshTokenRequest request);
+
+    void forceLogoutUser(Long userId);
 }

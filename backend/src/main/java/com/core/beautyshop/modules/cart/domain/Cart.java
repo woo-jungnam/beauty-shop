@@ -27,7 +27,7 @@ public class Cart extends Base {
     @Column(name = "user_id", unique = true)
     private Long userId;
 
-    @Column(name = "session_id", length = 255)
+    @Column(name = "session_id", length = 255, unique = true)
     private String sessionId;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)

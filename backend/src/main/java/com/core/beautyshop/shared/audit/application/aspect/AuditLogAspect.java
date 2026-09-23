@@ -1,8 +1,8 @@
 package com.core.beautyshop.shared.audit.application.aspect;
 
 import com.core.beautyshop.shared.audit.api.annotation.AuditAction;
+import com.core.beautyshop.shared.audit.application.service.AuditLogWriter;
 import com.core.beautyshop.shared.audit.domain.AuditLog;
-import com.core.beautyshop.shared.audit.domain.AuditLogRepository;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @RequiredArgsConstructor
 public class AuditLogAspect {
 
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogWriter auditLogWriter;
 
     @Around("@annotation(auditAction)")
     public Object auditMethod(ProceedingJoinPoint joinPoint, AuditAction auditAction) throws Throwable {
@@ -67,7 +67,6 @@ public class AuditLogAspect {
         String resourceId = null;
         Object[] args = joinPoint.getArgs();
         if (args != null && args.length > 0) {
-            // Lấy ID đầu tiên nếu có truyền param ID
             for (Object arg : args) {
                 if (arg instanceof Long || arg instanceof String || arg instanceof Integer) {
                     resourceId = String.valueOf(arg);
@@ -89,7 +88,7 @@ public class AuditLogAspect {
                 .executionTimeMs(executionTime)
                 .build();
 
-        auditLogRepository.save(auditLog);
+        auditLogWriter.save(auditLog);
     }
 
     private String getClientIp(HttpServletRequest request) {

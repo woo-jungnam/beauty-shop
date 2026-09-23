@@ -9,6 +9,8 @@ import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.catalog.domain.ProductRepository;
 import com.core.beautyshop.modules.catalog.domain.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,12 +38,23 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public ProductVariantResponse addVariant(Long productId, ProductVariantRequest request) {
-        Product product = productRepository.findByIdAndIsDeletedFalse(productId)
+        validatePrices(request.getPrice(), request.getDiscountPrice());
+
+        Product product = productRepository.findByIdForUpdateAndIsDeletedFalse(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
 
         if (variantRepository.existsBySku(request.getSku())) {
             throw new BusinessException("Mã SKU đã tồn tại: " + request.getSku());
+        }
+
+        boolean makeDefault = Boolean.TRUE.equals(request.getIsDefault());
+        if (makeDefault) {
+            variantRepository.clearDefaultsForProduct(productId);
         }
 
         ProductVariant variant = ProductVariant.builder()
@@ -53,7 +66,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
                 .volume(request.getVolume())
                 .color(request.getColor())
                 .barcode(request.getBarcode())
-                .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
+                .isDefault(makeDefault)
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
 
@@ -63,9 +76,32 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public ProductVariantResponse updateVariant(Long variantId, ProductVariantRequest request) {
+        return updateVariant(null, variantId, request);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
+    public ProductVariantResponse updateVariant(Long expectedProductId, Long variantId, ProductVariantRequest request) {
+        validatePrices(request.getPrice(), request.getDiscountPrice());
+
         ProductVariant variant = variantRepository.findByIdAndIsDeletedFalse(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với id: " + variantId));
+
+        Long productId = variant.getProduct().getId();
+        if (expectedProductId != null && !expectedProductId.equals(productId)) {
+            throw new ResourceNotFoundException("Biến thể không thuộc sản phẩm với id: " + expectedProductId);
+        }
+        productRepository.findByIdForUpdateAndIsDeletedFalse(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
 
         if (!variant.getSku().equals(request.getSku()) && variantRepository.existsBySku(request.getSku())) {
             throw new BusinessException("Mã SKU đã tồn tại: " + request.getSku());
@@ -79,7 +115,12 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         variant.setColor(request.getColor());
         variant.setBarcode(request.getBarcode());
         
-        if (request.getIsDefault() != null) variant.setIsDefault(request.getIsDefault());
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            variantRepository.clearOtherDefaultsForProduct(productId, variantId);
+            variant.setIsDefault(true);
+        } else if (request.getIsDefault() != null) {
+            variant.setIsDefault(false);
+        }
         if (request.getIsActive() != null) variant.setIsActive(request.getIsActive());
 
         variant = variantRepository.save(variant);
@@ -88,9 +129,26 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public void deleteVariant(Long variantId) {
+        deleteVariant(null, variantId);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
+    public void deleteVariant(Long expectedProductId, Long variantId) {
         ProductVariant variant = variantRepository.findByIdAndIsDeletedFalse(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với id: " + variantId));
+        if (expectedProductId != null && !expectedProductId.equals(variant.getProduct().getId())) {
+            throw new ResourceNotFoundException("Biến thể không thuộc sản phẩm với id: " + expectedProductId);
+        }
         variant.setIsDeleted(true);
         variantRepository.save(variant);
     }
@@ -111,5 +169,15 @@ public class ProductVariantServiceImpl implements ProductVariantService {
                 .createdAt(variant.getCreatedAt())
                 .updatedAt(variant.getUpdatedAt())
                 .build();
+    }
+
+    private void validatePrices(java.math.BigDecimal price, java.math.BigDecimal discountPrice) {
+        if (price == null || price.signum() < 0) {
+            throw new BusinessException("Giá sản phẩm phải lớn hơn hoặc bằng 0");
+        }
+        if (discountPrice != null
+                && (discountPrice.signum() < 0 || discountPrice.compareTo(price) > 0)) {
+            throw new BusinessException("Giá khuyến mãi phải nằm trong khoảng từ 0 đến giá gốc");
+        }
     }
 }

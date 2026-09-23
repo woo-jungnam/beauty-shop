@@ -53,4 +53,9 @@ public class OutboxMessage {
 
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
+
+    @Column(name = "lease_until")
+    private LocalDateTime leaseUntil;
+    @Column(name = "claim_token", length = 36)
+    private String claimToken;
 }

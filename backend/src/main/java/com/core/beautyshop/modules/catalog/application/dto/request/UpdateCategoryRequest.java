@@ -1,5 +1,7 @@
 package com.core.beautyshop.modules.catalog.application.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,6 +27,15 @@ public class UpdateCategoryRequest {
     private String imageUrl;
 
     private Long parentId;
+
+    @JsonIgnore
+    private boolean parentIdSpecified;
+
+    @JsonSetter("parentId")
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+        this.parentIdSpecified = true;
+    }
 
     private Integer displayOrder;
 

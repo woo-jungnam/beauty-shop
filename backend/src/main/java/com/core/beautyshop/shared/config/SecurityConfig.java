@@ -83,7 +83,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/payment/sepay-webhook",
-                                "/api/v1/test/public"
+                                "/api/v1/test/public",
+                                "/api/v1/chatbot/chat",
+                                "/api/v1/chatbot/chat/stream",
+                                "/api/v1/chatbot/health",
+                                "/api/v1/chatbot/openapi.json"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
@@ -93,12 +97,15 @@ public class SecurityConfig {
                                 "/api/v1/tags/**",
                                 "/api/v1/spa/services/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/orders/*").permitAll()
                         .requestMatchers(
                                 "/api/v1/cart/**",
                                 "/api/v1/orders/checkout"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/admin/**",
+                                "/api/v1/chatbot/sync/**",
+                                "/api/v1/chatbot/test/**",
                                 "/api/v1/roles/**",
                                 "/api/v1/test/admin"
                         ).hasRole("ADMIN")

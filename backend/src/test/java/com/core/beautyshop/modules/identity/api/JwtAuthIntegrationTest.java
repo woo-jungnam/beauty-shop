@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.identity.api;
 
 import com.core.beautyshop.modules.identity.application.dto.request.LoginRequest;
+import com.core.beautyshop.modules.identity.application.dto.request.RefreshTokenRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.RegisterRequest;
 import com.core.beautyshop.modules.identity.domain.enums.Gender;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -115,7 +116,6 @@ public class JwtAuthIntegrationTest {
         String responseString = result.getResponse().getContentAsString();
         String token = objectMapper.readTree(responseString).get("data").get("accessToken").asText();
 
-        // Admin accessing admin endpoint -> 200 OK
         mockMvc.perform(get("/api/v1/test/admin")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -136,13 +136,11 @@ public class JwtAuthIntegrationTest {
         String responseString = result.getResponse().getContentAsString();
         String token = objectMapper.readTree(responseString).get("data").get("accessToken").asText();
 
-        // User accessing user endpoint -> 200 OK
         mockMvc.perform(get("/api/v1/test/user")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.message").value("Nội dung người dùng có thể truy cập bởi vai trò USER và ADMIN"));
 
-        // User accessing admin endpoint -> 403 Forbidden
         mockMvc.perform(get("/api/v1/test/admin")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden())
@@ -164,5 +162,95 @@ public class JwtAuthIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.username").value("testuser1"))
                 .andExpect(jsonPath("$.data.roles[0]").value("ROLE_CUSTOMER"));
+    }
+
+    @Test
+    public void testRefreshTokenRotationAndLogoutRevokeTokens() throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("user", "user123"))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String originalRefreshToken = objectMapper.readTree(loginResult.getResponse().getContentAsString())
+                .get("data").get("refreshToken").asText();
+
+        MvcResult refreshResult = mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest(originalRefreshToken))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String rotatedRefreshToken = objectMapper.readTree(refreshResult.getResponse().getContentAsString())
+                .get("data").get("refreshToken").asText();
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest(originalRefreshToken))))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest(rotatedRefreshToken))))
+                .andExpect(status().isBadRequest());
+
+        MvcResult secondLoginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("user", "user123"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        String logoutRefreshToken = objectMapper.readTree(secondLoginResult.getResponse().getContentAsString())
+                .get("data").get("refreshToken").asText();
+        String logoutAccessToken = objectMapper.readTree(secondLoginResult.getResponse().getContentAsString())
+                .get("data").get("accessToken").asText();
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest(logoutRefreshToken))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest(logoutRefreshToken))))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/users/profile")
+                        .header("Authorization", "Bearer " + logoutAccessToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testAdminForceLogoutRevokesAllUserTokens() throws Exception {
+        MvcResult userLogin = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("user", "user123"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        String userAccessToken = objectMapper.readTree(userLogin.getResponse().getContentAsString())
+                .get("data").get("accessToken").asText();
+        String userRefreshToken = objectMapper.readTree(userLogin.getResponse().getContentAsString())
+                .get("data").get("refreshToken").asText();
+
+        MvcResult adminLogin = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("admin", "admin123"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        String adminAccessToken = objectMapper.readTree(adminLogin.getResponse().getContentAsString())
+                .get("data").get("accessToken").asText();
+        Long userId = userRepository.findByUsername("user").orElseThrow().getId();
+
+        mockMvc.perform(post("/api/v1/users/admin/{id}/force-logout", userId)
+                        .header("Authorization", "Bearer " + adminAccessToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/users/profile")
+                        .header("Authorization", "Bearer " + userAccessToken))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest(userRefreshToken))))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -7,6 +7,7 @@ import com.core.beautyshop.modules.inventory.application.dto.response.WarehouseS
 import com.core.beautyshop.modules.inventory.domain.Warehouse;
 import com.core.beautyshop.modules.inventory.domain.WarehouseStock;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
+import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.modules.inventory.domain.WarehouseRepository;
 import com.core.beautyshop.modules.inventory.domain.WarehouseStockRepository;
 import lombok.RequiredArgsConstructor;
@@ -44,10 +45,16 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
 
         WarehouseStock stock;
         if (existingStock.isPresent()) {
-            stock = existingStock.get();
+            stock = stockRepository.findByIdForUpdate(existingStock.get().getId()).orElseThrow();
+            if (request.getQuantity() < stock.getReservedQuantity()
+                    || request.getReservedQuantity() != null && !request.getReservedQuantity().equals(stock.getReservedQuantity())) {
+                throw new com.core.beautyshop.shared.exception.BusinessException("Cannot overwrite order reservations");
+            }
             stock.setQuantity(request.getQuantity());
-            stock.setReservedQuantity(request.getReservedQuantity() != null ? request.getReservedQuantity() : stock.getReservedQuantity());
         } else {
+            if (request.getReservedQuantity() != null && request.getReservedQuantity() != 0) {
+                throw new com.core.beautyshop.shared.exception.BusinessException("Reservations must be created by checkout");
+            }
             stock = WarehouseStock.builder()
                     .warehouse(warehouse)
                     .productVariantId(variant.getId())
@@ -65,10 +72,19 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     @Override
     @Transactional
     public void deleteStock(Long stockId) {
-        if (!stockRepository.existsById(stockId)) {
-            throw new ResourceNotFoundException("Không tìm thấy kho hàng với id: " + stockId);
+        WarehouseStock stock = stockRepository.findByIdForUpdate(stockId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho hàng với id: " + stockId));
+        if (valueOrZero(stock.getReservedQuantity()) > 0) {
+            throw new BusinessException("Không thể xóa lô hàng đang được giữ cho đơn hàng");
         }
-        stockRepository.deleteById(stockId);
+        if (valueOrZero(stock.getQuarantinedQuantity()) > 0) {
+            throw new BusinessException("Không thể xóa lô hàng đang bị cách ly");
+        }
+        stockRepository.delete(stock);
+    }
+
+    private int valueOrZero(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private WarehouseStockResponse mapToResponse(WarehouseStock stock) {
@@ -83,6 +99,7 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                 .sku(sku)
                 .quantity(stock.getQuantity())
                 .reservedQuantity(stock.getReservedQuantity())
+                .quarantinedQuantity(stock.getQuarantinedQuantity())
                 .batchCode(stock.getBatchCode())
                 .expirationDate(stock.getExpirationDate())
                 .createdAt(stock.getCreatedAt())

@@ -1,9 +1,12 @@
 package com.core.beautyshop.modules.catalog.domain;
 
 import com.core.beautyshop.shared.domain.Base;
+import com.core.beautyshop.modules.catalog.domain.enums.ProductImageType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -32,9 +35,16 @@ public class ProductImage extends Base {
 
     @Column(name = "alt_text", length = 255)
     private String altText;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "image_type", length = 50)
+    @Builder.Default
+    private ProductImageType imageType = ProductImageType.PRODUCT_FRONT;
+
     @Builder.Default
     @Column(name = "display_order")
     private Integer displayOrder = 0;
+
     @Builder.Default
     @Column(name = "is_primary", nullable = false)
     private Boolean isPrimary = false;

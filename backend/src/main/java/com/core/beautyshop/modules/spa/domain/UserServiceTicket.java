@@ -23,7 +23,7 @@ public class UserServiceTicket extends Base {
     @JoinColumn(name = "package_id", nullable = false)
     private ServicePackage servicePackage;
 
-    @Column(name = "order_id")
+    @Column(name = "order_id", unique = true)
     private Long orderId;
 
     @Column(name = "total_sessions", nullable = false)
@@ -32,6 +32,12 @@ public class UserServiceTicket extends Base {
     @Column(name = "used_sessions", nullable = false)
     @Builder.Default
     private Integer usedSessions = 0;
+
+    @ElementCollection
+    @CollectionTable(name = "ticket_entitlements", joinColumns = @JoinColumn(name = "ticket_id"))
+    @MapKeyColumn(name = "service_id")
+    @Builder.Default
+    private java.util.Map<Long, TicketEntitlement> entitlements = new java.util.HashMap<>();
 
     @Column(name = "expiry_date")
     private Instant expiryDate;

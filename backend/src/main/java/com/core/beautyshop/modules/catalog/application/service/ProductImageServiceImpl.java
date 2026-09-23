@@ -8,6 +8,8 @@ import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.catalog.domain.ProductImageRepository;
 import com.core.beautyshop.modules.catalog.domain.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,10 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public ProductImageResponse addImage(Long productId, ProductImageRequest request) {
         Product product = productRepository.findByIdAndIsDeletedFalse(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
@@ -48,11 +54,27 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public void deleteImage(Long imageId) {
-        if (!imageRepository.existsById(imageId)) {
-            throw new ResourceNotFoundException("Không tìm thấy hình ảnh với id: " + imageId);
+        deleteImage(null, imageId);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
+    public void deleteImage(Long productId, Long imageId) {
+        ProductImage image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hình ảnh với id: " + imageId));
+        if (productId != null && !productId.equals(image.getProduct().getId())) {
+            throw new ResourceNotFoundException("Hình ảnh không thuộc sản phẩm với id: " + productId);
         }
-        imageRepository.deleteById(imageId);
+        imageRepository.delete(image);
     }
 
     private ProductImageResponse mapToResponse(ProductImage image) {

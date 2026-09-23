@@ -42,4 +42,5 @@ public class OutboxServiceImpl implements OutboxService {
             throw new RuntimeException("Lỗi ghi nhận sự kiện outbox", e);
         }
     }
+
 }

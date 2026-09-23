@@ -101,6 +101,10 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         if (request.getProductVariantId() != null) {
             variant = productVariantRepository.findById(request.getProductVariantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm"));
+            if (!product.getId().equals(variant.getProduct().getId())) {
+                throw new com.core.beautyshop.shared.exception.BusinessException(
+                        "Biến thể không thuộc sản phẩm đã chọn");
+            }
         }
 
         ProductAttributeValue val = ProductAttributeValue.builder()

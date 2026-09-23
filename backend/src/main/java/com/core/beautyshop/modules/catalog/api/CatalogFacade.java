@@ -11,5 +11,7 @@ public interface CatalogFacade {
     ProductVariantSummaryDto getVariantSummaryById(Long variantId);
     Map<Long, ProductVariantSummaryDto> getVariantSummariesByIds(Collection<Long> variantIds);
     boolean variantExistsById(Long variantId);
+    void applyDiscountPrice(Long variantId, java.math.BigDecimal discountPrice);
+    void deactivateVariant(Long variantId);
 }
 

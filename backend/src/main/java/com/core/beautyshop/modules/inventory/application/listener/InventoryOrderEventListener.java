@@ -16,32 +16,36 @@ public class InventoryOrderEventListener {
 
     @EventListener
     public void handleOrderCancelled(OrderEvents.OrderCancelledEvent event) {
-        log.info("Đã nhận sự kiện OrderCancelledEvent cho orderId={}, tiến hành hoàn lại tồn kho cho {} mục sản phẩm",
+        log.info("Handling OrderCancelledEvent for orderId={} with {} items",
                 event.getOrderId(), event.getItems() != null ? event.getItems().size() : 0);
 
         if (event.getItems() != null) {
             for (OrderEvents.OrderItemSummary item : event.getItems()) {
-                try {
-                    inventoryFacade.releaseStock(item.getVariantId(), item.getQuantity());
-                } catch (Exception e) {
-                    log.error("Lỗi khi hoàn lại tồn kho cho variantId={}: {}", item.getVariantId(), e.getMessage(), e);
-                }
+                inventoryFacade.releaseStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
             }
         }
     }
 
     @EventListener
     public void handleOrderDelivered(OrderEvents.OrderDeliveredEvent event) {
-        log.info("Đã nhận sự kiện OrderDeliveredEvent cho orderId={}, tiến hành trừ tồn kho cho {} mục sản phẩm",
+        log.info("Handling OrderDeliveredEvent for orderId={} with {} items",
                 event.getOrderId(), event.getItems() != null ? event.getItems().size() : 0);
 
         if (event.getItems() != null) {
             for (OrderEvents.OrderItemSummary item : event.getItems()) {
-                try {
-                    inventoryFacade.deductStock(item.getVariantId(), item.getQuantity());
-                } catch (Exception e) {
-                    log.error("Lỗi khi trừ tồn kho cho variantId={}: {}", item.getVariantId(), e.getMessage(), e);
-                }
+                inventoryFacade.deductStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
+            }
+        }
+    }
+
+    @EventListener
+    public void handleOrderReturned(OrderEvents.OrderReturnedEvent event) {
+        log.info("Handling OrderReturnedEvent for orderId={} with {} items",
+                event.getOrderId(), event.getItems() != null ? event.getItems().size() : 0);
+
+        if (event.getItems() != null) {
+            for (OrderEvents.OrderItemSummary item : event.getItems()) {
+                inventoryFacade.returnStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
             }
         }
     }

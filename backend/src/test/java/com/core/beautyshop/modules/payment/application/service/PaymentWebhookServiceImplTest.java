@@ -28,24 +28,28 @@ class PaymentWebhookServiceImplTest {
     private ObjectMapper objectMapper;
 
     @InjectMocks
-    private PaymentWebhookServiceImpl paymentWebhookService;
+    private PaymentWebhookProcessor paymentWebhookService;
 
     private SePayWebhookRequest validRequest;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(paymentWebhookService, "accountNumber", "123456789");
+        lenient().when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        lenient().when(orderFacade.findPaymentState(any())).thenReturn(java.util.Optional.of("PROCESSING"));
         validRequest = new SePayWebhookRequest();
         validRequest.setTransferType("in");
         validRequest.setContent("NGUYEN VAN A CHUYEN TIEN ORD-1234ABCD");
         validRequest.setTransferAmount(new BigDecimal("150000"));
         validRequest.setReferenceCode("REF123");
+        validRequest.setAccountNumber("123456789");
     }
 
     @Test
     void testProcessSePayWebhook_Success() {
         when(orderFacade.markOrderAsPaid(eq("ORD-1234ABCD"), eq(new BigDecimal("150000")), eq("REF123"))).thenReturn(true);
 
-        paymentWebhookService.processSePayWebhook(validRequest);
+        paymentWebhookService.process(validRequest, paymentWebhookService.reference(validRequest));
 
         verify(orderFacade).markOrderAsPaid("ORD-1234ABCD", new BigDecimal("150000"), "REF123");
     }
@@ -54,16 +58,16 @@ class PaymentWebhookServiceImplTest {
     void testProcessSePayWebhook_TransferTypeOut_Ignored() {
         validRequest.setTransferType("out");
 
-        paymentWebhookService.processSePayWebhook(validRequest);
+        paymentWebhookService.process(validRequest, paymentWebhookService.reference(validRequest));
 
         verify(orderFacade, never()).markOrderAsPaid(any(), any(), any());
     }
 
     @Test
     void testProcessSePayWebhook_NoOrderNumberInContent_Ignored() {
-        validRequest.setContent("CHUYEN TIEN MUA HANG"); // No ORD-XXXXXXXX
+        validRequest.setContent("CHUYEN TIEN MUA HANG");
 
-        paymentWebhookService.processSePayWebhook(validRequest);
+        paymentWebhookService.process(validRequest, paymentWebhookService.reference(validRequest));
 
         verify(orderFacade, never()).markOrderAsPaid(any(), any(), any());
     }
@@ -72,7 +76,7 @@ class PaymentWebhookServiceImplTest {
     void testProcessSePayWebhook_OrderNotFound_Ignored() {
         when(orderFacade.markOrderAsPaid(eq("ORD-1234ABCD"), any(), any())).thenReturn(false);
 
-        paymentWebhookService.processSePayWebhook(validRequest);
+        paymentWebhookService.process(validRequest, paymentWebhookService.reference(validRequest));
 
         verify(orderFacade).markOrderAsPaid("ORD-1234ABCD", new BigDecimal("150000"), "REF123");
     }
@@ -82,7 +86,7 @@ class PaymentWebhookServiceImplTest {
         validRequest.setTransferAmount(new BigDecimal("100000"));
         when(orderFacade.markOrderAsPaid(eq("ORD-1234ABCD"), eq(new BigDecimal("100000")), eq("REF123"))).thenReturn(false);
 
-        paymentWebhookService.processSePayWebhook(validRequest);
+        paymentWebhookService.process(validRequest, paymentWebhookService.reference(validRequest));
 
         verify(orderFacade).markOrderAsPaid("ORD-1234ABCD", new BigDecimal("100000"), "REF123");
     }

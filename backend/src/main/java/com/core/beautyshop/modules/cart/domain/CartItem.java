@@ -22,6 +22,10 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class CartItem extends Base {
+    @jakarta.persistence.Version
+    @Column(name = "row_version", nullable = false)
+    @Builder.Default
+    private Long rowVersion = 0L;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)

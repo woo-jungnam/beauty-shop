@@ -3,6 +3,8 @@ package com.core.beautyshop.modules.catalog.application.dto.request;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.AssertTrue;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import java.math.BigDecimal;
 
@@ -26,4 +28,10 @@ public class ProductVariantRequest {
     private String barcode;
     private Boolean isDefault;
     private Boolean isActive;
+
+    @AssertTrue(message = "Giá khuyến mãi phải nhỏ hơn hoặc bằng giá gốc")
+    @JsonIgnore
+    public boolean isDiscountPriceValid() {
+        return price == null || discountPrice == null || discountPrice.compareTo(price) <= 0;
+    }
 }

@@ -27,6 +27,13 @@ public class UserDetailsImpl implements UserDetails {
 
     private Collection<? extends GrantedAuthority> authorities;
 
+    private Integer tokenVersion;
+
+    public UserDetailsImpl(Long id, String username, String email, String password,
+                           Collection<? extends GrantedAuthority> authorities) {
+        this(id, username, email, password, authorities, 0);
+    }
+
     public static UserDetailsImpl build(User user) {
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
@@ -37,7 +44,8 @@ public class UserDetailsImpl implements UserDetails {
                 user.getUsername(),
                 user.getEmail(),
                 user.getPasswordHash(),
-                authorities
+                authorities,
+                user.getTokenVersion() != null ? user.getTokenVersion() : 0
         );
     }
 

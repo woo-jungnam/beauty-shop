@@ -42,6 +42,13 @@ public class IdentityFacadeImpl implements IdentityFacade {
         return userRepository.existsById(userId);
     }
 
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.util.Map<Long, UserSummaryDto> findUserSummaries(java.util.Collection<Long> ids) {
+        if (ids.isEmpty()) return java.util.Map.of();
+        return userRepository.findAllById(ids).stream().collect(java.util.stream.Collectors.toMap(User::getId, this::mapToSummary));
+    }
+
     private UserSummaryDto mapToSummary(User user) {
         return UserSummaryDto.builder()
                 .id(user.getId())
@@ -50,7 +57,12 @@ public class IdentityFacadeImpl implements IdentityFacade {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
-                .membershipTier(user.getMembershipTier())
+                .membershipTier(user.getMembershipTier() != null ? user.getMembershipTier().name() : null)
+                .membershipDiscountPercentage(
+                        user.getMembershipTier() != null
+                                ? user.getMembershipTier().getDiscountPercentage()
+                                : 0
+                )
                 .loyaltyPoints(user.getLoyaltyPoints())
                 .build();
     }

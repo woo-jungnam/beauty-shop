@@ -12,10 +12,18 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.time.Instant;
+import java.util.UUID;
+import java.util.Optional;
 
 @Component
 @Slf4j
 public class JwtUtils {
+
+    private static final String TOKEN_USE_CLAIM = "token_use";
+    private static final String TOKEN_VERSION_CLAIM = "token_version";
+    private static final String ACCESS_TOKEN_USE = "access";
+    private static final String REFRESH_TOKEN_USE = "refresh";
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -40,6 +48,8 @@ public class JwtUtils {
                 .claim("id", userPrincipal.getId())
                 .claim("email", userPrincipal.getEmail())
                 .claim("roles", roles)
+                .claim(TOKEN_VERSION_CLAIM, userPrincipal.getTokenVersion())
+                .claim(TOKEN_USE_CLAIM, ACCESS_TOKEN_USE)
                 .issuedAt(new Date())
                 .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key())
@@ -48,11 +58,23 @@ public class JwtUtils {
 
     public String generateRefreshToken(String username) {
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
+                .claim(TOKEN_USE_CLAIM, REFRESH_TOKEN_USE)
                 .issuedAt(new Date())
                 .expiration(new Date((new Date()).getTime() + jwtRefreshExpirationMs))
                 .signWith(key())
                 .compact();
+    }
+
+    public Instant getExpirationInstant(String token) {
+        return Jwts.parser()
+                .verifyWith(key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getExpiration()
+                .toInstant();
     }
 
     public String getUserNameFromJwtToken(String token) {
@@ -70,6 +92,28 @@ public class JwtUtils {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+
+        return toUserPrincipal(claims);
+    }
+
+    public Optional<UserDetailsImpl> parseAccessToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            if (!ACCESS_TOKEN_USE.equals(claims.get(TOKEN_USE_CLAIM, String.class))) {
+                return Optional.empty();
+            }
+            return Optional.of(toUserPrincipal(claims));
+        } catch (JwtException | IllegalArgumentException exception) {
+            log.debug("Invalid access token: {}", exception.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private UserDetailsImpl toUserPrincipal(Claims claims) {
 
         String username = claims.getSubject();
         Long id = null;
@@ -91,13 +135,32 @@ public class JwtUtils {
                     .collect(java.util.stream.Collectors.toList());
         }
 
+        Integer tokenVersion = claims.get(TOKEN_VERSION_CLAIM, Integer.class);
+
         return new UserDetailsImpl(
                 id,
                 username,
                 email,
                 "",
-                authorities
+                authorities,
+                tokenVersion
         );
+    }
+
+    public boolean validateAccessToken(String token) {
+        return validateTokenUse(token, ACCESS_TOKEN_USE);
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return validateTokenUse(token, REFRESH_TOKEN_USE);
+    }
+
+    private boolean validateTokenUse(String token, String expectedUse) {
+        if (!validateJwtToken(token)) {
+            return false;
+        }
+        Claims claims = Jwts.parser().verifyWith(key()).build().parseSignedClaims(token).getPayload();
+        return expectedUse.equals(claims.get(TOKEN_USE_CLAIM, String.class));
     }
 
     public boolean validateJwtToken(String authToken) {

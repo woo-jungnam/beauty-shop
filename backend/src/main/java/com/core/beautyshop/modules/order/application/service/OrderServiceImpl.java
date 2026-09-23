@@ -6,6 +6,7 @@ import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
+import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.order.application.dto.request.CheckoutRequest;
 import com.core.beautyshop.modules.order.application.dto.request.UpdateOrderStatusRequest;
@@ -50,6 +51,9 @@ public class OrderServiceImpl implements OrderService {
     private final PaymentFacade paymentFacade;
     private final ApplicationEventPublisher eventPublisher;
 
+    @org.springframework.beans.factory.annotation.Value("${app.order.payment-timeout-minutes:30}")
+    private long paymentTimeoutMinutes = 30;
+
     @Override
     @Transactional
     public OrderResponse checkout(CheckoutRequest request) {
@@ -60,30 +64,63 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse checkout(Long userId, CheckoutRequest request) {
-        CartResponse cart = validateCart(userId, request.getSessionId());
+        String key = checkoutKey(userId, request);
+        String hash = requestHash(request);
+        // The cart row survives clearing. Lock it before reading items or replaying a request.
+        CartResponse cart = cartFacade.lockCart(userId, request.getSessionId());
+        if (key != null) {
+            var previous = orderRepository.findByCheckoutKey(key);
+            if (previous.isPresent()) {
+                if (!hash.equals(previous.get().getCheckoutHash())) {
+                    throw new BusinessException("Idempotency-Key was already used with a different request");
+                }
+                return buildOrderResponse(previous.get());
+            }
+        }
+        if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {
+            throw new BusinessException("Cart is empty");
+        }
+        List<Long> unavailableVariantIds = cart.getItems().stream()
+                .filter(item -> Boolean.FALSE.equals(item.getAvailable()))
+                .map(CartItemResponse::getVariantId)
+                .toList();
+        if (!unavailableVariantIds.isEmpty()) {
+            throw new BusinessException("Cart contains unavailable products; remove variants: " + unavailableVariantIds);
+        }
 
         if (userId != null && !identityFacade.existsById(userId)) {
             throw new ResourceNotFoundException("Không tìm thấy người dùng với id: " + userId);
         }
 
         Order order = orderFactory.createOrder(request, userId);
+        order.setCheckoutKey(key);
+        order.setCheckoutHash(hash);
+        if (order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK) {
+            order.setPaymentDeadline(java.time.Instant.now().plusSeconds(paymentTimeoutMinutes * 60));
+        }
 
         BigDecimal subTotal = buildOrderItems(order, cart);
 
         BigDecimal membershipDiscount = BigDecimal.ZERO;
         if (userId != null) {
-            com.core.beautyshop.modules.identity.api.dto.UserSummaryDto userSummary = identityFacade.getUserSummaryById(userId);
-            if (userSummary.getMembershipTier() != null && userSummary.getMembershipTier().getDiscountPercentage() > 0) {
-                BigDecimal discountPercent = BigDecimal.valueOf(userSummary.getMembershipTier().getDiscountPercentage()).divide(BigDecimal.valueOf(100));
+            UserSummaryDto userSummary = identityFacade.getUserSummaryById(userId);
+            Integer discountPercentage = userSummary.getMembershipDiscountPercentage();
+            if (discountPercentage != null && discountPercentage > 0) {
+                BigDecimal discountPercent = BigDecimal.valueOf(discountPercentage)
+                        .divide(BigDecimal.valueOf(100));
                 membershipDiscount = subTotal.multiply(discountPercent);
             }
         }
         
-        BigDecimal totalDiscount = order.getDiscountAmount() != null ? order.getDiscountAmount().add(membershipDiscount) : membershipDiscount;
-        order.setDiscountAmount(totalDiscount);
+        BigDecimal grossAmount = subTotal.add(order.getShippingFee()).max(BigDecimal.ZERO);
+        BigDecimal totalDiscount = order.getDiscountAmount() != null
+                ? order.getDiscountAmount().add(membershipDiscount)
+                : membershipDiscount;
+        BigDecimal applicableDiscount = totalDiscount.max(BigDecimal.ZERO).min(grossAmount);
 
+        order.setDiscountAmount(applicableDiscount);
         order.setSubTotal(subTotal);
-        order.setTotalAmount(subTotal.add(order.getShippingFee()).subtract(order.getDiscountAmount()));
+        order.setTotalAmount(grossAmount.subtract(applicableDiscount));
 
         createStatusHistory(order, OrderStatus.PENDING, "Đơn hàng được tạo khi thanh toán");
 
@@ -103,8 +140,19 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(Long id) {
+        return getOrderById(id, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderById(Long id, String guestSessionId) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
+
+        if (order.getUserId() == null && !SecurityUtils.isAdmin()
+                && !matchesGuestSession(order.getGuestSessionId(), guestSessionId)) {
+            throw new AccessDeniedException("Mã phiên khách vãng lai không hợp lệ");
+        }
 
         if (order.getUserId() != null) {
             Long currentUserId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
@@ -114,6 +162,15 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return orderMapper.toOrderResponse(order);
+    }
+
+    private boolean matchesGuestSession(String expected, String provided) {
+        if (expected == null || expected.isBlank() || provided == null || provided.isBlank()) {
+            return false;
+        }
+        return java.security.MessageDigest.isEqual(
+                expected.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                provided.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     @Override
@@ -145,14 +202,29 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(Long id, UpdateOrderStatusRequest request) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
 
         OrderStatus previousStatus = order.getStatus();
         OrderStatus newStatus = request.getStatus();
 
         validateStatusTransition(previousStatus, newStatus);
+        if (previousStatus == newStatus) return orderMapper.toOrderResponse(order);
 
+        if ((newStatus == OrderStatus.PROCESSING || newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED)
+                && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK
+                && order.getPaymentStatus() != com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID) {
+            throw new BusinessException("Bank payment must be settled before shipping");
+        }
+        if (newStatus == OrderStatus.DELIVERED
+                && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.COD) {
+            order.setPaidAmount(order.getTotalAmount());
+            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID);
+        }
+        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED)
+                && order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
+            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.REFUND_PENDING);
+        }
         order.setStatus(newStatus);
         createStatusHistory(order, newStatus, request.getNotes());
 
@@ -162,6 +234,10 @@ public class OrderServiceImpl implements OrderService {
 
         if (newStatus == OrderStatus.DELIVERED && previousStatus != OrderStatus.DELIVERED) {
             publishOrderDeliveredEvent(order);
+        }
+
+        if (newStatus == OrderStatus.RETURNED && previousStatus != OrderStatus.RETURNED) {
+            publishOrderReturnedEvent(order);
         }
 
         Order saved = orderRepository.save(order);
@@ -186,8 +262,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(Long id, Long userId) {
-        Order order = orderRepository.findById(id)
+        Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
+
+        if (order.getUserId() == null && !SecurityUtils.isAdmin()) {
+            throw new AccessDeniedException("Guest orders can only be cancelled by an administrator");
+        }
 
         if (order.getUserId() != null && !order.getUserId().equals(userId) && !SecurityUtils.isAdmin()) {
             throw new AccessDeniedException("Bạn không có quyền hủy đơn hàng này!");
@@ -199,6 +279,9 @@ public class OrderServiceImpl implements OrderService {
 
         OrderStatus previousStatus = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
+        if (order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
+            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.REFUND_PENDING);
+        }
         createStatusHistory(order, OrderStatus.CANCELLED, "Khách hàng hủy đơn hàng");
 
         publishOrderCancelledEvent(order);
@@ -215,6 +298,34 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.toOrderResponse(saved);
     }
 
+    private String checkoutKey(Long userId, CheckoutRequest request) {
+        String key = request.getIdempotencyKey();
+        if (key == null) return null;
+        if (key.isBlank() || key.length() > 128) throw new BusinessException("Invalid Idempotency-Key");
+        if (userId == null && (request.getSessionId() == null || request.getSessionId().isBlank())) {
+            throw new BusinessException("Guest session is required");
+        }
+        String scope = userId == null ? "guest:" + request.getSessionId() : "user:" + userId;
+        return sha256(scope.length() + ":" + scope + key);
+    }
+
+    private String requestHash(CheckoutRequest request) {
+        try {
+            return sha256(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(request));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+            throw new IllegalArgumentException("Invalid checkout request", exception);
+        }
+    }
+
+    private String sha256(String value) {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
     private CartResponse validateCart(Long userId, String sessionId) {
         CartResponse cart = cartFacade.getCart(userId, sessionId);
         if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {
@@ -226,17 +337,14 @@ public class OrderServiceImpl implements OrderService {
     private BigDecimal buildOrderItems(Order order, CartResponse cart) {
         BigDecimal subTotal = BigDecimal.ZERO;
 
-        // 1. Thu thập và sắp xếp các variantId theo thứ tự tăng dần (Chống Deadlock khi nhiều đơn hàng cùng checkout)
         List<Long> variantIds = cart.getItems().stream()
                 .map(CartItemResponse::getVariantId)
                 .sorted()
                 .distinct()
                 .collect(Collectors.toList());
 
-        // 2. Nạp hàng loạt thông tin biến thể trong 1 câu truy vấn duy nhất (Batch Projection)
         java.util.Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
 
-        // 3. Sắp xếp danh sách cart item theo variantId và thực hiện giữ kho + tạo OrderItem
         List<CartItemResponse> sortedItems = cart.getItems().stream()
                 .sorted(java.util.Comparator.comparing(CartItemResponse::getVariantId))
                 .toList();
@@ -247,7 +355,7 @@ public class OrderServiceImpl implements OrderService {
                 throw new ResourceNotFoundException("Không tìm thấy thông tin biến thể với ID: " + item.getVariantId());
             }
 
-            inventoryFacade.reserveStock(item.getVariantId(), item.getQuantity());
+            inventoryFacade.reserveStock(order.getOrderNumber(), item.getVariantId(), item.getQuantity());
 
             BigDecimal price = variant.getDiscountPrice() != null
                     ? variant.getDiscountPrice()
@@ -325,6 +433,26 @@ public class OrderServiceImpl implements OrderService {
             eventPublisher.publishEvent(OrderEvents.OrderDeliveredEvent.builder()
                     .orderId(order.getId())
                     .orderNumber(order.getOrderNumber())
+                    .userId(order.getUserId())
+                    .totalAmount(order.getTotalAmount())
+                    .items(itemSummaries)
+                    .build());
+        }
+    }
+
+    private void publishOrderReturnedEvent(Order order) {
+        if (order.getItems() != null) {
+            List<OrderEvents.OrderItemSummary> itemSummaries = order.getItems().stream()
+                    .map(item -> OrderEvents.OrderItemSummary.builder()
+                            .variantId(item.getProductVariantId())
+                            .quantity(item.getQuantity())
+                            .build())
+                    .collect(Collectors.toList());
+
+            eventPublisher.publishEvent(OrderEvents.OrderReturnedEvent.builder()
+                    .orderId(order.getId())
+                    .userId(order.getUserId())
+                    .orderNumber(order.getOrderNumber())
                     .items(itemSummaries)
                     .build());
         }
@@ -338,7 +466,7 @@ public class OrderServiceImpl implements OrderService {
             case PROCESSING -> from == OrderStatus.CONFIRMED || from == OrderStatus.PENDING;
             case SHIPPED -> from == OrderStatus.PROCESSING;
             case DELIVERED -> from == OrderStatus.SHIPPED;
-            case CANCELLED -> from != OrderStatus.DELIVERED && from != OrderStatus.CANCELLED;
+            case CANCELLED -> from == OrderStatus.PENDING || from == OrderStatus.CONFIRMED || from == OrderStatus.PROCESSING;
             case RETURNED -> from == OrderStatus.DELIVERED;
             default -> false;
         };

@@ -62,4 +62,8 @@ public class User extends Base {
     @Column(name = "loyalty_points")
     @Builder.Default
     private Integer loyaltyPoints = 0;
+
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Integer tokenVersion = 0;
 }

@@ -40,11 +40,25 @@ public class ProductVariant extends Base {
     @Column(name = "price", nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "original_price", precision = 12, scale = 2)
+    private BigDecimal originalPrice;
+
     @Column(name = "discount_price", precision = 12, scale = 2)
     private BigDecimal discountPrice;
 
+    @Column(name = "currency", length = 10)
+    @Builder.Default
+    private String currency = "VND";
+
     @Column(name = "volume", length = 50)
     private String volume;
+
+    @Column(name = "volume_value", precision = 10, scale = 2)
+    private BigDecimal volumeValue;
+
+    @Column(name = "volume_unit", length = 20)
+    @Builder.Default
+    private String volumeUnit = "ml";
 
     @Column(name = "color", length = 50)
     private String color;

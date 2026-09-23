@@ -6,8 +6,12 @@ import com.core.beautyshop.modules.catalog.application.dto.response.BrandRespons
 import com.core.beautyshop.modules.catalog.domain.Brand;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
+import com.core.beautyshop.shared.dto.CacheablePage;
 import com.core.beautyshop.modules.catalog.domain.BrandRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,12 +25,15 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "brands", key = "'page:' + #pageable.pageNumber + ':size:' + #pageable.pageSize + ':sort:' + #pageable.sort")
     public Page<BrandResponse> getAllBrands(Pageable pageable) {
-        return brandRepository.findByIsDeletedFalse(pageable).map(this::mapToResponse);
+        return CacheablePage.from(
+                brandRepository.findByIsDeletedFalse(pageable).map(this::mapToResponse));
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "brands", key = "'id:' + #id")
     public BrandResponse getBrandById(Long id) {
         Brand brand = brandRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thương hiệu với id: " + id));
@@ -35,6 +42,7 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "brands", key = "'slug:' + #slug")
     public BrandResponse getBrandBySlug(String slug) {
         Brand brand = brandRepository.findBySlugAndIsDeletedFalse(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found with slug: " + slug));
@@ -43,6 +51,11 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "brands", allEntries = true),
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public BrandResponse createBrand(CreateBrandRequest request) {
         if (brandRepository.existsBySlug(request.getSlug())) {
             throw new BusinessException("Slug thương hiệu đã tồn tại: " + request.getSlug());
@@ -63,6 +76,11 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "brands", allEntries = true),
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public BrandResponse updateBrand(Long id, UpdateBrandRequest request) {
         Brand brand = brandRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thương hiệu với id: " + id));
@@ -85,6 +103,11 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "brands", allEntries = true),
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
     public void deleteBrand(Long id) {
         Brand brand = brandRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thương hiệu với id: " + id));

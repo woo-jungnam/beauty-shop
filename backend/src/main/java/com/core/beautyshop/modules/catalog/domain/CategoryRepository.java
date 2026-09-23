@@ -20,6 +20,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findByParentCategoryIdAndIsDeletedFalseOrderByDisplayOrderAsc(Long parentId);
 
+    boolean existsByParentCategoryIdAndIsDeletedFalse(Long parentId);
+
     List<Category> findByIsDeletedFalseOrderByDisplayOrderAsc();
 
     boolean existsBySlug(String slug);

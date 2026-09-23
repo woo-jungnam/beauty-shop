@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class OrderNotificationKafkaListener {
 
     private final NotificationService notificationService;
+    private final com.core.beautyshop.modules.notification.application.service.NotificationInbox inbox;
 
     @KafkaListener(
             topics = KafkaTopicConstants.ORDER_CREATED_TOPIC,
@@ -26,16 +27,18 @@ public class OrderNotificationKafkaListener {
     public void handleOrderCreated(@Payload OrderKafkaMessage.OrderCreatedKafkaMessage message,
                                    @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                    @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
-                                   @Header(KafkaHeaders.OFFSET) long offset) {
+                                   @Header(KafkaHeaders.OFFSET) long offset,
+            @Header(value = "event-id", required = false) String eventId) {
         log.info("Kafka Consumer đã nhận OrderCreatedKafkaMessage từ topic={}, partition={}, offset={}, orderId={}",
                 topic, partition, offset, message.getOrderId());
 
-        notificationService.sendOrderConfirmationNotification(
+        inbox.process(eventId != null ? eventId : topic + ":" + partition + ":" + offset,
+                () -> notificationService.sendOrderConfirmationNotification(
                 message.getOrderId(),
                 message.getOrderNumber(),
                 message.getUserId(),
                 message.getTotalAmount()
-        );
+        ));
     }
 
     @KafkaListener(
@@ -45,16 +48,18 @@ public class OrderNotificationKafkaListener {
     public void handleOrderStatusChanged(@Payload OrderKafkaMessage.OrderStatusChangedKafkaMessage message,
                                          @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                          @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
-                                         @Header(KafkaHeaders.OFFSET) long offset) {
+                                         @Header(KafkaHeaders.OFFSET) long offset,
+            @Header(value = "event-id", required = false) String eventId) {
         log.info("Kafka Consumer đã nhận OrderStatusChangedKafkaMessage từ topic={}, partition={}, offset={}, orderId={}, trạng thái {} -> {}",
                 topic, partition, offset, message.getOrderId(), message.getPreviousStatus(), message.getNewStatus());
 
-        notificationService.sendOrderStatusUpdateNotification(
+        inbox.process(eventId != null ? eventId : topic + ":" + partition + ":" + offset,
+                () -> notificationService.sendOrderStatusUpdateNotification(
                 message.getOrderId(),
                 message.getOrderNumber(),
                 message.getPreviousStatus(),
                 message.getNewStatus()
-        );
+        ));
     }
 
     @KafkaListener(
@@ -64,21 +69,28 @@ public class OrderNotificationKafkaListener {
     public void handleOrderCancelled(@Payload OrderKafkaMessage.OrderCancelledKafkaMessage message,
                                      @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                      @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
-                                     @Header(KafkaHeaders.OFFSET) long offset) {
+                                     @Header(KafkaHeaders.OFFSET) long offset,
+            @Header(value = "event-id", required = false) String eventId) {
         log.info("Kafka Consumer đã nhận OrderCancelledKafkaMessage từ topic={}, partition={}, offset={}, orderId={}",
                 topic, partition, offset, message.getOrderId());
 
-        notificationService.sendOrderCancelledNotification(
+        inbox.process(eventId != null ? eventId : topic + ":" + partition + ":" + offset,
+                () -> notificationService.sendOrderCancelledNotification(
                 message.getOrderId(),
                 message.getOrderNumber()
-        );
+        ));
     }
 
-    @DltHandler
+    @KafkaListener(topics = {
+            KafkaTopicConstants.ORDER_CREATED_TOPIC + ".DLT",
+            KafkaTopicConstants.ORDER_STATUS_CHANGED_TOPIC + ".DLT",
+            KafkaTopicConstants.ORDER_CANCELLED_TOPIC + ".DLT"
+    }, groupId = "beautyshop-notification-dlt")
     public void handleDltMessage(Object payload,
                                  @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
                                  @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
-                                 @Header(KafkaHeaders.OFFSET) long offset) {
+                                 @Header(KafkaHeaders.OFFSET) long offset,
+            @Header(value = "event-id", required = false) String eventId) {
         log.error("NGHIÊM TRỌNG: Tin nhắn rơi vào DEAD LETTER TOPIC (DLT)! Topic: {}, Partition: {}, Offset: {}, Nội dung: {}",
                 topic, partition, offset, payload);
     }

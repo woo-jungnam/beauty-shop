@@ -1,9 +1,10 @@
-target/*
-!target/*.jar
-.git/
-.gitignore
 .env
-*.log
+.env.*
+target
+.git
+.gitignore
 .idea/
 .vscode/
 *.cmd
+*.log
+*.md

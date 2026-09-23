@@ -15,7 +15,9 @@ import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -53,6 +55,14 @@ public class CartServiceImpl implements CartService {
         return addToCart(userId, request);
     }
 
+    @Override
+    @Transactional
+    public CartResponse lockCart(Long userId, String sessionId) {
+        Cart cart = userId != null ? cartRepository.findByUserIdForUpdate(userId).orElse(null)
+                : cartRepository.findGuestBySessionIdForUpdate(sessionId).orElse(null);
+        return mapToCartResponse(cart);
+    }
+
     private Cart getCartEntity(Long userId, String sessionId) {
         if (userId != null) {
             return cartRepository.findByUserId(userId).orElse(null);
@@ -69,17 +79,22 @@ public class CartServiceImpl implements CartService {
             throw new BusinessException("Số lượng sản phẩm thêm vào giỏ hàng phải lớn hơn 0");
         }
 
+        if (userId == null && (request.getSessionId() == null || request.getSessionId().isBlank())) {
+            throw new BusinessException("Session ID is required for a guest cart");
+        }
+
         ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryById(request.getVariantId());
 
         if (!inventoryFacade.isStockAvailable(variant.getId(), request.getQuantity())) {
             throw new InsufficientStockException("Không đủ hàng trong kho cho sản phẩm này");
         }
 
-        Cart cart = getCartEntity(userId, request.getSessionId());
+        Cart cart = userId != null ? cartRepository.findByUserIdForUpdate(userId).orElse(null)
+                : cartRepository.findGuestBySessionIdForUpdate(request.getSessionId()).orElse(null);
 
         if (cart == null) {
             cart = Cart.builder()
-                    .sessionId(request.getSessionId())
+                    .sessionId(userId == null ? request.getSessionId() : null)
                     .userId(userId)
                     .items(new ArrayList<>())
                     .build();
@@ -90,7 +105,7 @@ public class CartServiceImpl implements CartService {
 
         if (existingItemOpt.isPresent()) {
             CartItem existingItem = existingItemOpt.get();
-            int newQty = existingItem.getQuantity() + request.getQuantity();
+            int newQty = Math.addExact(existingItem.getQuantity(), request.getQuantity());
             if (!inventoryFacade.isStockAvailable(variant.getId(), newQty)) {
                 throw new InsufficientStockException("Không đủ hàng trong kho cho tổng số lượng yêu cầu trong giỏ hàng");
             }
@@ -103,6 +118,10 @@ public class CartServiceImpl implements CartService {
                     .quantity(request.getQuantity())
                     .build();
             cartItemRepository.save(newItem);
+            if (cart.getItems() == null) {
+                cart.setItems(new ArrayList<>());
+            }
+            cart.getItems().add(newItem);
         }
 
         Cart updatedCart = cartRepository.findById(cart.getId()).orElse(cart);
@@ -111,27 +130,50 @@ public class CartServiceImpl implements CartService {
 
     @Override
     @Transactional
-    public void clearCart() {
+    public void clearCart(String sessionId) {
         Long userId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
         if (userId != null) {
-            cartRepository.findByUserId(userId).ifPresent(cart -> clearCart(cart.getId()));
+            cartRepository.findByUserIdForUpdate(userId).ifPresent(cart -> clearCart(cart.getId()));
+        } else if (sessionId != null && !sessionId.isBlank()) {
+            cartRepository.findBySessionId(sessionId).ifPresent(cart -> {
+                assertCartOwner(cart, sessionId);
+                clearCart(cart.getId());
+            });
+        } else {
+            throw new AccessDeniedException("Session ID is required for a guest cart");
         }
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED)
     public void clearCart(Long cartId) {
-        cartRepository.findById(cartId).ifPresent(cart -> {
-            cartItemRepository.deleteAll(cart.getItems());
+        cartRepository.findByIdForUpdate(cartId).ifPresent(this::clearCartItems);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void clearCartByUserIdOrSessionId(Long userId, String sessionId) {
+        if (userId != null) {
+            cartRepository.findByUserIdForUpdate(userId).ifPresent(this::clearCartItems);
+        }
+        else if (sessionId != null && !sessionId.isBlank()) {
+            cartRepository.findGuestBySessionIdForUpdate(sessionId).ifPresent(this::clearCartItems);
+        }
+    }
+
+    private void clearCartItems(Cart cart) {
+        if (cart.getItems() != null) {
             cart.getItems().clear();
-        });
+        }
+        cartRepository.save(cart);
     }
 
     @Override
     @Transactional
-    public CartResponse updateCartItem(Long itemId, Integer quantity) {
+    public CartResponse updateCartItem(Long itemId, Integer quantity, String sessionId) {
         CartItem item = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm trong giỏ hàng"));
+        assertCartOwner(item.getCart(), sessionId);
         return updateCartItem(item.getCart().getId(), itemId, quantity);
     }
 
@@ -142,7 +184,7 @@ public class CartServiceImpl implements CartService {
             throw new BusinessException("Số lượng không được để trống");
         }
 
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByIdForUpdate(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giỏ hàng"));
 
         CartItem item = cartItemRepository.findById(itemId)
@@ -168,16 +210,17 @@ public class CartServiceImpl implements CartService {
 
     @Override
     @Transactional
-    public CartResponse removeCartItem(Long itemId) {
+    public CartResponse removeCartItem(Long itemId, String sessionId) {
         CartItem item = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm trong giỏ hàng"));
+        assertCartOwner(item.getCart(), sessionId);
         return removeCartItem(item.getCart().getId(), itemId);
     }
 
     @Override
     @Transactional
     public CartResponse removeCartItem(Long cartId, Long itemId) {
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByIdForUpdate(cartId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giỏ hàng"));
 
         CartItem item = cartItemRepository.findById(itemId)
@@ -222,17 +265,20 @@ public class CartServiceImpl implements CartService {
             return getCart(userId, sessionId);
         }
 
-        Optional<Cart> guestCartOpt = cartRepository.findBySessionId(sessionId);
+        Optional<Cart> guestCartOpt = cartRepository.findGuestBySessionIdForUpdate(sessionId);
         if (guestCartOpt.isEmpty() || guestCartOpt.get().getItems() == null || guestCartOpt.get().getItems().isEmpty()) {
             return getCart(userId, null);
         }
 
         Cart guestCart = guestCartOpt.get();
+        if (guestCart.getUserId() != null) {
+            throw new AccessDeniedException("Cannot merge another user's cart");
+        }
         if (userId.equals(guestCart.getUserId())) {
             return mapToCartResponse(guestCart);
         }
 
-        Cart userCart = cartRepository.findByUserId(userId).orElseGet(() -> {
+        Cart userCart = cartRepository.findByUserIdForUpdate(userId).orElseGet(() -> {
             Cart newCart = Cart.builder()
                     .userId(userId)
                     .items(new ArrayList<>())
@@ -240,29 +286,60 @@ public class CartServiceImpl implements CartService {
             return cartRepository.save(newCart);
         });
 
-        for (CartItem guestItem : guestCart.getItems()) {
+        List<CartItem> mergedGuestItems = new ArrayList<>();
+        for (CartItem guestItem : new ArrayList<>(guestCart.getItems())) {
             Optional<CartItem> existingUserItem = cartItemRepository.findByCartIdAndProductVariantId(
                     userCart.getId(), guestItem.getProductVariantId());
 
             if (existingUserItem.isPresent()) {
                 CartItem item = existingUserItem.get();
-                item.setQuantity(item.getQuantity() + guestItem.getQuantity());
+                int mergedQuantity = Math.addExact(item.getQuantity(), guestItem.getQuantity());
+                if (!inventoryFacade.isStockAvailable(item.getProductVariantId(), mergedQuantity)) {
+                    continue;
+                }
+                item.setQuantity(mergedQuantity);
                 cartItemRepository.save(item);
             } else {
+                if (!inventoryFacade.isStockAvailable(guestItem.getProductVariantId(), guestItem.getQuantity())) {
+                    continue;
+                }
                 CartItem newItem = CartItem.builder()
                         .cart(userCart)
                         .productVariantId(guestItem.getProductVariantId())
                         .quantity(guestItem.getQuantity())
                         .build();
                 cartItemRepository.save(newItem);
+                if (userCart.getItems() != null) {
+                    userCart.getItems().add(newItem);
+                }
             }
+
+            cartItemRepository.delete(guestItem);
+            mergedGuestItems.add(guestItem);
         }
 
-        // Xóa giỏ hàng vãng lai sau khi gộp
-        cartItemRepository.deleteAll(guestCart.getItems());
-        cartRepository.delete(guestCart);
+        guestCart.getItems().removeAll(mergedGuestItems);
+        if (guestCart.getItems().isEmpty()) {
+            cartRepository.delete(guestCart);
+        } else {
+            cartRepository.save(guestCart);
+        }
 
         Cart updatedUserCart = cartRepository.findById(userCart.getId()).orElse(userCart);
         return mapToCartResponse(updatedUserCart);
+    }
+
+    private void assertCartOwner(Cart cart, String sessionId) {
+        Long currentUserId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
+        boolean ownsCart = currentUserId != null
+                ? currentUserId.equals(cart.getUserId())
+                : cart.getUserId() == null
+                    && sessionId != null
+                    && !sessionId.isBlank()
+                    && sessionId.equals(cart.getSessionId());
+
+        if (!ownsCart) {
+            throw new AccessDeniedException("You do not have permission to modify this cart");
+        }
     }
 }

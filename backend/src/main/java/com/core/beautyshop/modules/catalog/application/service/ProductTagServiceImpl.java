@@ -7,6 +7,7 @@ import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.catalog.domain.ProductTagRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +54,7 @@ public class ProductTagServiceImpl implements ProductTagService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "product_detail", allEntries = true)
     public void deleteTag(Long id) {
         if (!tagRepository.existsById(id)) {
             throw new ResourceNotFoundException("Không tìm thấy thẻ với id: " + id);
@@ -61,7 +63,7 @@ public class ProductTagServiceImpl implements ProductTagService {
     }
 
     private String generateSlug(String input) {
-        String slug = Normalizer.normalize(input, Normalizer.Form.NFD);
+        String slug = Normalizer.normalize(input.replace('đ', 'd').replace('Đ', 'D'), Normalizer.Form.NFD);
         slug = slug.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
         slug = slug.toLowerCase().replaceAll("[^a-z0-9]", "-").replaceAll("-+", "-");
         return slug.replaceAll("^-|-$", "");

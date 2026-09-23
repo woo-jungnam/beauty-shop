@@ -13,6 +13,7 @@ public class WarehouseStockResponse {
     private String sku;
     private Integer quantity;
     private Integer reservedQuantity;
+    private Integer quarantinedQuantity;
     private java.time.LocalDate expirationDate;
     private String batchCode;
     private Instant createdAt;

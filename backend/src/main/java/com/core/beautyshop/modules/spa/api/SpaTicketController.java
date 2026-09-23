@@ -1,13 +1,14 @@
 package com.core.beautyshop.modules.spa.api;
 
-import com.core.beautyshop.modules.spa.application.dto.request.PurchasePackageRequest;
 import com.core.beautyshop.modules.spa.application.dto.response.UserServiceTicketResponse;
+import com.core.beautyshop.modules.spa.application.dto.request.PurchasePackageRequest;
+import com.core.beautyshop.modules.order.api.dto.SpaPackageOrderResult;
 import com.core.beautyshop.modules.spa.application.service.SpaTicketService;
 import com.core.beautyshop.shared.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -50,15 +51,16 @@ public class SpaTicketController {
         ));
     }
 
-    @Operation(summary = "Mua gói dịch vụ Spa và tạo vé liệu trình mới")
+    @Operation(summary = "Tạo đơn thanh toán mua gói dịch vụ Spa")
     @PostMapping("/purchase")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<UserServiceTicketResponse>> purchasePackage(
+    public ResponseEntity<ApiResponse<SpaPackageOrderResult>> purchasePackage(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody PurchasePackageRequest request) {
-        UserServiceTicketResponse response = spaTicketService.purchasePackage(request);
+        request.setIdempotencyKey(idempotencyKey);
         return ResponseEntity.status(201).body(ApiResponse.created(
-                response,
-                "Mua gói dịch vụ Spa thành công"
-        ));
+                spaTicketService.purchasePackage(request),
+                "Đã tạo đơn thanh toán gói Spa; vé sẽ được cấp sau khi thanh toán thành công"));
     }
+
 }

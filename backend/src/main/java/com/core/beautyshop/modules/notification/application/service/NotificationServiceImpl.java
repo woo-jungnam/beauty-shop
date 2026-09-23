@@ -20,12 +20,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendEmail(EmailMessageDto emailMessageDto) {
-        log.info("========== [EMAIL ĐÃ ĐƯỢC GỬI QUA DỊCH VỤ THÔNG BÁO] ==========");
-        log.info("Gửi tới: {} <{}>", emailMessageDto.getRecipientName(), emailMessageDto.getRecipientEmail());
-        log.info("Tiêu đề: {}", emailMessageDto.getSubject());
-        log.info("Mẫu (Template): {}", emailMessageDto.getTemplateCode());
-        log.info("Tham số: {}", emailMessageDto.getParameters());
-        log.info("==================================================================");
+        log.info("Email transport is not configured; notification template {} recorded for order {}",
+                emailMessageDto.getTemplateCode(), emailMessageDto.getParameters().get("orderId"));
     }
 
     @Override

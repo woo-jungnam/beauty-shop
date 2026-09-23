@@ -8,6 +8,7 @@ import java.time.LocalTime;
 @Data
 public class RescheduleAppointmentRequest {
     @NotNull(message = "Ngày hẹn không được để trống")
+    @jakarta.validation.constraints.FutureOrPresent(message = "Ngày hẹn phải từ hôm nay trở đi")
     private LocalDate appointmentDate;
 
     @NotNull(message = "Giờ hẹn không được để trống")

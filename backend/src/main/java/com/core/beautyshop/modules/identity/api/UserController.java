@@ -8,6 +8,7 @@ import com.core.beautyshop.shared.dto.PageResponse;
 import com.core.beautyshop.modules.identity.application.dto.request.UpdateProfileRequest;
 import com.core.beautyshop.modules.identity.application.dto.response.UserProfileResponse;
 import com.core.beautyshop.modules.identity.application.service.UserService;
+import com.core.beautyshop.modules.identity.application.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
     @Operation(summary = "Lấy thông tin cá nhân hiện tại")
     @GetMapping({"/profile", "/me"})
@@ -58,5 +60,13 @@ public class UserController {
             @PathVariable Long id) {
         UserProfileResponse profile = userService.getUserById(id);
         return ResponseEntity.ok(ApiResponse.success(profile));
+    }
+
+    @Operation(summary = "Buộc đăng xuất người dùng trên tất cả thiết bị (Admin)")
+    @PostMapping("/admin/{id}/force-logout")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable Long id) {
+        authService.forceLogoutUser(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Đã thu hồi toàn bộ phiên đăng nhập của người dùng"));
     }
 }

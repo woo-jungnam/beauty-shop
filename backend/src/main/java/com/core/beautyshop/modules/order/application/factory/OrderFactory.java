@@ -17,6 +17,7 @@ public class OrderFactory {
         return Order.builder()
                 .orderNumber(generateOrderNumber())
                 .userId(userId)
+                .guestSessionId(userId == null ? request.getSessionId() : null)
                 .customerName(request.getCustomerName())
                 .customerPhone(request.getCustomerPhone())
                 .shippingAddress(request.getShippingAddress())
@@ -35,6 +36,6 @@ public class OrderFactory {
     }
 
     private String generateOrderNumber() {
-        return "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "ORD-" + UUID.randomUUID().toString().replace("-", "").toUpperCase();
     }
 }
