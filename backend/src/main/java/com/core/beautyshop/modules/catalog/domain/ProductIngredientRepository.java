@@ -7,5 +7,6 @@ import java.util.List;
 
 @Repository
 public interface ProductIngredientRepository extends JpaRepository<ProductIngredient, Long> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"ingredient"})
     List<ProductIngredient> findByProductIdOrderByDisplayOrderAsc(Long productId);
 }

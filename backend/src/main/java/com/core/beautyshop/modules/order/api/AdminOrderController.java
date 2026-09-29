@@ -6,6 +6,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.shared.dto.PageResponse;
 import com.core.beautyshop.modules.order.application.dto.request.UpdateOrderStatusRequest;
+import com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter;
+import com.core.beautyshop.modules.order.domain.enums.*;
+import java.time.Instant;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
 import com.core.beautyshop.modules.order.application.service.OrderService;
 import jakarta.validation.Valid;
@@ -31,8 +34,13 @@ public class AdminOrderController {
     @Operation(summary = "Lấy tất cả đơn hàng trong hệ thống (Admin)")
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<OrderResponse>>> getAllOrders(
-           @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-        Page<OrderResponse> page = orderService.getAllOrders(pageable);
+           @RequestParam(required = false) String keyword,
+           @RequestParam(required = false) OrderStatus status,
+           @RequestParam(required = false) PaymentStatus paymentStatus,
+           @RequestParam(required = false) Instant from,
+           @RequestParam(required = false) Instant to,
+           @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        Page<OrderResponse> page = orderService.searchAdminOrders(new AdminOrderFilter(keyword, status, paymentStatus, from, to), pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 

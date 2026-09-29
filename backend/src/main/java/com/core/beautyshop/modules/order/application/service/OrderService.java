@@ -19,6 +19,7 @@ public interface OrderService {
     Page<OrderResponse> getOrdersByUser(Long userId, Pageable pageable);
 
     Page<OrderResponse> getAllOrders(Pageable pageable);
+    Page<OrderResponse> searchAdminOrders(com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter filter, Pageable pageable);
 
     OrderResponse updateOrderStatus(Long id, UpdateOrderStatusRequest request);
 

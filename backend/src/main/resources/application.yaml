@@ -1,6 +1,11 @@
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
   tomcat:
     threads:
       max: ${TOMCAT_MAX_THREADS:200}
@@ -10,6 +15,10 @@ server:
     connection-timeout: 10000
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: ${MEDIA_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MEDIA_MAX_REQUEST_SIZE:10MB}
   lifecycle:
     timeout-per-shutdown-phase: 30s
   application:
@@ -17,10 +26,25 @@ spring:
   threads:
     virtual:
       enabled: true
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
     baseline-on-migrate: true
-    validate-on-migrate: ${FLYWAY_VALIDATE_ON_MIGRATE:true}
+    validate-on-migrate: ${FLYWAY_VALIDATE_ON_MIGRATE:false}
     locations: classpath:db/migration
   data:
     web:
@@ -32,9 +56,9 @@ spring:
       password: ${REDIS_PASSWORD:}
       timeout: 2000ms
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/beautyshop?createDatabaseIfNotExist=true}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/beautyshop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:Sql@123456}
     driver-class-name: ${DB_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     hikari:
       maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:15}
@@ -82,6 +106,9 @@ spring:
       missing-topics-fatal: false
 
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -96,8 +123,16 @@ management:
       application: ${spring.application.name}
 
 app:
+  media:
+    upload-dir: ${MEDIA_UPLOAD_DIR:uploads}
   cache:
     provider: ${CACHE_PROVIDER:redis}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@beautyshop.vn}
+  retention:
+    days: ${RETENTION_DAYS:14}
+    cron: ${RETENTION_CRON:0 0 3 * * SUN}
   order:
     payment-timeout-minutes: ${ORDER_PAYMENT_TIMEOUT_MINUTES:30}
   outbox:
@@ -106,17 +141,17 @@ app:
     product-expiration: ${PRODUCT_EXPIRATION_CRON:0 0 1 * * ?}
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!}
   expiration-ms: ${JWT_EXPIRATION_MS:900000}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
 
 sepay:
   webhook:
-    api-key: ${SEPAY_WEBHOOK_API_KEY}
+    api-key: ${SEPAY_WEBHOOK_API_KEY:your-sepay-api-key-here}
   bank:
     name: ${SEPAY_BANK_NAME:MBBank}
-    account-name: ${SEPAY_BANK_ACCOUNT_NAME:BEAUTY SHOP}
-    account-number: ${SEPAY_BANK_ACCOUNT_NUMBER:123456789}
+    account-name: ${SEPAY_BANK_ACCOUNT_NAME:BEAUTYSHOP}
+    account-number: ${SEPAY_BANK_ACCOUNT_NUMBER:0000000000}
     bin: ${SEPAY_BANK_BIN:970422}
 
 chatbot:

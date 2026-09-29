@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -68,14 +69,14 @@ public class ProductExpirationWorker {
                     }
                 } else if (allUnexpiredStockExpiresSoon) {
                     if (variant.getDiscountPrice() == null && variant.getPrice() != null && Boolean.TRUE.equals(variant.getIsActive())) {
-                        BigDecimal discountPrice = variant.getPrice().multiply(new BigDecimal("0.80")).setScale(0, java.math.RoundingMode.HALF_UP);
+                        BigDecimal discountPrice = variant.getPrice().multiply(new BigDecimal("0.80")).setScale(0, RoundingMode.HALF_UP);
                         catalogFacade.applyDiscountPrice(variant.getId(), discountPrice);
                         log.info("Áp dụng giảm giá thanh lý 20% cho variantId={} (giá mới: {}) vì toàn bộ lô khả dụng đều sắp hết hạn",
                                 variant.getId(), discountPrice);
                     }
                 } else if (hasUnexpiredStock && variant.getPrice() != null && variant.getDiscountPrice() != null) {
                     BigDecimal automaticDiscount = variant.getPrice().multiply(new BigDecimal("0.80"))
-                            .setScale(0, java.math.RoundingMode.HALF_UP);
+                            .setScale(0, RoundingMode.HALF_UP);
                     if (variant.getDiscountPrice().compareTo(automaticDiscount) == 0) {
                         catalogFacade.applyDiscountPrice(variant.getId(), null);
                         log.info("Removed expiration discount for variantId={} because a longer-dated batch is available",

@@ -49,6 +49,7 @@ public class AuthMapper {
                 .roles(roles)
                 .membershipTier(user.getMembershipTier())
                 .loyaltyPoints(user.getLoyaltyPoints())
+                .status(user.getStatus())
                 .build();
     }
 }

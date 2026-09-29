@@ -14,10 +14,10 @@ public class BankPaymentStrategy implements PaymentStrategy {
     @Value("${sepay.bank.name:MBBank}")
     private String bankName;
 
-    @Value("${sepay.bank.account-name:BEAUTY SHOP}")
+    @Value("${sepay.bank.account-name:BEAUTYSHOP}")
     private String bankAccountName;
 
-    @Value("${sepay.bank.account-number:123456789}")
+    @Value("${sepay.bank.account-number:0000000000}")
     private String bankAccountNumber;
 
     @Value("${sepay.bank.bin:970422}")

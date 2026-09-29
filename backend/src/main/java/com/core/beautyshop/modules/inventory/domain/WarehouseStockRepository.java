@@ -69,4 +69,13 @@ public interface WarehouseStockRepository extends JpaRepository<WarehouseStock, 
     List<WarehouseStock> findByWarehouseId(Long warehouseId);
 
     Optional<WarehouseStock> findByWarehouseIdAndProductVariantIdAndBatchCode(Long warehouseId, Long productVariantId, String batchCode);
+
+    @Query("select s from WarehouseStock s join fetch s.warehouse w where s.isDeleted = false and w.isDeleted = false and (s.quantity - s.reservedQuantity) <= s.minQuantity order by (s.quantity - s.reservedQuantity) asc")
+    List<WarehouseStock> findLowStock();
+
+    @Query("select s from WarehouseStock s join fetch s.warehouse w where s.isDeleted = false and w.isDeleted = false and s.expirationDate is not null and s.expirationDate between :today and :deadline order by s.expirationDate")
+    List<WarehouseStock> findExpiringSoon(@Param("today") java.time.LocalDate today, @Param("deadline") java.time.LocalDate deadline);
+
+    @Query("select coalesce(sum(s.costPrice * s.quantity), 0) from WarehouseStock s where s.isDeleted = false")
+    java.math.BigDecimal calculateInventoryValue();
 }

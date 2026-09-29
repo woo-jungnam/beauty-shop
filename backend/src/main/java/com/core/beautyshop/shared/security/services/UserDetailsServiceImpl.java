@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với tên đăng nhập hoặc email: " + usernameOrEmail));
 
+        if (user.getStatus() != null && user.getStatus() != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) {
+            throw new DisabledException("Account is " + user.getStatus());
+        }
         return UserDetailsImpl.build(user);
     }
 }

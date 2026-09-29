@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Component;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 public class CatalogFacadeImpl implements CatalogFacade {
 
     private final ProductVariantRepository productVariantRepository;
+    private final com.core.beautyshop.modules.catalog.domain.ProductRepository productRepository;
 
     @Override
     public Optional<ProductVariantSummaryDto> findVariantSummaryById(Long variantId) {
@@ -57,7 +58,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     @Caching(evict = {
             @CacheEvict(value = "products_page", allEntries = true),
             @CacheEvict(value = "product_detail", allEntries = true)
@@ -76,7 +77,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     @Caching(evict = {
             @CacheEvict(value = "products_page", allEntries = true),
             @CacheEvict(value = "product_detail", allEntries = true)
@@ -88,5 +89,23 @@ public class CatalogFacadeImpl implements CatalogFacade {
                 productVariantRepository.save(variant);
             });
         }
+    }
+
+    @Override
+    public boolean productExistsById(Long productId) {
+        return productId != null && productRepository.findByIdAndIsDeletedFalse(productId).isPresent();
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products_page", allEntries = true),
+            @CacheEvict(value = "product_detail", allEntries = true)
+    })
+    public void updateProductRating(Long productId, double averageRating, int totalReviews) {
+        productRepository.findByIdForUpdateAndIsDeletedFalse(productId).ifPresent(product -> {
+            product.setAverageRating(averageRating);
+            product.setTotalReviews(totalReviews);
+        });
     }
 }

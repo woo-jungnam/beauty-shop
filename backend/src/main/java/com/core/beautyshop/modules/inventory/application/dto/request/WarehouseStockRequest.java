@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
 @Data
 public class WarehouseStockRequest {
@@ -20,4 +21,12 @@ public class WarehouseStockRequest {
     private LocalDate expirationDate;
 
     private String batchCode;
+
+    @Min(0)
+    private Integer minQuantity = 0;
+    @Min(0)
+    private Integer maxQuantity;
+    private String location;
+    @jakarta.validation.constraints.DecimalMin("0")
+    private BigDecimal costPrice = BigDecimal.ZERO;
 }

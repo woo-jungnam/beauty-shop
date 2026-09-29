@@ -31,7 +31,7 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(categories));
     }
 
-    @Operation(summary = "Lấy danh sách các danh mục gốc (Root Categories)")
+    @Operation(summary = "Lấy danh sách các danh mục gốc")
     @GetMapping("/root")
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getRootCategories() {
         List<CategoryResponse> categories = categoryService.getRootCategories();

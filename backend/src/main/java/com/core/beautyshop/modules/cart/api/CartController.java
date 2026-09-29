@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Giỏ hàng mua sắm", description = "Các API thao tác giỏ hàng, thêm/sửa/xóa sản phẩm và gộp giỏ hàng khách vãng lai")
@@ -70,7 +71,7 @@ public class CartController {
 
     @Operation(summary = "Gộp giỏ hàng khách vãng lai vào tài khoản khi đăng nhập", description = "Khi khách hàng vãng lai đã thêm đồ vào giỏ rồi mới đăng nhập, Frontend gọi API này để chuyển các món từ sessionId sang tài khoản người dùng.")
     @PostMapping("/merge")
-    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CartResponse>> mergeCart(
             @Parameter(description = "Session ID của khách vãng lai trước khi đăng nhập", example = "guest-session-uuid-12345")
             @RequestParam String sessionId) {

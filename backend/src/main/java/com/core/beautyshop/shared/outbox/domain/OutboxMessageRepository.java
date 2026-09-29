@@ -49,4 +49,8 @@ public interface OutboxMessageRepository extends JpaRepository<OutboxMessage, Lo
     @Modifying
     @Query("UPDATE OutboxMessage m SET m.status = 'FAILED', m.errorMessage = :errorMessage WHERE m.id = :id")
     int markAsFailed(@Param("id") Long id, @Param("errorMessage") String errorMessage);
+
+    @Modifying
+    @Query("DELETE FROM OutboxMessage m WHERE m.status = 'PUBLISHED' AND m.sentAt < :cutoff")
+    int deletePublishedBefore(@Param("cutoff") LocalDateTime cutoff);
 }

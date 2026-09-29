@@ -36,3 +36,8 @@ jwt:
 sepay:
   webhook:
     api-key: test-sepay-api-key
+  bank:
+    name: TEST BANK
+    account-name: TEST ACCOUNT
+    account-number: "0000000000"
+    bin: "000000"

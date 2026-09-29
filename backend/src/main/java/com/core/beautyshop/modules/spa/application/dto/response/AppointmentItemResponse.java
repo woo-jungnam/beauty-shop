@@ -9,6 +9,9 @@ import java.time.LocalTime;
 @Data
 @Builder
 public class AppointmentItemResponse {
+    private Long id;
+    private Long serviceId;
+    private Long staffId;
     private String serviceName;
     private String staffName;
     private Long ticketId;

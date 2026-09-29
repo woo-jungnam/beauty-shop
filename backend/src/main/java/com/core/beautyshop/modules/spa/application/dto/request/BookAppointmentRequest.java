@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -20,6 +21,7 @@ public class BookAppointmentRequest {
     @NotNull(message = "Giờ bắt đầu không được để trống")
     private LocalTime startTime;
     
+    @Size(max = 500)
     private String notes;
     
     @NotEmpty(message = "Cần chọn ít nhất một dịch vụ để đặt lịch")

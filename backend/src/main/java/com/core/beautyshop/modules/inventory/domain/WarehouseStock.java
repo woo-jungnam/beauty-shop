@@ -15,6 +15,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(
     name = "warehouse_stocks",
@@ -64,4 +66,8 @@ public class WarehouseStock extends Base {
 
     @Column(name = "batch_code", length = 100)
     private String batchCode;
+
+    @Column(name = "cost_price", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal costPrice = BigDecimal.ZERO;
 }

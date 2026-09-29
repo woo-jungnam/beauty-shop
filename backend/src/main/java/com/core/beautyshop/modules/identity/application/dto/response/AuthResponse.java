@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.util.List;
 
@@ -16,11 +17,11 @@ import java.util.List;
 public class AuthResponse {
 
     @Schema(description = "JWT Access Token dùng để gửi kèm các request sau qua Authorization header", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    @lombok.ToString.Exclude
+    @ToString.Exclude
     private String accessToken;
 
     @Schema(description = "JWT Refresh Token dùng để làm mới token khi hết hạn", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    @lombok.ToString.Exclude
+    @ToString.Exclude
     private String refreshToken;
 
     @Builder.Default

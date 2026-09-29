@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.*;
 
 @Repository
 public interface UserServiceTicketRepository extends JpaRepository<UserServiceTicket, Long> {
@@ -36,4 +37,13 @@ public interface UserServiceTicketRepository extends JpaRepository<UserServiceTi
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ticket FROM UserServiceTicket ticket WHERE ticket.id = :id")
     Optional<UserServiceTicket> findByIdForUpdate(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"servicePackage"})
+    Page<UserServiceTicket> findByIsDeletedFalse(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"servicePackage"})
+    Page<UserServiceTicket> findByUserIdAndIsDeletedFalse(Long userId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"servicePackage"})
+    Page<UserServiceTicket> findByStatusAndIsDeletedFalse(TicketStatus status, Pageable pageable);
 }

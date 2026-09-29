@@ -14,7 +14,10 @@ import jakarta.persistence.LockModeType;
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 
 @Repository
-public interface OrderRepository extends JpaRepository<Order, Long> {
+public interface OrderRepository extends JpaRepository<Order, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Order> {
+
+    @Query("select count(o) > 0 from Order o join o.items i, ProductVariant v where o.id = :orderId and o.userId = :userId and o.status = com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED and v.id = i.productVariantId and v.product.id = :productId")
+    boolean existsDeliveredProductPurchase(Long orderId, Long userId, Long productId);
 
     @EntityGraph(attributePaths = {"items"})
     Optional<Order> findByOrderNumber(String orderNumber);
@@ -42,5 +45,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
 }
 

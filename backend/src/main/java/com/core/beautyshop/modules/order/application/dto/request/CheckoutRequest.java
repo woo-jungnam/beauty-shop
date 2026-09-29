@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -19,6 +20,7 @@ public class CheckoutRequest {
 
     @NotBlank(message = "Tên khách hàng không được để trống")
     @Schema(description = "Họ tên người nhận hàng", example = "Trần Thị Mai", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Size(max = 100)
     private String customerName;
 
     @NotBlank(message = "Số điện thoại không được để trống")
@@ -28,15 +30,22 @@ public class CheckoutRequest {
 
     @NotBlank(message = "Địa chỉ giao hàng không được để trống")
     @Schema(description = "Địa chỉ chi tiết (số nhà, tên đường)", example = "123 Đường Nguyễn Huệ", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Size(max = 500)
     private String shippingAddress;
 
-    @Schema(description = "Phường / Xã", example = "Phường Bến Nghé")
+    @Schema(description = "Phường / Xã", example = "Phường Bến Nghé", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "Phường / xã không được để trống")
+    @Size(max = 100)
     private String ward;
 
-    @Schema(description = "Quận / Huyện", example = "Quận 1")
+    @Schema(description = "Quận / Huyện", example = "Quận 1", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "Quận / huyện không được để trống")
+    @Size(max = 100)
     private String district;
 
-    @Schema(description = "Tỉnh / Thành phố", example = "TP. Hồ Chí Minh")
+    @Schema(description = "Tỉnh / Thành phố", example = "TP. Hồ Chí Minh", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "Tỉnh / thành phố không được để trống")
+    @Size(max = 100)
     private String city;
 
     @NotNull(message = "Phương thức thanh toán không được để trống")
@@ -44,5 +53,10 @@ public class CheckoutRequest {
     private PaymentMethod paymentMethod;
 
     @Schema(description = "Ghi chú thêm cho đơn hàng khi giao hàng", example = "Giao hàng trong giờ hành chính.")
+    @Size(max = 500)
     private String notes;
+
+    @Size(max = 50)
+    @Schema(description = "Voucher code to apply")
+    private String voucherCode;
 }

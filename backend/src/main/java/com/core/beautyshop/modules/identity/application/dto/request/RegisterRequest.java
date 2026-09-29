@@ -35,9 +35,11 @@ public class RegisterRequest {
 
     @NotBlank(message = "Họ và tên không được để trống")
     @Schema(description = "Họ và tên đầy đủ của khách hàng", example = "Nguyễn Văn An", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Size(max = 100)
     private String fullName;
 
     @Schema(description = "Số điện thoại liên hệ", example = "0912345678")
+    @Size(max = 20)
     private String phone;
 
     @Schema(description = "Giới tính (MALE, FEMALE, OTHER)", example = "FEMALE")
@@ -47,8 +49,10 @@ public class RegisterRequest {
     private LocalDate dateOfBirth;
 
     @Schema(description = "Tiểu sử / Giới thiệu bản thân", example = "Khách hàng yêu thích các sản phẩm chăm sóc da hữu cơ.")
+    @Size(max = 500)
     private String bio;
 
     @Schema(description = "URL ảnh đại diện avatar", example = "https://cdn.beautyshop.com/avatars/user-1.png")
+    @Size(max = 500)
     private String avatarUrl;
 }

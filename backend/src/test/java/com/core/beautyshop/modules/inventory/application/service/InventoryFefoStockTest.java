@@ -15,6 +15,7 @@ import static org.mockito.Mockito.*;
 class InventoryFefoStockTest {
     @Mock WarehouseStockRepository stocks;
     @Mock StockAllocationRepository allocations;
+    @Mock InventoryLedgerService ledger;
     @InjectMocks StockAllocationService service;
 
     WarehouseStock stock(long id, int quantity) {

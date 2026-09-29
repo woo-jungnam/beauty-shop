@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
@@ -18,6 +19,6 @@ public class LoginRequest {
 
     @NotBlank(message = "Mật khẩu không được để trống")
     @Schema(description = "Mật khẩu tài khoản", example = "Password@123", requiredMode = Schema.RequiredMode.REQUIRED)
-    @lombok.ToString.Exclude
+    @ToString.Exclude
     private String password;
 }

@@ -111,7 +111,23 @@ public class Order extends Base {
     @Column(name = "notes", length = 500)
     private String notes;
 
+    @Column(name = "carrier_name", length = 100)
+    private String carrierName;
+
+    @Column(name = "tracking_code", length = 100)
+    private String trackingCode;
+
+    @Column(name = "cancel_reason", length = 500)
+    private String cancelReason;
+
+    @Column(name = "cancelled_by")
+    private Long cancelledBy;
+
+    @Column(name = "voucher_id")
+    private Long voucherId;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<OrderItem> items;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

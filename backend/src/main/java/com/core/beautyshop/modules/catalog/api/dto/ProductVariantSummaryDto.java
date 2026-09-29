@@ -20,4 +20,5 @@ public class ProductVariantSummaryDto {
     private BigDecimal price;
     private BigDecimal discountPrice;
     private Boolean isActive;
+    private String productThumbnailUrl;
 }

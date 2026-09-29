@@ -4,6 +4,9 @@ ALTER TABLE warehouse_stocks
 ADD COLUMN expiration_date DATE NULL,
 ADD COLUMN batch_code VARCHAR(100) NULL;
 
+-- Ensure foreign key fk_wstock_warehouse has an index before dropping unique index
+ALTER TABLE warehouse_stocks ADD INDEX idx_wstock_warehouse (warehouse_id);
+
 -- Drop old unique constraint
 ALTER TABLE warehouse_stocks DROP INDEX uk_warehouse_variant;
 

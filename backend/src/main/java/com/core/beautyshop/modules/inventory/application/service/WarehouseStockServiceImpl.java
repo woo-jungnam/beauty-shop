@@ -25,6 +25,7 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     private final WarehouseStockRepository stockRepository;
     private final WarehouseRepository warehouseRepository;
     private final CatalogFacade catalogFacade;
+    private final InventoryLedgerService ledgerService;
 
     @Override
     public List<WarehouseStockResponse> getStocksByWarehouseId(Long warehouseId) {
@@ -44,17 +45,20 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
         Optional<WarehouseStock> existingStock = stockRepository.findByWarehouseIdAndProductVariantIdAndBatchCode(warehouseId, variant.getId(), request.getBatchCode());
 
         WarehouseStock stock;
+        int quantityBefore;
         if (existingStock.isPresent()) {
             stock = stockRepository.findByIdForUpdate(existingStock.get().getId()).orElseThrow();
             if (request.getQuantity() < stock.getReservedQuantity()
                     || request.getReservedQuantity() != null && !request.getReservedQuantity().equals(stock.getReservedQuantity())) {
                 throw new com.core.beautyshop.shared.exception.BusinessException("Cannot overwrite order reservations");
             }
+            quantityBefore = stock.getQuantity();
             stock.setQuantity(request.getQuantity());
         } else {
             if (request.getReservedQuantity() != null && request.getReservedQuantity() != 0) {
                 throw new com.core.beautyshop.shared.exception.BusinessException("Reservations must be created by checkout");
             }
+            quantityBefore = 0;
             stock = WarehouseStock.builder()
                     .warehouse(warehouse)
                     .productVariantId(variant.getId())
@@ -62,10 +66,26 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                     .reservedQuantity(request.getReservedQuantity() != null ? request.getReservedQuantity() : 0)
                     .batchCode(request.getBatchCode())
                     .expirationDate(request.getExpirationDate())
+                    .minQuantity(request.getMinQuantity())
+                    .maxQuantity(request.getMaxQuantity())
+                    .location(request.getLocation())
+                    .costPrice(request.getCostPrice())
                     .build();
         }
 
+        stock.setExpirationDate(request.getExpirationDate());
+        stock.setMinQuantity(request.getMinQuantity());
+        stock.setMaxQuantity(request.getMaxQuantity());
+        stock.setLocation(request.getLocation());
+        stock.setCostPrice(request.getCostPrice());
+
         stock = stockRepository.save(stock);
+        int delta = stock.getQuantity() - quantityBefore;
+        if (delta != 0) {
+            ledgerService.record(stock, delta > 0 ? com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.RECEIPT
+                            : com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.ADJUSTMENT,
+                    delta, quantityBefore, stock.getQuantity(), "MANUAL_STOCK", String.valueOf(stock.getId()), "Admin stock update");
+        }
         return mapToResponse(stock);
     }
 
@@ -80,7 +100,13 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
         if (valueOrZero(stock.getQuarantinedQuantity()) > 0) {
             throw new BusinessException("Không thể xóa lô hàng đang bị cách ly");
         }
-        stockRepository.delete(stock);
+        int quantityBefore = stock.getQuantity();
+        if (quantityBefore > 0) {
+            stock.setQuantity(0);
+            ledgerService.record(stock, com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.DISPOSAL,
+                    -quantityBefore, quantityBefore, 0, "STOCK_DELETE", String.valueOf(stock.getId()), "Stock batch deactivated");
+        }
+        stock.setIsDeleted(true);
     }
 
     private int valueOrZero(Integer value) {
@@ -101,6 +127,10 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                 .reservedQuantity(stock.getReservedQuantity())
                 .quarantinedQuantity(stock.getQuarantinedQuantity())
                 .batchCode(stock.getBatchCode())
+                .minQuantity(stock.getMinQuantity())
+                .maxQuantity(stock.getMaxQuantity())
+                .location(stock.getLocation())
+                .costPrice(stock.getCostPrice())
                 .expirationDate(stock.getExpirationDate())
                 .createdAt(stock.getCreatedAt())
                 .updatedAt(stock.getUpdatedAt())

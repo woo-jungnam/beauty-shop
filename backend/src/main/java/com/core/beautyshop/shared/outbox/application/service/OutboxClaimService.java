@@ -2,12 +2,14 @@ package com.core.beautyshop.shared.outbox.application.service;
 import com.core.beautyshop.shared.outbox.domain.*;
 import com.core.beautyshop.shared.outbox.domain.enums.OutboxStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service @RequiredArgsConstructor
 public class OutboxClaimService {
     private final OutboxMessageRepository messages;
@@ -35,5 +37,13 @@ public class OutboxClaimService {
         messages.failClaim(message.getId(), message.getClaimToken(),
                 message.getRetryCount() >= 4 ? OutboxStatus.FAILED : OutboxStatus.PENDING,
                 exception.getClass().getSimpleName());
+    }
+
+    @Transactional
+    public int cleanupPublishedMessages(int retentionDays) {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
+        int deleted = messages.deletePublishedBefore(cutoff);
+        log.info("Đã dọn dẹp {} outbox messages cũ hơn {} ngày", deleted, retentionDays);
+        return deleted;
     }
 }

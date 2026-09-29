@@ -17,6 +17,7 @@ import com.core.beautyshop.modules.identity.domain.UserRepository;
 import com.core.beautyshop.shared.security.jwt.JwtUtils;
 import com.core.beautyshop.shared.security.services.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -34,6 +35,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -205,5 +207,14 @@ public class AuthServiceImpl implements AuthService {
         user.setTokenVersion(newVersion);
         userRepository.save(user);
         tokenVersionCache.updateCurrentVersion(userId, newVersion);
+    }
+
+    @Override
+    @Transactional
+    public int cleanupExpiredSessions(int retentionDays) {
+        Instant cutoff = Instant.now().minus(retentionDays, java.time.temporal.ChronoUnit.DAYS);
+        int deleted = refreshTokenSessionRepository.deleteExpiredOrRevokedBefore(cutoff);
+        log.info("Đã dọn dẹp {} refresh token sessions cũ hơn {} ngày", deleted, retentionDays);
+        return deleted;
     }
 }

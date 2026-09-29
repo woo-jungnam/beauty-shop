@@ -7,7 +7,9 @@ import com.core.beautyshop.modules.order.domain.OrderItem;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class OrderMapper {
@@ -18,13 +20,14 @@ public class OrderMapper {
         }
         return OrderResponse.builder()
                 .id(order.getId())
+                .servicePackageId(order.getServicePackageId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
                 .paymentMethod(order.getPaymentMethod())
                 .paymentStatus(order.getPaymentStatus())
                 .customerName(order.getCustomerName())
                 .customerPhone(order.getCustomerPhone())
-                .shippingAddress(order.getShippingAddress() + ", " + order.getWard() + ", " + order.getDistrict() + ", " + order.getCity())
+                .shippingAddress(formatShippingAddress(order))
                 .subTotal(order.getSubTotal())
                 .shippingFee(order.getShippingFee())
                 .discountAmount(order.getDiscountAmount())
@@ -33,11 +36,24 @@ public class OrderMapper {
                 .refundedAmount(order.getRefundedAmount())
                 .refundReference(order.getRefundReference())
                 .paymentDeadline(order.getPaymentDeadline())
+                .voucherId(order.getVoucherId())
+                .carrierName(order.getCarrierName())
+                .trackingCode(order.getTrackingCode())
+                .cancelReason(order.getCancelReason())
+                .cancelledBy(order.getCancelledBy())
                 .createdAt(order.getCreatedAt())
                 .items(order.getItems() != null ? 
                         order.getItems().stream().map(this::toOrderItemResponse).collect(Collectors.toList()) 
                         : List.of())
                 .build();
+    }
+
+    private String formatShippingAddress(Order order) {
+        return Stream.of(order.getShippingAddress(), order.getWard(), order.getDistrict(), order.getCity())
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .collect(Collectors.joining(", "));
     }
 
     public OrderItemResponse toOrderItemResponse(OrderItem item) {

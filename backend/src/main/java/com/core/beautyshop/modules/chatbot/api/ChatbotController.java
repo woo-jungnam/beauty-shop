@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -64,7 +65,7 @@ public class ChatbotController {
             description = "Phân tích câu hỏi người dùng thành các khía cạnh: ý định (Intent), danh mục sản phẩm (Category), yêu cầu ràng buộc (Constraints) và sở thích (Preferences)."
     )
     @PostMapping("/test/understand")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Object>> testUnderstand(
             @Valid @RequestBody UnderstandTestRequest request
     ) {
@@ -77,7 +78,7 @@ public class ChatbotController {
             description = "Truy xuất danh mục sản phẩm từ cơ sở dữ liệu MySQL chính ở chế độ chỉ đọc và nạp chỉ mục vào hệ thống tìm kiếm vector RAG của Chatbot."
     )
     @PostMapping("/sync/database")
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> syncDatabase(
             @Parameter(description = "Giới hạn số lượng sản phẩm cần đồng bộ (để trống nếu muốn đồng bộ toàn bộ)", example = "50")
             @RequestParam(required = false) Integer limit

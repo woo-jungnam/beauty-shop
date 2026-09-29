@@ -12,6 +12,7 @@ import java.util.List;
 public class StockAllocationService {
     private final WarehouseStockRepository stocks;
     private final StockAllocationRepository allocations;
+    private final InventoryLedgerService ledger;
 
     @Transactional
     public void reserve(String orderNumber, Long variantId, int quantity) {
@@ -57,6 +58,8 @@ public class StockAllocationService {
             if (target == StockAllocation.Status.QUARANTINED) {
                 // Returned goods retain their original batch/expiry and cannot be sold before inspection.
                 stock.setQuarantinedQuantity(Math.addExact(stock.getQuarantinedQuantity(), amount));
+                ledger.record(stock, com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.RETURN,
+                        amount, stock.getQuantity(), stock.getQuantity(), "ORDER", orderNumber, "Returned to quarantine");
             } else {
                 if (stock.getReservedQuantity() < amount || stock.getQuantity() < amount) {
                     throw new BusinessException("Allocated stock is inconsistent");
@@ -65,7 +68,13 @@ public class StockAllocationService {
                     if (stock.getExpirationDate() != null && !stock.getExpirationDate().isAfter(java.time.LocalDate.now())) {
                         throw new BusinessException("Allocated batch expired; reconcile before fulfilling order");
                     }
-                    stock.setQuantity(stock.getQuantity() - amount);
+                    int before = stock.getQuantity();
+                    stock.setQuantity(before - amount);
+                    ledger.record(stock, com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.SALE,
+                            -amount, before, stock.getQuantity(), "ORDER", orderNumber, "Order fulfilled");
+                } else {
+                    ledger.record(stock, com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.CANCELLATION,
+                            amount, stock.getQuantity(), stock.getQuantity(), "ORDER", orderNumber, "Reservation released");
                 }
                 stock.setReservedQuantity(stock.getReservedQuantity() - amount);
             }

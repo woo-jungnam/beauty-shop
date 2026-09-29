@@ -21,4 +21,5 @@ public interface UserService {
     void reverseLoyaltyPoints(Long userId, Long orderId);
 
     void addLoyaltyPoints(Long userId, Long orderId, int pointsToAdd);
+    UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason);
 }

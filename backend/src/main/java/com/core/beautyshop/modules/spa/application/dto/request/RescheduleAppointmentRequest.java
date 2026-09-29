@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.spa.application.dto.request;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,5 +15,6 @@ public class RescheduleAppointmentRequest {
     @NotNull(message = "Giờ hẹn không được để trống")
     private LocalTime startTime;
 
+    @Size(max = 500)
     private String notes;
 }

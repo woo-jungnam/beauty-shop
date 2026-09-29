@@ -53,12 +53,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public ObjectMapper objectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        return mapper;
-    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -79,6 +73,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/health",
                                 "/actuator/prometheus"
+                                ,"/uploads/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/**",
@@ -96,6 +91,7 @@ public class SecurityConfig {
                                 "/api/v1/attributes/**",
                                 "/api/v1/tags/**",
                                 "/api/v1/spa/services/**"
+                                ,"/api/v1/reviews/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/*").permitAll()
                         .requestMatchers(

@@ -39,8 +39,12 @@ public class OrderController {
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<OrderResponse>> checkout(
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = "X-Guest-Session-Id", required = false) String guestSessionId,
             @Valid @RequestBody CheckoutRequest request) {
         request.setIdempotencyKey(idempotencyKey);
+        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
+            request.setSessionId(guestSessionId);
+        }
         OrderResponse order = orderService.checkout(request);
         return ResponseEntity.status(201).body(ApiResponse.created(order, "Tạo đơn hàng thành công"));
     }

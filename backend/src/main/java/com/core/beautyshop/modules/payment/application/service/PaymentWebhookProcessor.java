@@ -17,7 +17,7 @@ public class PaymentWebhookProcessor {
     private final OrderFacade orders;
     private final PaymentTransactionRepository transactions;
     private final ObjectMapper mapper;
-    @Value("${sepay.bank.account-number}")
+    @Value("${sepay.bank.account-number:0000000000}")
     private String accountNumber;
     private static final Pattern ORDER = Pattern.compile("\\b(ORD-(?:[A-Z0-9]{32}|[A-Z0-9]{8}))\\b");
 

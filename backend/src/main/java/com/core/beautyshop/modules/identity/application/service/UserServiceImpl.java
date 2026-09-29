@@ -27,6 +27,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final LoyaltyPointAwardRepository loyaltyPointAwardRepository;
     private final AuthMapper authMapper;
+    private final com.core.beautyshop.modules.identity.domain.UserStatusHistoryRepository statusHistoryRepository;
 
     private String getAuthenticatedUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -158,5 +159,18 @@ public class UserServiceImpl implements UserService {
                 .userId(userId)
                 .points(pointsToAdd)
                 .build());
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason) {
+        if (status == null) throw new BusinessException("Account status is required");
+        User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        var previous = user.getStatus() == null ? com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE : user.getStatus();
+        if (previous == status) return authMapper.toUserProfileResponse(user);
+        user.setStatus(status);
+        statusHistoryRepository.save(com.core.beautyshop.modules.identity.domain.UserStatusHistory.builder()
+                .userId(userId).oldStatus(previous).newStatus(status).reason(reason).build());
+        return authMapper.toUserProfileResponse(user);
     }
 }

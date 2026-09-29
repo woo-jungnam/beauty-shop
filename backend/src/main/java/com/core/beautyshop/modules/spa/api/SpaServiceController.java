@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import com.core.beautyshop.modules.spa.application.dto.response.BeautyServiceResponse;
 import com.core.beautyshop.modules.spa.application.service.BeautyServiceService;
@@ -33,7 +35,7 @@ public class SpaServiceController {
     }
 
     @Operation(summary = "Xem chi tiết dịch vụ Spa theo ID")
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<ApiResponse<BeautyServiceResponse>> getServiceById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(
                 beautyServiceService.getServiceById(id)
@@ -46,5 +48,24 @@ public class SpaServiceController {
         return ResponseEntity.ok(ApiResponse.success(
                 beautyServiceService.getServiceBySlug(slug)
         ));
+    }
+
+    @GetMapping("/packages")
+    public ResponseEntity<ApiResponse<List<com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse>>> getPackages() {
+        return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getActivePackages()));
+    }
+
+    @GetMapping("/{id}/staff")
+    public ResponseEntity<ApiResponse<List<com.core.beautyshop.modules.spa.application.dto.response.StaffResponse>>> getQualifiedStaff(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getQualifiedStaff(id)));
+    }
+
+    @GetMapping("/{id}/available-slots")
+    public ResponseEntity<ApiResponse<List<String>>> getAvailableSlots(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @RequestParam(required = false) Long staffId) {
+        return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getAvailableSlots(id, date, staffId)));
     }
 }

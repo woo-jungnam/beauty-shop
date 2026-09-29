@@ -23,7 +23,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
-
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
 @Service
 @Slf4j
 public class ChatbotServiceImpl implements ChatbotService {
@@ -33,9 +35,8 @@ public class ChatbotServiceImpl implements ChatbotService {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final Duration requestTimeout;
-    private final java.util.concurrent.Semaphore streams;
-    private final java.util.concurrent.ScheduledExecutorService deadlines = java.util.concurrent.Executors
-            .newSingleThreadScheduledExecutor(Thread.ofPlatform().daemon().name("chat-deadlines").factory());
+    private final Semaphore streams;
+    private final ScheduledExecutorService deadlines = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().daemon().name("chat-deadlines").factory());
 
     @jakarta.annotation.PreDestroy
     public void shutdown() { deadlines.shutdownNow(); }

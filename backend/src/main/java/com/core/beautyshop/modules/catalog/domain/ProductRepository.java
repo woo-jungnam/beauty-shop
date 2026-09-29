@@ -33,14 +33,30 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
            "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, p.basePrice, " +
            "p.status, p.isFeatured, p.averageRating, p.totalReviews, p.totalSold, b.name) " +
-           "FROM Product p LEFT JOIN p.brand b WHERE p.isDeleted = false")
+           "FROM Product p LEFT JOIN p.brand b WHERE p.isDeleted = false " +
+           "AND p.status = com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE")
     Page<ProductListResponse> findAllProductList(Pageable pageable);
 
     @Query("SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
            "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, p.basePrice, " +
            "p.status, p.isFeatured, p.averageRating, p.totalReviews, p.totalSold, b.name) " +
+           "FROM Product p LEFT JOIN p.brand b WHERE p.isDeleted = false")
+    Page<ProductListResponse> findAllAdminProductList(Pageable pageable);
+
+    @Query("SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
+           "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, p.basePrice, " +
+           "p.status, p.isFeatured, p.averageRating, p.totalReviews, p.totalSold, b.name) " +
+           "FROM Product p LEFT JOIN p.brand b WHERE p.isDeleted = false AND p.isFeatured = true " +
+           "AND p.status = com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE")
+    Page<ProductListResponse> findFeaturedProductList(Pageable pageable);
+
+    @Query("SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
+           "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, p.basePrice, " +
+           "p.status, p.isFeatured, p.averageRating, p.totalReviews, p.totalSold, b.name) " +
            "FROM Product p LEFT JOIN p.brand b " +
-           "WHERE p.isDeleted = false AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "WHERE p.isDeleted = false " +
+           "AND p.status = com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE " +
+           "AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(p.shortDescription) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<ProductListResponse> searchProductList(@Param("keyword") String keyword, Pageable pageable);
 
@@ -48,14 +64,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, p.basePrice, " +
            "p.status, p.isFeatured, p.averageRating, p.totalReviews, p.totalSold, b.name) " +
            "FROM Product p LEFT JOIN p.brand b JOIN p.categories c " +
-           "WHERE c.id = :categoryId AND p.isDeleted = false")
+           "WHERE c.id = :categoryId AND p.isDeleted = false " +
+           "AND p.status = com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE")
     Page<ProductListResponse> findProductListByCategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
 
     @Query("SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
            "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, p.basePrice, " +
            "p.status, p.isFeatured, p.averageRating, p.totalReviews, p.totalSold, b.name) " +
            "FROM Product p LEFT JOIN p.brand b " +
-           "WHERE p.brand.id = :brandId AND p.isDeleted = false")
+           "WHERE p.brand.id = :brandId AND p.isDeleted = false " +
+           "AND p.status = com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE")
     Page<ProductListResponse> findProductListByBrandId(@Param("brandId") Long brandId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"brand"})

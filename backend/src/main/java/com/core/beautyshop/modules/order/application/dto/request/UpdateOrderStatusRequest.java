@@ -23,4 +23,10 @@ public class UpdateOrderStatusRequest {
     @Size(max = 500, message = "Ghi chú không được vượt quá 500 ký tự")
     @Schema(description = "Ghi chú hoặc lý do thay đổi trạng thái", example = "Đã xác nhận đơn hàng qua điện thoại.")
     private String notes;
+
+    @Size(max = 100)
+    private String carrierName;
+
+    @Size(max = 100)
+    private String trackingCode;
 }

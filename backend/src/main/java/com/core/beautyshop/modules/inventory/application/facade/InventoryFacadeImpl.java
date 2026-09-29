@@ -2,15 +2,16 @@ package com.core.beautyshop.modules.inventory.application.facade;
 
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.inventory.application.service.InventoryService;
+import com.core.beautyshop.modules.inventory.application.service.StockAllocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
+import com.core.beautyshop.modules.inventory.domain.StockAllocation.Status;
 @Component
 @RequiredArgsConstructor
 public class InventoryFacadeImpl implements InventoryFacade {
 
     private final InventoryService inventoryService;
-    private final com.core.beautyshop.modules.inventory.application.service.StockAllocationService allocations;
+    private final StockAllocationService allocations;
 
     @Override
     public boolean isStockAvailable(Long variantId, int requiredQuantity) {
@@ -29,16 +30,16 @@ public class InventoryFacadeImpl implements InventoryFacade {
 
     @Override
     public void releaseStock(String orderNumber, Long variantId, int quantityToRelease) {
-        allocations.transition(orderNumber, variantId, quantityToRelease, com.core.beautyshop.modules.inventory.domain.StockAllocation.Status.RELEASED);
+        allocations.transition(orderNumber, variantId, quantityToRelease, Status.RELEASED);
     }
 
     @Override
     public void deductStock(String orderNumber, Long variantId, int quantityToDeduct) {
-        allocations.transition(orderNumber, variantId, quantityToDeduct, com.core.beautyshop.modules.inventory.domain.StockAllocation.Status.DEDUCTED);
+        allocations.transition(orderNumber, variantId, quantityToDeduct, Status.DEDUCTED);
     }
 
     @Override
     public void returnStock(String orderNumber, Long variantId, int quantityToReturn) {
-        allocations.transition(orderNumber, variantId, quantityToReturn, com.core.beautyshop.modules.inventory.domain.StockAllocation.Status.QUARANTINED);
+        allocations.transition(orderNumber, variantId, quantityToReturn, Status.QUARANTINED);
     }
 }

@@ -15,4 +15,6 @@ public interface AuthService {
     void logout(RefreshTokenRequest request);
 
     void forceLogoutUser(Long userId);
+
+    int cleanupExpiredSessions(int retentionDays);
 }

@@ -13,6 +13,7 @@ import com.core.beautyshop.modules.catalog.domain.ProductAttributeDefinitionRepo
 import com.core.beautyshop.modules.catalog.domain.ProductAttributeValueRepository;
 import com.core.beautyshop.modules.catalog.domain.ProductRepository;
 import com.core.beautyshop.modules.catalog.domain.ProductVariantRepository;
+import com.core.beautyshop.shared.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,8 +103,8 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
             variant = productVariantRepository.findById(request.getProductVariantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm"));
             if (!product.getId().equals(variant.getProduct().getId())) {
-                throw new com.core.beautyshop.shared.exception.BusinessException(
-                        "Biến thể không thuộc sản phẩm đã chọn");
+                throw new BusinessException(
+                        "Thuộc tính không thuộc sản phẩm đã chọn");
             }
         }
 

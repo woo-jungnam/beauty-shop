@@ -52,6 +52,8 @@ class OrderServiceImplTest {
     @Mock private OrderMapper orderMapper;
     @Mock private PaymentFacade paymentFacade;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private com.core.beautyshop.modules.promotion.api.PromotionFacade promotionFacade;
+    @org.mockito.Spy private com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @InjectMocks private OrderServiceImpl orderService;
 

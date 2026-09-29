@@ -10,4 +10,5 @@ public interface OrderFacade {
     SpaPackageOrderResult createSpaPackageOrder(CreateSpaPackageOrderCommand command);
     boolean existsById(Long orderId);
     boolean isPaidOrderForUser(Long orderId, Long userId);
+    boolean isDeliveredProductPurchase(Long orderId, Long userId, Long productId);
 }

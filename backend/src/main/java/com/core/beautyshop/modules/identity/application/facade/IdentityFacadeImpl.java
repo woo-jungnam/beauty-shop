@@ -7,8 +7,12 @@ import com.core.beautyshop.modules.identity.domain.UserRepository;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -43,10 +47,10 @@ public class IdentityFacadeImpl implements IdentityFacade {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public java.util.Map<Long, UserSummaryDto> findUserSummaries(java.util.Collection<Long> ids) {
-        if (ids.isEmpty()) return java.util.Map.of();
-        return userRepository.findAllById(ids).stream().collect(java.util.stream.Collectors.toMap(User::getId, this::mapToSummary));
+    @Transactional(readOnly = true)
+    public Map<Long, UserSummaryDto> findUserSummaries(Collection<Long> ids) {
+        if (ids.isEmpty()) return Map.of();
+        return userRepository.findAllById(ids).stream().collect(Collectors.toMap(User::getId, this::mapToSummary));
     }
 
     private UserSummaryDto mapToSummary(User user) {

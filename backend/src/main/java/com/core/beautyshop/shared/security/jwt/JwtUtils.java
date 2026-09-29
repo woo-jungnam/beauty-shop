@@ -25,13 +25,13 @@ public class JwtUtils {
     private static final String ACCESS_TOKEN_USE = "access";
     private static final String REFRESH_TOKEN_USE = "refresh";
 
-    @Value("${jwt.secret}")
+    @Value("${jwt.secret:beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration-ms}")
+    @Value("${jwt.expiration-ms:900000}")
     private long jwtExpirationMs;
 
-    @Value("${jwt.refresh-expiration-ms}")
+    @Value("${jwt.refresh-expiration-ms:604800000}")
     private long jwtRefreshExpirationMs;
 
     private SecretKey key() {

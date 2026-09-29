@@ -13,5 +13,6 @@ public interface CatalogFacade {
     boolean variantExistsById(Long variantId);
     void applyDiscountPrice(Long variantId, java.math.BigDecimal discountPrice);
     void deactivateVariant(Long variantId);
+    boolean productExistsById(Long productId);
+    void updateProductRating(Long productId, double averageRating, int totalReviews);
 }
-

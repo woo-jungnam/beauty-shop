@@ -14,6 +14,8 @@ public interface ProductService {
     ProductResponse getProductBySlug(String slug);
 
     Page<ProductListResponse> getAllProducts(Pageable pageable);
+    Page<ProductListResponse> getAllProductsForAdmin(Pageable pageable);
+    Page<ProductListResponse> getFeaturedProducts(Pageable pageable);
 
     Page<ProductListResponse> searchProducts(String keyword, Pageable pageable);
 

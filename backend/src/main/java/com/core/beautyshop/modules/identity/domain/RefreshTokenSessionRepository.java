@@ -28,4 +28,8 @@ public interface RefreshTokenSessionRepository extends JpaRepository<RefreshToke
     @Query("UPDATE RefreshTokenSession session SET session.revokedAt = :revokedAt " +
             "WHERE session.userId = :userId AND session.revokedAt IS NULL")
     int revokeAllByUserId(@Param("userId") Long userId, @Param("revokedAt") Instant revokedAt);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM RefreshTokenSession session WHERE session.expiresAt < :cutoff OR (session.revokedAt IS NOT NULL AND session.revokedAt < :cutoff)")
+    int deleteExpiredOrRevokedBefore(@Param("cutoff") Instant cutoff);
 }

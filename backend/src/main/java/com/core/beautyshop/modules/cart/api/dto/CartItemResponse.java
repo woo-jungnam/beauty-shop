@@ -60,6 +60,7 @@ public class CartItemResponse {
                 .variantName(variantName)
                 .quantity(entity.getQuantity())
                 .price(price)
+                .imageUrl(variant != null ? variant.getProductThumbnailUrl() : null)
                 .available(variant != null)
                 .build();
     }

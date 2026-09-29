@@ -100,6 +100,11 @@ public class OrderFacadeImpl implements OrderFacade {
                 .orderNumber(saved.getOrderNumber())
                 .servicePackageId(saved.getServicePackageId())
                 .totalAmount(saved.getTotalAmount())
+                .status(saved.getStatus())
+                .paymentMethod(saved.getPaymentMethod())
+                .paymentStatus(saved.getPaymentStatus())
+                .paymentDeadline(saved.getPaymentDeadline())
+                .createdAt(saved.getCreatedAt())
                 .paymentInstruction(instruction)
                 .build();
     }
@@ -218,6 +223,13 @@ public class OrderFacadeImpl implements OrderFacade {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isDeliveredProductPurchase(Long orderId, Long userId, Long productId) {
+        return orderId != null && userId != null && productId != null
+                && orderRepository.existsDeliveredProductPurchase(orderId, userId, productId);
+    }
+
     private SpaPackageOrderResult toSpaPackageOrderResult(Order order) {
         PaymentInstruction instruction = paymentFacade.processPayment(
                 PaymentMethod.BANK,
@@ -231,6 +243,11 @@ public class OrderFacadeImpl implements OrderFacade {
                 .orderNumber(order.getOrderNumber())
                 .servicePackageId(order.getServicePackageId())
                 .totalAmount(order.getTotalAmount())
+                .status(order.getStatus())
+                .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus())
+                .paymentDeadline(order.getPaymentDeadline())
+                .createdAt(order.getCreatedAt())
                 .paymentInstruction(instruction)
                 .build();
     }

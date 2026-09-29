@@ -22,9 +22,11 @@ import com.core.beautyshop.modules.order.api.event.OrderEvents;
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto;
+import com.core.beautyshop.modules.promotion.api.PromotionFacade;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -50,6 +52,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final PaymentFacade paymentFacade;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
+    private final PromotionFacade promotionFacade;
 
     @org.springframework.beans.factory.annotation.Value("${app.order.payment-timeout-minutes:30}")
     private long paymentTimeoutMinutes = 30;
@@ -113,6 +117,11 @@ public class OrderServiceImpl implements OrderService {
         }
         
         BigDecimal grossAmount = subTotal.add(order.getShippingFee()).max(BigDecimal.ZERO);
+        PromotionFacade.AppliedVoucher appliedVoucher = promotionFacade.validate(request.getVoucherCode(), userId, subTotal);
+        if (appliedVoucher != null) {
+            order.setVoucherId(appliedVoucher.id());
+            order.setDiscountAmount(appliedVoucher.discountAmount());
+        }
         BigDecimal totalDiscount = order.getDiscountAmount() != null
                 ? order.getDiscountAmount().add(membershipDiscount)
                 : membershipDiscount;
@@ -125,6 +134,8 @@ public class OrderServiceImpl implements OrderService {
         createStatusHistory(order, OrderStatus.PENDING, "Đơn hàng được tạo khi thanh toán");
 
         Order savedOrder = orderRepository.save(order);
+
+        promotionFacade.redeem(appliedVoucher, userId, savedOrder.getId());
 
         eventPublisher.publishEvent(OrderEvents.OrderCreatedEvent.builder()
                 .orderId(savedOrder.getId())
@@ -161,7 +172,7 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        return orderMapper.toOrderResponse(order);
+        return buildOrderResponse(order);
     }
 
     private boolean matchesGuestSession(String expected, String provided) {
@@ -200,6 +211,29 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> searchAdminOrders(com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter filter, Pageable pageable) {
+        org.springframework.data.jpa.domain.Specification<Order> specification = (root, query, cb) -> {
+            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+            if (filter != null) {
+                if (filter.keyword() != null && !filter.keyword().isBlank()) {
+                    String pattern = "%" + filter.keyword().trim().toLowerCase(java.util.Locale.ROOT) + "%";
+                    predicates.add(cb.or(cb.like(cb.lower(root.get("orderNumber")), pattern),
+                            cb.like(cb.lower(root.get("customerName")), pattern),
+                            cb.like(cb.lower(root.get("customerPhone")), pattern)));
+                }
+                if (filter.status() != null) predicates.add(cb.equal(root.get("status"), filter.status()));
+                if (filter.paymentStatus() != null) predicates.add(cb.equal(root.get("paymentStatus"), filter.paymentStatus()));
+                if (filter.from() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), filter.from()));
+                if (filter.to() != null) predicates.add(cb.lessThan(root.get("createdAt"), filter.to()));
+            }
+            return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        return orderRepository.findAll(specification, pageable).map(orderMapper::toOrderResponse);
+    }
+
+    @Override
     @Transactional
     public OrderResponse updateOrderStatus(Long id, UpdateOrderStatusRequest request) {
         Order order = orderRepository.findByIdForUpdate(id)
@@ -210,6 +244,23 @@ public class OrderServiceImpl implements OrderService {
 
         validateStatusTransition(previousStatus, newStatus);
         if (previousStatus == newStatus) return orderMapper.toOrderResponse(order);
+
+        if (newStatus == OrderStatus.SHIPPED) {
+            boolean hasCarrier = request.getCarrierName() != null && !request.getCarrierName().isBlank();
+            boolean hasTracking = request.getTrackingCode() != null && !request.getTrackingCode().isBlank();
+            if (hasCarrier != hasTracking) {
+                throw new BusinessException("Carrier and tracking code are required when shipping");
+            }
+            if (hasCarrier) {
+                order.setCarrierName(request.getCarrierName().trim());
+                order.setTrackingCode(request.getTrackingCode().trim());
+            }
+        }
+        if (newStatus == OrderStatus.CANCELLED) {
+            if (request.getNotes() == null || request.getNotes().isBlank()) throw new BusinessException("Cancellation reason is required");
+            order.setCancelReason(request.getNotes().trim());
+            order.setCancelledBy(SecurityUtils.getCurrentUserIdOptional().orElse(null));
+        }
 
         if ((newStatus == OrderStatus.PROCESSING || newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED)
                 && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK
@@ -279,6 +330,8 @@ public class OrderServiceImpl implements OrderService {
 
         OrderStatus previousStatus = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelledBy(userId);
+        order.setCancelReason("Cancelled by customer");
         if (order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
             order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.REFUND_PENDING);
         }
@@ -311,7 +364,7 @@ public class OrderServiceImpl implements OrderService {
 
     private String requestHash(CheckoutRequest request) {
         try {
-            return sha256(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(request));
+            return sha256(objectMapper.writeValueAsString(request));
         } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
             throw new IllegalArgumentException("Invalid checkout request", exception);
         }

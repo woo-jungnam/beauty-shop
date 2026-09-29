@@ -1,10 +1,11 @@
 package com.core.beautyshop.modules.identity.domain;
 
 import com.core.beautyshop.modules.identity.domain.enums.Gender;
+import com.core.beautyshop.modules.identity.domain.enums.AccountStatus;
 import com.core.beautyshop.shared.domain.Base;
 import jakarta.persistence.*;
 import lombok.*;
-
+import com.core.beautyshop.modules.identity.domain.enums.MembershipTier;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -46,6 +47,11 @@ public class User extends Base {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private AccountStatus status = AccountStatus.ACTIVE;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",
@@ -57,7 +63,7 @@ public class User extends Base {
     @Enumerated(EnumType.STRING)
     @Column(name = "membership_tier", length = 20)
     @Builder.Default
-    private com.core.beautyshop.modules.identity.domain.enums.MembershipTier membershipTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.MEMBER;
+    private MembershipTier membershipTier = MembershipTier.MEMBER;
 
     @Column(name = "loyalty_points")
     @Builder.Default

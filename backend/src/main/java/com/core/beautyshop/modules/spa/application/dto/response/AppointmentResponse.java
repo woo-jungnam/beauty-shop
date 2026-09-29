@@ -34,6 +34,9 @@ public class AppointmentResponse {
         List<AppointmentItemResponse> itemResponses = entity.getItems() != null ?
                 entity.getItems().stream()
                         .map(item -> AppointmentItemResponse.builder()
+                                .id(item.getId())
+                                .serviceId(item.getService() != null ? item.getService().getId() : null)
+                                .staffId(item.getStaff() != null ? item.getStaff().getId() : null)
                                 .serviceName(item.getService() != null ? item.getService().getName() : null)
                                 .staffName(item.getStaff() != null ? "Staff #" + item.getStaff().getId() : "No preference")
                                 .ticketId(item.getTicket() != null ? item.getTicket().getId() : null)

@@ -21,7 +21,7 @@ public class PaymentController {
 
     private final PaymentWebhookService paymentWebhookService;
 
-    @Value("${sepay.webhook.api-key}")
+    @Value("${sepay.webhook.api-key:your-sepay-api-key-here}")
     private String sePayWebhookApiKey;
 
     @Operation(summary = "Tiếp nhận webhook thanh toán tự động từ SePay")

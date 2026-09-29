@@ -35,6 +35,8 @@ class CheckoutIntegrityIntegrationTest {
     @Autowired WarehouseStockRepository stocks;
     @Autowired StockAllocationRepository allocations;
     @Autowired CartRepository carts;
+    @Autowired CartItemRepository cartItems;
+    @Autowired com.core.beautyshop.modules.cart.application.service.CartService cartService;
     @Autowired OrderRepository orders;
     @Autowired OrderService service;
     @Autowired OrderExpirationService expiration;
@@ -91,6 +93,25 @@ class CheckoutIntegrityIntegrationTest {
         request.setTransferType("in"); request.setAccountNumber(bankAccount);
         request.setContent("PAY " + order.getOrderNumber()); request.setTransferAmount(BigDecimal.valueOf(100));
         return request;
+    }
+
+    @Test
+    void oneAddToCartCallPersistsExactlyOneRowAndReturnsThatRow() {
+        Fixture fixture = fixture(5);
+        String sessionId = "single-add-" + UUID.randomUUID();
+        var request = new com.core.beautyshop.modules.cart.application.dto.request.AddToCartRequest();
+        request.setSessionId(sessionId);
+        request.setVariantId(fixture.variantId());
+        request.setQuantity(1);
+
+        var response = cartService.addToCart(null, request);
+
+        Cart persistedCart = carts.findBySessionId(sessionId).orElseThrow();
+        List<CartItem> persistedItems = cartItems.findAllByCartIdOrderByIdAsc(persistedCart.getId());
+        assertEquals(1, persistedItems.size());
+        assertEquals(1, response.getItems().size());
+        assertEquals(persistedItems.getFirst().getId(), response.getItems().getFirst().getId());
+        assertEquals(0L, persistedItems.getFirst().getRowVersion());
     }
 
     @Test

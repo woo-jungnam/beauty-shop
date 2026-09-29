@@ -24,6 +24,9 @@ public class OrderResponse {
     @Schema(description = "ID đơn hàng", example = "1001")
     private Long id;
 
+    @Schema(description = "ID gói liệu trình Spa nếu đây là đơn mua gói")
+    private Long servicePackageId;
+
     @Schema(description = "Mã số đơn hàng hiển thị (Order Number)", example = "ORD-20260906-8921")
     private String orderNumber;
 
@@ -60,6 +63,11 @@ public class OrderResponse {
     private BigDecimal refundedAmount;
     private String refundReference;
     private Instant paymentDeadline;
+    private Long voucherId;
+    private String carrierName;
+    private String trackingCode;
+    private String cancelReason;
+    private Long cancelledBy;
 
     @Schema(description = "Thời gian tạo đơn (UTC Instant)", example = "2026-09-06T09:30:00Z")
     private Instant createdAt;

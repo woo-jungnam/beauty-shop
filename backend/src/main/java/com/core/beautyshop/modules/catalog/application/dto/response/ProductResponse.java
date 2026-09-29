@@ -171,6 +171,9 @@ public class ProductResponse {
 
         @Schema(description = "Trạng thái đang hoạt động / kinh doanh", example = "true")
         private Boolean isActive;
+
+        @Schema(description = "Số lượng tồn kho khả dụng sau khi trừ số lượng đã giữ")
+        private Integer stockQuantity;
     }
 
     @Data

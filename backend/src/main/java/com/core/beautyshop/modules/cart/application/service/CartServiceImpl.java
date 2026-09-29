@@ -118,10 +118,6 @@ public class CartServiceImpl implements CartService {
                     .quantity(request.getQuantity())
                     .build();
             cartItemRepository.save(newItem);
-            if (cart.getItems() == null) {
-                cart.setItems(new ArrayList<>());
-            }
-            cart.getItems().add(newItem);
         }
 
         Cart updatedCart = cartRepository.findById(cart.getId()).orElse(cart);
@@ -238,17 +234,18 @@ public class CartServiceImpl implements CartService {
 
     private CartResponse mapToCartResponse(Cart cart) {
         if (cart == null) return null;
-        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+        List<CartItem> cartItems = cartItemRepository.findAllByCartIdOrderByIdAsc(cart.getId());
+        if (cartItems.isEmpty()) {
             return CartResponse.of(cart, List.of());
         }
 
-        List<Long> variantIds = cart.getItems().stream()
+        List<Long> variantIds = cartItems.stream()
                 .map(CartItem::getProductVariantId)
                 .collect(Collectors.toList());
 
         java.util.Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
 
-        List<CartItemResponse> itemResponses = cart.getItems().stream()
+        List<CartItemResponse> itemResponses = cartItems.stream()
                 .map(item -> {
                     ProductVariantSummaryDto variant = variantMap.get(item.getProductVariantId());
                     return CartItemResponse.of(item, variant);
@@ -309,9 +306,6 @@ public class CartServiceImpl implements CartService {
                         .quantity(guestItem.getQuantity())
                         .build();
                 cartItemRepository.save(newItem);
-                if (userCart.getItems() != null) {
-                    userCart.getItems().add(newItem);
-                }
             }
 
             cartItemRepository.delete(guestItem);

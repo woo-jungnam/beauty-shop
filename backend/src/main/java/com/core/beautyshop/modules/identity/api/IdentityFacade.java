@@ -1,11 +1,13 @@
 package com.core.beautyshop.modules.identity.api;
 
 import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 public interface IdentityFacade {
     Optional<UserSummaryDto> findUserSummaryById(Long userId);
     UserSummaryDto getUserSummaryById(Long userId);
     boolean existsById(Long userId);
-    java.util.Map<Long, UserSummaryDto> findUserSummaries(java.util.Collection<Long> ids);
+    Map<Long, UserSummaryDto> findUserSummaries(Collection<Long> ids);
 }

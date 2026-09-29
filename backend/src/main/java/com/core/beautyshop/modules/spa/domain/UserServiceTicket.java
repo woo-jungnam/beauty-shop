@@ -34,6 +34,7 @@ public class UserServiceTicket extends Base {
     private Integer usedSessions = 0;
 
     @ElementCollection
+    @org.hibernate.annotations.BatchSize(size = 50)
     @CollectionTable(name = "ticket_entitlements", joinColumns = @JoinColumn(name = "ticket_id"))
     @MapKeyColumn(name = "service_id")
     @Builder.Default

@@ -42,6 +42,12 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
+    @GetMapping("/featured")
+    public ResponseEntity<ApiResponse<PageResponse<ProductListResponse>>> getFeaturedProducts(
+            @ParameterObject @PageableDefault(size = 8) Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.of(productService.getFeaturedProducts(pageable))));
+    }
+
     @Operation(summary = "Xem chi tiết sản phẩm theo ID", description = "Lấy đầy đủ thông tin sản phẩm bao gồm thương hiệu, danh mục, biến thể và hình ảnh.")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> getProductById(

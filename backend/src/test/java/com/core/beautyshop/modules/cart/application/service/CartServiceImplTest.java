@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.cart.application.service;
 
 import com.core.beautyshop.modules.cart.api.dto.CartResponse;
+import com.core.beautyshop.modules.cart.api.dto.CartItemResponse;
 import com.core.beautyshop.modules.cart.domain.Cart;
 import com.core.beautyshop.modules.cart.domain.CartItem;
 import com.core.beautyshop.modules.cart.domain.CartItemRepository;
@@ -26,6 +27,29 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CartServiceImplTest {
+
+    @Test
+    void cartItemUsesEffectivePriceAndProductThumbnail() {
+        CartItem item = CartItem.builder()
+                .productVariantId(10L)
+                .quantity(2)
+                .build();
+        item.setId(100L);
+        ProductVariantSummaryDto variant = ProductVariantSummaryDto.builder()
+                .id(10L)
+                .sku("SKU-001")
+                .variantName("50ml")
+                .price(new BigDecimal("480000"))
+                .discountPrice(new BigDecimal("408000"))
+                .productThumbnailUrl("https://cdn.example/product.jpg")
+                .build();
+
+        CartItemResponse response = CartItemResponse.of(item, variant);
+
+        assertEquals(new BigDecimal("408000"), response.getPrice());
+        assertEquals("https://cdn.example/product.jpg", response.getImageUrl());
+        assertTrue(response.getAvailable());
+    }
 
     @Mock
     private CartRepository cartRepository;
@@ -79,6 +103,14 @@ class CartServiceImplTest {
         when(cartItemRepository.findByCartIdAndProductVariantId(2L, 10L)).thenReturn(Optional.empty());
         when(inventoryFacade.isStockAvailable(10L, 2)).thenReturn(true);
         when(cartRepository.findById(2L)).thenReturn(Optional.of(userCart));
+        java.util.List<CartItem> savedItems = new ArrayList<>();
+        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(invocation -> {
+            CartItem saved = invocation.getArgument(0);
+            saved.setId(201L);
+            savedItems.add(saved);
+            return saved;
+        });
+        when(cartItemRepository.findAllByCartIdOrderByIdAsc(2L)).thenAnswer(invocation -> new ArrayList<>(savedItems));
         when(catalogFacade.getVariantSummariesByIds(any())).thenReturn(Map.of(10L, variantDto));
 
         CartResponse merged = cartService.mergeCart(sessionId, userId);
@@ -115,6 +147,14 @@ class CartServiceImplTest {
         when(inventoryFacade.isStockAvailable(10L, 1)).thenReturn(true);
         when(inventoryFacade.isStockAvailable(20L, 2)).thenReturn(false);
         when(cartRepository.findById(2L)).thenReturn(Optional.of(userCart));
+        java.util.List<CartItem> savedItems = new ArrayList<>();
+        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(invocation -> {
+            CartItem saved = invocation.getArgument(0);
+            saved.setId(201L);
+            savedItems.add(saved);
+            return saved;
+        });
+        when(cartItemRepository.findAllByCartIdOrderByIdAsc(2L)).thenAnswer(invocation -> new ArrayList<>(savedItems));
         when(catalogFacade.getVariantSummariesByIds(any())).thenReturn(Map.of(10L, availableVariant));
 
         CartResponse merged = cartService.mergeCart(sessionId, userId);
@@ -149,6 +189,7 @@ class CartServiceImplTest {
                 .quantity(1)
                 .build());
         when(cartRepository.findByUserId(99L)).thenReturn(Optional.of(cart));
+        when(cartItemRepository.findAllByCartIdOrderByIdAsc(1L)).thenReturn(cart.getItems());
         when(catalogFacade.getVariantSummariesByIds(java.util.List.of(404L))).thenReturn(Map.of());
 
         CartResponse response = cartService.getCart(99L, null);
@@ -202,6 +243,14 @@ class CartServiceImplTest {
             return saved;
         });
         when(cartItemRepository.findByCartIdAndProductVariantId(1L, 10L)).thenReturn(Optional.empty());
+        java.util.List<CartItem> savedItems = new ArrayList<>();
+        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(invocation -> {
+            CartItem saved = invocation.getArgument(0);
+            saved.setId(100L);
+            savedItems.add(saved);
+            return saved;
+        });
+        when(cartItemRepository.findAllByCartIdOrderByIdAsc(1L)).thenAnswer(invocation -> new ArrayList<>(savedItems));
         when(cartRepository.findById(1L)).thenReturn(Optional.empty());
         when(catalogFacade.getVariantSummariesByIds(java.util.List.of(10L)))
                 .thenReturn(Map.of(10L, variant));
@@ -211,6 +260,9 @@ class CartServiceImplTest {
         assertEquals(1, response.getItems().size());
         assertEquals(10L, response.getItems().get(0).getVariantId());
         assertEquals(2, response.getItems().get(0).getQuantity());
+        assertNull(savedItems.get(0).getRowVersion());
+        assertTrue(savedItems.get(0).getCart().getItems().isEmpty());
+        verify(cartItemRepository, times(1)).save(any(CartItem.class));
     }
 
     @Test

@@ -1,10 +1,12 @@
 package com.core.beautyshop.modules.catalog.application.service;
 
+import com.core.beautyshop.modules.catalog.domain.enums.ProductType;
 import com.core.beautyshop.modules.catalog.application.dto.request.CreateProductRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.UpdateProductRequest;
 import com.core.beautyshop.modules.catalog.application.dto.response.*;
 import com.core.beautyshop.modules.catalog.domain.*;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
+import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.dto.CacheablePage;
@@ -29,10 +31,10 @@ public class ProductServiceImpl implements ProductService {
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final ProductTagRepository productTagRepository;
+    private final InventoryFacade inventoryFacade;
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "product_detail", key = "'id:' + #id")
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("không tìm thấy sản phẩm với ID: " + id));
@@ -41,7 +43,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "product_detail", key = "'slug:' + #slug")
     public ProductResponse getProductBySlug(String slug) {
         Product product = productRepository.findBySlugAndIsDeletedFalse(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với slug: " + slug));
@@ -53,6 +54,16 @@ public class ProductServiceImpl implements ProductService {
     @Cacheable(value = "products_page", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
     public Page<ProductListResponse> getAllProducts(Pageable pageable) {
         return CacheablePage.from(productRepository.findAllProductList(pageable));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductListResponse> getFeaturedProducts(Pageable pageable) {
+        Page<ProductListResponse> featured = productRepository.findFeaturedProductList(pageable);
+        if (featured == null || featured.isEmpty()) {
+            return productRepository.findAllProductList(pageable);
+        }
+        return featured;
     }
 
     @Override
@@ -94,7 +105,7 @@ public class ProductServiceImpl implements ProductService {
                 .thumbnailUrl(request.getThumbnailUrl())
                 .basePrice(request.getBasePrice())
                 .status(request.getStatus() != null ? request.getStatus() : ProductStatus.ACTIVE)
-                .productType(request.getProductType() != null ? request.getProductType() : com.core.beautyshop.modules.catalog.domain.enums.ProductType.PRODUCT)
+                .productType(request.getProductType() != null ? request.getProductType() : ProductType.PRODUCT)
                 .targetGender(request.getTargetGender())
                 .skinType(request.getSkinType())
                 .ingredients(request.getIngredients())
@@ -302,6 +313,7 @@ public class ProductServiceImpl implements ProductService {
                                 .barcode(v.getBarcode())
                                 .isDefault(v.getIsDefault())
                                 .isActive(v.getIsActive())
+                                .stockQuantity(inventoryFacade.getAvailableQuantity(v.getId()))
                                 .build())
                         .collect(Collectors.toList()) : new ArrayList<>())
                 .images(product.getImages() != null ? product.getImages().stream()
@@ -388,5 +400,11 @@ public class ProductServiceImpl implements ProductService {
                         .warnings(product.getUsageDetail().getWarnings())
                         .build() : null)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductListResponse> getAllProductsForAdmin(Pageable pageable) {
+        return productRepository.findAllAdminProductList(pageable);
     }
 }

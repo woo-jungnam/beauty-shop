@@ -51,7 +51,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     Optional<ProductVariantResponse> findVariantResponseById(@Param("id") Long id);
 
     @Query("SELECT new com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto(" +
-           "v.id, p.id, p.name, v.sku, v.variantName, v.price, v.discountPrice, v.isActive) " +
+           "v.id, p.id, p.name, v.sku, v.variantName, v.price, v.discountPrice, v.isActive, p.thumbnailUrl) " +
            "FROM ProductVariant v JOIN v.product p " +
            "WHERE v.id IN :variantIds " +
            "AND v.isDeleted = false AND v.isActive = true " +
@@ -60,7 +60,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     List<ProductVariantSummaryDto> findVariantSummariesByIds(@Param("variantIds") Collection<Long> variantIds);
 
     @Query("SELECT new com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto(" +
-           "v.id, p.id, p.name, v.sku, v.variantName, v.price, v.discountPrice, v.isActive) " +
+           "v.id, p.id, p.name, v.sku, v.variantName, v.price, v.discountPrice, v.isActive, p.thumbnailUrl) " +
            "FROM ProductVariant v JOIN v.product p " +
            "WHERE v.id = :variantId " +
            "AND v.isDeleted = false AND v.isActive = true " +

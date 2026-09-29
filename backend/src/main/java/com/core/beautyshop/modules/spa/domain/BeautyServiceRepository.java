@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.*;
 
 @Repository
 public interface BeautyServiceRepository extends JpaRepository<BeautyService, Long> {
@@ -25,4 +26,7 @@ public interface BeautyServiceRepository extends JpaRepository<BeautyService, Lo
     Optional<BeautyService> findWithCategoryBySlug(@Param("slug") String slug);
 
     Optional<BeautyService> findBySlug(String slug);
+
+    @EntityGraph(attributePaths = {"category"})
+    Page<BeautyService> findByIsDeletedFalse(Pageable pageable);
 }
