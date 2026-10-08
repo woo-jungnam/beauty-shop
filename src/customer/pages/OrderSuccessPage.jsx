@@ -178,7 +178,7 @@ export const OrderSuccessPage = ({
       return paymentInstruction.qrCodeUrl;
     }
     const bankBin = '970422'; // MBBank BIN
-    const bankAccount = paymentInstruction?.bankAccountNumber || '0000000000';
+    const bankAccount = paymentInstruction?.bankAccountNumber || '0902588750';
     const cleanAmount = Math.round(Number(currentTotalAmount) || 0);
     const syntax = encodeURIComponent(currentOrderCode);
     const accName = encodeURIComponent(paymentInstruction?.bankAccountName || 'BEAUTYSHOP');
@@ -187,7 +187,7 @@ export const OrderSuccessPage = ({
 
   const bankName = paymentInstruction?.bankName || 'MBBank (Ngân hàng Quân Đội)';
   const bankAccountName = paymentInstruction?.bankAccountName || 'BEAUTYSHOP';
-  const bankAccountNumber = paymentInstruction?.bankAccountNumber || '0000000000';
+  const bankAccountNumber = paymentInstruction?.bankAccountNumber || '0902588750';
   const transferSyntax = paymentInstruction?.transferSyntax || currentOrderCode;
 
   const handleCopy = (text, type) => {
