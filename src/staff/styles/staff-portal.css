@@ -1,0 +1,210 @@
+/* ==========================================================================
+   BEAUTYSHOP SPA CLINIC & RECEPTION PORTAL - FLAT CLEAN ARCHITECTURAL STYLES
+   ========================================================================== */
+
+:root {
+  --sp-primary: #8C2A47;
+  --sp-primary-dark: #5C1B2E;
+  --sp-primary-light: #F9F1F3;
+  --sp-primary-soft: #F2E4E7;
+  --sp-gold: #A0674F;
+  --sp-gold-dark: #7A4B37;
+  --sp-gold-light: #F7F4F2;
+  --sp-gold-border: #D8C2B8;
+  --sp-canvas: #F8F9FA;
+  --sp-surface: #FFFFFF;
+  --sp-text: #111827;
+  --sp-text-muted: #4B5563;
+  --sp-text-light: #6B7280;
+  --sp-border: #D1D5DB;
+  --sp-border-subtle: #E5E7EB;
+  --sp-success: #065F46;
+  --sp-success-bg: #ECFDF5;
+  --sp-warning: #92400E;
+  --sp-warning-bg: #FFFBEB;
+  --sp-danger: #9F1239;
+  --sp-danger-bg: #FFF1F2;
+  --sp-info: #1E40AF;
+  --sp-info-bg: #EFF6FF;
+}
+
+.spa-portal-container {
+  min-height: 100vh;
+  background-color: var(--sp-canvas);
+  color: var(--sp-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Bar - Sharp & Flat */
+.spa-portal-header {
+  background-color: #18181B;
+  color: #FFFFFF;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #27272A;
+}
+
+.spa-portal-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spa-portal-brand-badge {
+  background-color: var(--sp-primary);
+  color: #FFFFFF;
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spa-portal-brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: #FFFFFF;
+}
+
+.spa-portal-brand-sub {
+  font-size: 11.5px;
+  color: #A1A1AA;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Navigation Tabs - Flat border-bottom */
+.spa-portal-nav {
+  background-color: #FFFFFF;
+  border-bottom: 1px solid var(--sp-border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.spa-nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.spa-nav-tab:hover {
+  color: var(--sp-primary);
+  background-color: transparent;
+}
+
+.spa-nav-tab.active {
+  color: var(--sp-primary);
+  font-weight: 700;
+  border-bottom-color: var(--sp-primary);
+  background-color: transparent;
+}
+
+.spa-nav-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 0;
+  border: 1px solid var(--sp-border);
+  background-color: #F4F4F5;
+  color: #3F3F46;
+}
+
+.spa-nav-tab.active .spa-nav-badge {
+  background-color: var(--sp-primary);
+  color: #FFFFFF;
+  border-color: var(--sp-primary);
+}
+
+/* Main Content Workspace */
+.spa-portal-main {
+  flex: 1;
+  padding: 24px;
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Card Surfaces - Flat 1px border, No shadow, No border-radius */
+.spa-card {
+  background-color: #FFFFFF;
+  border-radius: 0;
+  border: 1px solid var(--sp-border);
+  box-shadow: none;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+/* Status indicator - Flat square dot */
+.live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 0;
+  background-color: #10B981;
+  display: inline-block;
+}
+
+/* POS Table styling - Crisp borders */
+.spa-pos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.spa-pos-table th {
+  background-color: #F4F4F5;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #3F3F46;
+  border-bottom: 1px solid var(--sp-border);
+  font-size: 12px;
+}
+
+.spa-pos-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--sp-border-subtle);
+  vertical-align: middle;
+}
+
+.spa-pos-table tr:hover td {
+  background-color: #FAFAFA;
+}
+
+@media (max-width: 900px) {
+  .spa-portal-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .spa-portal-nav {
+    padding: 0 16px;
+  }
+  .spa-portal-main {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { attributePayload, ingredientPayload, ingredientCatalog, lines } from './productFeatures.js';
+
+const definitions = [{ id: 1, dataType: 'NUMBER' }, { id: 2, dataType: 'BOOLEAN' }];
+const row = { attributeDefinitionId: '1', productVariantId: '', value: '50' };
+assert.deepEqual(attributePayload([row], definitions), [{ attributeDefinitionId: 1, productVariantId: null, value: '50' }]);
+assert.throws(() => attributePayload([row, row], definitions), /trùng/);
+assert.equal(attributePayload([row, { ...row, productVariantId: '9' }], definitions).length, 2);
+assert.throws(() => attributePayload([{ ...row, value: 'NaN' }], definitions));
+assert.throws(() => attributePayload([{ ...row, attributeDefinitionId: '2', value: 'yes' }], definitions));
+const ingredient = { ingredientId: '7', concentration: '0', concentrationUnit: '%', keyActive: true, displayOrder: '0' };
+assert.equal(ingredientPayload([ingredient])[0].concentration, 0);
+assert.equal(ingredientPayload([{ ...ingredient, concentration: '' }])[0].concentration, null);
+assert.throws(() => ingredientPayload([{ ...ingredient, concentration: '-1' }]));
+assert.throws(() => ingredientPayload([ingredient, ingredient]), /trùng/);
+assert.deepEqual(lines(' humectant\n\n exfoliant '), ['humectant', 'exfoliant']);
+assert.deepEqual(attributePayload([], definitions), []);
+assert.deepEqual(ingredientPayload([]), []);
+assert.deepEqual(await ingredientCatalog(async (page) => ({ data: { content: [{ id: page + 1 }], totalPages: 2 } })), [{ id: 1 }, { id: 2 }]);
+await assert.rejects(() => ingredientCatalog(async () => ({})));
+console.log('Product feature checks passed');
