@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+!frontend/.env.production
+dist/
 .local/
 *.env
 .DS_Store
