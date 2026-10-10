@@ -45,7 +45,7 @@ jobs:
 
       - name: Run Backend Tests (Unit & ArchUnit)
         working-directory: backend
-        run: ./mvnw test -B -Dtest="*Test,!*IntegrationTest,!*MySql*,!*Migration*"
+        run: ./mvnw test -B
 
       - name: Publish Test Report
         if: always()
