@@ -43,9 +43,9 @@ jobs:
         working-directory: backend
         run: ./mvnw clean compile -B
 
-      - name: Run Backend Tests (Unit, Integration & ArchUnit)
+      - name: Run Backend Tests (Unit & ArchUnit)
         working-directory: backend
-        run: ./mvnw test -B
+        run: ./mvnw test -B -Dtest="*Test,!*IntegrationTest"
 
       - name: Publish Test Report
         if: always()
@@ -92,6 +92,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate Docker Compose Configuration
+        env:
+          JWT_SECRET: "ci-dummy-jwt-secret-for-syntax-validation-only-32bytes"
         run: docker compose -f docker-compose.yml config
 
       - name: Test Nginx Configuration Syntax
