@@ -94,7 +94,11 @@ jobs:
       - name: Validate Docker Compose Configuration
         env:
           JWT_SECRET: "ci-dummy-jwt-secret-for-syntax-validation-only-32bytes"
-        run: docker compose -f docker-compose.yml config
+        run: |
+          mkdir -p chatbot/product-agent
+          touch chatbot/product-agent/.env
+          touch .env
+          docker compose -f docker-compose.yml config
 
       - name: Test Nginx Configuration Syntax
         run: |
