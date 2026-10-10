@@ -211,6 +211,7 @@
 						<exclude>**/*IntegrationTest.java</exclude>
 						<exclude>**/*MySql*.java</exclude>
 						<exclude>**/OperationalMigrationIntegrityTest.java</exclude>
+						<exclude>**/Abstract*.java</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
