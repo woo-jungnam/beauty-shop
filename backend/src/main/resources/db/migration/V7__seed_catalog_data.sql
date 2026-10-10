@@ -4838,7 +4838,7 @@ INSERT IGNORE INTO warehouse_stocks (warehouse_id, product_variant_id, quantity,
 -- customer: 123456
 -- staff: 123456
 INSERT IGNORE INTO users (id, email, phone, password_hash, full_name, username, created_by, updated_by, is_deleted) VALUES
-(1, 'admin@beautyshop.vn', '0901234567', '$2a$10$NDN7RqL3beyBYs.u3/qByehbjxefRCgVO0a3Gn210Ws4c/hhcJToa', 'Quản Trị Viên', 'admin', 'system', 'system', FALSE),
+(1, 'namnt4560@gmail.com', '0901234567', '$2a$10$NDN7RqL3beyBYs.u3/qByehbjxefRCgVO0a3Gn210Ws4c/hhcJToa', 'Quản Trị Viên', 'admin', 'system', 'system', FALSE),
 (2, 'customer@beautyshop.vn', '0907654321', '$2a$10$J0o/uEj93.qQVnozQgn0tu5i3YJPQS34dVMyZxe96tt9U45YtoVNu', 'Khách Hàng Mẫu', 'customer', 'system', 'system', FALSE),
 (3, 'staff@beautyshop.vn', '0908889999', '$2a$10$Ihex718AO9.MXGMVmD2OguK7r2pp6hI6hJ3DhmTX7KZmlpcn2Fhja', 'Nhân Viên Mẫu', 'staff', 'system', 'system', FALSE);
 

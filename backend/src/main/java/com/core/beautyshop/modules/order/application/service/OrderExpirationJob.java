@@ -16,9 +16,16 @@ public class OrderExpirationJob {
     @Scheduled(fixedDelayString = "${app.order.expiration-poll-ms:30000}")
     @SchedulerLock(name = "order_expiration", lockAtMostFor = "5m")
     public void expireOrders() {
-        for (Long id : orders.findExpiredPaymentIds(java.time.Instant.now(), PageRequest.of(0, 100))) {
-            try { expiration.expire(id); }
-            catch (Exception exception) { log.error("Could not expire order {}", id, exception); }
+        java.time.Instant cutoff = java.time.Instant.now();
+        long cursor = 0;
+        while (true) {
+            var ids = orders.findExpiredPaymentIdsAfter(cutoff, cursor, PageRequest.of(0, 100));
+            if (ids.isEmpty()) return;
+            for (Long id : ids) {
+                try { expiration.expire(id); }
+                catch (Exception exception) { log.error("Could not expire order {}", id, exception); }
+            }
+            cursor = ids.getLast();
         }
     }
 }

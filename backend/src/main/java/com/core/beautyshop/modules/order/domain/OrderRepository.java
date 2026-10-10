@@ -35,12 +35,26 @@ public interface OrderRepository extends JpaRepository<Order, Long>, org.springf
 
     Optional<Order> findByCheckoutKey(String checkoutKey);
 
+    @EntityGraph(attributePaths = {"spaVisitItems"})
+    Optional<Order> findByAppointmentId(Long appointmentId);
+
+    @Query("select o.id from Order o where o.appointmentId = :appointmentId and o.isDeleted = false")
+    Optional<Long> findIdByAppointmentId(Long appointmentId);
+
     @Query("select o.id from Order o where o.status in (com.core.beautyshop.modules.order.domain.enums.OrderStatus.PENDING, com.core.beautyshop.modules.order.domain.enums.OrderStatus.CONFIRMED) "
             + "and o.paymentMethod = com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK "
-            + "and o.paymentDeadline <= :now order by o.id")
-    java.util.List<Long> findExpiredPaymentIds(java.time.Instant now, Pageable pageable);
+            + "and o.paymentStatus <> com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID "
+            + "and o.appointmentId is null and o.isDeleted = false and o.id > :after and o.paymentDeadline <= :now order by o.id")
+    java.util.List<Long> findExpiredPaymentIdsAfter(java.time.Instant now, Long after, Pageable pageable);
+
+    default java.util.List<Long> findExpiredPaymentIds(java.time.Instant now, Pageable pageable) {
+        return findExpiredPaymentIdsAfter(now, 0L, pageable);
+    }
 
     Page<Order> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    @Query("select o from Order o where o.userId = :userId and o.isDeleted = false and (o.paymentMethod <> com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK or o.paidAt is not null) order by o.createdAt desc")
+    Page<Order> findVisibleCustomerHistoryByUserId(Long userId, Pageable pageable);
 
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
 

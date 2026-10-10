@@ -28,6 +28,10 @@ public class UserServiceImpl implements UserService {
     private final LoyaltyPointAwardRepository loyaltyPointAwardRepository;
     private final AuthMapper authMapper;
     private final com.core.beautyshop.modules.identity.domain.UserStatusHistoryRepository statusHistoryRepository;
+    private final com.core.beautyshop.modules.identity.domain.RoleRepository roleRepository;
+    private final IdentityAdministrationGuard administrationGuard;
+    private final AuthService authService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     private String getAuthenticatedUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -87,7 +91,31 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserProfileResponse> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable).map(authMapper::toUserProfileResponse);
+        return getAllUsers(null, null, null, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserProfileResponse> getAllUsers(String keyword, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String role, Pageable pageable) {
+        org.springframework.data.jpa.domain.Specification<User> spec = (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
+        if (keyword != null && !keyword.isBlank()) {
+            String value = "%" + keyword.trim().toLowerCase(java.util.Locale.ROOT) + "%";
+            spec = spec.and((root, query, cb) -> cb.or(cb.like(cb.lower(root.get("username")), value),
+                    cb.like(cb.lower(root.get("email")), value), cb.like(cb.lower(root.get("fullName")), value), cb.like(root.get("phone"), value)));
+        }
+        if (status != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        if (role != null && !role.isBlank()) {
+            String name = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+            spec = spec.and((root, query, cb) -> { query.distinct(true); return cb.equal(root.join("roles").get("name"), name); });
+        }
+        return userRepository.findAll(spec, pageable).map(authMapper::toUserProfileResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<com.core.beautyshop.modules.identity.domain.UserStatusHistory> getStatusHistory(Long userId, Pageable pageable) {
+        getUserById(userId);
+        return statusHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
     @Override
@@ -165,12 +193,81 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason) {
         if (status == null) throw new BusinessException("Account status is required");
+        if (reason != null && reason.length() > 500) throw new BusinessException("Status reason must not exceed 500 characters");
+        administrationGuard.lockAdministration();
         User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         var previous = user.getStatus() == null ? com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE : user.getStatus();
         if (previous == status) return authMapper.toUserProfileResponse(user);
+        if (status != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) administrationGuard.requireAnotherActiveAdmin(user);
         user.setStatus(status);
         statusHistoryRepository.save(com.core.beautyshop.modules.identity.domain.UserStatusHistory.builder()
                 .userId(userId).oldStatus(previous).newStatus(status).reason(reason).build());
+        if (status != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) authService.forceLogoutUser(userId);
         return authMapper.toUserProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponse updateRoles(Long userId, java.util.List<Long> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) throw new BusinessException("At least one role is required");
+        if (roleIds.stream().anyMatch(java.util.Objects::isNull)) throw new BusinessException("Role ids are required");
+        administrationGuard.lockAdministration();
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        var roles = roleRepository.findAllById(roleIds);
+        if (roles.size() != roleIds.stream().distinct().count()) throw new BusinessException("One or more roles do not exist");
+        if (roles.stream().anyMatch(role -> Boolean.TRUE.equals(role.getIsDeleted()))) throw new BusinessException("Deleted roles cannot be assigned");
+        if (roles.stream().noneMatch(role -> "ROLE_ADMIN".equals(role.getName()))) administrationGuard.requireAnotherActiveAdmin(user);
+        user.setRoles(new java.util.ArrayList<>(roles));
+        userRepository.save(user);
+        authService.forceLogoutUser(userId);
+        return authMapper.toUserProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse resetPassword(Long userId) {
+        administrationGuard.lockAdministration();
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new BusinessException("Cannot reset password for deleted user");
+        }
+        String tempPassword = generateSecurePassword();
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        userRepository.save(user);
+        authService.forceLogoutUser(userId);
+        return com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .temporaryPassword(tempPassword)
+                .message("Mật khẩu tạm thời đã được tạo thành công. Toàn bộ phiên làm việc cũ đã bị thu hồi.")
+                .build();
+    }
+
+    private String generateSecurePassword() {
+        final String uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        final String lowercase = "abcdefghijkmnopqrstuvwxyz";
+        final String digits = "23456789";
+        final String special = "@#$%&*";
+        final String all = uppercase + lowercase + digits + special;
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder();
+        sb.append(uppercase.charAt(random.nextInt(uppercase.length())));
+        sb.append(lowercase.charAt(random.nextInt(lowercase.length())));
+        sb.append(digits.charAt(random.nextInt(digits.length())));
+        sb.append(special.charAt(random.nextInt(special.length())));
+        for (int i = 4; i < 10; i++) {
+            sb.append(all.charAt(random.nextInt(all.length())));
+        }
+        char[] chars = sb.toString().toCharArray();
+        for (int i = chars.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char temp = chars[i];
+            chars[i] = chars[j];
+            chars[j] = temp;
+        }
+        return new String(chars);
     }
 }

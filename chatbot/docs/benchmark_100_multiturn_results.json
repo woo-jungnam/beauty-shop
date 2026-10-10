@@ -1,0 +1,3941 @@
+{
+  "summary": {
+    "total_conversations": 100,
+    "passed": 50,
+    "failed": 50,
+    "pass_rate_percent": 50.0,
+    "total_benchmark_time_seconds": 1134.98,
+    "avg_turn_latency_ms": 16885.79,
+    "avg_conversation_latency_ms": 33771.58
+  },
+  "group_breakdown": {
+    "Clarification_to_Category": {
+      "total": 25,
+      "passed": 16,
+      "latencies": [
+        3209.47,
+        4848.86,
+        5166.03,
+        7517.31,
+        3634.45,
+        4173.53,
+        21715.24,
+        20815.13,
+        20392.45,
+        22503.03,
+        24402.56,
+        22508.03,
+        4966.39,
+        3524.14,
+        3560.8,
+        3588.86,
+        22510.44,
+        3465.67,
+        22508.76,
+        22498.6,
+        5006.72,
+        6181.66,
+        25293.14,
+        26188.85,
+        22509.22
+      ]
+    },
+    "Price_Constraint_Adjustment": {
+      "total": 15,
+      "passed": 9,
+      "latencies": [
+        3165.43,
+        4789.15,
+        3227.18,
+        3003.53,
+        22504.42,
+        22510.1,
+        22505.24,
+        3411.19,
+        3339.73,
+        3419.67,
+        2050.63,
+        24714.6,
+        24906.86,
+        22502.25,
+        11882.7
+      ]
+    },
+    "Negative_and_Safety_Filter": {
+      "total": 15,
+      "passed": 6,
+      "latencies": [
+        22638.04,
+        4688.29,
+        25127.97,
+        22499.88,
+        22636.98,
+        3387.55,
+        26561.73,
+        6456.98,
+        22505.48,
+        22634.66,
+        6344.15,
+        94442.38,
+        90638.86,
+        89497.79,
+        7292.24
+      ]
+    },
+    "Domain_Switching": {
+      "total": 15,
+      "passed": 8,
+      "latencies": [
+        3169.86,
+        4891.74,
+        22503.02,
+        22507.78,
+        22503.78,
+        7525.34,
+        7680.22,
+        6092.69,
+        25862.23,
+        22508.12,
+        22505.66,
+        6768.48,
+        7359.32,
+        6666.68,
+        22501.65
+      ]
+    },
+    "Coreference_Resolution": {
+      "total": 10,
+      "passed": 5,
+      "latencies": [
+        22514.26,
+        22504.05,
+        5585.63,
+        5903.51,
+        6193.08,
+        25306.69,
+        22510.72,
+        22502.55,
+        8317.58,
+        7526.22
+      ]
+    },
+    "Spa_Service_and_Booking": {
+      "total": 10,
+      "passed": 4,
+      "latencies": [
+        26833.72,
+        22508.28,
+        22505.83,
+        6995.05,
+        26907.01,
+        26430.69,
+        22510.78,
+        6819.24,
+        8665.86,
+        8178.79
+      ]
+    },
+    "Comparison_and_Routine": {
+      "total": 10,
+      "passed": 2,
+      "latencies": [
+        26118.25,
+        22506.93,
+        22504.19,
+        10520.68,
+        8489.57,
+        6272.22,
+        30776.61,
+        22509.87,
+        1.98,
+        22637.57
+      ]
+    }
+  },
+  "failed_scenarios": [
+    {
+      "id": "MT_010",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45006.07,
+      "avg_turn_latency_ms": 22503.03,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mình da khô muốn cấp nước tức thì lúc ngồi điều hòa",
+          "latency_ms": 45006.07,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_011",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 48805.12,
+      "avg_turn_latency_ms": 24402.56,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da xuất hiện nếp nhăn li ti khóe mắt và rãnh cười",
+          "latency_ms": 3784.0,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "kem chống lão hóa",
+          "latency_ms": 45021.12,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_012",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45016.05,
+      "avg_turn_latency_ms": 22508.03,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da dầu mụn cần làm sạch sâu cuối ngày",
+          "latency_ms": 45016.05,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_017",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45020.88,
+      "avg_turn_latency_ms": 22510.44,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da treatment đang dùng retinol bị bong tróc đỏ rát",
+          "latency_ms": 45020.88,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_019",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45017.51,
+      "avg_turn_latency_ms": 22508.76,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da hỗn hợp thiên khô vùng chữ U bị mốc meo khi trang điểm",
+          "latency_ms": 45017.51,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_020",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 44997.21,
+      "avg_turn_latency_ms": 22498.6,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da có nhiều sợi bã nhờn li ti ở cánh mũi",
+          "latency_ms": 44997.21,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_023",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 50586.28,
+      "avg_turn_latency_ms": 25293.14,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da bị mỏng lộ chỉ máu do xài kem trộn ngày xưa",
+          "latency_ms": 5577.64,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da bị mỏng và lộ chỉ máu do kem trộn là tình trạng hàng rào bảo vệ da đã bị tổn thương nghiêm trọng. Ưu tiên hàng đầu củ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "serum rau má centella",
+          "latency_ms": 45008.64,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_024",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 52377.71,
+      "avg_turn_latency_ms": 26188.85,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mặt bị mụn bọc sưng đỏ viêm nhức",
+          "latency_ms": 7349.43,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng mụn bọc sưng đỏ và viêm nhức cần được xử lý bằng các hoạt chất kháng viêm, làm dịu cấp tốc để giảm áp lực lên",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chấm mụn",
+          "latency_ms": 45028.28,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_025",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45018.44,
+      "avg_turn_latency_ms": 22509.22,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da khô ráp thiếu ẩm muốn cấp nước căng bóng kiểu hàn quốc",
+          "latency_ms": 45018.44,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_030",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45008.84,
+      "avg_turn_latency_ms": 22504.42,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm nước tẩy trang dịu nhẹ không cồn",
+          "latency_ms": 45008.84,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_031",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45020.2,
+      "avg_turn_latency_ms": 22510.1,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Toner cấp ẩm cho da dầu",
+          "latency_ms": 45020.2,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_032",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45010.48,
+      "avg_turn_latency_ms": 22505.24,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm serum trị thâm mụn sáng da",
+          "latency_ms": 45010.48,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_037",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 49429.2,
+      "avg_turn_latency_ms": 24714.6,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa rửa mặt dạng gel kiềm dầu",
+          "latency_ms": 4407.37,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da dầu cần sản phẩm làm sạch sâu để kiểm soát bã nhờn nhưng phải đảm bảo không gây mất cân bằng pH. Dưới đây là các lựa ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "dưới 250k",
+          "latency_ms": 45021.83,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_038",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 49813.73,
+      "avg_turn_latency_ms": 24906.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng phục hồi b5",
+          "latency_ms": 4793.41,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Bạn đang tìm kiếm kem dưỡng phục hồi chứa B5, tuy nhiên các sản phẩm hiện có tập trung vào khả năng làm dịu và cấp ẩm sâ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "tầm 300k đổ lại",
+          "latency_ms": 45020.32,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_039",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45004.5,
+      "avg_turn_latency_ms": 22502.25,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Xịt khoáng làm dịu da nhạy cảm",
+          "latency_ms": 45004.5,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_041",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45276.08,
+      "avg_turn_latency_ms": 22638.04,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem chống nắng cho da dầu",
+          "latency_ms": 45276.08,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_043",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 50255.93,
+      "avg_turn_latency_ms": 25127.97,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem dưỡng cho da nhạy cảm",
+          "latency_ms": 5249.89,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da nhạy cảm cần ưu tiên các sản phẩm có khả năng làm dịu, phục hồi hàng rào bảo vệ và không gây kích ứng. Dưới đây là cá",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "không có mùi hương liệu",
+          "latency_ms": 45006.04,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_044",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 44999.77,
+      "avg_turn_latency_ms": 22499.88,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm sữa rửa mặt cho da mụn",
+          "latency_ms": 44999.77,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_045",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45273.96,
+      "avg_turn_latency_ms": 22636.98,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng cho da mụn",
+          "latency_ms": 45273.96,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_047",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 53123.46,
+      "avg_turn_latency_ms": 26561.73,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm serum làm dịu phục hồi",
+          "latency_ms": 8105.81,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để phục hồi và làm dịu da hiệu quả, bạn cần ưu tiên các sản phẩm chứa thành phần củng cố hàng rào bảo vệ tự nhiên và giả",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chứa b5 và rau má centella",
+          "latency_ms": 45017.65,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_049",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45010.96,
+      "avg_turn_latency_ms": 22505.48,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng cho da treatment",
+          "latency_ms": 45010.96,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_050",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45269.32,
+      "avg_turn_latency_ms": 22634.66,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa rửa mặt cho da dầu mụn",
+          "latency_ms": 45269.32,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_053",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 181277.72,
+      "avg_turn_latency_ms": 90638.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Serum chống lão hóa",
+          "latency_ms": 4688.17,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để chống lão hóa hiệu quả, bạn cần kết hợp giữa việc tái tạo bề mặt da, làm sáng và bảo vệ da khỏi các tác nhân gây hại ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chứa retinol nồng độ thấp cho người mới",
+          "latency_ms": 176589.55,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_054",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 178995.57,
+      "avg_turn_latency_ms": 89497.79,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng ẩm dạng gel",
+          "latency_ms": 178995.57,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_058",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45006.04,
+      "avg_turn_latency_ms": 22503.02,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem dưỡng b5 phục hồi",
+          "latency_ms": 45006.04,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_059",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45015.55,
+      "avg_turn_latency_ms": 22507.78,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tư vấn serum trị thâm nám",
+          "latency_ms": 45015.55,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_060",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45007.57,
+      "avg_turn_latency_ms": 22503.78,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem nền che khuyết điểm",
+          "latency_ms": 45007.57,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_064",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 51724.47,
+      "avg_turn_latency_ms": 25862.23,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Phấn phủ kiềm dầu",
+          "latency_ms": 6708.7,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để kiểm soát dầu nhờn hiệu quả, bạn cần sản phẩm có khả năng hút bã nhờn tức thì hoặc khóa nền bền vững tùy theo nhu cầu",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "sang xịt khoáng cấp ẩm dịu da",
+          "latency_ms": 45015.77,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_065",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45016.25,
+      "avg_turn_latency_ms": 22508.12,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa dưỡng thể trắng da",
+          "latency_ms": 45016.25,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_066",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45011.32,
+      "avg_turn_latency_ms": 22505.66,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước hoa hồng cấp ẩm",
+          "latency_ms": 45011.32,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_070",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45003.3,
+      "avg_turn_latency_ms": 22501.65,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Son lì mịn môi 3ce",
+          "latency_ms": 45003.3,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_071",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45028.51,
+      "avg_turn_latency_ms": 22514.26,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng B5 La Roche-Posay có tốt không?",
+          "latency_ms": 45028.51,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_072",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45008.1,
+      "avg_turn_latency_ms": 22504.05,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng Anessa vàng",
+          "latency_ms": 45008.1,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_076",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 50613.38,
+      "avg_turn_latency_ms": 25306.69,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dung dịch BHA 2% Paula's Choice",
+          "latency_ms": 5605.8,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Dung dịch BHA 2% là lựa chọn tiêu chuẩn để làm sạch sâu lỗ chân lông và cải thiện tình trạng mụn. Dưới đây là các phương",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "cách dùng nó như thế nào để không kích ứng",
+          "latency_ms": 45007.58,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_077",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45021.45,
+      "avg_turn_latency_ms": 22510.72,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng Martiderm The Originals",
+          "latency_ms": 45021.45,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_078",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45005.1,
+      "avg_turn_latency_ms": 22502.55,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước tẩy trang Bioderma nắp hồng",
+          "latency_ms": 45005.1,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_081",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 53667.44,
+      "avg_turn_latency_ms": 26833.72,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Bên mình có gói nặn mụn chuẩn y khoa không?",
+          "latency_ms": 8636.18,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Có, chúng tôi cung cấp dịch vụ lấy nhân mụn chuẩn y khoa được thiết kế chuyên biệt để xử lý tình trạng mụn sưng viêm an ",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "cho mình xem bảng giá chi tiết",
+          "latency_ms": 45031.26,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_082",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 45016.56,
+      "avg_turn_latency_ms": 22508.28,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Viện có liệu trình peel da trị mụn không shop",
+          "latency_ms": 45016.56,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_083",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 45011.65,
+      "avg_turn_latency_ms": 22505.83,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dịch vụ triệt lông nách công nghệ diode laser",
+          "latency_ms": 45011.65,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_085",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 53814.03,
+      "avg_turn_latency_ms": 26907.01,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dịch vụ soi da và phân tích biểu bì",
+          "latency_ms": 8818.58,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Việc soi da và phân tích biểu bì là bước nền tảng để xác định chính xác tình trạng sắc tố, độ ẩm và sức khỏe hàng rào bả",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "đặt lịch sáng thứ 7 này nha",
+          "latency_ms": 44995.45,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_086",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 52861.38,
+      "avg_turn_latency_ms": 26430.69,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Liệu trình cấy căng bóng trẻ hóa da",
+          "latency_ms": 7838.37,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để đạt hiệu quả căng bóng và trẻ hóa da, phương pháp cấy vi điểm là lựa chọn tối ưu nhờ khả năng đưa dưỡng chất trực tiế",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "bên mình có chi nhánh ở đâu",
+          "latency_ms": 45023.01,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_087",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 45021.56,
+      "avg_turn_latency_ms": 22510.78,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Gói gội đầu dưỡng sinh thư giãn",
+          "latency_ms": 45021.56,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_091",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 52236.51,
+      "avg_turn_latency_ms": 26118.25,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "So sánh serum B5 La Roche-Posay và Vichy 89",
+          "latency_ms": 7225.24,
+          "intent": "COMPARISON",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "La Roche-Posay Hyalu B5 và Vichy Minéral 89 đều là các dòng serum phục hồi phổ biến nhưng tập trung vào các mục tiêu da ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "da dầu treatment nên chọn cái nào hơn",
+          "latency_ms": 45011.27,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_092",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45013.86,
+      "avg_turn_latency_ms": 22506.93,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng Anessa vàng và La Roche-Posay Anthelios",
+          "latency_ms": 45013.86,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_093",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45008.38,
+      "avg_turn_latency_ms": 22504.19,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước tẩy trang Bioderma hồng và xanh lá",
+          "latency_ms": 45008.38,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_094",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 HTTP 500: Traceback (most recent call last):\n  File \"C:\\Users\\NGUYEN THANH NAM\\AppData\\Local\\Programs\\Python\\P"
+      ],
+      "total_latency_ms": 21041.37,
+      "avg_turn_latency_ms": 10520.68,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa rửa mặt Cerave và Cosrx Low pH",
+          "status": 500,
+          "latency_ms": 21041.37,
+          "error": "Traceback (most recent call last):\n  File \"C:\\Users\\NGUYEN THANH NAM\\AppData\\Local\\Programs\\Python\\P"
+        }
+      ]
+    },
+    {
+      "id": "MT_097",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 61553.22,
+      "avg_turn_latency_ms": 30776.61,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Vitamin C có dùng chung với Niacinamide được không?",
+          "latency_ms": 16525.12,
+          "intent": "COMPARISON",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Việc kết hợp Vitamin C và Niacinamide trong cùng một quy trình chăm sóc da là hoàn toàn khả thi nếu bạn biết cách điều c",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "thứ tự thoa cái nào trước cái nào sau",
+          "latency_ms": 45028.1,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_098",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45019.73,
+      "avg_turn_latency_ms": 22509.87,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng B5 La Roche-Posay và Klairs Midnight Blue",
+          "latency_ms": 45019.73,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_099",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 3.96,
+      "avg_turn_latency_ms": 1.98,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Routine sáng: Sữa rửa mặt -> Toner -> Vitamin C -> Kem chống nắng",
+          "latency_ms": 3.96,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_100",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45275.14,
+      "avg_turn_latency_ms": 22637.57,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mình đang bôi Treti 0.05% bị bong da đỏ rát",
+          "latency_ms": 45275.14,
+          "error": ""
+        }
+      ]
+    }
+  ],
+  "all_results": [
+    {
+      "id": "MT_001",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6418.94,
+      "avg_turn_latency_ms": 3209.47,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da em dạo này đổ nhiều dầu, xuất hiện nhiều mụn ẩn ở vùng cằm và trán",
+          "latency_ms": 277.35,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": true,
+          "products_count": 0,
+          "answer_snippet": "Chào bạn, để cải thiện tình trạng da dầu và mụn ẩn, bạn đang muốn tìm kiếm sản phẩm nào như sữa rửa mặt, toner hay serum",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "toner",
+          "latency_ms": 6141.59,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với tình trạng da dầu và mụn ẩn, bạn cần ưu tiên các loại toner có khả năng làm sạch sâu lỗ chân lông và hỗ trợ tẩy tế b",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_002",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 9697.72,
+      "avg_turn_latency_ms": 4848.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mặt mình bị khô căng tróc vảy hai bên má mùa đông này",
+          "latency_ms": 6137.46,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng da khô căng và tróc vảy vào mùa đông cho thấy hàng rào bảo vệ da của bạn đang bị tổn thương và thiếu hụt độ ẩ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "kem dưỡng",
+          "latency_ms": 3560.26,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với tình trạng da khô căng và tróc vảy, bạn cần ưu tiên các loại kem dưỡng có khả năng cấp ẩm sâu và phục hồi hàng rào b",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_003",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 10332.06,
+      "avg_turn_latency_ms": 5166.03,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da mình siêu nhạy cảm, dễ bị mẩn đỏ khi đi nắng",
+          "latency_ms": 5888.41,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với làn da siêu nhạy cảm và dễ mẩn đỏ khi tiếp xúc với ánh nắng, bạn cần ưu tiên các sản phẩm có khả năng làm dịu tức th",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "kem chống nắng",
+          "latency_ms": 4443.65,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với làn da nhạy cảm và dễ mẩn đỏ khi đi nắng, bạn cần các sản phẩm có màng lọc khoáng bền vững và khả năng làm dịu da tứ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_004",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 15034.61,
+      "avg_turn_latency_ms": 7517.31,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mặt mình có nhiều vết thâm mụn đỏ sau khi nặn mụn",
+          "latency_ms": 6713.33,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Vết thâm đỏ sau mụn là tình trạng giãn mao mạch và viêm tại chỗ, cần được xử lý bằng các liệu pháp làm dịu, kháng viêm v",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "serum",
+          "latency_ms": 8321.28,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Vết thâm đỏ sau mụn là hệ quả của viêm và giãn mao mạch, cần các hoạt chất vừa làm dịu, vừa tái tạo cấu trúc da để phục ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_005",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 7268.9,
+      "avg_turn_latency_ms": 3634.45,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da mình dầu nhiều, lỗ chân lông to bị bít tắc bã nhờn",
+          "latency_ms": 3787.71,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": true,
+          "products_count": 0,
+          "answer_snippet": "Chào bạn, để cải thiện tình trạng da dầu và bít tắc lỗ chân lông, bạn đang muốn tìm sản phẩm nào ạ? Ví dụ như sữa rửa mặ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "sữa rửa mặt",
+          "latency_ms": 3481.19,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với tình trạng da dầu và lỗ chân lông bít tắc, bạn cần ưu tiên các sản phẩm làm sạch sâu nhưng không gây khô căng để trá",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_006",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 8347.06,
+      "avg_turn_latency_ms": 4173.53,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da hỗn hợp thiên dầu bị mụn viêm sưng to",
+          "latency_ms": 5795.74,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da hỗn hợp thiên dầu đang gặp tình trạng mụn viêm sưng cần quy trình tập trung vào việc kháng khuẩn, làm dịu và bảo vệ d",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "serum trị mụn",
+          "latency_ms": 2551.32,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Đối với da hỗn hợp thiên dầu đang gặp tình trạng mụn viêm, mục tiêu chính là kiểm soát vi khuẩn, làm thông thoáng lỗ châ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_007",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 43430.48,
+      "avg_turn_latency_ms": 21715.24,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mình bị tàn nhang và sạm nám do đi biển về",
+          "latency_ms": 37360.77,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng sạm nám và tàn nhang sau khi đi biển là do da bị tổn thương bởi tia UV, cần tập trung vào các sản phẩm có khả",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "serum làm sáng da",
+          "latency_ms": 6069.71,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để cải thiện tình trạng sạm nám sau khi đi biển, bạn cần kết hợp hoạt chất ức chế sắc tố chuyên sâu vào buổi tối và tăng",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_008",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 41630.27,
+      "avg_turn_latency_ms": 20815.13,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mặt mình đang bị đỏ rát sau khi peel da ở nhà",
+          "latency_ms": 36277.27,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng đỏ rát sau khi peel da tại nhà cho thấy hàng rào bảo vệ da của bạn đang bị tổn thương, mất cân bằng độ ẩm và ",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "kem phục hồi",
+          "latency_ms": 5353.0,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Da bạn đang bị tổn thương bề mặt do peel, cần các sản phẩm có khả năng làm dịu tức thì và tái tạo hàng rào bảo vệ da mà ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_009",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 40784.9,
+      "avg_turn_latency_ms": 20392.45,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da dầu nhờn nhiều mụn đầu đen ở mũi",
+          "latency_ms": 34187.44,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng da dầu kèm mụn đầu đen cần ưu tiên làm sạch sâu lỗ chân lông, kiểm soát bã nhờn và làm dịu các vùng da viêm n",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "tẩy tế bào chết",
+          "latency_ms": 6597.46,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với tình trạng da dầu và mụn đầu đen, việc tẩy tế bào chết định kỳ là cần thiết để làm thông thoáng lỗ chân lông, ngăn n",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_010",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45006.07,
+      "avg_turn_latency_ms": 22503.03,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mình da khô muốn cấp nước tức thì lúc ngồi điều hòa",
+          "latency_ms": 45006.07,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_011",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 48805.12,
+      "avg_turn_latency_ms": 24402.56,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da xuất hiện nếp nhăn li ti khóe mắt và rãnh cười",
+          "latency_ms": 3784.0,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "kem chống lão hóa",
+          "latency_ms": 45021.12,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_012",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45016.05,
+      "avg_turn_latency_ms": 22508.03,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da dầu mụn cần làm sạch sâu cuối ngày",
+          "latency_ms": 45016.05,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_013",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 9932.77,
+      "avg_turn_latency_ms": 4966.39,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mặt mình hay bị nổi mẩn ngứa mỗi khi thời tiết hanh khô",
+          "latency_ms": 5141.97,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng mẩn ngứa khi thời tiết hanh khô cho thấy hàng rào bảo vệ da của bạn đang bị suy yếu và mất cân bằng độ ẩm ngh",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "kem dưỡng ẩm làm dịu",
+          "latency_ms": 4790.8,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng mẩn ngứa khi thời tiết hanh khô đòi hỏi các sản phẩm có khả năng phục hồi hàng rào bảo vệ da và làm dịu kích ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_014",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 7048.27,
+      "avg_turn_latency_ms": 3524.14,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da khô ráp thiếu sức sống cần đắp thư giãn tối",
+          "latency_ms": 4990.97,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng da khô ráp và thiếu sức sống của bạn cần được ưu tiên cấp ẩm sâu để phục hồi độ đàn hồi và vẻ rạng rỡ tự nhiê",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "mặt nạ",
+          "latency_ms": 2057.3,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để cải thiện tình trạng da khô ráp và thiếu sức sống, bạn cần tập trung vào các sản phẩm cấp ẩm sâu và phục hồi hàng rào",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_015",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 7121.59,
+      "avg_turn_latency_ms": 3560.8,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Môi mình bị khô nứt nẻ chảy máu vào mùa đông",
+          "latency_ms": 3734.03,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "son dưỡng",
+          "latency_ms": 3387.56,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Tình trạng môi nứt nẻ chảy máu vào mùa đông cần ưu tiên các sản phẩm có khả năng cấp ẩm sâu và làm dịu tức thì. Hiện tại",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_016",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 7177.71,
+      "avg_turn_latency_ms": 3588.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da bóng nhẫy như chảo mỡ sau khi ngủ dậy",
+          "latency_ms": 4260.3,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": true,
+          "products_count": 0,
+          "answer_snippet": "Tình trạng da đổ nhiều dầu vào buổi sáng thường liên quan đến việc chọn sản phẩm làm sạch hoặc dưỡng ẩm chưa phù hợp. Bạ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "toner kiềm dầu",
+          "latency_ms": 2917.41,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng da đổ dầu nhiều vào buổi sáng cho thấy da đang bị mất cân bằng độ ẩm hoặc tích tụ tế bào chết, khiến tuyến bã",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_017",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45020.88,
+      "avg_turn_latency_ms": 22510.44,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da treatment đang dùng retinol bị bong tróc đỏ rát",
+          "latency_ms": 45020.88,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_018",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6931.34,
+      "avg_turn_latency_ms": 3465.67,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da bị xỉn màu sạm đen do thức khuya nhiều",
+          "latency_ms": 3113.55,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": true,
+          "products_count": 0,
+          "answer_snippet": "Để cải thiện tình trạng da sạm màu do thức khuya, bạn đang muốn tìm kiếm sản phẩm nào như serum làm sáng da, kem dưỡng h",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "serum vitamin c",
+          "latency_ms": 3817.79,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da xỉn màu do thức khuya cần sự kết hợp giữa hoạt chất chống oxy hóa mạnh để làm sáng và các thành phần phục hồi để tái ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_019",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45017.51,
+      "avg_turn_latency_ms": 22508.76,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da hỗn hợp thiên khô vùng chữ U bị mốc meo khi trang điểm",
+          "latency_ms": 45017.51,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_020",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 44997.21,
+      "avg_turn_latency_ms": 22498.6,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da có nhiều sợi bã nhờn li ti ở cánh mũi",
+          "latency_ms": 44997.21,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_021",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 10013.43,
+      "avg_turn_latency_ms": 5006.72,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da dễ nổi mụn kích ứng với cồn và hương liệu",
+          "latency_ms": 5163.03,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Làn da dễ nổi mụn và nhạy cảm với cồn, hương liệu cần ưu tiên các sản phẩm tối giản, tập trung vào khả năng làm dịu và c",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "sữa rửa mặt tạo bọt dịu nhẹ",
+          "latency_ms": 4850.4,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với làn da dễ nổi mụn và nhạy cảm, bạn cần sữa rửa mặt có độ pH cân bằng, không chứa cồn và hương liệu để làm sạch mà kh",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_022",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 12363.32,
+      "avg_turn_latency_ms": 6181.66,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da dầu cần chống nắng đi bơi ngoài trời không trôi",
+          "latency_ms": 5556.2,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da dầu khi đi bơi ngoài trời cần ưu tiên các sản phẩm có khả năng kháng nước, kiềm dầu tốt và độ bám cao để tránh tình t",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "kem chống nắng kháng nước",
+          "latency_ms": 6807.12,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Khi đi bơi ngoài trời, bạn cần ưu tiên các sản phẩm có màng lọc bền vững với nước để tránh tình trạng kem trôi vào mắt h",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_023",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 50586.28,
+      "avg_turn_latency_ms": 25293.14,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da bị mỏng lộ chỉ máu do xài kem trộn ngày xưa",
+          "latency_ms": 5577.64,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da bị mỏng và lộ chỉ máu do kem trộn là tình trạng hàng rào bảo vệ da đã bị tổn thương nghiêm trọng. Ưu tiên hàng đầu củ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "serum rau má centella",
+          "latency_ms": 45008.64,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_024",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 52377.71,
+      "avg_turn_latency_ms": 26188.85,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mặt bị mụn bọc sưng đỏ viêm nhức",
+          "latency_ms": 7349.43,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tình trạng mụn bọc sưng đỏ và viêm nhức cần được xử lý bằng các hoạt chất kháng viêm, làm dịu cấp tốc để giảm áp lực lên",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chấm mụn",
+          "latency_ms": 45028.28,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_025",
+      "group": "Clarification_to_Category",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Zero products returned for completed category request"
+      ],
+      "total_latency_ms": 45018.44,
+      "avg_turn_latency_ms": 22509.22,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Da khô ráp thiếu ẩm muốn cấp nước căng bóng kiểu hàn quốc",
+          "latency_ms": 45018.44,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_026",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6330.86,
+      "avg_turn_latency_ms": 3165.43,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem chống nắng cho da dầu mụn",
+          "latency_ms": 4548.51,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da dầu mụn cần ưu tiên các sản phẩm có khả năng kiểm soát bã nhờn, không gây bít tắc lỗ chân lông và hỗ trợ làm dịu các ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "dưới 300k nhé shop",
+          "latency_ms": 1782.35,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với ngân sách dưới 300.000 đồng, bạn nên ưu tiên các sản phẩm có kết cấu mỏng nhẹ, khả năng kiềm dầu tốt để tránh gây bí",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_027",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 9578.31,
+      "avg_turn_latency_ms": 4789.15,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tư vấn serum phục hồi da sau nặn mụn",
+          "latency_ms": 4630.78,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da sau khi nặn mụn đang ở trạng thái tổn thương, cần ưu tiên làm dịu và phục hồi hàng rào bảo vệ để tránh viêm nhiễm hoặ",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "tầm 400k đổ lại thôi",
+          "latency_ms": 4947.53,
+          "intent": "PRICE_QUERY",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da sau nặn mụn đang bị tổn thương bề mặt, cần ưu tiên làm dịu và cấp ẩm sâu để tránh viêm nhiễm và hỗ trợ tái tạo. Với n",
+          "target_type": "SERVICE"
+        }
+      ]
+    },
+    {
+      "id": "MT_028",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6454.35,
+      "avg_turn_latency_ms": 3227.18,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm sữa rửa mặt cho da nhạy cảm",
+          "latency_ms": 4684.54,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da nhạy cảm cần ưu tiên các sản phẩm có độ pH cân bằng, không chứa hương liệu và chất tẩy rửa mạnh để tránh gây kích ứng",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "loại nào rẻ hơn 200 nghìn không shop",
+          "latency_ms": 1769.81,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Cả ba sản phẩm trong danh mục đều có mức giá dưới 200.000 đồng và phù hợp với nhu cầu làm sạch da nhạy cảm của bạn.\n\nGợi",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_029",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6007.07,
+      "avg_turn_latency_ms": 3003.53,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng ẩm cho da khô mùa đông",
+          "latency_ms": 4134.03,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da khô trong mùa đông cần các sản phẩm có khả năng khóa ẩm mạnh mẽ và phục hồi hàng rào bảo vệ da để ngăn chặn tình trạn",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "ngân sách tầm 350k",
+          "latency_ms": 1873.04,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Với ngân sách dưới 350.000 VND, CeraVe Moisturizing Cream là lựa chọn tối ưu nhất để giải quyết tình trạng da khô và bon",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_030",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45008.84,
+      "avg_turn_latency_ms": 22504.42,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm nước tẩy trang dịu nhẹ không cồn",
+          "latency_ms": 45008.84,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_031",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45020.2,
+      "avg_turn_latency_ms": 22510.1,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Toner cấp ẩm cho da dầu",
+          "latency_ms": 45020.2,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_032",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45010.48,
+      "avg_turn_latency_ms": 22505.24,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm serum trị thâm mụn sáng da",
+          "latency_ms": 45010.48,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_033",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6822.38,
+      "avg_turn_latency_ms": 3411.19,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng nâng tone tự nhiên",
+          "latency_ms": 4701.59,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Nhu cầu nâng tone tự nhiên thường đi kèm với mong muốn làm đều màu da và tạo lớp nền mỏng nhẹ. Trong danh mục sản phẩm h",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "tầm 400k",
+          "latency_ms": 2120.79,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với ngân sách dưới 400.000 đồng, bạn có thể lựa chọn các sản phẩm chống nắng vừa bảo vệ da hiệu quả, vừa hỗ trợ cải thiệ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_034",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6679.47,
+      "avg_turn_latency_ms": 3339.73,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tẩy tế bào chết hóa học bha",
+          "latency_ms": 4433.33,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Bạn đang tìm kiếm giải pháp tẩy tế bào chết chứa BHA để làm sạch sâu và kiểm soát mụn. Đây là hoạt chất hiệu quả để hòa ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "khoảng 300k",
+          "latency_ms": 2246.14,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với nhu cầu tẩy tế bào chết chứa BHA để kiểm soát dầu mụn, bạn cần ưu tiên các sản phẩm có khả năng làm sạch sâu lỗ chân",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_035",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6839.34,
+      "avg_turn_latency_ms": 3419.67,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mặt nạ cấp ẩm phục hồi da",
+          "latency_ms": 4953.57,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để phục hồi và cấp ẩm hiệu quả, bạn cần ưu tiên các sản phẩm chứa hoạt chất làm dịu và cấp nước sâu để tái tạo hàng rào ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "loại hộp dưới 200k",
+          "latency_ms": 1885.77,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với ngân sách dưới 200.000 đồng, bạn hoàn toàn có thể lựa chọn các loại mặt nạ giấy chất lượng cao để phục hồi và cấp ẩm",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_036",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 4101.26,
+      "avg_turn_latency_ms": 2050.63,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Son dưỡng môi có màu xinh",
+          "latency_ms": 2275.87,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "dưới 100k thôi shop",
+          "latency_ms": 1825.39,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với ngân sách dưới 100.000 đồng, bạn có thể chọn các sản phẩm dưỡng môi chất lượng cao, tập trung vào khả năng cấp ẩm và",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_037",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 49429.2,
+      "avg_turn_latency_ms": 24714.6,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa rửa mặt dạng gel kiềm dầu",
+          "latency_ms": 4407.37,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da dầu cần sản phẩm làm sạch sâu để kiểm soát bã nhờn nhưng phải đảm bảo không gây mất cân bằng pH. Dưới đây là các lựa ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "dưới 250k",
+          "latency_ms": 45021.83,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_038",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 49813.73,
+      "avg_turn_latency_ms": 24906.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng phục hồi b5",
+          "latency_ms": 4793.41,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Bạn đang tìm kiếm kem dưỡng phục hồi chứa B5, tuy nhiên các sản phẩm hiện có tập trung vào khả năng làm dịu và cấp ẩm sâ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "tầm 300k đổ lại",
+          "latency_ms": 45020.32,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_039",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45004.5,
+      "avg_turn_latency_ms": 22502.25,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Xịt khoáng làm dịu da nhạy cảm",
+          "latency_ms": 45004.5,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_040",
+      "group": "Price_Constraint_Adjustment",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 23765.4,
+      "avg_turn_latency_ms": 11882.7,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng kiềm dầu đi học",
+          "latency_ms": 21941.8,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với nhu cầu tìm kem chống nắng kiềm dầu đi học, bạn cần ưu tiên các sản phẩm có kết cấu mỏng nhẹ, không gây bít tắc lỗ c",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "dưới 180k thôi nha",
+          "latency_ms": 1823.6,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với ngân sách dưới 180.000 đồng, bạn nên ưu tiên các sản phẩm có khả năng kiềm dầu tốt và kết cấu mỏng nhẹ để không gây ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_041",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45276.08,
+      "avg_turn_latency_ms": 22638.04,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem chống nắng cho da dầu",
+          "latency_ms": 45276.08,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_042",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 9376.58,
+      "avg_turn_latency_ms": 4688.29,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tư vấn nước tẩy trang làm sạch sâu",
+          "latency_ms": 4955.94,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để làm sạch sâu hiệu quả, bạn cần lựa chọn sản phẩm dựa trên nhu cầu cụ thể của vùng da cần làm sạch và tình trạng da hi",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "không chứa cồn và paraben",
+          "latency_ms": 4420.64,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Cả ba sản phẩm dưới đây đều đáp ứng tiêu chí không chứa cồn và paraben, đảm bảo an toàn cho hàng rào bảo vệ da.\n\nGợi ý p",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_043",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 50255.93,
+      "avg_turn_latency_ms": 25127.97,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem dưỡng cho da nhạy cảm",
+          "latency_ms": 5249.89,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da nhạy cảm cần ưu tiên các sản phẩm có khả năng làm dịu, phục hồi hàng rào bảo vệ và không gây kích ứng. Dưới đây là cá",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "không có mùi hương liệu",
+          "latency_ms": 45006.04,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_044",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 44999.77,
+      "avg_turn_latency_ms": 22499.88,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm sữa rửa mặt cho da mụn",
+          "latency_ms": 44999.77,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_045",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45273.96,
+      "avg_turn_latency_ms": 22636.98,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng cho da mụn",
+          "latency_ms": 45273.96,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_046",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6775.09,
+      "avg_turn_latency_ms": 3387.55,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tư vấn kem dưỡng ban ngày",
+          "latency_ms": 2782.21,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "thấm nhanh không gây nhờn dính",
+          "latency_ms": 3992.88,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_047",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 53123.46,
+      "avg_turn_latency_ms": 26561.73,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm serum làm dịu phục hồi",
+          "latency_ms": 8105.81,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để phục hồi và làm dịu da hiệu quả, bạn cần ưu tiên các sản phẩm chứa thành phần củng cố hàng rào bảo vệ tự nhiên và giả",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chứa b5 và rau má centella",
+          "latency_ms": 45017.65,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_048",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 12913.96,
+      "avg_turn_latency_ms": 6456.98,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Serum mờ thâm nám",
+          "latency_ms": 6609.05,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để cải thiện tình trạng thâm nám, bạn cần kết hợp hoạt chất ức chế sắc chế chuyên sâu và các thành phần tái tạo bề mặt d",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "thành phần có chứa niacinamide",
+          "latency_ms": 6304.91,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Niacinamide là dẫn xuất của Vitamin B3, đóng vai trò then chốt trong việc củng cố hàng rào bảo vệ da, kiểm soát dầu thừa",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_049",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45010.96,
+      "avg_turn_latency_ms": 22505.48,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng cho da treatment",
+          "latency_ms": 45010.96,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_050",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45269.32,
+      "avg_turn_latency_ms": 22634.66,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa rửa mặt cho da dầu mụn",
+          "latency_ms": 45269.32,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_051",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 12688.3,
+      "avg_turn_latency_ms": 6344.15,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Toner cấp nước se khít chân lông",
+          "latency_ms": 5663.13,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để cải thiện tình trạng lỗ chân lông và cấp ẩm, bạn cần kết hợp làm sạch sâu tế bào chết và duy trì độ ẩm bề mặt. Dưới đ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "loại không cồn khô của klairs",
+          "latency_ms": 7025.17,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Các sản phẩm dòng Unscented của Klairs là lựa chọn tối ưu cho làn da cần cấp ẩm sâu mà không gây kích ứng do không chứa ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_052",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 188884.75,
+      "avg_turn_latency_ms": 94442.38,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng cho da khô",
+          "latency_ms": 7677.86,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da khô cần các sản phẩm chống nắng có khả năng cấp ẩm sâu, tạo màng khóa ẩm để tránh tình trạng da bong tróc hoặc căng r",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "loại có dưỡng ẩm mỏng nhẹ",
+          "latency_ms": 181206.89,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với nhu cầu tìm kiếm kem chống nắng có khả năng dưỡng ẩm mỏng nhẹ cho da khô, bạn nên ưu tiên các sản phẩm có kết cấu dạ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_053",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 181277.72,
+      "avg_turn_latency_ms": 90638.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Serum chống lão hóa",
+          "latency_ms": 4688.17,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để chống lão hóa hiệu quả, bạn cần kết hợp giữa việc tái tạo bề mặt da, làm sáng và bảo vệ da khỏi các tác nhân gây hại ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chứa retinol nồng độ thấp cho người mới",
+          "latency_ms": 176589.55,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_054",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 178995.57,
+      "avg_turn_latency_ms": 89497.79,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng ẩm dạng gel",
+          "latency_ms": 178995.57,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_055",
+      "group": "Negative_and_Safety_Filter",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 14584.47,
+      "avg_turn_latency_ms": 7292.24,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước hoa hồng làm dịu da",
+          "latency_ms": 5484.63,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để làm dịu làn da đang kích ứng hoặc mẩn đỏ, bạn cần các sản phẩm có độ pH cân bằng, không chứa cồn và hương liệu để trá",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chiết xuất hoa cúc không hương liệu",
+          "latency_ms": 9099.84,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với yêu cầu ưu tiên chiết xuất hoa cúc và không hương liệu, hai sản phẩm dưới đây là lựa chọn phù hợp nhất để làm dịu da",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_056",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 6339.72,
+      "avg_turn_latency_ms": 3169.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem chống nắng cho da dầu mụn",
+          "latency_ms": 2085.91,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da dầu mụn cần ưu tiên các sản phẩm có kết cấu mỏng nhẹ, không gây bít tắc lỗ chân lông và có khả năng kiểm soát dầu thừ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chuyển sang dầu gội trị gàu giúp mình",
+          "latency_ms": 4253.81,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để điều trị gàu hiệu quả, bạn cần sử dụng các sản phẩm có hoạt chất kháng nấm chuyên biệt thay vì các loại dầu gội làm s",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_057",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 9783.48,
+      "avg_turn_latency_ms": 4891.74,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tư vấn sữa rửa mặt dịu nhẹ",
+          "latency_ms": 4854.88,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để làm sạch da dịu nhẹ, bạn cần ưu tiên các sản phẩm có độ pH cân bằng, không chứa hương liệu hoặc chất tẩy rửa mạnh gây",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "đổi sang sữa tắm dưỡng ẩm cơ thể",
+          "latency_ms": 4928.6,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để dưỡng ẩm hiệu quả cho cơ thể, bạn cần ưu tiên các sản phẩm chứa thành phần cấp ẩm sâu như Glycerin hoặc Protein tơ tằ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_058",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45006.04,
+      "avg_turn_latency_ms": 22503.02,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem dưỡng b5 phục hồi",
+          "latency_ms": 45006.04,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_059",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45015.55,
+      "avg_turn_latency_ms": 22507.78,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tư vấn serum trị thâm nám",
+          "latency_ms": 45015.55,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_060",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45007.57,
+      "avg_turn_latency_ms": 22503.78,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tìm kem nền che khuyết điểm",
+          "latency_ms": 45007.57,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_061",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 15050.67,
+      "avg_turn_latency_ms": 7525.34,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dầu xả phục hồi tóc khô xơ",
+          "latency_ms": 8047.26,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tóc khô xơ cần sự kết hợp giữa dưỡng ẩm sâu và phục hồi cấu trúc protein để lấy lại độ bóng mượt. Dưới đây là các lựa ch",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "sang nước tẩy trang mắt môi",
+          "latency_ms": 7003.41,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Vùng da quanh mắt và môi là khu vực nhạy cảm, cần sản phẩm chuyên dụng để làm sạch lớp trang điểm lì mà không gây tổn th",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_062",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 15360.44,
+      "avg_turn_latency_ms": 7680.22,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng đi biển",
+          "latency_ms": 7779.89,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Đi biển đòi hỏi kem chống nắng có khả năng bám tốt và bảo vệ cao trước cường độ tia UV mạnh. Dưới đây là các lựa chọn ph",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chuyển sang lăn khử mùi không ố vàng áo",
+          "latency_ms": 7580.55,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để tránh tình trạng ố vàng nách áo, bạn cần ưu tiên các dòng sản phẩm có công thức chuyên biệt, không chứa các thành phầ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_063",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 12185.39,
+      "avg_turn_latency_ms": 6092.69,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Son dưỡng môi khô nứt",
+          "latency_ms": 4279.38,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "đổi sang dầu gội bưởi giảm rụng tóc",
+          "latency_ms": 7906.01,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Dầu gội chứa tinh dầu bưởi là lựa chọn tối ưu để cải thiện tình trạng rụng tóc nhờ khả năng kích thích nang tóc và làm s",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_064",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 51724.47,
+      "avg_turn_latency_ms": 25862.23,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Phấn phủ kiềm dầu",
+          "latency_ms": 6708.7,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để kiểm soát dầu nhờn hiệu quả, bạn cần sản phẩm có khả năng hút bã nhờn tức thì hoặc khóa nền bền vững tùy theo nhu cầu",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "sang xịt khoáng cấp ẩm dịu da",
+          "latency_ms": 45015.77,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_065",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45016.25,
+      "avg_turn_latency_ms": 22508.12,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa dưỡng thể trắng da",
+          "latency_ms": 45016.25,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_066",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45011.32,
+      "avg_turn_latency_ms": 22505.66,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước hoa hồng cấp ẩm",
+          "latency_ms": 45011.32,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_067",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 13536.95,
+      "avg_turn_latency_ms": 6768.48,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem trị mụn bọc",
+          "latency_ms": 8589.79,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Mụn bọc là tình trạng viêm nặng, cần các hoạt chất kháng khuẩn mạnh để ức chế vi khuẩn và làm dịu phản ứng viêm tại chỗ.",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "chuyển sang kem dưỡng tay khô nẻ",
+          "latency_ms": 4947.16,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_068",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 14718.64,
+      "avg_turn_latency_ms": 7359.32,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Tẩy tế bào chết da mặt",
+          "latency_ms": 7788.5,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Việc lựa chọn tẩy tế bào chết phụ thuộc vào tình trạng da và mức độ nhạy cảm của bạn. Dưới đây là các lựa chọn tối ưu dự",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "sang tẩy tế bào chết body cà phê",
+          "latency_ms": 6930.14,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 0,
+          "answer_snippet": "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử điều chỉnh tầm giá ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_069",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 13333.36,
+      "avg_turn_latency_ms": 6666.68,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dầu gội thảo dược",
+          "latency_ms": 6852.31,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Dầu gội thảo dược là lựa chọn tối ưu để làm sạch da đầu nhẹ nhàng và nuôi dưỡng mái tóc từ gốc bằng các chiết xuất tự nh",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "đổi sang kem chống nắng cho da nhạy cảm",
+          "latency_ms": 6481.05,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Da nhạy cảm cần ưu tiên các sản phẩm có bảng thành phần lành tính, không gây kích ứng và có khả năng làm dịu da. Dưới đâ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_070",
+      "group": "Domain_Switching",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45003.3,
+      "avg_turn_latency_ms": 22501.65,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Son lì mịn môi 3ce",
+          "latency_ms": 45003.3,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_071",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45028.51,
+      "avg_turn_latency_ms": 22514.26,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng B5 La Roche-Posay có tốt không?",
+          "latency_ms": 45028.51,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_072",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45008.1,
+      "avg_turn_latency_ms": 22504.05,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng Anessa vàng",
+          "latency_ms": 45008.1,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_073",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 11171.26,
+      "avg_turn_latency_ms": 5585.63,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Serum Torriden Dive-in Hyaluronic Acid",
+          "latency_ms": 4878.45,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Serum Torriden Dive-in Hyaluronic Acid là lựa chọn tối ưu để cấp ẩm sâu và phục hồi hàng rào bảo vệ da nhờ công thức đa ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "sản phẩm này có chứa cồn không",
+          "latency_ms": 6292.81,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Dòng sản phẩm serum của Torriden tập trung vào sự lành tính và cấp ẩm sâu, do đó toàn bộ các sản phẩm trong danh mục trê",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_074",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 11807.01,
+      "avg_turn_latency_ms": 5903.51,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước hoa hồng Klairs không mùi",
+          "latency_ms": 6655.01,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Bạn đang tìm kiếm dòng toner không mùi của Klairs để đảm bảo an toàn tối đa cho làn da nhạy cảm. Sản phẩm dưới đây là lự",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "cái này bầu dùng được không",
+          "latency_ms": 5152.0,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Nước hoa hồng Klairs Supple Preparation Unscented Toner hoàn toàn an toàn cho phụ nữ mang thai. Sản phẩm này không chứa ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_075",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 12386.17,
+      "avg_turn_latency_ms": 6193.08,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa rửa mặt Cerave Foaming Facial Cleanser",
+          "latency_ms": 8207.55,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Dòng sản phẩm Foaming Facial Cleanser của CeraVe hiện không có sẵn trong kho. Dựa trên nhu cầu làm sạch của bạn, tôi đề ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "nó có dung tích bao nhiêu ml",
+          "latency_ms": 4178.62,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Cả ba sản phẩm sữa rửa mặt CeraVe tôi đề xuất đều có dung tích tiêu chuẩn là 236ml.\n\nGợi ý phù hợp nhất cho bạn:\n\n- Cera",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_076",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 50613.38,
+      "avg_turn_latency_ms": 25306.69,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dung dịch BHA 2% Paula's Choice",
+          "latency_ms": 5605.8,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Dung dịch BHA 2% là lựa chọn tiêu chuẩn để làm sạch sâu lỗ chân lông và cải thiện tình trạng mụn. Dưới đây là các phương",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "cách dùng nó như thế nào để không kích ứng",
+          "latency_ms": 45007.58,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_077",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45021.45,
+      "avg_turn_latency_ms": 22510.72,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng Martiderm The Originals",
+          "latency_ms": 45021.45,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_078",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45005.1,
+      "avg_turn_latency_ms": 22502.55,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước tẩy trang Bioderma nắp hồng",
+          "latency_ms": 45005.1,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_079",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 16635.16,
+      "avg_turn_latency_ms": 8317.58,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Serum Vitamin C tươi Klairs Freshly Juiced",
+          "latency_ms": 9907.12,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Hiện tại kho hàng không có sẵn dòng Vitamin C của Klairs. Nếu mục tiêu của bạn là cải thiện sức khỏe làn da, dưới đây là",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "nó có dễ bị oxy hóa ngả vàng không",
+          "latency_ms": 6728.04,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Cả hai sản phẩm Klairs Rich Moist Soothing Serum và Midnight Blue Youth Activating Drop đều không chứa dẫn xuất Vitamin ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_080",
+      "group": "Coreference_Resolution",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 15052.44,
+      "avg_turn_latency_ms": 7526.22,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng ẩm Simple Kind to Skin",
+          "latency_ms": 7812.02,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Kem dưỡng Simple Kind to Skin Hydrating Light Moisturiser là lựa chọn tối ưu nếu bạn đang tìm kiếm một sản phẩm cấp ẩm c",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "cái này bôi lên có bị bết nhờn da không",
+          "latency_ms": 7240.42,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Sản phẩm này được thiết kế với kết cấu dạng sữa lỏng, tập trung vào khả năng thẩm thấu nhanh nên không gây bết dính hay ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_081",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 53667.44,
+      "avg_turn_latency_ms": 26833.72,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Bên mình có gói nặn mụn chuẩn y khoa không?",
+          "latency_ms": 8636.18,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Có, chúng tôi cung cấp dịch vụ lấy nhân mụn chuẩn y khoa được thiết kế chuyên biệt để xử lý tình trạng mụn sưng viêm an ",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "cho mình xem bảng giá chi tiết",
+          "latency_ms": 45031.26,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_082",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 45016.56,
+      "avg_turn_latency_ms": 22508.28,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Viện có liệu trình peel da trị mụn không shop",
+          "latency_ms": 45016.56,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_083",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 45011.65,
+      "avg_turn_latency_ms": 22505.83,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dịch vụ triệt lông nách công nghệ diode laser",
+          "latency_ms": 45011.65,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_084",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 13990.1,
+      "avg_turn_latency_ms": 6995.05,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Gói điện di tinh chất b5 phục hồi da",
+          "latency_ms": 7713.69,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Dịch vụ điện di tinh chất B5 và Hyaluronic Acid là lựa chọn tối ưu để phục hồi hàng rào bảo vệ da và cấp ẩm sâu cho các ",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "thời gian làm mất bao lâu vậy shop",
+          "latency_ms": 6276.41,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Liệu trình điện di tinh chất B5 và Hyaluronic Acid tại cơ sở của chúng tôi có thời gian thực hiện là 60 phút. Đây là kho",
+          "target_type": "SERVICE"
+        }
+      ]
+    },
+    {
+      "id": "MT_085",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 53814.03,
+      "avg_turn_latency_ms": 26907.01,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Dịch vụ soi da và phân tích biểu bì",
+          "latency_ms": 8818.58,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Việc soi da và phân tích biểu bì là bước nền tảng để xác định chính xác tình trạng sắc tố, độ ẩm và sức khỏe hàng rào bả",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "đặt lịch sáng thứ 7 này nha",
+          "latency_ms": 44995.45,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_086",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 52861.38,
+      "avg_turn_latency_ms": 26430.69,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Liệu trình cấy căng bóng trẻ hóa da",
+          "latency_ms": 7838.37,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Để đạt hiệu quả căng bóng và trẻ hóa da, phương pháp cấy vi điểm là lựa chọn tối ưu nhờ khả năng đưa dưỡng chất trực tiế",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "bên mình có chi nhánh ở đâu",
+          "latency_ms": 45023.01,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_087",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: ",
+        "Spa service query not classified as SERVICE target"
+      ],
+      "total_latency_ms": 45021.56,
+      "avg_turn_latency_ms": 22510.78,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Gói gội đầu dưỡng sinh thư giãn",
+          "latency_ms": 45021.56,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_088",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 13638.47,
+      "avg_turn_latency_ms": 6819.24,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Viện có dịch vụ massage body thảo dược không",
+          "latency_ms": 6669.51,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Viện hiện có dịch vụ massage body thảo dược chuyên sâu, đáp ứng nhu cầu thư giãn và phục hồi thể chất của bạn.\n\nGỢI Ý PH",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "đặt lịch 17h chiều nay nhé",
+          "latency_ms": 6968.96,
+          "intent": "AVAILABILITY_QUERY",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Tôi đã ghi nhận lịch hẹn của bạn vào lúc 17h chiều nay. Để đảm bảo hiệu quả thư giãn tốt nhất, bạn vui lòng xác nhận lựa",
+          "target_type": "SERVICE"
+        }
+      ]
+    },
+    {
+      "id": "MT_089",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 17331.73,
+      "avg_turn_latency_ms": 8665.86,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Chăm sóc da mặt chuyên sâu cho da mụn",
+          "latency_ms": 8682.66,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Với tình trạng da mụn, mục tiêu ưu tiên là làm sạch sâu, kiểm soát dầu thừa và kháng viêm để ngăn ngừa mụn lây lan. Dưới",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "quy trình gồm những bước nào",
+          "latency_ms": 8649.07,
+          "intent": "PRODUCT_DETAIL",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Quy trình 12 bước của liệu trình Bio-Light được thiết kế để giải quyết mụn từ khâu làm sạch, xử lý nhân mụn đến phục hồi",
+          "target_type": "SERVICE"
+        }
+      ]
+    },
+    {
+      "id": "MT_090",
+      "group": "Spa_Service_and_Booking",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 16357.58,
+      "avg_turn_latency_ms": 8178.79,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Gói peel da mờ thâm nách",
+          "latency_ms": 7995.27,
+          "intent": "PRODUCT_SEARCH",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Vùng da nách thường nhạy cảm và dễ bị tổn thương do ma sát hoặc cạo nhổ, vì vậy việc sử dụng hoạt chất peel cần được kiể",
+          "target_type": "SERVICE"
+        },
+        {
+          "turn": 2,
+          "msg": "đặt lịch làm vào cuối tuần này",
+          "latency_ms": 8362.31,
+          "intent": "AVAILABILITY_QUERY",
+          "needs_clarification": false,
+          "products_count": 3,
+          "answer_snippet": "Việc peel da nách cần sử dụng nồng độ acid kiểm soát chặt chẽ để loại bỏ tế bào sừng hóa mà không gây kích ứng vùng da m",
+          "target_type": "SERVICE"
+        }
+      ]
+    },
+    {
+      "id": "MT_091",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 52236.51,
+      "avg_turn_latency_ms": 26118.25,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "So sánh serum B5 La Roche-Posay và Vichy 89",
+          "latency_ms": 7225.24,
+          "intent": "COMPARISON",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "La Roche-Posay Hyalu B5 và Vichy Minéral 89 đều là các dòng serum phục hồi phổ biến nhưng tập trung vào các mục tiêu da ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "da dầu treatment nên chọn cái nào hơn",
+          "latency_ms": 45011.27,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_092",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45013.86,
+      "avg_turn_latency_ms": 22506.93,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem chống nắng Anessa vàng và La Roche-Posay Anthelios",
+          "latency_ms": 45013.86,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_093",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45008.38,
+      "avg_turn_latency_ms": 22504.19,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Nước tẩy trang Bioderma hồng và xanh lá",
+          "latency_ms": 45008.38,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_094",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 HTTP 500: Traceback (most recent call last):\n  File \"C:\\Users\\NGUYEN THANH NAM\\AppData\\Local\\Programs\\Python\\P"
+      ],
+      "total_latency_ms": 21041.37,
+      "avg_turn_latency_ms": 10520.68,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Sữa rửa mặt Cerave và Cosrx Low pH",
+          "status": 500,
+          "latency_ms": 21041.37,
+          "error": "Traceback (most recent call last):\n  File \"C:\\Users\\NGUYEN THANH NAM\\AppData\\Local\\Programs\\Python\\P"
+        }
+      ]
+    },
+    {
+      "id": "MT_095",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 16979.13,
+      "avg_turn_latency_ms": 8489.57,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Routine buổi tối của mình gồm BHA và Retinol",
+          "latency_ms": 9061.78,
+          "intent": "ROUTINE_RECOMMENDATION",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Kết hợp BHA và Retinol trong cùng một buổi tối dễ gây kích ứng nếu da chưa có nền tảng khỏe mạnh. Bạn cần giãn cách tần ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "dùng chung cùng một buổi tối được không shop",
+          "latency_ms": 7917.35,
+          "intent": "COMPARISON",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Việc dùng chung BHA và Retinol trong một buổi tối là quá tải với hầu hết làn da, dễ dẫn đến đỏ rát, bong tróc và tổn thư",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_096",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": true,
+      "failure_reasons": [],
+      "total_latency_ms": 12544.43,
+      "avg_turn_latency_ms": 6272.22,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Lên giúp mình chu trình skincare sáng tối",
+          "latency_ms": 5774.3,
+          "intent": "ROUTINE_RECOMMENDATION",
+          "needs_clarification": true,
+          "products_count": 0,
+          "answer_snippet": "Để xây dựng chu trình skincare phù hợp và hiệu quả nhất, bạn vui lòng cho mình biết loại da hiện tại của bạn là gì và bạ",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "cho da hỗn hợp thiên dầu bị mụn ẩn",
+          "latency_ms": 6770.13,
+          "intent": "ROUTINE_RECOMMENDATION",
+          "needs_clarification": false,
+          "products_count": 1,
+          "answer_snippet": "Da hỗn hợp thiên dầu bị mụn ẩn cần ưu tiên làm sạch sâu lỗ chân lông và kiểm soát bã nhờn để ngăn chặn tình trạng bít tắ",
+          "target_type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "id": "MT_097",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 2 Exception: "
+      ],
+      "total_latency_ms": 61553.22,
+      "avg_turn_latency_ms": 30776.61,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Vitamin C có dùng chung với Niacinamide được không?",
+          "latency_ms": 16525.12,
+          "intent": "COMPARISON",
+          "needs_clarification": false,
+          "products_count": 2,
+          "answer_snippet": "Việc kết hợp Vitamin C và Niacinamide trong cùng một quy trình chăm sóc da là hoàn toàn khả thi nếu bạn biết cách điều c",
+          "target_type": "PRODUCT"
+        },
+        {
+          "turn": 2,
+          "msg": "thứ tự thoa cái nào trước cái nào sau",
+          "latency_ms": 45028.1,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_098",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45019.73,
+      "avg_turn_latency_ms": 22509.87,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Kem dưỡng B5 La Roche-Posay và Klairs Midnight Blue",
+          "latency_ms": 45019.73,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_099",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 3.96,
+      "avg_turn_latency_ms": 1.98,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Routine sáng: Sữa rửa mặt -> Toner -> Vitamin C -> Kem chống nắng",
+          "latency_ms": 3.96,
+          "error": ""
+        }
+      ]
+    },
+    {
+      "id": "MT_100",
+      "group": "Comparison_and_Routine",
+      "turns_count": 2,
+      "success": false,
+      "failure_reasons": [
+        "Turn 1 Exception: "
+      ],
+      "total_latency_ms": 45275.14,
+      "avg_turn_latency_ms": 22637.57,
+      "history": [
+        {
+          "turn": 1,
+          "msg": "Mình đang bôi Treti 0.05% bị bong da đỏ rát",
+          "latency_ms": 45275.14,
+          "error": ""
+        }
+      ]
+    }
+  ]
+}

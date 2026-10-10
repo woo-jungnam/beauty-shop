@@ -13,6 +13,8 @@ import com.core.beautyshop.modules.spa.domain.BeautyServiceRepository;
 import com.core.beautyshop.modules.spa.domain.ServicePackageRepository;
 import com.core.beautyshop.modules.spa.domain.StaffRepository;
 import com.core.beautyshop.modules.spa.domain.AppointmentRepository;
+import com.core.beautyshop.modules.spa.domain.StaffScheduleRepository;
+import com.core.beautyshop.modules.spa.application.service.SpaTimeRules;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse;
@@ -32,6 +34,8 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
     private final StaffRepository staffRepository;
     private final AppointmentRepository appointmentRepository;
     private final IdentityFacade identityFacade;
+    private final StaffScheduleRepository schedules;
+    private final com.core.beautyshop.modules.spa.application.service.FacilitySchedulingService facilities;
 
     @Override
     @Cacheable(value = "spa_services", key = "'all-active'")
@@ -68,7 +72,18 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
     public List<StaffResponse> getQualifiedStaff(Long serviceId) {
         beautyServiceRepository.findWithCategoryById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
-        return staffRepository.findQualifiedActiveStaff(serviceId).stream()
+        var list = staffRepository.findQualifiedActiveStaff(serviceId);
+        return list.stream()
+                .map(staff -> StaffResponse.of(staff,
+                        identityFacade.findUserSummaryById(staff.getUserId())
+                                .map(UserSummaryDto::getFullName).orElse(null)))
+                .toList();
+    }
+
+    @Override
+    public List<StaffResponse> getAllStaff() {
+        return staffRepository.findAllAdminWithSkills().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getIsActive()) && !Boolean.TRUE.equals(s.getIsDeleted()))
                 .map(staff -> StaffResponse.of(staff,
                         identityFacade.findUserSummaryById(staff.getUserId())
                                 .map(UserSummaryDto::getFullName).orElse(null)))
@@ -82,29 +97,39 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
         if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
             throw new BusinessException("Service is not available");
         }
-        if (date.isBefore(java.time.LocalDate.now())) {
+        if (date == null || date.isBefore(java.time.LocalDate.now(SpaTimeRules.ZONE))) {
             throw new BusinessException("Appointment date cannot be in the past");
         }
         var qualifiedStaff = staffRepository.findQualifiedActiveStaff(serviceId);
         if (staffId != null && qualifiedStaff.stream().noneMatch(staff -> staff.getId().equals(staffId))) {
             throw new BusinessException("Staff is not qualified for this service");
         }
-        long duration = (long) service.getDurationMinutes()
-                + (service.getPreparationTimeMinutes() == null ? 0 : service.getPreparationTimeMinutes());
+        long duration = SpaTimeRules.durationMinutes(service);
         var result = new java.util.ArrayList<String>();
-        var slot = java.time.LocalTime.of(8, 0);
-        var close = java.time.LocalTime.of(20, 0);
-        while (!slot.plusMinutes(duration).isAfter(close)) {
+        var slot = SpaTimeRules.OPEN;
+        var close = SpaTimeRules.CLOSE;
+        while (java.time.Duration.between(slot, close).toMinutes() >= duration) {
             var currentSlot = slot;
             var end = currentSlot.plusMinutes(duration);
-            boolean future = !date.equals(java.time.LocalDate.now()) || currentSlot.isAfter(java.time.LocalTime.now());
+            boolean future = date.atTime(currentSlot).isAfter(java.time.LocalDateTime.now(SpaTimeRules.ZONE));
             boolean available = future && (staffId != null
-                    ? !appointmentRepository.existsOverlappingAppointmentForStaff(staffId, date, currentSlot, end)
-                    : qualifiedStaff.isEmpty() || qualifiedStaff.stream().anyMatch(staff ->
-                            !appointmentRepository.existsOverlappingAppointmentForStaff(staff.getId(), date, currentSlot, end)));
+                    ? isStaffAvailable(staffId, date, currentSlot, end)
+                    : qualifiedStaff.stream().anyMatch(staff -> isStaffAvailable(staff.getId(), date, currentSlot, end)));
+            available = available && facilities.hasAvailability(serviceId, date, currentSlot, end);
             if (available) result.add(currentSlot.toString());
             slot = slot.plusMinutes(30);
         }
         return result;
+    }
+
+    private boolean isStaffAvailable(Long staffId, java.time.LocalDate date, java.time.LocalTime start, java.time.LocalTime end) {
+        if (appointmentRepository.existsOverlappingAppointmentForStaff(staffId, date, start, end)) {
+            return false;
+        }
+        if (schedules.hasScheduleOnDate(staffId, date)) {
+            return schedules.coversWorkingInterval(staffId, date, start, end);
+        }
+        // If no explicit shift schedule is registered for this day, staff defaults to working standard store opening hours
+        return !start.isBefore(SpaTimeRules.OPEN) && !end.isAfter(SpaTimeRules.CLOSE);
     }
 }

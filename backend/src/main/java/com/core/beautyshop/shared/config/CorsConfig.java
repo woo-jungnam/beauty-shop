@@ -12,17 +12,16 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    public static final List<String> ALLOWED_ORIGINS = List.of(
+            "https://dermascan.world",
+            "https://www.dermascan.world"
+    );
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:[*]",
-                "http://127.0.0.1:[*]",
-                "https://*.beautyshop.com",
-                "https://*.vercel.app",
-                "https://*.netlify.app"
-        ));
+        configuration.setAllowedOrigins(ALLOWED_ORIGINS);
         
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

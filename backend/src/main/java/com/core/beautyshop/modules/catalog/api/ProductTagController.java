@@ -34,18 +34,29 @@ public class ProductTagController {
         return ResponseEntity.ok(ApiResponse.success(tagService.getTagById(id)));
     }
 
-    @Operation(summary = "Tạo thẻ sản phẩm mới (Admin)")
+    @Operation(summary = "Tạo thẻ sản phẩm mới (Admin/Staff)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã tạo dữ liệu", useReturnTypeSchema = true)
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<TagResponse>> createTag(
             @Valid @RequestBody TagRequest request) {
         TagResponse response = tagService.createTag(request);
         return ResponseEntity.status(201).body(ApiResponse.created(response, "Tạo thẻ thành công"));
     }
 
-    @Operation(summary = "Xóa thẻ sản phẩm (Admin)")
+    @Operation(summary = "Cập nhật thẻ sản phẩm (Admin/Staff)")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<TagResponse>> updateTag(
+            @PathVariable Long id,
+            @Valid @RequestBody TagRequest request) {
+        TagResponse response = tagService.updateTag(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Operation(summary = "Xóa thẻ sản phẩm (Admin/Staff)")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteTag(@PathVariable Long id) {
         tagService.deleteTag(id);
         return ResponseEntity.ok(ApiResponse.success(null));

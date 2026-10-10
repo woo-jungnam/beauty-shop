@@ -16,6 +16,10 @@ public class OrderRefundService {
     @com.core.beautyshop.shared.audit.api.annotation.AuditAction(action = "CONFIRM_REFUND", resourceType = "ORDER")
     @Transactional
     public void confirm(Long id, ConfirmRefundRequest request) {
+        if (request == null || request.reference() == null || request.reference().isBlank() || request.reference().length() > 100
+                || request.amount() == null || request.amount().signum() <= 0 || request.amount().scale() > 2
+                || (request.approvalReason() != null && request.approvalReason().length() > 250))
+            throw new BusinessException("Invalid refund confirmation");
         Order order = orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         var previous = confirmations.findByReference(request.reference());
         if (previous.isPresent()) {
@@ -24,8 +28,14 @@ public class OrderRefundService {
             }
             return;
         }
-        if (order.getPaymentStatus() != PaymentStatus.REFUND_PENDING
-                || (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.RETURNED)) {
+        boolean completedVisit = order.getAppointmentId() != null && order.getStatus() == OrderStatus.COMPLETED;
+        boolean explicitVisitRefund = completedVisit && (order.getPaymentStatus() == PaymentStatus.PAID
+                || order.getPaymentStatus() == PaymentStatus.PENDING || order.getPaymentStatus() == PaymentStatus.REFUND_PENDING);
+        if (explicitVisitRefund && (!com.core.beautyshop.shared.security.utils.SecurityUtils.isAdmin()
+                || request.approvalReason() == null || request.approvalReason().isBlank()))
+            throw new BusinessException("A Spa visit refund requires an administrator and an explicit approval reason");
+        if (!explicitVisitRefund && (order.getPaymentStatus() != PaymentStatus.REFUND_PENDING
+                || (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.RETURNED))) {
             throw new BusinessException("Order is not awaiting a refund");
         }
         java.math.BigDecimal outstanding = order.getPaidAmount().subtract(order.getRefundedAmount());
@@ -34,12 +44,15 @@ public class OrderRefundService {
         }
         var confirmation = new RefundConfirmation();
         confirmation.setOrderId(id); confirmation.setReference(request.reference()); confirmation.setAmount(request.amount());
+        confirmation.setConfirmedByUserId(com.core.beautyshop.shared.security.utils.SecurityUtils.getCurrentUserIdOptional().orElse(null));
+        confirmation.setApprovalReason(request.approvalReason());
         confirmations.saveAndFlush(confirmation);
         order.setRefundedAmount(order.getPaidAmount());
         order.setRefundReference(request.reference());
         order.setPaymentStatus(PaymentStatus.REFUNDED);
         order.getStatusHistories().add(OrderStatusHistory.builder().order(order).status(order.getStatus())
-                .notes("Refund confirmed: " + request.reference() + "; amount=" + request.amount()).build());
+                .notes("Refund confirmed: " + request.reference() + "; amount=" + request.amount()
+                        + (request.approvalReason() == null ? "" : "; approval=" + request.approvalReason())).build());
         orders.save(order);
     }
 }

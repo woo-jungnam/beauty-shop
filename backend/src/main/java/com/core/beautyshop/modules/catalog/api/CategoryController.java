@@ -52,18 +52,19 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(category));
     }
 
-    @Operation(summary = "Tạo danh mục mới (Admin)")
+    @Operation(summary = "Tạo danh mục mới (ADMIN / STAFF)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã tạo dữ liệu", useReturnTypeSchema = true)
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
             @Valid @RequestBody CreateCategoryRequest request) {
         CategoryResponse category = categoryService.createCategory(request);
         return ResponseEntity.status(201).body(ApiResponse.created(category, "Tạo danh mục thành công"));
     }
 
-    @Operation(summary = "Cập nhật danh mục (Admin)")
+    @Operation(summary = "Cập nhật danh mục (ADMIN / STAFF)")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCategoryRequest request) {
@@ -71,9 +72,9 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(category));
     }
 
-    @Operation(summary = "Xóa danh mục (Admin)")
+    @Operation(summary = "Xóa danh mục (ADMIN / STAFF)", description = "Xóa mềm; từ chối nếu còn danh mục con chưa xóa, kể cả danh mục con inactive.")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(ApiResponse.success(null));

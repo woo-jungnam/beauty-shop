@@ -54,18 +54,19 @@ public class BrandController {
         return ResponseEntity.ok(ApiResponse.success(brand));
     }
 
-    @Operation(summary = "Tạo thương hiệu mới (Admin)", description = "Yêu cầu quyền ADMIN. Slug không được trùng lặp.")
+    @Operation(summary = "Tạo thương hiệu mới (ADMIN / STAFF)", description = "Yêu cầu ADMIN hoặc STAFF. Slug không được trùng lặp.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã tạo dữ liệu", useReturnTypeSchema = true)
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<ApiResponse<BrandResponse>> createBrand(
             @Valid @RequestBody CreateBrandRequest request) {
         BrandResponse brand = brandService.createBrand(request);
         return ResponseEntity.status(201).body(ApiResponse.created(brand, "Tạo thương hiệu thành công"));
     }
 
-    @Operation(summary = "Cập nhật thông tin thương hiệu (Admin)", description = "Yêu cầu quyền ADMIN.")
+    @Operation(summary = "Cập nhật thông tin thương hiệu (ADMIN / STAFF)", description = "Yêu cầu ADMIN hoặc STAFF.")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<ApiResponse<BrandResponse>> updateBrand(
             @Parameter(description = "ID thương hiệu cần cập nhật", example = "1") @PathVariable Long id,
             @Valid @RequestBody UpdateBrandRequest request) {
@@ -73,9 +74,9 @@ public class BrandController {
         return ResponseEntity.ok(ApiResponse.success(brand));
     }
 
-    @Operation(summary = "Xóa thương hiệu (Admin)", description = "Yêu cầu quyền ADMIN.")
+    @Operation(summary = "Xóa thương hiệu (ADMIN / STAFF)", description = "Yêu cầu ADMIN hoặc STAFF.")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteBrand(
             @Parameter(description = "ID thương hiệu cần xóa", example = "1") @PathVariable Long id) {
         brandService.deleteBrand(id);

@@ -67,7 +67,7 @@ public class JwtAuthIntegrationTest {
         if (!userRepository.existsByUsername("admin")) {
             userRepository.save(User.builder()
                     .username("admin")
-                    .email("admin@beautyshop.com")
+                    .email("namnt4560@gmail.com")
                     .fullName("Default Admin")
                     .passwordHash(passwordEncoder.encode("admin123"))
                     .roles(List.of(adminRole))

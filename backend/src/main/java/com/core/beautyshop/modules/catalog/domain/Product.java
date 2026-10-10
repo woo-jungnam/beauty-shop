@@ -37,7 +37,6 @@ import lombok.Setter;
         @Index(name = "idx_products_brand_deleted", columnList = "brand_id, is_deleted"),
         @Index(name = "idx_products_created_at", columnList = "created_at"),
         @Index(name = "idx_products_featured_deleted", columnList = "is_featured, is_deleted"),
-        @Index(name = "idx_products_base_price", columnList = "base_price"),
         @Index(name = "idx_products_total_sold", columnList = "total_sold")
     }
 )
@@ -62,9 +61,6 @@ public class Product extends Base {
 
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
-
-    @Column(name = "base_price", precision = 12, scale = 2)
-    private BigDecimal basePrice;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

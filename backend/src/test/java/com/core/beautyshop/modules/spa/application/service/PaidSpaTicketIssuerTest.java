@@ -17,6 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,6 +49,8 @@ class PaidSpaTicketIssuerTest {
         when(ticketRepository.existsByOrderId(10L)).thenReturn(false);
         when(identityFacade.existsById(20L)).thenReturn(true);
         when(orderFacade.isPaidOrderForUser(10L, 20L)).thenReturn(true);
+        Instant paidAt = Instant.now().minus(7, ChronoUnit.DAYS);
+        when(orderFacade.findPaidAtForUser(10L, 20L)).thenReturn(Optional.of(paidAt));
 
         issuer.issue(new SpaPackagePaidEvent(10L, 20L, 30L));
 
@@ -57,6 +61,7 @@ class PaidSpaTicketIssuerTest {
         assertEquals(20L, ticket.getUserId());
         assertEquals(5, ticket.getTotalSessions());
         assertNotNull(ticket.getExpiryDate());
+        assertEquals(paidAt.plus(30, ChronoUnit.DAYS), ticket.getExpiryDate());
     }
 
     @Test
@@ -91,5 +96,23 @@ class PaidSpaTicketIssuerTest {
                         ServicePackageItem.builder().quantity(2).build(),
                         ServicePackageItem.builder().quantity(3).build()))
                 .build();
+    }
+
+    @Test
+    void delayedIssuanceCannotMakeAnAlreadyExpiredPurchaseActive() {
+        var snapshot = new com.core.beautyshop.modules.spa.domain.SpaPurchaseSnapshot();
+        snapshot.setOrderId(10L); snapshot.setPackageId(30L); snapshot.setValidityDays(30);
+        snapshot.getEntitlements().put(1L, 2);
+        when(snapshots.findById(10L)).thenReturn(Optional.of(snapshot));
+        when(packageRepository.getReferenceById(30L)).thenReturn(activePackage());
+        when(identityFacade.existsById(20L)).thenReturn(true);
+        when(orderFacade.isPaidOrderForUser(10L, 20L)).thenReturn(true);
+        Instant paidAt = Instant.now().minus(45, ChronoUnit.DAYS);
+        when(orderFacade.findPaidAtForUser(10L, 20L)).thenReturn(Optional.of(paidAt));
+        issuer.issue(new SpaPackagePaidEvent(10L, 20L, 30L));
+        var captor = ArgumentCaptor.forClass(UserServiceTicket.class);
+        verify(ticketRepository).save(captor.capture());
+        assertEquals(paidAt.plus(30, ChronoUnit.DAYS), captor.getValue().getExpiryDate());
+        assertEquals(com.core.beautyshop.modules.spa.domain.enums.TicketStatus.EXPIRED, captor.getValue().getStatus());
     }
 }

@@ -59,6 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
             log.info("Đã gửi email thành công tới {} cho template {}", emailMessageDto.getRecipientEmail(), emailMessageDto.getTemplateCode());
         } catch (Exception ex) {
             log.error("Không thể gửi email qua SMTP tới {}: {}", emailMessageDto.getRecipientEmail(), ex.getMessage());
+            throw new IllegalStateException("Email delivery failed; the notification will be retried", ex);
         }
     }
 
@@ -92,6 +93,35 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void sendOrderPaidNotification(Long orderId, String orderNumber, Long userId, BigDecimal totalAmount) {
+        String recipientEmail = "guest@beautyshop.local";
+        String recipientName = "Quý khách";
+
+        if (userId != null) {
+            UserSummaryDto userSummary = identityFacade.findUserSummaryById(userId).orElse(null);
+            if (userSummary != null) {
+                recipientEmail = userSummary.getEmail() != null ? userSummary.getEmail() : recipientEmail;
+                recipientName = userSummary.getFullName() != null ? userSummary.getFullName() : userSummary.getUsername();
+            }
+        }
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("orderId", orderId);
+        params.put("orderNumber", orderNumber);
+        params.put("totalAmount", totalAmount);
+
+        EmailMessageDto email = EmailMessageDto.builder()
+                .recipientEmail(recipientEmail)
+                .recipientName(recipientName)
+                .subject("Xác nhận thanh toán thành công qua chuyển khoản đơn hàng #" + orderNumber)
+                .templateCode("ORDER_PAID")
+                .parameters(params)
+                .build();
+
+        sendEmail(email);
+    }
+
+    @Override
     public void sendOrderStatusUpdateNotification(Long orderId, String orderNumber, String previousStatus, String newStatus) {
         log.info("Đã ghi nhận thông báo: Đơn hàng #{} thay đổi trạng thái từ {} sang {}", orderNumber, previousStatus, newStatus);
     }
@@ -111,6 +141,14 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private String buildEmailHtml(EmailMessageDto dto) {
+        if ("SPA_APPOINTMENT_REMINDER".equals(dto.getTemplateCode()) || "SPA_STAFF_FOLLOW_UP".equals(dto.getTemplateCode())) {
+            String recipient = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getRecipientName() == null ? "Quý khách" : dto.getRecipientName());
+            String subject = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getSubject() == null ? "BeautyShop Spa" : dto.getSubject());
+            String body = org.springframework.web.util.HtmlUtils.htmlEscape(String.valueOf(dto.getParameters().getOrDefault("body", "")))
+                    .replace("\n", "<br/>");
+            return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h2>" + subject
+                    + "</h2><p>Xin chào " + recipient + ",</p><p>" + body + "</p></body></html>";
+        }
         String name = dto.getRecipientName() != null ? dto.getRecipientName() : "Quý khách";
         String orderNumber = dto.getParameters() != null && dto.getParameters().get("orderNumber") != null
                 ? String.valueOf(dto.getParameters().get("orderNumber")) : "";

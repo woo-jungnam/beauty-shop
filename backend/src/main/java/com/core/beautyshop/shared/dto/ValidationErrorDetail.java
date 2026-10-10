@@ -19,6 +19,6 @@ public class ValidationErrorDetail {
     @Schema(description = "Thông điệp lỗi chi tiết", example = "Định dạng số điện thoại không hợp lệ")
     private String message;
 
-    @Schema(description = "Giá trị bị từ chối gửi lên (nếu có)", example = "0123abc")
+    @Schema(description = "Máy chủ trả null để tránh tiết lộ mật khẩu hoặc dữ liệu cá nhân trong lỗi kiểm thực")
     private Object rejectedValue;
 }

@@ -7,6 +7,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,7 +16,10 @@ public class DotenvEnvironmentPostProcessor implements EnvironmentPostProcessor,
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         try {
+            String directory = new File(".env").exists() ? "." : (new File("../.env").exists() ? ".." : ".");
+
             Dotenv dotenv = Dotenv.configure()
+                    .directory(directory)
                     .ignoreIfMissing()
                     .load();
 

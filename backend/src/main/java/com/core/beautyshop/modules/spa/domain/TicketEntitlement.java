@@ -7,4 +7,9 @@ public class TicketEntitlement {
     private int total;
     @Column(name = "used_sessions", nullable = false)
     private int used;
+    @Column(name = "reserved_sessions", nullable = false)
+    private int reserved;
+
+    public TicketEntitlement(int total, int used) { this.total = total; this.used = used; }
+    public int available() { return total - used - reserved; }
 }

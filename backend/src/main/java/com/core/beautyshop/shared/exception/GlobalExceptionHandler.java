@@ -17,6 +17,8 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -114,6 +116,14 @@ public class GlobalExceptionHandler {
         log.warn("Thiếu tham số bắt buộc: {}", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ErrorCode.INVALID_PARAMETER, message));
+    }
+
+    @ExceptionHandler({MissingRequestHeaderException.class, MissingServletRequestPartException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMissingHeaderOrPart(Exception ex) {
+        String message = ex instanceof MissingRequestHeaderException header
+                ? "Thiếu header bắt buộc: " + header.getHeaderName()
+                : "Thiếu phần multipart bắt buộc: " + ((MissingServletRequestPartException) ex).getRequestPartName();
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.INVALID_PARAMETER, message));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

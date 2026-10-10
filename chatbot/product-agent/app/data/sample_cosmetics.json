@@ -1,0 +1,634 @@
+[
+  {
+    "id": "prod_lrp_effaclar_serum",
+    "name": "Serum La Roche-Posay Effaclar Ultra Concentrated Giảm Mụn Mờ Thâm",
+    "brand": "La Roche-Posay",
+    "category": "serum",
+    "price": 759000,
+    "original_price": 890000,
+    "rating": 4.8,
+    "review_count": 1250,
+    "stock": 45,
+    "image_url": "https://example.com/images/lrp-effaclar-serum.jpg",
+    "url": "https://example.com/products/lrp-effaclar-serum",
+    "description": "Tinh chất giảm mụn 3 tác động với phức hợp LHA, Salicylic Acid (BHA), Glycolic Acid (AHA) kết hợp Niacinamide và nước khoáng La Roche-Posay. Giúp tẩy tế bào chết nhẹ nhàng, thông thoáng lỗ chân lông, kiềm dầu và làm mờ thâm mụn rõ rệt sau 28 ngày.",
+    "ingredients": [
+      "Salicylic Acid (BHA 1.5%): Tẩy tế bào chết sâu trong lỗ chân lông, giảm bít tắc dầu thừa.",
+      "LHA (0.45%): Dẫn xuất dịu nhẹ của salicylic acid, làm mịn bề mặt da.",
+      "Glycolic Acid (AHA 3.5%): Tăng sinh tế bào mới, cải thiện độ sáng và mờ thâm sạm.",
+      "Niacinamide (Vitamin B3): Làm dịu kích ứng, kháng viêm, củng cố hàng rào bảo vệ da.",
+      "Thermal Spring Water: Nước khoáng làm dịu da và chống oxy hóa."
+    ],
+    "benefits": [
+      "Giảm mụn ẩn, mụn đầu đen và mụn viêm đỏ",
+      "Thông thoáng và se khít lỗ chân lông",
+      "Làm mờ vết thâm sau mụn và đều màu da",
+      "Kiểm soát bã nhờn, hạn chế tái phát mụn"
+    ],
+    "usage": "Sử dụng buổi tối sau bước làm sạch và toner. Lấy 3-4 giọt thoa đều khắp mặt, tránh vùng mắt. Ban ngày bắt buộc dùng kem chống nắng SPF 50+.",
+    "skin_type": ["oily", "combination", "acne_prone"],
+    "concerns": ["acne", "dark_spots", "large_pores", "excess_oil"],
+    "reviews": [
+      {"author": "Minh Thư", "rating": 5, "comment": "Dùng 2 tuần mụn ẩn trồi lên dễ lấy hơn hẳn, da đỡ dầu hơn nhiều."},
+      {"author": "Hoàng Nam", "rating": 4, "comment": "Hiệu quả gom cồi mụn tốt, ban đầu có hơi châm chích nhẹ nhưng sau quen dần."}
+    ]
+  },
+  {
+    "id": "prod_to_niacinamide_10",
+    "name": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% Kiềm Dầu Giảm Mụn",
+    "brand": "The Ordinary",
+    "category": "serum",
+    "price": 245000,
+    "original_price": 280000,
+    "rating": 4.6,
+    "review_count": 3420,
+    "stock": 120,
+    "image_url": "https://example.com/images/to-niacinamide.jpg",
+    "url": "https://example.com/products/to-niacinamide",
+    "description": "Serum quốc dân chứa hàm lượng cao Niacinamide (Vitamin B3) cùng muối kẽm ZinC PCA 1%. Công thức dịu nhẹ giúp cân bằng bài tiết bã nhờn, hỗ trợ làm sáng đều màu da và hạn chế tắc nghẽn nang lông.",
+    "ingredients": [
+      "Niacinamide 10%: Làm sáng vết thâm, đều màu da, thu nhỏ lỗ chân lông.",
+      "Zinc PCA 1%: Kiểm soát dầu nhờn, kháng khuẩn và giảm tình trạng mụn sưng đỏ.",
+      "Tamarindus Indica Seed Gum: Cấp ẩm tự nhiên cho da."
+    ],
+    "benefits": [
+      "Kiểm soát dầu nhờn hiệu quả suốt ngày dài",
+      "Hỗ trợ giảm mẩn đỏ và làm mờ thâm mụn mới",
+      "Cải thiện độ mịn màng cho làn da dầu mụn"
+    ],
+    "usage": "Thoa sáng và tối trước kem dưỡng. Không sử dụng chung chu trình với sản phẩm chứa Vitamin C nguyên chất.",
+    "skin_type": ["oily", "combination"],
+    "concerns": ["excess_oil", "dark_spots", "large_pores"],
+    "reviews": [
+      {"author": "Phương Linh", "rating": 5, "comment": "Giá mềm mà kiềm dầu siêu tốt, da bớt bóng nhờn rõ rệt."},
+      {"author": "Tuấn Anh", "rating": 4, "comment": "Hơi có bọt trắng nếu xoa mạnh, nên vỗ nhẹ để thấm vào da."}
+    ]
+  },
+  {
+    "id": "prod_paulas_choice_bha_2",
+    "name": "Dung Dịch Tẩy Tế Bào Chết Paula's Choice Skin Perfecting 2% BHA Liquid Exfoliant",
+    "brand": "Paula's Choice",
+    "category": "toner",
+    "price": 890000,
+    "original_price": 950000,
+    "rating": 4.9,
+    "review_count": 2100,
+    "stock": 35,
+    "image_url": "https://example.com/images/pc-bha-2.jpg",
+    "url": "https://example.com/products/pc-bha-2",
+    "description": "Sản phẩm tẩy tế bào chết hóa học huyền thoại chứa 2% Salicylic Acid. Công thức tối ưu thẩm thấu sâu loại bỏ tế bào chết tích tụ trong lỗ chân lông, loại bỏ mụn đầu đen, cải thiện kết cấu da sần sùi.",
+    "ingredients": [
+      "Salicylic Acid (BHA 2%): Hòa tan dầu thừa, làm sạch sâu lỗ chân lông, đẩy lùi mụn đầu đen.",
+      "Camellia Oleifera (Green Tea) Leaf Extract: Chiết xuất trà xanh chống oxy hóa và làm dịu da.",
+      "Methylpropanediol: Tăng cường khả năng thẩm thấu của BHA vào sâu biểu bì."
+    ],
+    "benefits": [
+      "Làm sạch sâu bã nhờn, trị mụn đầu đen và mụn ẩn",
+      "Thu nhỏ lỗ chân lông và làm mịn bề mặt da thô ráp",
+      "Kháng viêm, giảm ửng đỏ"
+    ],
+    "usage": "Sử dụng 1-2 lần/ngày sau bước làm sạch và toner. Thấm ra bông cotton hoặc vỗ trực tiếp lên mặt. Bắt buộc dùng kem chống nắng phổ rộng ban ngày.",
+    "skin_type": ["oily", "combination", "normal"],
+    "concerns": ["blackheads", "acne", "large_pores", "rough_texture"],
+    "reviews": [
+      {"author": "Khánh Vy", "rating": 5, "comment": "Đỉnh chóp cho mụn đầu đen vùng mũi, dùng 1 tháng lỗ chân lông sạch bong."},
+      {"author": "Huy Hoàng", "rating": 5, "comment": "Da mịn màng hơn hẳn, rất đáng tiền."}
+    ]
+  },
+  {
+    "id": "prod_anessa_perfect_uv_milk",
+    "name": "Sữa Chống Nắng Anessa Perfect UV Sunscreen Skincare Milk SPF50+ PA++++",
+    "brand": "Anessa",
+    "category": "sunscreen",
+    "price": 585000,
+    "original_price": 685000,
+    "rating": 4.9,
+    "review_count": 4800,
+    "stock": 80,
+    "image_url": "https://example.com/images/anessa-uv-milk.jpg",
+    "url": "https://example.com/products/anessa-uv-milk",
+    "description": "Sữa chống nắng kiềm dầu số 1 Nhật Bản với công nghệ Auto Booster và Aqua Booster EX độc quyền, lớp màng bảo vệ trở nên mạnh mẽ hơn khi gặp Nhiệt độ cao - Nước - Mồ hôi - Độ ẩm. Kết cấu sữa mỏng nhẹ, kiềm dầu khô thoáng.",
+    "ingredients": [
+      "Zinc Oxide & Titanium Dioxide: Màng lọc khoáng chất chống tia UV phổ rộng bền vững.",
+      "Octocrylene, Uvinul A Plus: Màng lọc hóa học thế hệ mới bảo vệ tối ưu.",
+      "Chiết xuất rễ hoa hồng vàng Potentilla Erecta, Trà xanh Uji Kyoto: Chống oxy hóa ngừa lão hóa.",
+      "Super Hyaluronic Acid & Collagen: Cấp ẩm ngăn khô căng da."
+    ],
+    "benefits": [
+      "Chống nắng phổ rộng SPF50+ PA++++ bảo vệ tối đa",
+      "Chống trôi nước và mồ hôi lên tới 80 phút",
+      "Kiềm dầu và duy trì làn da khô thoáng suốt cả ngày",
+      "Có thể dùng làm kem lót trang điểm mịn lì"
+    ],
+    "usage": "Lắc đều trước khi dùng. Thoa đều trước khi ra nắng 20 phút. Thoa lại sau mỗi 2-3 tiếng khi hoạt động ngoài trời.",
+    "skin_type": ["oily", "combination", "normal"],
+    "concerns": ["sun_protection", "excess_oil", "aging"],
+    "reviews": [
+      {"author": "Thanh Hằng", "rating": 5, "comment": "Đi biển hay chạy ngoài trời không thể thiếu em này, không hề bị chảy hay bí da."},
+      {"author": "Bảo Ngọc", "rating": 5, "comment": "Chất sữa thấm nhanh như không thoa gì, kiềm dầu cực kỳ ưng ý."}
+    ]
+  },
+  {
+    "id": "prod_lrp_anthelios_oil_control",
+    "name": "Kem Chống Nắng La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+",
+    "brand": "La Roche-Posay",
+    "category": "sunscreen",
+    "price": 465000,
+    "original_price": 535000,
+    "rating": 4.8,
+    "review_count": 3900,
+    "stock": 65,
+    "image_url": "https://example.com/images/lrp-anthelios-oil-control.jpg",
+    "url": "https://example.com/products/lrp-anthelios-oil-control",
+    "description": "Kem chống nắng cho da dầu mụn trang bị màng lọc độc quyền Mexoryl 400 chống lại tia UVA siêu dài (380nm - 400nm). Hoạt chất Airlicium hấp thụ bã nhờn tức thì, kiểm soát dầu thừa đến 12 giờ không bóng nhờn.",
+    "ingredients": [
+      "Mexoryl 400: Màng lọc độc quyền bảo vệ da khỏi tia UVA dài nguy hại nhất.",
+      "Airlicium: Vi hạt với 99% khí, kiểm soát bã nhờn và mồ hôi tối ưu.",
+      "Nước khoáng La Roche-Posay: Làm dịu và giảm kích ứng cho da dầu mụn."
+    ],
+    "benefits": [
+      "Chống tia UVA/UVB toàn diện ngăn ngừa thâm nám và lão hóa",
+      "Kiềm dầu khô thoáng đến 12 giờ, không để lại vệt trắng",
+      "Không gây bít tắc lỗ chân lông, an toàn cho da mụn"
+    ],
+    "usage": "Thoa trước khi ra nắng 15-20 phút. Lấy lượng vừa đủ 2 ngón tay thoa đều mặt và cổ.",
+    "skin_type": ["oily", "combination", "acne_prone"],
+    "concerns": ["sun_protection", "excess_oil", "acne"],
+    "reviews": [
+      {"author": "Hồng Nhung", "rating": 5, "comment": "Kiềm dầu tốt nhất trong các dòng mình từng dùng, da khô ráo cả ngày."},
+      {"author": "Đức Trí", "rating": 4, "comment": "Thấm nhanh, không nâng tone lố, rất hợp cho nam da dầu."}
+    ]
+  },
+  {
+    "id": "prod_cerave_foaming_cleanser",
+    "name": "Sữa Rửa Mặt CeraVe Foaming Facial Cleanser Cho Da Dầu Mụn",
+    "brand": "CeraVe",
+    "category": "cleanser",
+    "price": 380000,
+    "original_price": 430000,
+    "rating": 4.8,
+    "review_count": 5200,
+    "stock": 95,
+    "image_url": "https://example.com/images/cerave-foaming.jpg",
+    "url": "https://example.com/products/cerave-foaming",
+    "description": "Gel rửa mặt tạo bọt dịu nhẹ được các bác sĩ da liễu khuyên dùng. Giúp loại bỏ dầu thừa, bụi bẩn và cặn trang điểm mà không làm tổn hại hàng rào độ ẩm tự nhiên của da nhờ công thức 3 Ceramide thiết yếu.",
+    "ingredients": [
+      "3 Ceramides thiết yếu (1, 3, 6-II): Khôi phục và củng cố hàng rào bảo vệ da tự nhiên.",
+      "Niacinamide: Làm dịu da mẩn đỏ, hỗ trợ kiểm soát bã nhờn.",
+      "Hyaluronic Acid: Cấp ẩm, giữ da mềm mịn không bị khô căng sau khi rửa."
+    ],
+    "benefits": [
+      "Làm sạch sâu bã nhờn và bụi mịn dịu nhẹ",
+      "Bảo toàn màng ẩm tự nhiên, độ pH chuẩn 5.5",
+      "Không chứa cồn, hương liệu, không gây bít tắc lỗ chân lông"
+    ],
+    "usage": "Dùng 2 lần mỗi ngày (sáng và tối). Làm ướt mặt, lấy một lượng gel vừa đủ tạo bọt nhẹ, massage đều trong 60 giây rồi rửa sạch bằng nước ấm.",
+    "skin_type": ["oily", "combination", "normal"],
+    "concerns": ["excess_oil", "clogged_pores", "barrier_repair"],
+    "reviews": [
+      {"author": "Thảo My", "rating": 5, "comment": "Rửa xong da sạch mịn tưng mà không hề khô căng, chai to dùng nửa năm mới hết."},
+      {"author": "Quang Huy", "rating": 5, "comment": "Chân ái cho da dầu nhạy cảm, cực kỳ lành tính."}
+    ]
+  },
+  {
+    "id": "prod_cosrx_low_ph_cleanser",
+    "name": "Gel Rửa Mặt COSRX Low pH Good Morning Gel Cleanser Dịu Nhẹ",
+    "brand": "Cosrx",
+    "category": "cleanser",
+    "price": 175000,
+    "original_price": 220000,
+    "rating": 4.7,
+    "review_count": 4100,
+    "stock": 110,
+    "image_url": "https://example.com/images/cosrx-low-ph.jpg",
+    "url": "https://example.com/products/cosrx-low-ph",
+    "description": "Gel rửa mặt buổi sáng với độ pH chuẩn 5.0 - 6.0 tương đương môi trường tự nhiên của làn da. Chứa tinh dầu tràm trà và BHA tự nhiên từ vỏ cây liễu giúp kháng khuẩn và làm sạch tế bào chết dịu êm.",
+    "ingredients": [
+      "Tea Tree Leaf Oil (Tinh dầu tràm trà): Kháng viêm, kháng khuẩn, làm dịu nốt mụn đỏ.",
+      "Betaine Salicylate (BHA tự nhiên): Làm sạch sâu lỗ chân lông, nhẹ nhàng lấy đi bã nhờn.",
+      "Allantoin: Dưỡng ẩm và làm dịu kích ứng da."
+    ],
+    "benefits": [
+      "Làm sạch nhẹ nhàng bã nhờn tiết ra sau đêm dài",
+      "Kháng khuẩn ngừa mụn nhờ tinh dầu tràm trà",
+      "Giữ da mềm mại, không gây căng rát hay khô nẻ"
+    ],
+    "usage": "Làm ướt tay và mặt, lấy một lượng nhỏ tạo bọt và xoa nhẹ nhàng khắp khuôn mặt, sau đó rửa lại với nước mát.",
+    "skin_type": ["oily", "combination", "sensitive", "acne_prone"],
+    "concerns": ["acne", "excess_oil", "sensitive_skin"],
+    "reviews": [
+      {"author": "Thanh Trúc", "rating": 5, "comment": "Mùi tràm trà thư giãn, rửa sáng sớm rất sảng khoái và êm dịu."},
+      {"author": "Ngọc Ánh", "rating": 4, "comment": "Giá học sinh sinh viên nhưng dùng rất ổn, da mụn dùng yên tâm."}
+    ]
+  },
+  {
+    "id": "prod_lrp_cicaplast_b5",
+    "name": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ Ultra-Repairing",
+    "brand": "La Roche-Posay",
+    "category": "cream",
+    "price": 389000,
+    "original_price": 450000,
+    "rating": 4.9,
+    "review_count": 6700,
+    "stock": 70,
+    "image_url": "https://example.com/images/lrp-cicaplast-b5.jpg",
+    "url": "https://example.com/products/lrp-cicaplast-b5",
+    "description": "Kem dưỡng phục hồi đa năng thế hệ mới với công nghệ độc quyền Tribioma (phức hợp tiền sinh học cân bằng hệ vi sinh da), kết hợp 5% Panthenol (Vitamin B5) và Madecassoside. Phục hồi da tổn thương, da kích ứng sau treatment, nặn mụn hoặc laser.",
+    "ingredients": [
+      "Panthenol (Vitamin B5) 5%: Làm dịu lập tức vùng da khô rát, mẩn đỏ và kích ứng.",
+      "Madecassoside (Chiết xuất rau má): Tái tạo tế bào da, thúc đẩy lành sẹo vết thương.",
+      "Tribioma: Phức hợp Prebiotics hỗ trợ cân bằng hệ vi sinh vật trên da.",
+      "Zinc Gluconate & Bơ hạt mỡ (Shea Butter): Kháng khuẩn và dưỡng ẩm sâu."
+    ],
+    "benefits": [
+      "Làm dịu da mẩn đỏ, ngứa ngáy và kích ứng chỉ sau 1 giờ",
+      "Tái tạo và phục hồi hàng rào bảo vệ da nhanh chóng",
+      "Ngừa thâm sẹo sau khi nặn mụn hoặc can thiệp thẩm mỹ",
+      "Dùng được cho cả trẻ sơ sinh và trẻ nhỏ"
+    ],
+    "usage": "Thoa ngày 2 lần lên vùng da sạch và khô. Có thể thoa lớp dày như mặt nạ phục hồi ban đêm.",
+    "skin_type": ["dry", "sensitive", "normal", "combination"],
+    "concerns": ["barrier_repair", "irritation", "redness", "flaky_skin"],
+    "reviews": [
+      {"author": "Huyền Trang", "rating": 5, "comment": "Cứ mỗi lần peel da hoặc nặn mụn xong bôi em này là da êm ru, 2 hôm sau hồi phục hoàn toàn."},
+      {"author": "Bích Ngọc", "rating": 5, "comment": "Kem hơi đặc một chút nhưng hiệu quả phục hồi thì đỉnh nhất phân khúc."}
+    ]
+  },
+  {
+    "id": "prod_klairs_midnight_cream",
+    "name": "Kem Dưỡng Phục Hồi Làm Dịu Da Klairs Midnight Blue Calming Cream",
+    "brand": "Klairs",
+    "category": "cream",
+    "price": 395000,
+    "original_price": 460000,
+    "rating": 4.8,
+    "review_count": 3100,
+    "stock": 50,
+    "image_url": "https://example.com/images/klairs-blue-cream.jpg",
+    "url": "https://example.com/products/klairs-blue-cream",
+    "description": "Kem dưỡng màu xanh dương tự nhiên độc đáo từ chiết xuất hoa cúc La Mã (Guaiazulene) và rau má (Centella Asiatica). Cực kỳ lý tưởng để làm dịu các nốt mụn sưng đỏ, làm dịu da cháy nắng và phục hồi da nhạy cảm sau các đợt treatment nặng đô.",
+    "ingredients": [
+      "Guaiazulene (Chiết xuất cúc La Mã): Hoạt chất màu xanh tự nhiên có khả năng kháng viêm và làm dịu da cấp tốc.",
+      "Centella Asiatica Extract (Chiết xuất rau má): Kích thích tái tạo collagen, làm mờ vết thâm sẹo.",
+      "Ceramide 3 & Sodium Hyaluronate: Cung cấp độ ẩm và khóa ẩm bền vững."
+    ],
+    "benefits": [
+      "Hạ nhiệt tức thì cho da kích ứng, cháy nắng hoặc mẩn đỏ",
+      "Gom cồi và giảm sưng tấy nốt mụn viêm",
+      "Củng cố hàng rào sinh học của làn da mỏng yếu"
+    ],
+    "usage": "Sử dụng ở bước cuối cùng chu trình dưỡng da ban đêm hoặc chấm trực tiếp lên các vùng da mẩn đỏ, kích ứng.",
+    "skin_type": ["sensitive", "oily", "combination", "acne_prone"],
+    "concerns": ["redness", "acne", "irritation", "barrier_repair"],
+    "reviews": [
+      {"author": "Yến Nhi", "rating": 5, "comment": "Màu xanh cúc La Mã rất xinh, bôi lên nốt mụn đỏ sáng hôm sau dịu hẳn."},
+      {"author": "Lan Anh", "rating": 5, "comment": "Chất kem mềm mịn, thấm nhanh không bết dính như B5 La Roche Posay, rất hợp cho da dầu mụn."}
+    ]
+  },
+  {
+    "id": "prod_torriden_dive_in_serum",
+    "name": "Serum Cấp Nước Đa Tầng Torriden DIVE-IN Low Molecular Hyaluronic Acid",
+    "brand": "Torriden",
+    "category": "serum",
+    "price": 360000,
+    "original_price": 420000,
+    "rating": 4.9,
+    "review_count": 3800,
+    "stock": 85,
+    "image_url": "https://example.com/images/torriden-dive-in.jpg",
+    "url": "https://example.com/products/torriden-dive-in",
+    "description": "Serum cấp ẩm số 1 tại chuỗi Olive Young Hàn Quốc với phức hợp 5 loại Hyaluronic Acid phân tử siêu nhỏ. Thẩm thấu sâu vào từng lớp tế bào, cấp ẩm tức thì, làm dịu căng thẳng và cho da ngậm nước căng bóng không bóng nhờn.",
+    "ingredients": [
+      "5D Complex Hyaluronic Acid (Phân tử cao - trung - thấp): Cấp ẩm đa tầng từ bề mặt đến đáy biểu bì.",
+      "D-Panthenol (Vitamin B5): Làm dịu và thúc đẩy phục hồi hàng rào màng tế bào.",
+      "Malachite Extract (Chiết xuất đá khổng tước): Tạo sắc xanh pastel tự nhiên và chống oxy hóa.",
+      "Allantoin: Làm dịu và bảo vệ da."
+    ],
+    "benefits": [
+      "Cấp ẩm sâu bên trong, giải quyết tình trạng da khô căng rát",
+      "Tăng cường độ đàn hồi, cho bề mặt da căng mướt mọng nước",
+      "Kết cấu mỏng nhẹ như nước, thấm trong 3 giây không hề nhờn rít"
+    ],
+    "usage": "Nhỏ 3-5 giọt ra lòng bàn tay hoặc thoa trực tiếp lên da sau khi rửa mặt hoặc dùng toner. Vỗ nhẹ cho dưỡng chất thẩm thấu.",
+    "skin_type": ["dry", "normal", "combination", "oily", "sensitive"],
+    "concerns": ["dehydration", "dry_patches", "rough_texture"],
+    "reviews": [
+      {"author": "Mai Anh", "rating": 5, "comment": "Thấm siêu nhanh, da dầu thiếu nước dùng em này thấy da kiềm dầu hơn hẳn vì đủ ẩm."},
+      {"author": "Kim Cương", "rating": 5, "comment": "Xứng đáng đứng top 1 Olive Young, cấp nước cực tốt."}
+    ]
+  },
+  {
+    "id": "prod_kiehls_ultra_facial_cream",
+    "name": "Kem Dưỡng Ẩm Cấp Nước Sâu Kiehl's Ultra Facial Cream 24-Hour",
+    "brand": "Kiehl's",
+    "category": "cream",
+    "price": 950000,
+    "original_price": 1050000,
+    "rating": 4.8,
+    "review_count": 1800,
+    "stock": 40,
+    "image_url": "https://example.com/images/kiehls-ultra-facial.jpg",
+    "url": "https://example.com/products/kiehls-ultra-facial",
+    "description": "Kem dưỡng ẩm huyền thoại suốt 24 giờ của Kiehl's. Được thử nghiệm trong điều kiện thời tiết khắc nghiệt, công thức chứa đạm nhiệt đới Glacial Glycoprotein và Squalane dầu ô liu giúp phục hồi hàng rào ẩm cho da mềm mịn suốt cả ngày.",
+    "ingredients": [
+      "Glacial Glycoprotein (Đạm trong băng biển): Dưỡng ẩm sâu, bảo vệ da khỏi khí hậu khô lạnh.",
+      "Squalane từ quả ô liu: Dầu dưỡng ẩm cao cấp tương thích với dầu tự nhiên trên da.",
+      "Glycerin: Hút ẩm giữ nước cho tế bào da."
+    ],
+    "benefits": [
+      "Cấp ẩm duy trì liên tục suốt 24 giờ",
+      "Phục hồi hàng rào bảo vệ da nhanh hơn 55%",
+      "Cải thiện tức thì làn da khô nứt nẻ, bong tróc",
+      "Kết cấu kem mịn, hấp thụ nhanh không gây nhờn"
+    ],
+    "usage": "Thoa lên da mặt sạch vào buổi sáng và buổi tối, massage nhẹ nhàng để kem thẩm thấu sâu.",
+    "skin_type": ["dry", "normal", "sensitive"],
+    "concerns": ["flaky_skin", "dry_patches", "barrier_repair", "dehydration"],
+    "reviews": [
+      {"author": "Thùy Dung", "rating": 5, "comment": "Mùa đông miền Bắc hanh khô nẻ toác mặt mà thoa em này là êm ngay sau một đêm."},
+      {"author": "Minh Trí", "rating": 5, "comment": "Dưỡng ẩm đỉnh cao, đắt nhưng xắt ra miếng."}
+    ]
+  },
+  {
+    "id": "prod_some_by_mi_aha_bha_toner",
+    "name": "Nước Hoa Hồng Giảm Mụn Some By Mi AHA-BHA-PHA 30 Days Miracle Toner",
+    "brand": "Some By Mi",
+    "category": "toner",
+    "price": 285000,
+    "original_price": 350000,
+    "rating": 4.6,
+    "review_count": 4100,
+    "stock": 75,
+    "image_url": "https://example.com/images/some-by-mi-toner.jpg",
+    "url": "https://example.com/products/some-by-mi-toner",
+    "description": "Toner trị mụn thần thánh 30 ngày chứa bộ ba AHA - BHA - PHA kết hợp 10,000ppm chiết xuất tràm trà thiên nhiên. Làm sạch bã nhờn sâu trong nang lông, loại bỏ tế bào sừng chết và làm dịu các đốm mụn sưng viêm.",
+    "ingredients": [
+      "AHA: Loại bỏ bụi bẩn và chất sừng khô ráp trên bề mặt da.",
+      "BHA: Tan trong dầu giúp làm sạch sâu lỗ chân lông, ngừa mụn ẩn.",
+      "PHA: Tẩy da chết dịu nhẹ, khóa ẩm và chống oxy hóa.",
+      "Tea Tree Extract (10,000 ppm): Kháng khuẩn, kiểm soát bã nhờn và làm dịu mụn."
+    ],
+    "benefits": [
+      "Loại bỏ tế bào chết dịu êm không làm rát da",
+      "Giảm mụn đầu đen, mụn đầu trắng và mụn cám",
+      "Kháng khuẩn ngừa viêm, cân bằng pH sinh lý cho da mụn"
+    ],
+    "usage": "Thấm một lượng vừa đủ ra bông tẩy trang rồi nhẹ nhàng lau đều khắp mặt theo chiều cấu tạo da sau khi rửa mặt.",
+    "skin_type": ["oily", "combination", "acne_prone"],
+    "concerns": ["acne", "blackheads", "excess_oil", "rough_texture"],
+    "reviews": [
+      {"author": "Thanh Vân", "rating": 5, "comment": "Mùi tràm trà the mát, dùng lau hàng ngày mụn ẩn ở trán và cằm giảm hẳn."},
+      {"author": "Đức Minh", "rating": 4, "comment": "Kiềm dầu tốt, da nhạy cảm nên test trước vùng quai hàm."}
+    ]
+  },
+  {
+    "id": "prod_innisfree_green_tea_seed_serum",
+    "name": "Serum Trà Xanh Cấp Ẩm Dưỡng Sáng Innisfree Green Tea Seed Hyaluronic Serum",
+    "brand": "Innisfree",
+    "category": "serum",
+    "price": 540000,
+    "original_price": 630000,
+    "rating": 4.7,
+    "review_count": 3200,
+    "stock": 60,
+    "image_url": "https://example.com/images/innisfree-green-tea.jpg",
+    "url": "https://example.com/products/innisfree-green-tea",
+    "description": "Serum cấp nước dưỡng ẩm màng sinh học chiết xuất từ lá trà xanh hữu cơ Đảo Jeju kết hợp Hyaluronic Acid dạng nano. Giúp bù đắp độ ẩm thiếu hụt ngay lập tức sau bước rửa mặt, làm sáng và chống oxy hóa cho da.",
+    "ingredients": [
+      "Beauty Green Tea Extract: Giàu 16 loại axit amin cấp ẩm và chống oxy hóa mạnh mẽ.",
+      "Nano-capsuled Hyaluronic Acid: HA bọc phân tử nano thẩm thấu sâu hơn 5.7 lần.",
+      "Panthenol: Làm dịu và giữ màng ẩm mềm mại."
+    ],
+    "benefits": [
+      "Cấp nước tức thì trong 10 giây đầu sau rửa mặt",
+      "Tăng cường độ sáng rạng rỡ và độ đàn hồi tự nhiên",
+      "Bảo vệ tế bào da khỏi tác nhân ô nhiễm môi trường"
+    ],
+    "usage": "Dùng ngay sau bước làm sạch (quy tắc 3 giây sau khi rửa mặt) để khóa lại độ ẩm tối đa.",
+    "skin_type": ["normal", "dry", "combination"],
+    "concerns": ["dehydration", "dullness", "rough_texture"],
+    "reviews": [
+      {"author": "Quỳnh Chi", "rating": 5, "comment": "Mùi thơm trà xanh siêu dễ chịu, thoa lên mát rượi và căng mịn."},
+      {"author": "Minh Châu", "rating": 4, "comment": "Dưỡng ẩm ban ngày rất thích, không gây nhờn bóng hay bí tắc."}
+    ]
+  },
+  {
+    "id": "prod_bioderma_sensibio_h2o",
+    "name": "Nước Tẩy Trang Dịu Nhẹ Cho Da Nhạy Cảm Bioderma Sensibio H2O Micellar Water",
+    "brand": "Bioderma",
+    "category": "cleanser",
+    "price": 420000,
+    "original_price": 490000,
+    "rating": 4.9,
+    "review_count": 8900,
+    "stock": 140,
+    "image_url": "https://example.com/images/bioderma-sensibio.jpg",
+    "url": "https://example.com/products/bioderma-sensibio",
+    "description": "Nước tẩy trang micellar water kinh điển số 1 thế giới dành riêng cho da nhạy cảm. Công nghệ hạt micelle mô phỏng cấu trúc phospholipid màng tế bào da tự nhiên, nhẹ nhàng quét sạch 99% lớp trang điểm và bụi mịn PM2.5.",
+    "ingredients": [
+      "Micelles Esters: Hạt phân tử micelle hút sạch dầu thừa và bụi bẩn dịu nhẹ.",
+      "Cucumis Sativus (Cucumber) Fruit Extract: Chiết xuất dưa leo làm mát và dịu da.",
+      "Rhamnose & Mannitol: Giảm cảm giác nóng rát và kích ứng da."
+    ],
+    "benefits": [
+      "Làm sạch sâu bụi mịn, cặn trang điểm và kem chống nắng",
+      "Dịu nhẹ như nước cất, không cần rửa lại với nước",
+      "Không cồn, không paraben, không hương liệu, không gây cay mắt"
+    ],
+    "usage": "Thấm đẫm bông cotton, nhẹ nhàng lau khắp mặt cho đến khi bông tẩy trang sạch hoàn toàn.",
+    "skin_type": ["sensitive", "dry", "normal", "combination", "oily"],
+    "concerns": ["sensitive_skin", "redness", "clogged_pores"],
+    "reviews": [
+      {"author": "Hà Trang", "rating": 5, "comment": "Dùng hơn chục chai rồi, tẩy trang mắt môi không hề rát hay cay mắt."},
+      {"author": "Hải Yến", "rating": 5, "comment": "Da nhạy cảm nhất định phải dùng dòng hồng này, cực kỳ dịu lành."}
+    ]
+  },
+  {
+    "id": "prod_cosrx_snail_96_essence",
+    "name": "Tinh Chất Dưỡng Ốc Sên Phục Hồi COSRX Advanced Snail 96 Mucin Power Essence",
+    "brand": "Cosrx",
+    "category": "serum",
+    "price": 315000,
+    "original_price": 380000,
+    "rating": 4.8,
+    "review_count": 4500,
+    "stock": 65,
+    "image_url": "https://example.com/images/cosrx-snail-96.jpg",
+    "url": "https://example.com/products/cosrx-snail-96",
+    "description": "Tinh chất chứa đến 96% dịch nhầy ốc sên cô đặc tự nhiên. Cung cấp dưỡng chất nuôi dưỡng tế bào da từ sâu bên trong, làm đầy nếp nhăn li ti, phục hồi tổn thương sau mụn và mang lại độ căng mọng bóng khỏe 'glass skin'.",
+    "ingredients": [
+      "Snail Secretion Filtrate 96%: Giàu mucin tự nhiên, elastin và glycolic acid giúp tái tạo da.",
+      "Sodium Hyaluronate: Cấp nước giữ ẩm sâu.",
+      "Allantoin & Panthenol: Làm dịu viêm sưng và kích ứng."
+    ],
+    "benefits": [
+      "Phục hồi làn da yếu tổn thương, mẩn đỏ sau mụn",
+      "Cấp ẩm chuyên sâu cho hiệu ứng căng bóng ngậm nước",
+      "Cải thiện độ đàn hồi và làm mờ các rãnh nhăn nông"
+    ],
+    "usage": "Sau bước làm sạch và toner, lấy 2-3 pump thoa đều và vỗ nhẹ lên khắp mặt cho đến khi tinh chất thẩm thấu hết.",
+    "skin_type": ["dry", "normal", "combination", "sensitive"],
+    "concerns": ["barrier_repair", "dehydration", "dullness", "aging"],
+    "reviews": [
+      {"author": "Ngân Hà", "rating": 5, "comment": "Chất hơi nhớt dính lúc đầu nhưng vỗ vào da thấm rất mướt, sáng dậy da căng bóng mịn màng."},
+      {"author": "Trọng Hiếu", "rating": 5, "comment": "Mờ thâm mụn đỏ rất nhanh, da khỏe lên trông thấy."}
+    ]
+  },
+  {
+    "id": "prod_skin1004_centella_ampoule",
+    "name": "Tinh Chất Rau Má Làm Dịu Da Skin1004 Madagascar Centella Ampoule",
+    "brand": "Skin1004",
+    "category": "serum",
+    "price": 340000,
+    "original_price": 410000,
+    "rating": 4.8,
+    "review_count": 5100,
+    "stock": 90,
+    "image_url": "https://example.com/images/skin1004-centella.jpg",
+    "url": "https://example.com/products/skin1004-centella",
+    "description": "Ampoule tinh khiết chứa 100% chiết xuất rau má Centella Asiatica thu hoạch từ vùng đảo Madagascar hoang sơ. Công thức không cồn, không hương liệu, giúp làm dịu nốt mụn viêm sưng, kháng khuẩn và tái sinh hàng rào da mỏng manh.",
+    "ingredients": [
+      "100% Centella Asiatica Extract: Rau má Madagascar tinh khiết giàu Asiaticoside, Madecassic Acid và Asiatic Acid."
+    ],
+    "benefits": [
+      "Làm dịu cấp tốc vùng da mẩn đỏ, ngứa rát và mụn sưng viêm",
+      "Kháng viêm, đẩy nhanh tốc độ phục hồi vết thương",
+      "Cân bằng độ ẩm và củng cố biểu bì da khỏe khoắn",
+      "Chất lỏng như nước, thẩm thấu ngay lập tức"
+    ],
+    "usage": "Nhỏ 4-5 giọt thoa đều khắp mặt sau bước toner. Có thể apply 2-3 lớp nếu da đang bị kích ứng nhiều.",
+    "skin_type": ["sensitive", "acne_prone", "oily", "combination", "dry"],
+    "concerns": ["redness", "acne", "sensitive_skin", "irritation"],
+    "reviews": [
+      {"author": "Mai Phương", "rating": 5, "comment": "Chân ái cho da nhạy cảm dễ nổi mẩn, bôi lên êm ru không một chút châm chích."},
+      {"author": "Văn Hậu", "rating": 5, "comment": "Nước rau má lỏng nhẹ, dùng hàng ngày da khỏe ít bị mụn vặt."}
+    ]
+  },
+  {
+    "id": "prod_cerave_pm_moisturizing_lotion",
+    "name": "Sữa Dưỡng Ẩm Đêm CeraVe PM Facial Moisturizing Lotion Phục Hồi",
+    "brand": "CeraVe",
+    "category": "cream",
+    "price": 395000,
+    "original_price": 460000,
+    "rating": 4.7,
+    "review_count": 2700,
+    "stock": 55,
+    "image_url": "https://example.com/images/cerave-pm-lotion.jpg",
+    "url": "https://example.com/products/cerave-pm-lotion",
+    "description": "Lotion dưỡng ẩm đêm mỏng nhẹ ứng dụng công nghệ MVE phân phối dưỡng chất từ từ suốt đêm. Chứa 3 loại Ceramide thiết yếu, Niacinamide và Hyaluronic Acid giúp tái tạo lớp màng ẩm, làm sáng đều màu da và nuôi dưỡng tế bào khỏe mạnh.",
+    "ingredients": [
+      "3 Ceramides thiết yếu (1, 3, 6-II): Phục hồi màng ẩm sinh lý bảo vệ da.",
+      "Niacinamide: Làm sáng da, kiềm dầu nhẹ và làm dịu viêm.",
+      "Hyaluronic Acid: Duy trì độ ẩm suốt 24h.",
+      "Công nghệ MVE: Giải phóng dưỡng chất liên tục qua đêm."
+    ],
+    "benefits": [
+      "Khôi phục lớp màng lipid tự nhiên của biểu bì",
+      "Cấp ẩm sâu không gây nặng mặt hay bí tắc nang lông",
+      "Cải thiện độ mịn và làm sáng tone da tự nhiên"
+    ],
+    "usage": "Thoa đều khắp mặt và cổ vào ban đêm sau các bước serum. Lấy 1-2 lần nhấn.",
+    "skin_type": ["oily", "combination", "normal", "sensitive"],
+    "concerns": ["barrier_repair", "dehydration", "dullness"],
+    "reviews": [
+      {"author": "Hồng Ánh", "rating": 5, "comment": "Chất lotion mỏng nhẹ tênh, da dầu mụn dùng không hề bị lên mụn mà da sáng mướt."},
+      {"author": "Quang Minh", "rating": 4, "comment": "Dưỡng ẩm vừa vặn, thiết kế vòi pump tiện lợi và vệ sinh."}
+    ]
+  },
+  {
+    "id": "prod_eucerin_sun_oil_control",
+    "name": "Kem Chống Nắng Kiểm Soát Nhờn Eucerin Sun Gel-Cream Dry Touch SPF50+",
+    "brand": "Eucerin",
+    "category": "sunscreen",
+    "price": 440000,
+    "original_price": 520000,
+    "rating": 4.8,
+    "review_count": 3100,
+    "stock": 50,
+    "image_url": "https://example.com/images/eucerin-oil-control.jpg",
+    "url": "https://example.com/products/eucerin-oil-control",
+    "description": "Kem chống nắng dạng gel-cream chuyên biệt cho da nhờn và dễ nổi mụn. Công nghệ quang phổ tiên tiến kết hợp bộ lọc UVA/UVB và ánh sáng năng lượng cao HEVIS, cùng hoạt chất L-Carnitine kiểm soát bã nhờn suốt 8 giờ.",
+    "ingredients": [
+      "L-Carnitine: Kiểm soát bã nhờn, hạn chế tiết dầu dư thừa đến 86%.",
+      "Licochalcone A: Chất chống oxy hóa mạnh vô hiệu hóa gốc tự do do tia UV và ánh sáng xanh.",
+      "Glycyrrhetinic Acid: Hỗ trợ cơ chế tự tái tạo DNA của tế bào da."
+    ],
+    "benefits": [
+      "Bảo vệ phổ rộng vượt trội chống UVA/UVB và tia HEVIS",
+      "Hiệu ứng Dry Touch khô thoáng, không bết dính",
+      "Kiểm soát bóng dầu hiệu quả suốt ngày dài"
+    ],
+    "usage": "Thoa lượng kem tương đương 2 đốt ngón tay lên toàn bộ khuôn mặt trước khi ra nắng 15-20 phút.",
+    "skin_type": ["oily", "combination", "acne_prone"],
+    "concerns": ["sun_protection", "excess_oil", "acne"],
+    "reviews": [
+      {"author": "Thảo Tiên", "rating": 5, "comment": "Dành cho ai ghét bết dính, bôi lên tệp ngay vào da khô thoáng cực kỳ."},
+      {"author": "Minh Khôi", "rating": 5, "comment": "Bác sĩ da liễu kê đơn lúc đang trị mụn, không bị mụn ẩn."}
+    ]
+  },
+  {
+    "id": "prod_obagi_retinol_1_0",
+    "name": "Kem Dưỡng Chống Lão Hóa Tái Tạo Da Obagi Clinical Retinol 1.0",
+    "brand": "Obagi",
+    "category": "cream",
+    "price": 1450000,
+    "original_price": 1750000,
+    "rating": 4.9,
+    "review_count": 1450,
+    "stock": 25,
+    "image_url": "https://example.com/images/obagi-retinol-1.jpg",
+    "url": "https://example.com/products/obagi-retinol-1",
+    "description": "Kem trẻ hóa da chứa 1.0% Retinol tinh khiết ứng dụng công nghệ bọc hạt giải phóng từ từ. Thúc đẩy chu kỳ thay mới tế bào, làm phẳng nếp nhăn, xóa mờ thâm nám và tăng sinh collagen cho làn da căng bóng mịn màng.",
+    "ingredients": [
+      "Retinol 1.0%: Kích thích sản sinh collagen, cải thiện kết cấu sần sùi và nếp nhăn.",
+      "Chiết xuất hoa cúc La Mã & Trà xanh: Làm dịu phản ứng bong tróc, giảm ửng đỏ kích ứng.",
+      "Tinh dầu Jojoba & Bơ hạt mỡ: Nuôi dưỡng và bảo vệ màng ẩm sinh lý."
+    ],
+    "benefits": [
+      "Cải thiện rõ rệt nếp nhăn li ti và rãnh cười",
+      "Làm đều màu da, mờ vết nám tàn nhang và thâm mụn lâu năm",
+      "Tái tạo bề mặt da mịn màng, se nhỏ lỗ chân lông"
+    ],
+    "usage": "Chỉ dùng buổi tối. Dùng 1 lần/tuần trong 2 tuần đầu rồi tăng dần lên cách ngày. Ban ngày bắt buộc dùng kem chống nắng SPF50+.",
+    "skin_type": ["normal", "oily", "dry", "combination"],
+    "concerns": ["aging", "wrinkles", "dark_spots", "rough_texture"],
+    "reviews": [
+      {"author": "Thu Hương", "rating": 5, "comment": "Dùng kiên trì 3 tháng da căng bóng như tráng gương, nếp nhăn đuôi mắt mờ đi trông thấy."},
+      {"author": "Ngọc Trâm", "rating": 4, "comment": "Cần dưỡng ẩm kỹ lúc mới bắt đầu vì có thể bong tróc nhẹ quanh khóe miệng."}
+    ]
+  },
+  {
+    "id": "prod_rohto_melano_cc_essence",
+    "name": "Tinh Chất Trắng Da Mờ Thâm Nám Rohto Melano CC Intensive Anti-Spot Essence",
+    "brand": "Rohto",
+    "category": "serum",
+    "price": 260000,
+    "original_price": 310000,
+    "rating": 4.7,
+    "review_count": 5600,
+    "stock": 100,
+    "image_url": "https://example.com/images/melano-cc.jpg",
+    "url": "https://example.com/products/melano-cc",
+    "description": "Essence dưỡng trắng mờ thâm chứa Vitamin C tinh khiết (L-Ascorbic Acid) kết hợp Vitamin E. Thiết kế tuýp nhôm chống oxy hóa độc quyền giúp tinh chất giữ được hoạt tính mạnh mẽ mà không cần bảo quản tủ lạnh.",
+    "ingredients": [
+      "Vitamin C tinh khiết (L-Ascorbic Acid): Ức chế sắc tố melanin, làm mờ thâm mụn và dưỡng sáng da.",
+      "Vitamin E (Tocopherol Acetate): Gia tăng hiệu quả chống oxy hóa và duy trì độ ẩm.",
+      "Dipotassium Glycyrrhizate: Kháng viêm, làm dịu vùng da tổn thương sau mụn.",
+      "Alpinia White: Chiết xuất thảo dược thúc đẩy làm sáng da."
+    ],
+    "benefits": [
+      "Làm mờ vết thâm mụn đỏ và thâm mụn nâu nhanh chóng",
+      "Dưỡng sáng da đều màu và chống oxy hóa",
+      "Kháng khuẩn ngừa mụn mới xuất hiện",
+      "Bao bì nhôm đặc biệt ngăn ngừa oxy hóa tối đa"
+    ],
+    "usage": "Chấm 4-5 giọt lên vùng da thâm mụn hoặc thoa toàn mặt sau bước làm sạch và toner.",
+    "skin_type": ["oily", "combination", "normal"],
+    "concerns": ["dark_spots", "dullness", "uneven_skin_tone"],
+    "reviews": [
+      {"author": "Diệu Linh", "rating": 5, "comment": "Trị thâm mụn mới siêu nhanh, chỉ 1-2 tuần là mờ hẳn. Giá quá hời."},
+      {"author": "Tuấn Kiệt", "rating": 4, "comment": "Hơi có mùi cam chanh nhẹ, thoa lúc đầu ấm ấm trên da."}
+    ]
+  }
+]

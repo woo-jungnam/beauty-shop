@@ -93,15 +93,15 @@ public class ProductVariantServiceImpl implements ProductVariantService {
     public ProductVariantResponse updateVariant(Long expectedProductId, Long variantId, ProductVariantRequest request) {
         validatePrices(request.getPrice(), request.getDiscountPrice());
 
-        ProductVariant variant = variantRepository.findByIdAndIsDeletedFalse(variantId)
+        Long productId = variantRepository.findProductIdByVariantId(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với id: " + variantId));
-
-        Long productId = variant.getProduct().getId();
         if (expectedProductId != null && !expectedProductId.equals(productId)) {
             throw new ResourceNotFoundException("Biến thể không thuộc sản phẩm với id: " + expectedProductId);
         }
         productRepository.findByIdForUpdateAndIsDeletedFalse(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
+        ProductVariant variant = variantRepository.findByIdForUpdate(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với id: " + variantId));
 
         if (!variant.getSku().equals(request.getSku()) && variantRepository.existsBySku(request.getSku())) {
             throw new BusinessException("Mã SKU đã tồn tại: " + request.getSku());
@@ -124,6 +124,15 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         if (request.getIsActive() != null) variant.setIsActive(request.getIsActive());
 
         variant = variantRepository.save(variant);
+
+        if (Boolean.TRUE.equals(variant.getIsDefault())) {
+            Product parent = variant.getProduct();
+            if (parent != null && variant.getVolume() != null && !variant.getVolume().isBlank()) {
+                parent.setVolume(variant.getVolume().trim());
+                productRepository.save(parent);
+            }
+        }
+
         return mapToResponse(variant);
     }
 
@@ -144,12 +153,18 @@ public class ProductVariantServiceImpl implements ProductVariantService {
             @CacheEvict(value = "product_detail", allEntries = true)
     })
     public void deleteVariant(Long expectedProductId, Long variantId) {
-        ProductVariant variant = variantRepository.findByIdAndIsDeletedFalse(variantId)
+        Long productId = variantRepository.findProductIdByVariantId(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với id: " + variantId));
-        if (expectedProductId != null && !expectedProductId.equals(variant.getProduct().getId())) {
+        if (expectedProductId != null && !expectedProductId.equals(productId)) {
             throw new ResourceNotFoundException("Biến thể không thuộc sản phẩm với id: " + expectedProductId);
         }
+        productRepository.findByIdForUpdateAndIsDeletedFalse(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
+        ProductVariant variant = variantRepository.findByIdForUpdate(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể với id: " + variantId));
         variant.setIsDeleted(true);
+        variant.setIsActive(false);
+        variant.setIsDefault(false);
         variantRepository.save(variant);
     }
 

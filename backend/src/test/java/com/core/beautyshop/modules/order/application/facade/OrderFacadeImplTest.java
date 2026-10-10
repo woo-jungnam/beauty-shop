@@ -34,6 +34,8 @@ class OrderFacadeImplTest {
 
     @Mock
     private com.core.beautyshop.modules.order.application.service.OrderExpirationService expirationService;
+    @Mock private com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refunds;
+    @Mock private com.core.beautyshop.modules.order.application.service.SpaVisitOrderService visits;
 
     @Test
     void accumulatesPartialPaymentsUntilOrderIsFullyPaid() {
@@ -52,7 +54,7 @@ class OrderFacadeImplTest {
         when(orderRepository.findByOrderNumberForUpdate("ORD-1234ABCD"))
                 .thenReturn(Optional.of(order));
 
-        OrderFacadeImpl facade = new OrderFacadeImpl(orderRepository, eventPublisher, paymentFacade, expirationService);
+        OrderFacadeImpl facade = new OrderFacadeImpl(orderRepository, eventPublisher, paymentFacade, refunds, expirationService, visits);
 
         assertFalse(facade.markOrderAsPaid(
                 "ORD-1234ABCD", new BigDecimal("40.00"), "REF-1"));
@@ -84,7 +86,7 @@ class OrderFacadeImplTest {
         order.setId(11L);
         when(orderRepository.findByOrderNumberForUpdate("ORD-LATE")).thenReturn(Optional.of(order));
         when(expirationService.expire(11L)).thenReturn(true);
-        OrderFacadeImpl facade = new OrderFacadeImpl(orderRepository, eventPublisher, paymentFacade, expirationService);
+        OrderFacadeImpl facade = new OrderFacadeImpl(orderRepository, eventPublisher, paymentFacade, refunds, expirationService, visits);
 
         assertTrue(facade.markOrderAsPaid("ORD-LATE", new BigDecimal("100.00"), "REF-LATE"));
 
@@ -117,7 +119,7 @@ class OrderFacadeImplTest {
                 .build();
         previous.setId(55L);
         when(orderRepository.findByCheckoutKey(anyString())).thenReturn(Optional.of(previous));
-        OrderFacadeImpl facade = new OrderFacadeImpl(orderRepository, eventPublisher, paymentFacade, expirationService);
+        OrderFacadeImpl facade = new OrderFacadeImpl(orderRepository, eventPublisher, paymentFacade, refunds, expirationService, visits);
 
         var replay = facade.createSpaPackageOrder(command);
 

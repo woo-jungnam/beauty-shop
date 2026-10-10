@@ -50,8 +50,11 @@ public class OrderEvents {
     @AllArgsConstructor
     public static class OrderPaidEvent {
         private Long orderId;
+        private String orderNumber;
         private Long userId;
         private Long servicePackageId;
+        private BigDecimal totalAmount;
+        private List<OrderItemSummary> items;
     }
 
     @Data

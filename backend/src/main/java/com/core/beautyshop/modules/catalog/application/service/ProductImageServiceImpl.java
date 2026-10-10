@@ -24,8 +24,12 @@ public class ProductImageServiceImpl implements ProductImageService {
     private final ProductRepository productRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductImageResponse> getImagesByProductId(Long productId) {
+        productRepository.findByIdAndStatusAndIsDeletedFalse(productId, com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
         return imageRepository.findByProductIdOrderByDisplayOrderAsc(productId).stream()
+                .filter(image -> !Boolean.TRUE.equals(image.getIsDeleted()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

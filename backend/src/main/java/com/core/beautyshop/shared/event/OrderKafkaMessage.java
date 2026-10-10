@@ -52,6 +52,18 @@ public class OrderKafkaMessage {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class OrderPaidKafkaMessage implements Serializable {
+        private Long orderId;
+        private String orderNumber;
+        private Long userId;
+        private BigDecimal totalAmount;
+        private LocalDateTime occurredAt;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class OrderItemSummaryMessage implements Serializable {
         private Long variantId;
         private Integer quantity;

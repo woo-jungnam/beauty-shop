@@ -8,6 +8,7 @@ public final class KafkaTopicConstants {
     public static final String ORDER_CREATED_TOPIC = "order.created";
     public static final String ORDER_CANCELLED_TOPIC = "order.cancelled";
     public static final String ORDER_STATUS_CHANGED_TOPIC = "order.status-changed";
+    public static final String ORDER_PAID_TOPIC = "order.paid";
 
     public static final String NOTIFICATION_EMAIL_TOPIC = "notification.email";
 

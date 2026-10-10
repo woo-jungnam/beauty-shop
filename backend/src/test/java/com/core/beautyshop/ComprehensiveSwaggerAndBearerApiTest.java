@@ -73,7 +73,7 @@ public class ComprehensiveSwaggerAndBearerApiTest {
         if (!userRepository.existsByUsername("swagger_admin")) {
             userRepository.save(User.builder()
                     .username("swagger_admin")
-                    .email("swagger_admin@beautyshop.com")
+                    .email("namnt4560@gmail.com")
                     .fullName("Swagger Admin")
                     .passwordHash(passwordEncoder.encode("Admin@123"))
                     .roles(List.of(adminRole))
@@ -132,21 +132,13 @@ public class ComprehensiveSwaggerAndBearerApiTest {
     }
 
     @Test
-    @DisplayName("Kiểm tra toàn bộ 7 Grouped OpenAPI trong SwaggerConfig hoạt động chính xác")
+    @DisplayName("Mọi nhóm hiển thị trong Swagger UI đều xuất được OpenAPI")
     public void testAllSwaggerGroups() throws Exception {
-        String[] groupNames = {
-                "0. Toàn bộ Hệ thống (All APIs)",
-                "1. Catalog & Sản phẩm",
-                "2. Định danh & Người dùng",
-                "3. Giỏ hàng & Đơn hàng",
-                "4. Thanh toán & Webhooks",
-                "5. Kho hàng & Tồn kho",
-                "6. Dịch vụ Spa & Lịch hẹn",
-                "7. Trợ lý Chatbot AI"
-        };
-
-        for (String group : groupNames) {
-            mockMvc.perform(get("/v3/api-docs/" + group))
+        JsonNode config = objectMapper.readTree(mockMvc.perform(get("/v3/api-docs/swagger-config"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        org.junit.jupiter.api.Assertions.assertEquals(13, config.path("urls").size());
+        for (JsonNode group : config.path("urls")) {
+            mockMvc.perform(get(group.path("url").asText()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.paths").isMap());
         }

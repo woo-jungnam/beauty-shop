@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.catalog.application.service;
 
 import com.core.beautyshop.modules.catalog.domain.*;
 import com.core.beautyshop.shared.exception.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,12 @@ public class AdminIngredientService {
 
     @Transactional(readOnly = true)
     public Page<IngredientView> list(Pageable pageable) { return ingredientRepository.findByIsDeletedFalse(pageable).map(IngredientView::from); }
+    @Transactional(readOnly = true)
+    public IngredientView get(Long id) {
+        return ingredientRepository.findByIdAndIsDeletedFalse(id)
+                .map(IngredientView::from)
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + id));
+    }
     @Transactional
     public IngredientView save(Long id, IngredientCommand command) {
         if (command.name() == null || command.name().isBlank() || command.inciName() == null || command.inciName().isBlank()
@@ -62,14 +69,28 @@ public class AdminIngredientService {
     }
     private List<String> copy(List<String> values) { return values == null ? new ArrayList<>() : new ArrayList<>(values); }
 
-    public record IngredientCommand(String name, String inciName, String slug, String description, List<String> functions,
-            List<String> benefits, List<String> potentialConcerns, Integer ewgScore, Boolean activeIngredient) { }
+    @Schema(name = "IngredientWriteRequest", description = "Tạo/cập nhật toàn bộ hoạt chất; field tùy chọn null được thay bằng giá trị mặc định, không phải cập nhật một phần")
+    public record IngredientCommand(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Tên hoạt chất không rỗng") String name,
+            @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Tên INCI không rỗng", example = "Niacinamide") String inciName,
+            @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Slug duy nhất trong hoạt chất chưa xóa") String slug,
+            @Schema(description = "Mô tả") String description, @Schema(description = "Chức năng; null thành []") List<String> functions,
+            @Schema(description = "Lợi ích; null thành []") List<String> benefits,
+            @Schema(description = "Lưu ý; null thành []") List<String> potentialConcerns,
+            @Schema(description = "Điểm 1–10; bỏ qua/null dùng 1", minimum = "1", maximum = "10", example = "1") Integer ewgScore,
+            @Schema(description = "Hoạt chất chính; null thành false") Boolean activeIngredient) { }
+    @Schema(name = "IngredientView", description = "Thông tin hoạt chất")
     public record IngredientView(Long id, String name, String inciName, String slug, String description, List<String> functions,
             List<String> benefits, List<String> potentialConcerns, Integer ewgScore, Boolean activeIngredient) {
         static IngredientView from(Ingredient value) { return new IngredientView(value.getId(), value.getName(), value.getInciName(), value.getSlug(), value.getDescription(),
                 value.getFunctions(), value.getBenefits(), value.getPotentialConcerns(), value.getEwgScore(), value.getIsActiveIngredient()); }
     }
-    public record ProductIngredientCommand(Long ingredientId, BigDecimal concentration, String concentrationUnit, Boolean keyActive, Integer displayOrder) { }
+    @Schema(name = "ProductIngredientWriteRequest", description = "Một phần tử trong mảng thay thế toàn bộ mapping thành phần")
+    public record ProductIngredientCommand(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "ID hoạt chất chưa xóa") Long ingredientId,
+            @Schema(description = "Nồng độ không âm, tùy chọn", minimum = "0") BigDecimal concentration,
+            @Schema(description = "Đơn vị; null dùng %", example = "%") String concentrationUnit,
+            @Schema(description = "Hoạt chất nổi bật; null dùng false") Boolean keyActive,
+            @Schema(description = "Thứ tự hiển thị; null tự cấp theo vị trí") Integer displayOrder) { }
+    @Schema(name = "ProductIngredientView", description = "Mapping thành phần của sản phẩm")
     public record ProductIngredientView(Long id, Long ingredientId, String ingredientName, BigDecimal concentration, String concentrationUnit, Boolean keyActive, Integer displayOrder) {
         static ProductIngredientView from(ProductIngredient value) { return new ProductIngredientView(value.getId(), value.getIngredient().getId(), value.getIngredient().getName(),
                 value.getConcentration(), value.getConcentrationUnit(), value.getIsKeyActive(), value.getDisplayOrder()); }

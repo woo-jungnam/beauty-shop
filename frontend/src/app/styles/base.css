@@ -1,0 +1,92 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * Border radii belong to each surface's design system. The previous global
+ * !important rule also flattened the customer storefront and overrode inline
+ * component styles. Admin components remain square through their own tokens.
+ */
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  line-height: 1.5;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabular figures for financial and inventory accuracy */
+.tabular-nums,
+table td,
+.metric-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* Standard Rectangular Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-primary-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary-400);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-600);
+}
+
+/* Focus styling */
+:focus-visible {
+  outline: 2px solid var(--color-accent-600) !important;
+  outline-offset: 1px;
+}
+
+a {
+  color: var(--color-accent-600);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.animate-spin { animation: ui-spin 1s linear infinite; }
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .animate-spin { animation: none; } }

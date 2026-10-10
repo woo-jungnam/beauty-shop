@@ -3,6 +3,8 @@ package com.core.beautyshop.modules.catalog.domain;
 import com.core.beautyshop.modules.catalog.application.dto.response.CategoryResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -11,6 +13,10 @@ import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Category c ORDER BY c.id")
+    List<Category> findAllForHierarchyUpdate();
 
     Optional<Category> findBySlugAndIsDeletedFalse(String slug);
 

@@ -27,7 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
 
-    @Operation(summary = "Đăng nhập tài khoản & nhận JWT Token", description = "Xác thực bằng username hoặc email kết hợp mật khẩu. Trả về access token và refresh token.")
+    @Operation(summary = "Đăng nhập tài khoản và nhận cặp JWT", description = "Công khai, không cần access token. usernameOrEmail nhận username hoặc email; giá trị chứa @ được tra theo email. Tài khoản phải đang ACTIVE. Mỗi lần đăng nhập tạo một họ phiên riêng.")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest loginRequest
@@ -36,7 +36,8 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
-    @Operation(summary = "Đăng ký tài khoản khách hàng mới", description = "Tạo tài khoản khách hàng mới với vai trò ROLE_CUSTOMER.")
+    @Operation(summary = "Đăng ký tài khoản khách hàng mới", description = "Công khai. Username dài 3–50 ký tự, không chứa @ hoặc khoảng trắng; email và username phải duy nhất. Tạo ROLE_CUSTOMER (hoặc ROLE_USER tương thích nếu hệ thống chỉ có role cũ), trả luôn cặp token; không có bước kích hoạt email trong API này.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Tài khoản và phiên đăng nhập đã được tạo", useReturnTypeSchema = true)
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody RegisterRequest registerRequest
@@ -45,7 +46,7 @@ public class AuthController {
         return ResponseEntity.status(201).body(ApiResponse.created(authResponse, "Đăng ký tài khoản thành công"));
     }
 
-    @Operation(summary = "Làm mới Access Token bằng Refresh Token", description = "Sử dụng Refresh Token hợp lệ để nhận cặp token mới khi Access Token hết hạn mà không bắt người dùng đăng nhập lại (Silent Refresh).")
+    @Operation(summary = "Luân chuyển refresh token và cấp cặp token mới", description = "Không cần access token; gửi refreshToken còn hiệu lực trong body. Token cũ bị thu hồi khi luân chuyển. Gửi lại token đã luân chuyển làm thu hồi cả họ phiên; client cần thay cặp token và tránh refresh đồng thời.")
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest refreshTokenRequest
@@ -54,7 +55,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authResponse));
     }
 
-    @Operation(summary = "Đăng xuất và thu hồi Refresh Token")
+    @Operation(summary = "Đăng xuất một họ phiên", description = "Không cần access token; gửi refreshToken trong body. Thu hồi cả access/refresh của họ phiên liên quan. Gửi lại yêu cầu hoặc token không còn phiên hoạt động vẫn trả thành công; không đăng xuất các họ phiên khác.")
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
             @Valid @RequestBody RefreshTokenRequest refreshTokenRequest

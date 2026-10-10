@@ -19,7 +19,7 @@ import java.util.Map;
 public class UnderstandTestRequest {
 
     @NotBlank(message = "Nội dung tin nhắn không được để trống")
-    @Schema(description = "Nội dung câu nói hoặc yêu cầu từ người dùng", example = "Tìm serum chứa Niacinamide trị thâm giá dưới 500k")
+    @Schema(description = "Nội dung câu nói không rỗng", requiredMode = Schema.RequiredMode.REQUIRED, example = "Tìm serum chứa Niacinamide trị thâm giá dưới 500k")
     private String message;
 
     @JsonProperty("current_state")

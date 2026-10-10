@@ -29,16 +29,19 @@ public class OrderController {
     private final OrderService orderService;
 
     @Operation(summary = "Thanh toán & tạo đơn hàng mới", description = """
-            Tạo đơn hàng từ giỏ hàng hiện tại (dựa trên token đăng nhập hoặc sessionId cho khách vãng lai).
-            Nếu chọn BANK, trường paymentInstruction trong phản hồi sẽ chứa thông tin tài khoản và mã VietQR SePay để hiển thị cho khách quét.
+            Tạo đơn hàng sản phẩm từ giỏ của tài khoản đăng nhập hoặc sessionId của khách vãng lai. Chỉ nhận BANK/COD; CASH dành cho invoice Spa.
+            BANK có hướng dẫn chuyển khoản khi còn nghĩa vụ thanh toán. Tổng cuối làm tròn VND HALF_UP một lần; BANK tổng 0 được PAID ngay.
+            Idempotency-Key tùy chọn: cùng người/phiên, khóa và nội dung trả lại đơn cũ; cùng khóa khác nội dung bị từ chối. Không gửi khóa thì không có bảo đảm gửi lại.
             """)
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Tạo đơn hàng thành công"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ (Mã: SYS_003) HOẶC giỏ hàng trống (Mã: ORD_001) HOẶC không đủ tồn kho (Mã: INV_001)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation SYS_003, quy tắc nghiệp vụ SYS_008 (giỏ trống, khóa gửi lại khác nội dung, CASH) hoặc tồn không đủ INV_001")
     })
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<OrderResponse>> checkout(
+            @Parameter(description = "Khóa gửi lại tùy chọn, 1–128 ký tự; giữ nguyên khóa và body khi retry", example = "checkout-20261002-001")
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Parameter(description = "Phiên giỏ khách vãng lai; dùng khi body.sessionId trống", example = "guest-session-uuid-12345")
             @RequestHeader(value = "X-Guest-Session-Id", required = false) String guestSessionId,
             @Valid @RequestBody CheckoutRequest request) {
         request.setIdempotencyKey(idempotencyKey);
@@ -49,14 +52,16 @@ public class OrderController {
         return ResponseEntity.status(201).body(ApiResponse.created(order, "Tạo đơn hàng thành công"));
     }
 
-    @Operation(summary = "Xem chi tiết đơn hàng", description = "Tra cứu thông tin chi tiết của một đơn hàng theo ID.")
+    @Operation(summary = "Xem chi tiết đơn hàng", description = "Đơn tài khoản: chính chủ hoặc ADMIN. Đơn khách vãng lai: đúng X-Guest-Session-Id hoặc ADMIN. ORDER_STAFF dùng tuyến /api/v1/admin/orders/{id}.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Tìm thấy đơn hàng"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy đơn hàng (Mã: ORD_002 / SYS_004)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Không sở hữu đơn hoặc thiếu/sai phiên khách"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy đơn hàng (SYS_004)")
     })
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(
             @Parameter(description = "ID đơn hàng", example = "1001") @PathVariable Long id,
+            @Parameter(description = "Bắt buộc để xem đơn khách vãng lai khi không có quyền ADMIN; phải khớp phiên lúc checkout")
             @RequestHeader(value = "X-Guest-Session-Id", required = false) String guestSessionId) {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrderById(id, guestSessionId)));
     }
@@ -89,40 +94,41 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
-    @Operation(summary = "Lấy tất cả đơn hàng (Admin)", description = "Dành cho Quản trị viên theo dõi toàn bộ đơn hàng trong hệ thống.")
+    @Operation(summary = "Lấy tất cả đơn hàng (Admin/Staff)", description = "Dành cho Quản trị viên và Nhân viên theo dõi toàn bộ đơn hàng trong hệ thống.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Thành công"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Chưa đăng nhập (Mã: AUTH_001)"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Không có quyền ADMIN (Mã: AUTH_002)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Không có quyền truy cập (Mã: AUTH_002)")
     })
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<PageResponse<OrderResponse>>> getAllOrders(
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
         Page<OrderResponse> page = orderService.getAllOrders(pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
-    @Operation(summary = "Cập nhật trạng thái đơn hàng (Admin)", description = "Chuyển đổi trạng thái đơn hàng (ví dụ: CONFIRMED -> SHIPPED -> DELIVERED). Yêu cầu quyền ADMIN.")
+    @Operation(summary = "Cập nhật trạng thái đơn hàng (Admin/Staff)", description = "PENDING→CONFIRMED/PROCESSING; CONFIRMED→PROCESSING; PROCESSING→SHIPPED→DELIVERED→RETURNED. Có thể CANCELLED từ PENDING/CONFIRMED/PROCESSING và phải có notes. BANK phải PAID trước PROCESSING/SHIPPED/DELIVERED. Invoice Spa không dùng luồng này; đơn gói Spa không SHIPPED/DELIVERED/RETURNED. Carrier và tracking có thể cùng trống, hoặc phải cùng được gửi khi SHIPPED.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cập nhật thành công"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ hoặc trạng thái chuyển tiếp không hợp lệ (Mã: ORD_004)"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy đơn hàng (Mã: ORD_002)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation SYS_003 hoặc vi phạm vòng đời/điều kiện thanh toán SYS_008"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy đơn hàng (SYS_004)")
     })
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<OrderResponse>> updateOrderStatus(
             @Parameter(description = "ID đơn hàng", example = "1001") @PathVariable Long id,
             @Valid @RequestBody UpdateOrderStatusRequest request) {
         return ResponseEntity.ok(ApiResponse.success(orderService.updateOrderStatus(id, request)));
     }
 
-    @Operation(summary = "Hủy đơn hàng", description = "Khách hàng hủy đơn hàng của mình. Chỉ được phép hủy khi đơn hàng đang ở trạng thái PENDING hoặc CONFIRMED.")
+    @Operation(summary = "Hủy đơn hàng", description = "Chính chủ hoặc ADMIN hủy đơn PENDING. Đơn khách vãng lai chỉ ADMIN được hủy qua tuyến này. Giải phóng tồn giữ; tiền đã nhận chuyển REFUND_PENDING, chưa thực hiện hoàn tiền.")
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Hủy đơn hàng thành công và hoàn trả tồn kho"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Đơn hàng đã được giao hoặc đang vận chuyển nên không thể hủy (Mã: ORD_003)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Hủy thành công và giải phóng phần tồn kho đã giữ"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Đơn không còn PENDING"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Chưa đăng nhập (Mã: AUTH_001)"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy đơn hàng (Mã: ORD_002)")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Không sở hữu đơn; chỉ ADMIN hủy được đơn khách vãng lai"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Không tìm thấy đơn hàng (SYS_004)")
     })
     @DeleteMapping("/{id}/cancel")
     @PreAuthorize("isAuthenticated()")

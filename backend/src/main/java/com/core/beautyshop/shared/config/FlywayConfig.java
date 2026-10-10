@@ -17,13 +17,12 @@ public class FlywayConfig {
     @Bean
     public FlywayMigrationStrategy flywayMigrationStrategy() {
         return flyway -> {
-            log.info("Executing Flyway repair & migrate...");
-            try {
-                flyway.repair();
-            } catch (Exception e) {
-                log.warn("Flyway repair warning: {}", e.getMessage());
-            }
-            flyway.migrate();
+            log.info("Repairing and migrating the database with Flyway...");
+            Flyway f = Flyway.configure()
+                    .configuration(flyway.getConfiguration())
+                    .load();
+            f.repair();
+            f.migrate();
             log.info("Flyway migration completed successfully.");
         };
     }

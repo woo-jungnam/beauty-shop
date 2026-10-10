@@ -9,13 +9,13 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-@Schema(description = "Dữ liệu yêu cầu thanh toán và khởi tạo đơn hàng mới")
+@Schema(description = "Checkout giỏ sản phẩm; BANK/COD. Idempotency-Key là header, không phải body. Không dùng DTO này để tạo invoice Spa")
 public class CheckoutRequest {
     @com.fasterxml.jackson.annotation.JsonIgnore
     @Schema(hidden = true)
     private String idempotencyKey;
 
-    @Schema(description = "ID phiên giỏ hàng (áp dụng cho khách vãng lai chưa đăng nhập, nếu đã đăng nhập thì để null)", example = "guest-session-uuid-12345")
+    @Schema(description = "Phiên giỏ khách vãng lai; body được ưu tiên, header X-Guest-Session-Id chỉ dùng khi trường này trống. Người đăng nhập dùng giỏ tài khoản", example = "guest-session-uuid-12345")
     private String sessionId;
 
     @NotBlank(message = "Tên khách hàng không được để trống")
@@ -49,7 +49,7 @@ public class CheckoutRequest {
     private String city;
 
     @NotNull(message = "Phương thức thanh toán không được để trống")
-    @Schema(description = "Phương thức thanh toán: COD (tiền mặt khi nhận), BANK (chuyển khoản VietQR/SePay)", example = "BANK", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "COD thu khi giao; BANK chuyển khoản SePay. CASH bị từ chối ở checkout sản phẩm", allowableValues = {"COD", "BANK"}, example = "BANK", requiredMode = Schema.RequiredMode.REQUIRED)
     private PaymentMethod paymentMethod;
 
     @Schema(description = "Ghi chú thêm cho đơn hàng khi giao hàng", example = "Giao hàng trong giờ hành chính.")
@@ -57,6 +57,6 @@ public class CheckoutRequest {
     private String notes;
 
     @Size(max = 50)
-    @Schema(description = "Voucher code to apply")
+    @Schema(description = "Mã voucher tùy chọn; chỉ tài khoản đăng nhập dùng được. Kiểm thời gian, hạn ngạch và số tiền tối thiểu", maxLength = 50, example = "WELCOME10")
     private String voucherCode;
 }

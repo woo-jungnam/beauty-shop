@@ -5,6 +5,9 @@ import com.core.beautyshop.shared.domain.Base;
 import jakarta.persistence.*;
 import lombok.*;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.Instant;
 
 @Entity
@@ -15,10 +18,14 @@ public class ProductReview extends Base {
     private Long productId;
     @Column(name = "user_id", nullable = false)
     private Long userId;
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id")
     private Long orderId;
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.TINYINT)
+    @Column
     private Integer rating;
+    @Column(name = "is_verified_purchase", nullable = false)
+    @Builder.Default
+    private Boolean isVerifiedPurchase = false;
     @Column(length = 150)
     private String title;
     @Column(nullable = false, length = 2000)

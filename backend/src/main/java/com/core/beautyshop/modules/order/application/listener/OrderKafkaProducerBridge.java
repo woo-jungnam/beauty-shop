@@ -99,4 +99,27 @@ public class OrderKafkaProducerBridge {
                 message
         );
     }
+
+    @EventListener
+    public void onOrderPaid(OrderEvents.OrderPaidEvent event) {
+        log.info("Ghi nhận OrderPaidEvent vào Outbox cho orderId={}, orderNumber={}", event.getOrderId(), event.getOrderNumber());
+
+        OrderKafkaMessage.OrderPaidKafkaMessage message = OrderKafkaMessage.OrderPaidKafkaMessage.builder()
+                .orderId(event.getOrderId())
+                .orderNumber(event.getOrderNumber())
+                .userId(event.getUserId())
+                .totalAmount(event.getTotalAmount())
+                .occurredAt(LocalDateTime.now())
+                .build();
+
+        String messageKey = String.valueOf(event.getOrderId());
+
+        outboxService.recordEvent(
+                "ORDER",
+                String.valueOf(event.getOrderId()),
+                KafkaTopicConstants.ORDER_PAID_TOPIC,
+                messageKey,
+                message
+        );
+    }
 }

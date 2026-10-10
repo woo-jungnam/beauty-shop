@@ -1,0 +1,636 @@
+{
+    "generatedAt":  "2026-10-02T15:24:13.8040557+07:00",
+    "scope":  "Latest Surefire result for each suite from full backend regression and targeted reruns after fixes; not a single fresh full-suite run",
+    "fullRegressionLog":  "spa-final-tests.log",
+    "finalRerunLog":  "spa-final-recheck-tests.log",
+    "finalRerunTests":  47,
+    "finalRerunFailures":  0,
+    "finalRerunErrors":  0,
+    "finalRerunSkipped":  1,
+    "suites":  77,
+    "tests":  326,
+    "passed":  325,
+    "failures":  0,
+    "errors":  0,
+    "skipped":  1,
+    "mysqlSuites":  7,
+    "mysqlTests":  61,
+    "results":  [
+                    {
+                        "suite":  "com.core.beautyshop.AdminOrderAccessIntegrationTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:53:05.8994109+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.architecture.ModularArchitectureTest",
+                        "tests":  6,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:21:02.7483401+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.BeautyshopApplicationTests",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:53:18.7292799+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.CheckoutIntegrityIntegrationTest",
+                        "tests":  14,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:53:21.1439038+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.ComprehensiveSwaggerAndBearerApiTest",
+                        "tests":  10,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:53:40.8184929+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.cart.application.facade.CartFacadeImplTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:53:41.3853778+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.cart.application.listener.CartOrderEventListenerTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:53:41.6301320+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.cart.application.service.CartServiceImplTest",
+                        "tests":  11,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:53:42.6533410+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.api.AdminMediaControllerTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:00.0916490+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.dto.response.ProductResponseJsonTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:00.2667635+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.CatalogMutationConcurrencyIntegrationTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:00.8538871+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.CategoryServiceImplTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:01.1210800+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.MediaStorageServiceTest",
+                        "tests":  10,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:01.4017028+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.ProductAttributeServiceIntegrationTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:01.5877486+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.ProductServiceImplTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:02.0396967+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.ProductTagServiceImplTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:02.0794852+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.ProductVariantServiceImplTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:02.2823561+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.application.service.ProductVisibilityIntegrationTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:02.3920042+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.catalog.domain.ProductVariantRepositoryIntegrationTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:02.7663334+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.chatbot.api.ChatbotControllerTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:03.0946889+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.crm.application.CustomerCarePaginationTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:03.7214791+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.dashboard.application.AdminDashboardJdbcTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  1,
+                        "updatedAt":  "2026-10-02T15:21:03.3086890+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.dashboard.application.AdminDashboardMySqlJdbcTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:21:41.0633740+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.identity.api.IdentityAdministrationIntegrationTest",
+                        "tests":  8,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:53.1903545+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.identity.api.JwtAuthIntegrationTest",
+                        "tests":  7,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:54.3206555+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.identity.application.listener.IdentityOrderEventListenerTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:54.4873798+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.identity.application.service.AccessTokenRevocationServiceTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:54.6589769+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.identity.application.service.UserServiceImplTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:55.1631495+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.inventory.application.job.ProductExpirationJobTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:55.3378215+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.inventory.application.listener.InventoryOrderEventListenerTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:55.3509125+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.inventory.application.service.InventoryBatchServiceTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:55.6921883+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.inventory.application.service.InventoryFefoStockTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:56.0398336+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.inventory.application.service.InventoryMovementServiceTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:56.2117522+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.inventory.application.service.WarehouseStockServiceImplTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:54:56.2334452+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.notification.application.service.NotificationDeliveryIntegrationTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:02.6836302+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.notification.application.service.SpaNotificationEmailTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:03.0954938+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.order.application.facade.OrderFacadeImplTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:03.9851918+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.order.application.mapper.OrderMapperTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:04.0022990+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.order.application.service.OrderExpirationJobTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:04.0181382+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.order.application.service.OrderServiceImplTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:04.8306408+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.payment.application.service.PaymentWebhookServiceImplTest",
+                        "tests":  5,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:05.1908378+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.payment.application.strategy.BankPaymentStrategyTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:05.2093131+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.payment.domain.PaymentSummaryRepositoryTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:07.8831298+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.procurement.application.ProcurementServiceTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:08.4845827+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.promotion.application.VoucherServiceTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:08.8575796+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.review.application.ProductReviewServiceIntegrationTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:09.2463360+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.review.application.ProductReviewServiceTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:09.4103848+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.listener.SpaPackagePaidEventListenerTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:09.5843032+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.AppointmentOperationalRulesTest",
+                        "tests":  8,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:11.5389236+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.AppointmentServiceImplTest",
+                        "tests":  12,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:11.6235653+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.FacilitySchedulingIntegrationTest",
+                        "tests":  10,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:55:13.2918750+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.FacilitySchedulingMySqlIntegrationTest",
+                        "tests":  10,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:56:12.9023611+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.PaidSpaTicketIssuerTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:56:13.1334527+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.SpaAdministrationRulesTest",
+                        "tests":  9,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:56:13.3433104+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.SpaCatalogIntegrityIntegrationTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:56:13.5383787+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.SpaPreparationServiceTest",
+                        "tests":  11,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:56:14.5598731+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.SpaTicketServiceImplTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:56:14.5724474+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.modules.spa.application.service.StaffShiftIntegrityIntegrationTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:56:14.7811049+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.MySqlCheckoutIntegrityTest",
+                        "tests":  14,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:57:12.1484362+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.MySqlSpaConcurrencyIntegrityTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:58:09.4302655+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.MySqlSpaVisitCheckoutIntegrityTest",
+                        "tests":  10,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T14:59:06.9172917+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.MySqlSpaVisitExecutionIntegrationTest",
+                        "tests":  15,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:23:07.9578346+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.OperationalMigrationIntegrityTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:11.3182895+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.audit.application.aspect.AuditLogAspectTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:11.8792942+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.audit.application.service.AuditLogWriterTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:11.8914935+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.config.AdminOperationalAlertControllerTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:12.4791040+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.config.CacheConfigTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:12.8363253+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.config.KafkaConfigTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:12.8490200+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.config.SystemConfigIntegrationTest",
+                        "tests":  3,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:23:16.3607827+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.exception.GlobalExceptionHandlerTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:19.4211180+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.maintenance.DataRetentionJobTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:20.0617545+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.outbox.OutboxClaimIntegrationTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:20.1732886+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.security.jwt.JwtAuthenticationFilterTest",
+                        "tests":  2,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:20.5146293+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.shared.security.jwt.JwtSecretValidationTest",
+                        "tests":  1,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:20.5226416+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.SpaConcurrencyIntegrityIntegrationTest",
+                        "tests":  4,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:27.9771123+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.SpaVisitCheckoutIntegrityIntegrationTest",
+                        "tests":  10,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:02:34.8996224+07:00"
+                    },
+                    {
+                        "suite":  "com.core.beautyshop.SpaVisitExecutionIntegrationTest",
+                        "tests":  15,
+                        "failures":  0,
+                        "errors":  0,
+                        "skipped":  0,
+                        "updatedAt":  "2026-10-02T15:23:24.1891671+07:00"
+                    }
+                ]
+}

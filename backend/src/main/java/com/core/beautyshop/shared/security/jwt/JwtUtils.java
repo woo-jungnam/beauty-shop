@@ -25,8 +25,17 @@ public class JwtUtils {
     private static final String ACCESS_TOKEN_USE = "access";
     private static final String REFRESH_TOKEN_USE = "refresh";
 
-    @Value("${jwt.secret:beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!}")
+    @Value("${jwt.secret:}")
     private String jwtSecret;
+
+    @jakarta.annotation.PostConstruct
+    public void validateSecret() {
+        if (jwtSecret == null || jwtSecret.isBlank()
+                || jwtSecret.equals("beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!")
+                || jwtSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET must be configured with a non-default key of at least 32 bytes");
+        }
+    }
 
     @Value("${jwt.expiration-ms:900000}")
     private long jwtExpirationMs;
@@ -39,6 +48,10 @@ public class JwtUtils {
     }
 
     public String generateAccessToken(UserDetailsImpl userPrincipal) {
+        return generateAccessToken(userPrincipal, userPrincipal.getSessionFamilyId());
+    }
+
+    public String generateAccessToken(UserDetailsImpl userPrincipal, String familyId) {
         List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
@@ -49,6 +62,7 @@ public class JwtUtils {
                 .claim("email", userPrincipal.getEmail())
                 .claim("roles", roles)
                 .claim(TOKEN_VERSION_CLAIM, userPrincipal.getTokenVersion())
+                .claim("family_id", familyId)
                 .claim(TOKEN_USE_CLAIM, ACCESS_TOKEN_USE)
                 .issuedAt(new Date())
                 .expiration(new Date((new Date()).getTime() + jwtExpirationMs))
@@ -143,7 +157,8 @@ public class JwtUtils {
                 email,
                 "",
                 authorities,
-                tokenVersion
+                tokenVersion,
+                claims.get("family_id", String.class)
         );
     }
 
@@ -167,14 +182,8 @@ public class JwtUtils {
         try {
             Jwts.parser().verifyWith(key()).build().parseSignedClaims(authToken);
             return true;
-        } catch (MalformedJwtException e) {
-            log.error("Token JWT không đúng định dạng: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            log.error("Token JWT đã hết hạn: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            log.error("Token JWT không được hỗ trợ: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            log.error("Chuỗi JWT claims rỗng: {}", e.getMessage());
+        } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Invalid JWT: {}", e.getClass().getSimpleName());
         }
         return false;
     }

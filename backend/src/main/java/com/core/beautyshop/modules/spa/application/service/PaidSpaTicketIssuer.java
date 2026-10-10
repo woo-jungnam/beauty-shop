@@ -48,10 +48,15 @@ public class PaidSpaTicketIssuer {
         if (!snapshot.getPackageId().equals(event.packageId()) || snapshot.getEntitlements().isEmpty()) {
             throw new BusinessException("Invalid Spa purchase snapshot");
         }
+        if (snapshot.getValidityDays() != null && snapshot.getValidityDays() <= 0) {
+            throw new BusinessException("Purchase snapshot has invalid validity days; reconciliation required");
+        }
         ServicePackage servicePackage = packageRepository.getReferenceById(snapshot.getPackageId());
         int totalSessions = snapshot.getEntitlements().values().stream().reduce(0, Math::addExact);
+        Instant paidAt = orderFacade.findPaidAtForUser(event.orderId(), event.userId())
+                .orElseThrow(() -> new BusinessException("Payment timestamp missing; reconcile legacy Spa order"));
         Instant expiryDate = snapshot.getValidityDays() != null && snapshot.getValidityDays() > 0
-                ? Instant.now().plus(snapshot.getValidityDays(), ChronoUnit.DAYS) : null;
+                ? paidAt.plus(snapshot.getValidityDays(), ChronoUnit.DAYS) : null;
 
         UserServiceTicket ticket = UserServiceTicket.builder()
                 .userId(event.userId())
@@ -59,8 +64,9 @@ public class PaidSpaTicketIssuer {
                 .orderId(event.orderId())
                 .totalSessions(totalSessions)
                 .usedSessions(0)
+                .expiryCheckMode(snapshot.getExpiryCheckMode())
                 .expiryDate(expiryDate)
-                .status(TicketStatus.ACTIVE)
+                .status(expiryDate != null && !expiryDate.isAfter(Instant.now()) ? TicketStatus.EXPIRED : TicketStatus.ACTIVE)
                 .build();
         snapshot.getEntitlements().forEach((serviceId, quantity) -> ticket.getEntitlements().put(serviceId,
                 new com.core.beautyshop.modules.spa.domain.TicketEntitlement(quantity, 0)));

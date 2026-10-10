@@ -10,7 +10,7 @@ import lombok.Data;
 public class AddToCartRequest {
 
     @NotNull(message = "ID biến thể không được để trống")
-    @Schema(description = "ID của biến thể SKU cần thêm", example = "201", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "ID SKU còn bán, quantity tổng trong giỏ phải đủ tồn khả dụng", example = "201", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long variantId;
 
     @NotNull(message = "Số lượng không được để trống")
@@ -18,6 +18,6 @@ public class AddToCartRequest {
     @Schema(description = "Số lượng cần thêm (tối thiểu là 1)", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer quantity;
 
-    @Schema(description = "ID phiên giỏ hàng vãng lai (nếu chưa đăng nhập)", example = "guest-session-uuid-12345")
+    @Schema(description = "Bắt buộc không trống cho khách chưa đăng nhập; bỏ qua với giỏ tài khoản. Đây là body, không phải header", example = "guest-session-uuid-12345")
     private String sessionId;
 }

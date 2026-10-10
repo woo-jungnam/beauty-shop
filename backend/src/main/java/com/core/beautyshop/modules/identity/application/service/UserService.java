@@ -15,6 +15,8 @@ public interface UserService {
     UserProfileResponse updateProfile(String username, UpdateProfileRequest request);
 
     Page<UserProfileResponse> getAllUsers(Pageable pageable);
+    Page<UserProfileResponse> getAllUsers(String keyword, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String role, Pageable pageable);
+    Page<com.core.beautyshop.modules.identity.domain.UserStatusHistory> getStatusHistory(Long userId, Pageable pageable);
 
     UserProfileResponse getUserById(Long id);
 
@@ -22,4 +24,6 @@ public interface UserService {
 
     void addLoyaltyPoints(Long userId, Long orderId, int pointsToAdd);
     UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason);
+    UserProfileResponse updateRoles(Long userId, java.util.List<Long> roleIds);
+    com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse resetPassword(Long userId);
 }

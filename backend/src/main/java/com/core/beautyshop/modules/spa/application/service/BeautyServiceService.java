@@ -12,5 +12,6 @@ public interface BeautyServiceService {
     BeautyServiceResponse getServiceBySlug(String slug);
     List<ServicePackageResponse> getActivePackages();
     List<StaffResponse> getQualifiedStaff(Long serviceId);
+    List<StaffResponse> getAllStaff();
     List<String> getAvailableSlots(Long serviceId, LocalDate date, Long staffId);
 }

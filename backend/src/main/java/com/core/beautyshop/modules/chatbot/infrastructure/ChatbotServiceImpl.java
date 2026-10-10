@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -56,8 +56,9 @@ public class ChatbotServiceImpl implements ChatbotService {
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
-        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(this.httpClient);
-        factory.setReadTimeout(requestTimeout);
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);
+        factory.setReadTimeout((int) requestTimeout.toMillis());
         this.restClient = RestClient.builder()
                 .baseUrl(this.chatbotBaseUrl)
                 .requestFactory(factory)
@@ -67,7 +68,10 @@ public class ChatbotServiceImpl implements ChatbotService {
     @Override
     public ChatResponse chat(ChatRequest request) {
         try {
-            log.info("Chuyển tiếp yêu cầu chat (non-streaming) sang Chatbot AI [session_id: {}]", request.getSessionId());
+            if (request.getSessionId() == null || request.getSessionId().isBlank()) {
+                request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+            }
+            log.info("Chuyển tiếp yêu cầu chat (non-streaming) sang Chatbot AI [session_id: {}, url: {}/chat]", request.getSessionId(), this.chatbotBaseUrl);
             return restClient.post()
                     .uri("/chat")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -75,8 +79,8 @@ public class ChatbotServiceImpl implements ChatbotService {
                     .retrieve()
                     .body(ChatResponse.class);
         } catch (Exception e) {
-            log.error("Lỗi khi gọi API chat của Chatbot AI: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Không thể kết nối đến máy chủ Chatbot AI: ");
+            log.error("Lỗi khi gọi API chat của Chatbot AI tại {}/chat: {}", this.chatbotBaseUrl, e.getMessage(), e);
+            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Không thể kết nối đến máy chủ Chatbot AI (" + this.chatbotBaseUrl + "): " + (e.getMessage() != null ? e.getMessage() : ""));
         }
     }
 
@@ -84,6 +88,9 @@ public class ChatbotServiceImpl implements ChatbotService {
     public void streamChat(ChatRequest request, OutputStream outputStream) {
         if (!streams.tryAcquire()) {
             throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Chat service is busy; please retry");
+        }
+        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
+            request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         }
         java.util.concurrent.ScheduledFuture<?> deadline = null;
         try {
@@ -138,11 +145,11 @@ public class ChatbotServiceImpl implements ChatbotService {
     @Override
     public Map<String, Object> syncDatabase(Integer limit) {
         try {
-            log.info("Kích hoạt đồng bộ MySQL sang kho RAG [limit: {}]", limit);
+            log.info("Kích hoạt đồng bộ MySQL sang kho RAG tại {} [limit: {}]", this.chatbotBaseUrl, limit);
             return restClient.post()
                     .uri(uriBuilder -> {
                         uriBuilder.path("/sync/database");
-                        if (limit != null) {
+                        if (limit != null && limit > 0) {
                             uriBuilder.queryParam("limit", limit);
                         }
                         return uriBuilder.build();
@@ -151,14 +158,14 @@ public class ChatbotServiceImpl implements ChatbotService {
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.error("Lỗi khi gọi API đồng bộ database của Chatbot AI: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Đồng bộ RAG thất bại: ");
+            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Đồng bộ RAG thất bại (" + this.chatbotBaseUrl + "): " + (e.getMessage() != null ? e.getMessage() : ""));
         }
     }
 
     @Override
     public Object testUnderstand(UnderstandTestRequest request) {
         try {
-            log.info("Gửi yêu cầu kiểm tra NLU hiểu truy vấn: {}", request.getMessage());
+            log.info("Gửi yêu cầu kiểm tra NLU hiểu truy vấn tới {}: {}", this.chatbotBaseUrl, request.getMessage());
             return restClient.post()
                     .uri("/test/understand")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -167,20 +174,21 @@ public class ChatbotServiceImpl implements ChatbotService {
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.error("Lỗi khi gọi API kiểm tra hiểu truy vấn của Chatbot AI: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Kiểm tra NLU thất bại: ");
+            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Kiểm tra NLU thất bại (" + this.chatbotBaseUrl + "): " + (e.getMessage() != null ? e.getMessage() : ""));
         }
     }
 
     @Override
     public Map<String, Object> checkHealth() {
         try {
-            return restClient.get()
+            Map<String, Object> res = restClient.get()
                     .uri("/health")
                     .retrieve()
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+            return res != null ? res : Map.of("status", "DOWN");
         } catch (Exception e) {
-            log.warn("Chatbot AI healthcheck thất bại: {}", e.getMessage());
-            return Map.of("status", "DOWN");
+            log.warn("Chatbot AI healthcheck thất bại tại {}/health: {}", this.chatbotBaseUrl, e.getMessage());
+            return Map.of("status", "DOWN", "error", e.getMessage() != null ? e.getMessage() : "Connection refused");
         }
     }
 
@@ -193,7 +201,7 @@ public class ChatbotServiceImpl implements ChatbotService {
                     .body(String.class);
         } catch (Exception e) {
             log.error("Lỗi khi tải openapi.json từ Chatbot AI: {}", e.getMessage(), e);
-            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Không thể tải OpenAPI spec của Chatbot: ");
+            throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Không thể tải OpenAPI spec của Chatbot (" + this.chatbotBaseUrl + "): " + (e.getMessage() != null ? e.getMessage() : ""));
         }
     }
 }

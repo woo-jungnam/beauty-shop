@@ -42,7 +42,8 @@ class CacheConfigTest {
         ProductListResponse product = ProductListResponse.builder()
                 .id(10L)
                 .name("Serum")
-                .basePrice(new BigDecimal("250000"))
+                .minPrice(new BigDecimal("250000"))
+                .maxPrice(new BigDecimal("250000"))
                 .status(ProductStatus.ACTIVE)
                 .build();
         CacheablePage<ProductListResponse> page = CacheablePage.from(new PageImpl<>(

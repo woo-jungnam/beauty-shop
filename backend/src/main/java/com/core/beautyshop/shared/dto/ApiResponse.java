@@ -36,7 +36,7 @@ public class ApiResponse<T> {
     private Object errors;
 
     @Builder.Default
-    @Schema(description = "Thời điểm phản hồi của máy chủ", example = "2026-09-06T10:00:00")
+    @Schema(implementation = String.class, description = "LocalDateTime máy chủ, không có offset/Z; không dùng OffsetDateTime để parse trường này", example = "2026-10-02T17:00:00")
     private LocalDateTime timestamp = LocalDateTime.now();
 
     @Schema(description = "Đường dẫn API được yêu cầu", example = "/api/v1/products")

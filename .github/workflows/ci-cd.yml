@@ -1,0 +1,131 @@
+name: BeautyShop CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =========================================================================
+  # JOB 1: Backend CI (Build, Unit & Integration Tests, Architecture Tests)
+  # =========================================================================
+  backend-ci:
+    name: Backend CI (Java 21 & Spring Boot)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Eclipse Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Grant Execute Permission to Maven Wrapper
+        run: chmod +x backend/mvnw
+
+      - name: Compile Backend & Check Dependencies
+        working-directory: backend
+        run: ./mvnw clean compile -B
+
+      - name: Run Backend Tests (Unit, Integration & ArchUnit)
+        working-directory: backend
+        run: ./mvnw test -B
+
+      - name: Publish Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
+
+  # =========================================================================
+  # JOB 2: Backend Containerization & Image Build
+  # =========================================================================
+  backend-docker:
+    name: Backend Docker Build
+    needs: backend-ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: beautyshop-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # =========================================================================
+  # JOB 3: DevOps & Infrastructure Validation (Docker Compose, Nginx)
+  # =========================================================================
+  devops-validation:
+    name: DevOps & Infrastructure Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose Configuration
+        run: docker compose -f docker-compose.yml config
+
+      - name: Test Nginx Configuration Syntax
+        run: |
+          docker run --rm -v "${{ github.workspace }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" --add-host backend:127.0.0.1 nginx:alpine nginx -t
+
+  # =========================================================================
+  # JOB 4: Mobile CI (Flutter Analysis & Unit Tests)
+  # =========================================================================
+  mobile-ci:
+    name: Mobile CI (Flutter)
+    runs-on: ubuntu-latest
+    # Only run if there are changes in the mobile directory or manual dispatch
+    if: github.event_name == 'workflow_dispatch' || contains(toJson(github.event.commits), 'mobile/') || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Analyze Flutter Code
+        working-directory: mobile
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Flutter Tests
+        working-directory: mobile
+        run: flutter test

@@ -6,6 +6,11 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus;
+import com.core.beautyshop.modules.spa.domain.enums.TicketUsageState;
 
 @Entity
 @Table(name = "appointment_items")
@@ -44,4 +49,34 @@ public class AppointmentItem extends Base {
 
     @Column(name = "end_time")
     private LocalTime endTime;
+
+    @Column(name = "service_name_snapshot", length = 150)
+    private String serviceNameSnapshot;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "execution_status", nullable = false, length = 30)
+    @Builder.Default
+    private AppointmentItemExecutionStatus executionStatus = AppointmentItemExecutionStatus.PLANNED;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ticket_usage_state", nullable = false, length = 30)
+    @Builder.Default
+    private TicketUsageState ticketUsageState = TicketUsageState.NONE;
+
+    @Column(name = "actual_started_at")
+    private Instant actualStartedAt;
+    @Column(name = "actual_completed_at")
+    private Instant actualCompletedAt;
+    @Column(name = "performed_by_user_id")
+    private Long performedByUserId;
+    @Column(name = "execution_notes", length = 2000)
+    private String executionNotes;
+
+    @OneToMany(mappedBy = "appointmentItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<FacilityAllocation> facilityAllocations = new ArrayList<>();
+
+    @OneToMany(mappedBy = "appointmentItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<AppointmentItemResourceRequirement> resourceRequirements = new ArrayList<>();
 }

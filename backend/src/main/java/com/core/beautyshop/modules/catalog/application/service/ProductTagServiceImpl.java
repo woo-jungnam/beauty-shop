@@ -55,6 +55,23 @@ public class ProductTagServiceImpl implements ProductTagService {
     @Override
     @Transactional
     @CacheEvict(value = "product_detail", allEntries = true)
+    public TagResponse updateTag(Long id, TagRequest request) {
+        ProductTag tag = tagRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ với id: " + id));
+        String slug = generateSlug(request.getName());
+        tagRepository.findBySlug(slug)
+                .filter(found -> !found.getId().equals(id))
+                .ifPresent(found -> {
+                    throw new BusinessException("Slug thẻ đã tồn tại: " + slug);
+                });
+        tag.setName(request.getName());
+        tag.setSlug(slug);
+        return mapToResponse(tagRepository.save(tag));
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "product_detail", allEntries = true)
     public void deleteTag(Long id) {
         if (!tagRepository.existsById(id)) {
             throw new ResourceNotFoundException("Không tìm thấy thẻ với id: " + id);

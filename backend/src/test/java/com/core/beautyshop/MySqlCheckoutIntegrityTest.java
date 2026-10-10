@@ -10,7 +10,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers(disabledWithoutDocker = true)
 class MySqlCheckoutIntegrityTest extends CheckoutIntegrityIntegrationTest {
     @Container
-    static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
+    static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+            .withCommand("--log-bin-trust-function-creators=1");
 
     @DynamicPropertySource
     static void mysqlProperties(DynamicPropertyRegistry properties) {
@@ -18,6 +19,7 @@ class MySqlCheckoutIntegrityTest extends CheckoutIntegrityIntegrationTest {
         properties.add("spring.datasource.username", mysql::getUsername);
         properties.add("spring.datasource.password", mysql::getPassword);
         properties.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
+        properties.add("spring.datasource.hikari.connection-init-sql", () -> "SET time_zone = '+00:00'");
         properties.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQLDialect");
         properties.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.MySQLDialect");
         properties.add("spring.jpa.hibernate.ddl-auto", () -> "validate");

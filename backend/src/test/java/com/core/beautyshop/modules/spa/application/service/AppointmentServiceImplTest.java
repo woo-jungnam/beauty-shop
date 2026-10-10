@@ -18,6 +18,7 @@ import com.core.beautyshop.modules.spa.domain.Staff;
 import com.core.beautyshop.modules.spa.domain.StaffRepository;
 import com.core.beautyshop.modules.spa.domain.UserServiceTicket;
 import com.core.beautyshop.modules.spa.domain.UserServiceTicketRepository;
+import com.core.beautyshop.modules.spa.domain.StaffScheduleRepository;
 import com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus;
 import com.core.beautyshop.modules.spa.domain.enums.TicketStatus;
 import com.core.beautyshop.shared.exception.BusinessException;
@@ -51,6 +52,8 @@ class AppointmentServiceImplTest {
 
     @Test
     void cancelledAppointmentCannotBeReopenedOrRestoreAnotherSession() {
+        var principal = new UserDetailsImpl(USER_ID,"admin","admin@example.test","password", List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal,null,principal.getAuthorities()));
         Appointment appointment = Appointment.builder().userId(USER_ID)
                 .status(AppointmentStatus.CANCELLED).items(new ArrayList<>()).build();
         when(appointmentRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(appointment));
@@ -76,7 +79,7 @@ class AppointmentServiceImplTest {
         request.setAppointmentDate(LocalDate.now().plusDays(1)); request.setStartTime(LocalTime.of(10, 0));
         request.setItems(List.of(item));
         when(identityFacade.getUserSummaryById(USER_ID)).thenReturn(UserSummaryDto.builder().id(USER_ID).build());
-        when(beautyServiceRepository.findById(1L)).thenReturn(Optional.of(service));
+        when(beautyServiceRepository.findAvailableByIdForUpdate(1L)).thenReturn(Optional.of(service));
         when(ticketRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ticket));
         when(orderFacade.isPaidOrderForUser(500L, USER_ID)).thenReturn(true);
         assertThrows(BusinessException.class, () -> appointmentService.bookAppointment(request));
@@ -102,13 +105,25 @@ class AppointmentServiceImplTest {
     @Mock
     private OrderFacade orderFacade;
 
-    @InjectMocks
+    @Mock
+    private StaffScheduleRepository schedules;
+
+    @Mock private com.core.beautyshop.modules.spa.application.service.SpaPreparationService preparation;
+    @Mock private com.core.beautyshop.modules.spa.application.service.FacilitySchedulingService facilities;
+    @Mock private com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService policies;
+    @Mock private com.core.beautyshop.modules.spa.domain.AppointmentActionHistoryRepository history;
+    @Mock private com.core.beautyshop.modules.spa.domain.TicketSessionMovementRepository movements;
     private AppointmentServiceImpl appointmentService;
 
     private static final Long USER_ID = 50L;
 
     @BeforeEach
     void setUpSecurity() {
+        appointmentService = new AppointmentServiceImpl(appointmentRepository, beautyServiceRepository, staffRepository, ticketRepository,
+                identityFacade, orderFacade, schedules, new com.core.beautyshop.modules.spa.application.service.SpaAccessService(),
+                preparation, facilities, policies, new com.core.beautyshop.modules.spa.application.service.TicketUsageService(movements), history);
+        lenient().when(policies.forAppointment(any())).thenReturn(new com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService.Policy("test",0,0,0,0,"FORFEIT"));
+        lenient().when(schedules.coversWorkingInterval(anyLong(), any(), any(), any())).thenReturn(true);
         UserDetailsImpl userDetails = new UserDetailsImpl(
                 USER_ID,
                 "customer1",
@@ -127,7 +142,7 @@ class AppointmentServiceImplTest {
     }
 
     @Test
-    void testBookAppointment_WithTicket_DeductsSessionAndSetsPriceZero() {
+    void testBookAppointment_WithTicket_ReservesSessionWithoutConsumingIt() {
         BeautyService service = BeautyService.builder()
                 .name("Chăm sóc da mặt cơ bản")
                 .basePrice(new BigDecimal("300000"))
@@ -163,12 +178,13 @@ class AppointmentServiceImplTest {
                 .build();
 
         when(identityFacade.getUserSummaryById(USER_ID)).thenReturn(userSummary);
-        when(beautyServiceRepository.findById(1L)).thenReturn(Optional.of(service));
+        when(beautyServiceRepository.findAvailableByIdForUpdate(1L)).thenReturn(Optional.of(service));
         when(ticketRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ticket));
         when(orderFacade.isPaidOrderForUser(500L, USER_ID)).thenReturn(true);
-        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(inv -> {
+        when(appointmentRepository.saveAndFlush(any(Appointment.class))).thenAnswer(inv -> {
             Appointment apt = inv.getArgument(0);
             apt.setId(100L);
+            apt.getItems().getFirst().setId(200L);
             return apt;
         });
 
@@ -182,10 +198,12 @@ class AppointmentServiceImplTest {
         assertEquals(10L, response.getItems().get(0).getTicketId());
         assertTrue(response.getItems().get(0).getIsTicketUsed());
 
-        assertEquals(1, ticket.getUsedSessions());
+        assertEquals(0, ticket.getUsedSessions());
+        assertEquals(1, ticket.getReservedSessions());
+        assertEquals(1, ticket.getEntitlements().get(1L).getReserved());
         verify(ticketRepository, times(2)).findByIdForUpdate(10L);
-        verify(ticketRepository).save(ticket);
-        verify(appointmentRepository).save(any(Appointment.class));
+
+        verify(appointmentRepository).saveAndFlush(any(Appointment.class));
     }
 
     @Test
@@ -218,7 +236,7 @@ class AppointmentServiceImplTest {
 
         when(identityFacade.getUserSummaryById(USER_ID)).thenReturn(
                 UserSummaryDto.builder().id(USER_ID).fullName("Khách hàng A").build());
-        when(beautyServiceRepository.findById(1L)).thenReturn(Optional.of(service));
+        when(beautyServiceRepository.findAvailableByIdForUpdate(1L)).thenReturn(Optional.of(service));
         when(ticketRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(legacyTicket));
 
         assertThrows(BusinessException.class, () -> appointmentService.bookAppointment(request));
@@ -233,21 +251,23 @@ class AppointmentServiceImplTest {
         UserServiceTicket ticket = UserServiceTicket.builder()
                 .userId(USER_ID)
                 .totalSessions(5)
-                .usedSessions(2)
+                .usedSessions(1).reservedSessions(1)
                 .expiryDate(Instant.now().plus(60, ChronoUnit.DAYS))
                 .status(TicketStatus.ACTIVE)
                 .build();
         ticket.setId(10L);
-        ticket.getEntitlements().put(1L, new com.core.beautyshop.modules.spa.domain.TicketEntitlement(5, ticket.getUsedSessions()));
+        ticket.getEntitlements().put(1L, new com.core.beautyshop.modules.spa.domain.TicketEntitlement(5, 1, 1));
 
         BeautyService service = BeautyService.builder().name("Service").build();
         service.setId(1L);
         AppointmentItem item = AppointmentItem.builder()
                 .service(service)
                 .ticket(ticket)
+                .ticketUsageState(com.core.beautyshop.modules.spa.domain.enums.TicketUsageState.RESERVED)
                 .price(BigDecimal.ZERO)
                 .build();
 
+        item.setId(200L);
         Appointment appointment = Appointment.builder()
                 .userId(USER_ID)
                 .appointmentDate(LocalDate.now().plusDays(2))
@@ -264,7 +284,8 @@ class AppointmentServiceImplTest {
 
         assertEquals(AppointmentStatus.CANCELLED, appointment.getStatus());
         assertEquals(1, ticket.getUsedSessions());
-        verify(ticketRepository).save(ticket);
+        assertEquals(0, ticket.getReservedSessions());
+
         verify(appointmentRepository).save(appointment);
     }
 
@@ -334,7 +355,7 @@ class AppointmentServiceImplTest {
                 .build();
 
         when(identityFacade.getUserSummaryById(USER_ID)).thenReturn(userSummary);
-        when(beautyServiceRepository.findById(1L)).thenReturn(Optional.of(serviceA));
+        when(beautyServiceRepository.findAvailableByIdForUpdate(1L)).thenReturn(Optional.of(serviceA));
         when(ticketRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(ticket));
         when(orderFacade.isPaidOrderForUser(501L, USER_ID)).thenReturn(true);
 
@@ -449,6 +470,8 @@ class AppointmentServiceImplTest {
         AppointmentItem item = AppointmentItem.builder()
                 .service(service)
                 .staff(staff)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(11, 0))
                 .build();
 
         Appointment appointment = Appointment.builder()
@@ -462,9 +485,9 @@ class AppointmentServiceImplTest {
 
         when(appointmentRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(appointment));
         when(staffRepository.findByIdWithLock(5L)).thenReturn(Optional.of(staff));
-        when(appointmentRepository.findOverlappingAppointmentsForStaffExcludingAppointmentWithLock(
+        when(appointmentRepository.existsOverlappingAppointmentForStaffExcludingAppointment(
                 eq(5L), any(LocalDate.class), any(LocalTime.class), any(LocalTime.class), eq(100L)))
-                .thenReturn(List.of(item));
+                .thenReturn(true);
         when(identityFacade.findUserSummaryById(200L)).thenReturn(Optional.of(
                 UserSummaryDto.builder().id(200L).fullName("Kỹ thuật viên Lan").build()));
 

@@ -54,6 +54,7 @@ public class OrderServiceImpl implements OrderService {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final PromotionFacade promotionFacade;
+    private final com.core.beautyshop.shared.config.SystemConfigService systemConfigService;
 
     @org.springframework.beans.factory.annotation.Value("${app.order.payment-timeout-minutes:30}")
     private long paymentTimeoutMinutes = 30;
@@ -68,6 +69,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse checkout(Long userId, CheckoutRequest request) {
+        if (request.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.CASH)
+            throw new BusinessException("CASH is only supported by Spa visit checkout");
         String key = checkoutKey(userId, request);
         String hash = requestHash(request);
         // The cart row survives clearing. Lock it before reading items or replaying a request.
@@ -116,6 +119,11 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         
+        BigDecimal shippingFee = systemConfigService != null
+                ? systemConfigService.calculateShippingFee(subTotal)
+                : BigDecimal.ZERO;
+        order.setShippingFee(shippingFee);
+
         BigDecimal grossAmount = subTotal.add(order.getShippingFee()).max(BigDecimal.ZERO);
         PromotionFacade.AppliedVoucher appliedVoucher = promotionFacade.validate(request.getVoucherCode(), userId, subTotal);
         if (appliedVoucher != null) {
@@ -129,9 +137,19 @@ public class OrderServiceImpl implements OrderService {
 
         order.setDiscountAmount(applicableDiscount);
         order.setSubTotal(subTotal);
-        order.setTotalAmount(grossAmount.subtract(applicableDiscount));
+        // VND obligations are rounded once before persistence and payment instructions.
+        order.setTotalAmount(grossAmount.subtract(applicableDiscount).setScale(0, java.math.RoundingMode.HALF_UP));
 
         createStatusHistory(order, OrderStatus.PENDING, "Đơn hàng được tạo khi thanh toán");
+        boolean freeBankOrder = order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK
+                && order.getTotalAmount().signum() == 0;
+        if (freeBankOrder) {
+            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID);
+            order.setPaidAt(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+            order.setPaymentDeadline(null);
+            order.setStatus(OrderStatus.PROCESSING);
+            createStatusHistory(order, OrderStatus.PROCESSING, "Zero amount payment obligation settled");
+        }
 
         Order savedOrder = orderRepository.save(order);
 
@@ -144,6 +162,26 @@ public class OrderServiceImpl implements OrderService {
                 .sessionId(request.getSessionId())
                 .totalAmount(savedOrder.getTotalAmount())
                 .build());
+
+        if (freeBankOrder) {
+            List<OrderEvents.OrderItemSummary> itemSummaries = savedOrder.getItems() != null
+                    ? savedOrder.getItems().stream()
+                    .map(item -> OrderEvents.OrderItemSummary.builder()
+                            .variantId(item.getProductVariantId())
+                            .quantity(item.getQuantity())
+                            .build())
+                    .toList()
+                    : java.util.List.of();
+
+            eventPublisher.publishEvent(OrderEvents.OrderStatusChangedEvent.builder().orderId(savedOrder.getId())
+                    .orderNumber(savedOrder.getOrderNumber()).previousStatus(OrderStatus.PENDING).newStatus(OrderStatus.PROCESSING).build());
+            eventPublisher.publishEvent(OrderEvents.OrderPaidEvent.builder().orderId(savedOrder.getId())
+                    .orderNumber(savedOrder.getOrderNumber())
+                    .totalAmount(savedOrder.getTotalAmount())
+                    .userId(savedOrder.getUserId()).servicePackageId(savedOrder.getServicePackageId())
+                    .items(itemSummaries)
+                    .build());
+        }
 
         return buildOrderResponse(savedOrder);
     }
@@ -175,6 +213,16 @@ public class OrderServiceImpl implements OrderService {
         return buildOrderResponse(order);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'ORDER_STAFF')")
+    public OrderResponse getAdminOrderById(Long id) {
+        Order order = orderRepository.findById(id)
+                .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + id));
+        return buildOrderResponse(order);
+    }
+
     private boolean matchesGuestSession(String expected, String provided) {
         if (expected == null || expected.isBlank() || provided == null || provided.isBlank()) {
             return false;
@@ -188,7 +236,8 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public Page<OrderResponse> getMyOrders(Pageable pageable) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        return getOrdersByUser(currentUserId, pageable);
+        return orderRepository.findVisibleCustomerHistoryByUserId(currentUserId, pageable)
+                .map(orderMapper::toOrderResponse);
     }
 
     @Override
@@ -242,6 +291,11 @@ public class OrderServiceImpl implements OrderService {
         OrderStatus previousStatus = order.getStatus();
         OrderStatus newStatus = request.getStatus();
 
+        if (order.getAppointmentId() != null)
+            throw new BusinessException("A completed Spa visit invoice has no shipping or order-status workflow");
+        if (order.getServicePackageId() != null && (newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.RETURNED))
+            throw new BusinessException("Spa package orders cannot be shipped or returned as physical goods");
+
         validateStatusTransition(previousStatus, newStatus);
         if (previousStatus == newStatus) return orderMapper.toOrderResponse(order);
 
@@ -269,8 +323,12 @@ public class OrderServiceImpl implements OrderService {
         }
         if (newStatus == OrderStatus.DELIVERED
                 && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.COD) {
-            order.setPaidAmount(order.getTotalAmount());
+            BigDecimal remaining = order.getTotalAmount().subtract(order.getPaidAmount()).max(BigDecimal.ZERO);
+            paymentFacade.recordCodCollection(order.getOrderNumber(), remaining);
+            // Delivery confirms cash collection only for the outstanding balance; preserve prior transfers/excess.
+            order.setPaidAmount(order.getPaidAmount().max(order.getTotalAmount()));
             order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID);
+            if (order.getPaidAt() == null) order.setPaidAt(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         }
         if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED)
                 && order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
@@ -422,6 +480,7 @@ public class OrderServiceImpl implements OrderService {
                     .sku(variant.getSku())
                     .productName(variant.getProductName())
                     .variantName(variant.getVariantName())
+                    .imageUrl(variant.getProductThumbnailUrl())
                     .quantity(item.getQuantity())
                     .price(variant.getPrice())
                     .discount(variant.getDiscountPrice() != null
@@ -462,6 +521,18 @@ public class OrderServiceImpl implements OrderService {
 
     private OrderResponse buildOrderResponse(Order savedOrder) {
         OrderResponse response = orderMapper.toOrderResponse(savedOrder);
+
+        if (savedOrder.getAppointmentId() != null) {
+            BigDecimal due = savedOrder.getTotalAmount().subtract(savedOrder.getPaidAmount()).max(BigDecimal.ZERO);
+            if (due.signum() > 0 && savedOrder.getRefundedAmount().signum() == 0) {
+                response.setPaymentInstruction(savedOrder.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.CASH
+                        ? PaymentInstruction.builder().method("CASH").instructionMessage("Thanh toán " + due + " VND tại quầy Spa.").build()
+                        : paymentFacade.processPayment(com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK,
+                            PaymentOrderDto.builder().orderNumber(savedOrder.getOrderNumber()).totalAmount(due)
+                                .customerName(savedOrder.getCustomerName()).build()));
+            }
+            return response;
+        }
 
         PaymentOrderDto paymentOrderDto = PaymentOrderDto.builder()
                 .orderNumber(savedOrder.getOrderNumber())

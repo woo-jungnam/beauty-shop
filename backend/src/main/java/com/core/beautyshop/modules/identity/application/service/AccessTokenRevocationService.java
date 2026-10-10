@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 public class AccessTokenRevocationService implements AccessTokenRevocationChecker {
 
     private final TokenVersionCache tokenVersionCache;
+    private final com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository sessions;
 
     @Override
     public boolean isCurrent(Long userId, Integer tokenVersion) {
@@ -18,5 +19,12 @@ public class AccessTokenRevocationService implements AccessTokenRevocationChecke
         return tokenVersionCache.findCurrentVersion(userId)
                 .map(currentVersion -> currentVersion.equals(tokenVersion))
                 .orElse(false);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public boolean isSessionCurrent(Long userId, String familyId) {
+        return userId != null && familyId != null && !familyId.isBlank()
+                && sessions.existsByUserIdAndFamilyIdAndRevokedAtIsNullAndExpiresAtAfterAndIsDeletedFalse(userId, familyId, java.time.Instant.now());
     }
 }

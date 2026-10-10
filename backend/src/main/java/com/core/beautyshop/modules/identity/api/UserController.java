@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.identity.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.shared.dto.PageResponse;
@@ -35,7 +36,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(profile));
     }
 
-    @Operation(summary = "Cập nhật thông tin cá nhân")
+    @Operation(summary = "Cập nhật thông tin cá nhân", description = "Bearer JWT của chính tài khoản. Chỉ cập nhật các trường gửi với giá trị khác null; bỏ qua hoặc null giữ giá trị hiện tại. Không đổi username/email/password/roles qua API này.")
     @PutMapping("/profile")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
@@ -44,11 +45,11 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(profile));
     }
 
-    @Operation(summary = "Lấy danh sách tất cả người dùng (Admin)")
+    @Operation(summary = "Lấy danh sách người dùng qua tuyến tương thích (ADMIN)", description = "Yêu cầu ROLE_ADMIN. Dùng /api/v1/admin/users để có thêm bộ lọc keyword/status/role. page bắt đầu từ 0, size mặc định 20, sort theo Spring Pageable.")
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<UserProfileResponse>>> getAllUsers(
-            @PageableDefault(size = 20) Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
         Page<UserProfileResponse> page = userService.getAllUsers(pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
@@ -62,7 +63,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(profile));
     }
 
-    @Operation(summary = "Buộc đăng xuất người dùng trên tất cả thiết bị (Admin)")
+    @Operation(summary = "Buộc đăng xuất người dùng trên tất cả thiết bị (ADMIN)", description = "Thu hồi toàn bộ họ phiên và tăng tokenVersion; access token hiện hành của tài khoản không còn được chấp nhận.")
     @PostMapping("/admin/{id}/force-logout")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable Long id) {

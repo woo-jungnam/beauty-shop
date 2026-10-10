@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.inventory.application.service;
 
 import com.core.beautyshop.modules.inventory.domain.*;
 import com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -33,9 +34,14 @@ public class InventoryLedgerService {
         return page.map(LedgerView::from);
     }
 
+    @Schema(description = "Movement kho bất biến; quantityBefore/After là bucket tồn bán được, đọc type/note để phân biệt giữ/nhả tồn hoặc quarantine")
     public record LedgerView(Long id, Long stockId, Long warehouseId, Long productVariantId,
-            InventoryTransactionType type, Integer quantity, Integer quantityBefore, Integer quantityAfter,
-            BigDecimal unitCost, String referenceType, String referenceId, String note, Instant occurredAt) {
+            InventoryTransactionType type,
+            @Schema(description = "Lượng thao tác có dấu; không phải luôn quantityAfter−quantityBefore (reservation/return quarantine)") Integer quantity,
+            Integer quantityBefore, Integer quantityAfter,
+            @Schema(description = "Giá vốn VND tại lúc ghi movement") BigDecimal unitCost,
+            String referenceType, String referenceId, String note,
+            @Schema(description = "UTC Instant ghi movement") Instant occurredAt) {
         static LedgerView from(InventoryTransaction tx) {
             return new LedgerView(tx.getId(), tx.getWarehouseStockId(), tx.getWarehouseId(), tx.getProductVariantId(),
                     tx.getTransactionType(), tx.getQuantity(), tx.getQuantityBefore(), tx.getQuantityAfter(), tx.getUnitCost(),

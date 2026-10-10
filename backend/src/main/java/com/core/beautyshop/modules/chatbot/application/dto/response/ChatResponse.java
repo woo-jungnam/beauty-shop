@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.chatbot.application.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Kết quả phản hồi hoàn chỉnh từ Trợ lý Chatbot AI")
 public class ChatResponse {
 
@@ -26,7 +28,7 @@ public class ChatResponse {
     @Schema(description = "Ý định người dùng được hệ thống phân tích xác định", example = "PRODUCT_RECOMMENDATION")
     private String intent;
 
-    @Schema(description = "Câu trả lời tự nhiên, giàu chuyên môn da liễu và chăm sóc sắc đẹp từ AI",
+    @Schema(description = "Câu trả lời do dịch vụ AI cung cấp",
             example = "Chào bạn, với tình trạng da dầu mụn nhạy cảm, bạn nên ưu tiên các dòng kem chống nắng quang phổ rộng dạng gel mỏng nhẹ...")
     private String answer;
 
@@ -34,10 +36,10 @@ public class ChatResponse {
             example = "Chào bạn, với tình trạng da dầu mụn nhạy cảm...")
     private String message;
 
-    @Schema(description = "Danh sách thẻ sản phẩm tối ưu được hệ thống đề xuất")
+    @Schema(description = "Danh sách thẻ sản phẩm do dịch vụ AI trả về")
     private List<ProductCardResponse> products;
 
-    @Schema(description = "Danh sách nguồn thông tin thực tế được AI trích dẫn")
+    @Schema(description = "Nguồn thông tin do dịch vụ AI trả về")
     private List<SourceRefResponse> sources;
 
     @JsonProperty("needs_clarification")

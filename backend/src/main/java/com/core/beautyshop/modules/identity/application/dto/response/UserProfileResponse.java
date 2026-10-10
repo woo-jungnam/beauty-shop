@@ -53,5 +53,6 @@ public class UserProfileResponse {
     @Schema(description = "Điểm tích lũy thành viên", example = "450")
     private Integer loyaltyPoints;
 
+    @Schema(description = "Trạng thái tài khoản", example = "ACTIVE")
     private com.core.beautyshop.modules.identity.domain.enums.AccountStatus status;
 }

@@ -48,9 +48,10 @@ public class AuthServiceImpl implements AuthService {
     private final AuthMapper authMapper;
     private final RefreshTokenSessionRepository refreshTokenSessionRepository;
     private final TokenVersionCache tokenVersionCache;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -59,21 +60,24 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        String jwt = jwtUtils.generateAccessToken(userDetails);
+        UserDetailsImpl authenticated = (UserDetailsImpl) authentication.getPrincipal();
+        User user = userRepository.findByIdForUpdate(authenticated.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // Authentication loaded this entity before the lock; discard that possibly stale state.
+        entityManager.refresh(user, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        requireActiveUser(user);
+        UserDetailsImpl userDetails = UserDetailsImpl.build(user);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+        String familyId = UUID.randomUUID().toString();
+        String jwt = jwtUtils.generateAccessToken(userDetails, familyId);
         String refreshToken = jwtUtils.generateRefreshToken(userDetails.getUsername());
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userDetails.getUsername()));
-
         tokenVersionCache.updateCurrentVersion(user.getId(), user.getTokenVersion());
-        saveRefreshSession(user, refreshToken, UUID.randomUUID().toString());
+        saveRefreshSession(user, refreshToken, familyId);
 
         return authMapper.toAuthResponse(user, jwt, refreshToken, roles);
     }
@@ -81,6 +85,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (request.getUsername() == null || request.getUsername().contains("@") || request.getUsername().chars().anyMatch(Character::isWhitespace)) {
+            throw new BusinessException("Username must not contain @ or whitespace");
+        }
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new BusinessException("Lỗi: Tên đăng nhập đã được sử dụng!");
         }
@@ -88,13 +95,16 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Lỗi: Email đã được sử dụng!");
         }
+        if (userRepository.existsByEmail(request.getUsername()) || userRepository.existsByUsername(request.getEmail())) {
+            throw new BusinessException("Username and email must identify a single account");
+        }
 
         List<Role> roles = new ArrayList<>();
-        Role defaultRole = roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_CUSTOMER.name())
-                .or(() -> roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name()))
+        Role defaultRole = roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name())
+                .or(() -> roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_CUSTOMER.name()))
                 .orElseGet(() -> roleRepository.save(Role.builder()
-                        .name(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_CUSTOMER.name())
-                        .description("Default Customer Role")
+                        .name(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name())
+                        .description("Default User Role")
                         .build()));
         roles.add(defaultRole);
 
@@ -103,10 +113,11 @@ public class AuthServiceImpl implements AuthService {
         tokenVersionCache.updateCurrentVersion(user.getId(), user.getTokenVersion());
 
         UserDetailsImpl userDetails = UserDetailsImpl.build(user);
-        String jwt = jwtUtils.generateAccessToken(userDetails);
+        String familyId = UUID.randomUUID().toString();
+        String jwt = jwtUtils.generateAccessToken(userDetails, familyId);
         String refreshToken = jwtUtils.generateRefreshToken(userDetails.getUsername());
 
-        saveRefreshSession(user, refreshToken, UUID.randomUUID().toString());
+        saveRefreshSession(user, refreshToken, familyId);
 
         List<String> roleNames = roles.stream().map(Role::getRoleName).toList();
 
@@ -114,10 +125,14 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(noRollbackFor = BusinessException.class)
+    @Transactional(noRollbackFor = BusinessException.class, isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
         if (jwtUtils.validateRefreshToken(refreshToken)) {
+            Long sessionUserId = refreshTokenSessionRepository.findUserIdByTokenHash(hashToken(refreshToken))
+                    .orElseThrow(() -> new BusinessException("Refresh Token không hợp lệ hoặc đã bị thu hồi"));
+            User user = userRepository.findByIdForUpdate(sessionUserId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
             RefreshTokenSession currentSession = refreshTokenSessionRepository
                     .findByTokenHashForUpdate(hashToken(refreshToken))
                     .orElseThrow(() -> new BusinessException("Refresh Token không hợp lệ hoặc đã bị thu hồi"));
@@ -132,16 +147,14 @@ public class AuthServiceImpl implements AuthService {
             }
 
             String username = jwtUtils.getUserNameFromJwtToken(refreshToken);
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với tên đăng nhập: " + username));
-
-            if (!user.getId().equals(currentSession.getUserId())) {
+            if (!username.equals(user.getUsername()) || !user.getId().equals(currentSession.getUserId())) {
                 throw new BusinessException("Refresh Token không thuộc về người dùng hiện tại");
             }
+            requireActiveUser(user);
 
             UserDetailsImpl userDetails = UserDetailsImpl.build(user);
             tokenVersionCache.updateCurrentVersion(user.getId(), user.getTokenVersion());
-            String newAccessToken = jwtUtils.generateAccessToken(userDetails);
+            String newAccessToken = jwtUtils.generateAccessToken(userDetails, currentSession.getFamilyId());
             String newRefreshToken = jwtUtils.generateRefreshToken(username);
 
             currentSession.setRevokedAt(Instant.now());
@@ -161,11 +174,29 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void logout(RefreshTokenRequest request) {
-        refreshTokenSessionRepository.findByTokenHashForUpdate(hashToken(request.getRefreshToken()))
-                .ifPresent(session -> {
-                    refreshTokenSessionRepository.revokeFamily(session.getFamilyId(), Instant.now());
-                    incrementTokenVersion(session.getUserId());
-                });
+        String hash = hashToken(request.getRefreshToken());
+        var sessionUserId = refreshTokenSessionRepository.findUserIdByTokenHash(hash);
+        if (sessionUserId.isEmpty() || userRepository.findByIdForUpdate(sessionUserId.get()).isEmpty()) return;
+        refreshTokenSessionRepository.findByTokenHashForUpdate(hash).ifPresent(session -> {
+            if (session.getRevokedAt() == null && session.getExpiresAt().isAfter(Instant.now())) {
+                refreshTokenSessionRepository.revokeFamily(session.getFamilyId(), Instant.now());
+            }
+        });
+    }
+
+    @Override
+    @Transactional
+    public void revokeSession(Long userId, Long sessionId) {
+        userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        var session = refreshTokenSessionRepository.findByIdAndUserIdAndIsDeletedFalse(sessionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found for this user"));
+        refreshTokenSessionRepository.revokeFamily(session.getFamilyId(), Instant.now());
+    }
+
+    private void requireActiveUser(User user) {
+        if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getStatus() != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) {
+            throw new BusinessException("Account is not active");
+        }
     }
 
     @Override

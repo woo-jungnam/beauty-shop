@@ -8,5 +8,6 @@ import java.util.List;
 public interface WarehouseStockService {
     List<WarehouseStockResponse> getStocksByWarehouseId(Long warehouseId);
     WarehouseStockResponse addOrUpdateStock(Long warehouseId, WarehouseStockRequest request);
+    WarehouseStockResponse receiveStock(Long warehouseId, WarehouseStockRequest request, String referenceType, String referenceId);
     void deleteStock(Long stockId);
 }

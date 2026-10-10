@@ -1,5 +1,7 @@
 package com.core.beautyshop.modules.catalog.application.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.core.beautyshop.modules.catalog.domain.enums.ProductImageType;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductType;
@@ -40,19 +42,28 @@ public class ProductResponse {
     @Schema(description = "URL ảnh đại diện chính", example = "https://cdn.beautyshop.com/products/lrp-anthelios.png")
     private String thumbnailUrl;
 
-    @Schema(description = "Giá gốc niêm yết (VND)", example = "425000")
-    private BigDecimal basePrice;
+    @Schema(description = "Giá thấp nhất dùng discountPrice nếu có, nếu không dùng price của SKU active chưa xóa (VND); 0 khi không có SKU", example = "380000")
+    private BigDecimal minPrice;
+
+    @Schema(description = "Giá cao nhất dùng discountPrice nếu có, nếu không dùng price của SKU active chưa xóa (VND)", example = "480000")
+    private BigDecimal maxPrice;
+
+    @Schema(description = "Alias tương thích của minPrice, không phải field nhập giá sản phẩm", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public BigDecimal getBasePrice() {
+        return minPrice;
+    }
 
     @Schema(description = "Trạng thái hiển thị sản phẩm", example = "ACTIVE")
     private ProductStatus status;
 
-    @Schema(description = "Loại sản phẩm (PHYSICAL, DIGITAL, SERVICE)", example = "PHYSICAL")
+    @Schema(description = "Loại sản phẩm (PRODUCT, SERVICE, COMBO)", example = "PRODUCT")
     private ProductType productType;
 
     @Schema(description = "Đối tượng giới tính mục tiêu (UNISEX, FEMALE, MALE)", example = "UNISEX")
     private TargetGender targetGender;
 
-    @Schema(description = "Loại da phù hợp (OILY, DRY, COMBINATION, SENSITIVE, ALL)", example = "OILY")
+    @Schema(description = "Loại da phù hợp (ALL_SKIN, OILY, DRY, COMBINATION, SENSITIVE, NORMAL)", example = "OILY")
     private SkinType skinType;
 
     @Schema(description = "Bảng thành phần hóa học", example = "Aqua, Homosalate, Silica, Ethylhexyl Salicylate...")
@@ -70,7 +81,7 @@ public class ProductResponse {
     @Schema(description = "Đánh dấu sản phẩm nổi bật trên trang chủ", example = "true")
     private Boolean isFeatured;
 
-    @Schema(description = "Điểm đánh giá trung bình (1.0 -> 5.0)", example = "4.8")
+    @Schema(description = "Điểm trung bình đánh giá APPROVED; 0 khi chưa có đánh giá", example = "4.8")
     private Double averageRating;
 
     @Schema(description = "Tổng số lượt đánh giá", example = "128")
@@ -100,6 +111,8 @@ public class ProductResponse {
     @Schema(description = "Danh sách tag nhãn gắn với sản phẩm")
     private List<TagResponse> tags;
 
+    private List<AttributeValueResponse> attributeValues;
+
     @Schema(description = "Có chứa hương liệu không")
     private Boolean hasFragrance;
 
@@ -128,7 +141,7 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Thông tin biến thể sản phẩm (SKU)")
+    @Schema(name = "ProductDetailVariantResponse", description = "Thông tin biến thể sản phẩm (SKU)")
     public static class VariantResponse {
         @Schema(description = "ID biến thể", example = "201")
         private Long id;
@@ -180,7 +193,7 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Hình ảnh minh họa sản phẩm")
+    @Schema(name = "ProductDetailImageResponse", description = "Hình ảnh minh họa sản phẩm")
     public static class ImageResponse {
         @Schema(description = "ID ảnh", example = "301")
         private Long id;
@@ -205,7 +218,7 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Thẻ từ khóa / Tag")
+    @Schema(name = "ProductDetailTagResponse", description = "Thẻ từ khóa / Tag")
     public static class TagResponse {
         @Schema(description = "ID thẻ", example = "1")
         private Long id;
@@ -221,16 +234,25 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Chi tiết thành phần mỹ phẩm")
+    @Schema(name = "ProductDetailIngredientDetailResponse", description = "Chi tiết thành phần mỹ phẩm")
     public static class IngredientDetailResponse {
+        @Schema(description = "ID thành phần")
         private Long ingredientId;
+        @Schema(description = "Tên hiển thị")
         private String name;
+        @Schema(description = "Tên INCI")
         private String inciName;
+        @Schema(description = "Nồng độ, có thể null")
         private BigDecimal concentration;
+        @Schema(description = "Đơn vị nồng độ")
         private String concentrationUnit;
+        @Schema(description = "Thành phần nổi bật")
         private Boolean isKeyActive;
+        @Schema(description = "Chức năng đã lưu")
         private List<String> function;
+        @Schema(description = "Lợi ích đã lưu")
         private List<String> benefits;
+        @Schema(description = "Lưu ý đã lưu")
         private List<String> potentialConcerns;
     }
 
@@ -238,12 +260,17 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Tóm tắt các nhóm thành phần chính")
+    @Schema(name = "ProductDetailIngredientSummaryResponse", description = "Tóm tắt các nhóm thành phần chính")
     public static class IngredientSummaryResponse {
+        @Schema(description = "Tên các hoạt chất chính")
         private List<String> keyActives;
+        @Schema(description = "Nhóm cấp ẩm")
         private List<String> hydratingIngredients;
+        @Schema(description = "Nhóm tẩy tế bào chết")
         private List<String> exfoliatingIngredients;
+        @Schema(description = "Dữ liệu có hương liệu")
         private Boolean fragrance;
+        @Schema(description = "Dữ liệu có cồn")
         private Boolean alcohol;
     }
 
@@ -251,9 +278,11 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Độ tương thích loại da và cảnh báo")
+    @Schema(name = "ProductDetailSkinCompatibilityResponse", description = "Độ tương thích loại da và cảnh báo")
     public static class SkinCompatibilityResponse {
+        @Schema(description = "Mapping loại da phù hợp đã lưu")
         private List<RecommendedSkinType> recommendedSkinTypes;
+        @Schema(description = "Mapping loại da không lý tưởng đã lưu")
         private List<NotIdealForSkinType> notIdealFor;
     }
 
@@ -261,11 +290,15 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Loại da khuyên dùng kèm điểm số")
+    @Schema(name = "ProductDetailRecommendedSkinType", description = "Loại da khuyên dùng kèm điểm số")
     public static class RecommendedSkinType {
+        @Schema(description = "ID loại da")
         private Long skinTypeId;
+        @Schema(description = "Mã loại da hoặc vấn đề da")
         private String code;
+        @Schema(description = "Tên hiển thị")
         private String name;
+        @Schema(description = "Điểm phù hợp đã lưu, có thể null")
         private BigDecimal score;
     }
 
@@ -273,10 +306,13 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Loại da chống chỉ định kèm lý do")
+    @Schema(name = "ProductDetailNotIdealForSkinType", description = "Loại da chống chỉ định kèm lý do")
     public static class NotIdealForSkinType {
+        @Schema(description = "ID loại da")
         private Long skinTypeId;
+        @Schema(description = "Tên loại da")
         private String skinType;
+        @Schema(description = "Lý do đã lưu")
         private String reason;
     }
 
@@ -284,12 +320,17 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Vấn đề về da giải quyết")
+    @Schema(name = "ProductDetailSkinConcernResponse", description = "Vấn đề về da giải quyết")
     public static class SkinConcernResponse {
+        @Schema(description = "ID vấn đề da")
         private Long concernId;
+        @Schema(description = "Mã loại da hoặc vấn đề da")
         private String code;
+        @Schema(description = "Tên hiển thị")
         private String name;
+        @Schema(description = "Điểm phù hợp đã lưu, có thể null")
         private BigDecimal score;
+        @Schema(description = "Ghi chú đã lưu")
         private String notes;
     }
 
@@ -297,11 +338,15 @@ public class ProductResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Hướng dẫn sử dụng và cảnh báo an toàn")
+    @Schema(name = "ProductDetailUsageDetailResponse", description = "Hướng dẫn sử dụng và cảnh báo an toàn")
     public static class UsageDetailResponse {
+        @Schema(description = "Thời điểm dùng")
         private List<String> whenToUse;
+        @Schema(description = "Tần suất")
         private String frequency;
+        @Schema(description = "Hướng dẫn đã lưu")
         private List<String> instructions;
+        @Schema(description = "Cảnh báo đã lưu")
         private List<String> warnings;
     }
 }

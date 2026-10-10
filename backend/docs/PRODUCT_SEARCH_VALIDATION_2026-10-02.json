@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-10-02T18:08:44+07:00",
+  "scope": "Latest passing results per selected suite; the initial 54-test run found one pagination metadata failure. After the documentation-only fix, all 7 OpenApiContractIntegrationTest cases passed in the final rerun.",
+  "initialLog": "spa-product-search-tests.log",
+  "initialRunTests": 54,
+  "initialRunFailures": 1,
+  "finalLog": "spa-product-search-docs-tests.log",
+  "finalBuild": "SUCCESS",
+  "finalBuildFinishedAt": "2026-10-02T18:07:16+07:00",
+  "finalRerunTests": 7,
+  "tests": 54,
+  "passed": 54,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "searchCasesH2": 15,
+  "searchCasesMySql": 15,
+  "mysqlMigrationValidated": "V35",
+  "paths": 179,
+  "operations": 253,
+  "swaggerGroups": 13,
+  "searchQueryParameters": 23,
+  "snapshotSha256": "fdea53b43557ac60040d0b8777f2965396ef013fc85da3d39a881cec4e52121d",
+  "results": [
+    {
+      "suite": "com.core.beautyshop.ProductSearchIntegrationTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T18:02:41+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.MySqlProductSearchIntegrationTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T18:01:20+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.OpenApiContractIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T18:07:16+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.ComprehensiveSwaggerAndBearerApiTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:58:46+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.modules.catalog.application.service.ProductVisibilityIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:58:47+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.architecture.ModularArchitectureTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:55:24+07:00"
+    }
+  ]
+}

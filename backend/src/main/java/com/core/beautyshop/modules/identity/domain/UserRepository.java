@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<User> {
     Optional<User> findByUsername(String username);
 
     Optional<User> findByEmail(String email);
@@ -31,5 +31,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT user.tokenVersion FROM User user WHERE user.id = :id AND user.isDeleted = false")
     Optional<Integer> findTokenVersionById(@Param("id") Long id);
+
+    @Query("SELECT COUNT(DISTINCT u.id) FROM User u JOIN u.roles r WHERE u.isDeleted = false " +
+            "AND u.status = com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE " +
+            "AND r.name = 'ROLE_ADMIN' AND r.isDeleted = false AND u.id <> :excludedId")
+    long countActiveAdminsExcluding(@Param("excludedId") Long excludedId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.id = :roleId AND u.isDeleted = false ORDER BY u.id")
+    java.util.List<User> findByRoleIdForUpdate(@Param("roleId") Long roleId);
 }
 

@@ -19,17 +19,18 @@ public class RegisterRequest {
 
     @NotBlank(message = "Tên đăng nhập không được để trống")
     @Size(min = 3, max = 50, message = "Tên đăng nhập phải từ 3 đến 50 ký tự")
-    @Schema(description = "Tên đăng nhập duy nhất", example = "nguyenan", requiredMode = Schema.RequiredMode.REQUIRED)
+    @jakarta.validation.constraints.Pattern(regexp = "^[^@\\s]+$", message = "Tên đăng nhập không được chứa @ hoặc khoảng trắng")
+    @Schema(description = "Tên đăng nhập duy nhất, 3–50 ký tự, không chứa @ hoặc khoảng trắng", minLength = 3, maxLength = 50, example = "nguyenan", requiredMode = Schema.RequiredMode.REQUIRED)
     private String username;
 
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Định dạng email không hợp lệ")
-    @Schema(description = "Địa chỉ email nhận thông báo và kích hoạt", example = "nguyenan@gmail.com", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Email duy nhất dùng đăng nhập/nhận thông báo; không có bước kích hoạt email", example = "nguyenan@gmail.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;
 
     @NotBlank(message = "Mật khẩu không được để trống")
     @Size(min = 6, max = 100, message = "Mật khẩu phải có ít nhất 6 ký tự")
-    @Schema(description = "Mật khẩu bảo mật (tối thiểu 6 ký tự)", example = "SecurePassword@123", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Mật khẩu 6–100 ký tự", minLength = 6, maxLength = 100, format = "password", accessMode = Schema.AccessMode.WRITE_ONLY, example = "SecurePassword@123", requiredMode = Schema.RequiredMode.REQUIRED)
     @lombok.ToString.Exclude
     private String password;
 

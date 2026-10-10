@@ -33,6 +33,9 @@ public class ProductAttributeDefinition extends Base {
     @Column(name = "attribute_name", nullable = false, length = 150)
     private String attributeName;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "attribute_code", nullable = false, unique = true, length = 100)
     private String attributeCode;
 

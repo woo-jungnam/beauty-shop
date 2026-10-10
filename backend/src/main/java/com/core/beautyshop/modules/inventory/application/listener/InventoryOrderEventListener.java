@@ -27,13 +27,34 @@ public class InventoryOrderEventListener {
     }
 
     @EventListener
+    public void handleOrderPaid(OrderEvents.OrderPaidEvent event) {
+        log.info("Handling OrderPaidEvent in Inventory for orderId={}, orderNumber={} with {} items",
+                event.getOrderId(), event.getOrderNumber(), event.getItems() != null ? event.getItems().size() : 0);
+
+        if (event.getItems() != null && event.getOrderNumber() != null) {
+            for (OrderEvents.OrderItemSummary item : event.getItems()) {
+                try {
+                    inventoryFacade.deductStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
+                } catch (Exception e) {
+                    log.warn("Stock deduction on OrderPaid skipped or already processed for variant {}: {}",
+                            item.getVariantId(), e.getMessage());
+                }
+            }
+        }
+    }
+
+    @EventListener
     public void handleOrderDelivered(OrderEvents.OrderDeliveredEvent event) {
         log.info("Handling OrderDeliveredEvent for orderId={} with {} items",
                 event.getOrderId(), event.getItems() != null ? event.getItems().size() : 0);
 
         if (event.getItems() != null) {
             for (OrderEvents.OrderItemSummary item : event.getItems()) {
-                inventoryFacade.deductStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
+                try {
+                    inventoryFacade.deductStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
+                } catch (Exception e) {
+                    log.warn("Stock deduction on OrderDelivered skipped (likely deducted on payment): {}", e.getMessage());
+                }
             }
         }
     }

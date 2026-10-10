@@ -49,4 +49,28 @@ class VoucherServiceTest {
         voucher.setId(1L);
         return voucher;
     }
+
+    @Test
+    void negativeMinimumAndMaximumAmountsAreRejected() {
+        for (boolean negativeMinimum : java.util.List.of(true, false)) {
+            var command = new VoucherService.VoucherCommand("SAVE", "Save", null, DiscountType.FIXED_AMOUNT,
+                    BigDecimal.TEN, negativeMinimum ? BigDecimal.TEN : BigDecimal.ONE.negate(),
+                    negativeMinimum ? BigDecimal.ONE.negate() : BigDecimal.ZERO,
+                    Instant.now().minusSeconds(10), Instant.now().plusSeconds(3600), 10, 1, true);
+            assertThrows(BusinessException.class, () -> service.create(command));
+        }
+        verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void usageLimitCannotBeLoweredBelowConsumedCount() {
+        var voucher = validVoucher(); voucher.setUsedCount(5);
+        when(vouchers.findByIdForUpdate(1L)).thenReturn(Optional.of(voucher));
+        var command = new VoucherService.VoucherCommand("SAVE20", "Save", null, DiscountType.PERCENTAGE,
+                BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, Instant.now().minusSeconds(10),
+                Instant.now().plusSeconds(3600), 4, 1, true);
+        assertThrows(BusinessException.class, () -> service.update(1L, command));
+        assertEquals(5, voucher.getUsedCount());
+        verify(vouchers, never()).save(any());
+    }
 }

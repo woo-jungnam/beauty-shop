@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.chatbot.application.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -14,6 +15,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Thẻ thông tin sản phẩm đề xuất bởi AI")
 public class ProductCardResponse {
 
@@ -60,7 +62,7 @@ public class ProductCardResponse {
 
     @JsonProperty("reason_for_recommendation")
     @JsonAlias({"reasonForRecommendation", "reason_for_recommendation"})
-    @Schema(description = "Lý do chuyên môn đề xuất sản phẩm này cho tình trạng da của bạn",
+    @Schema(description = "Lý do đề xuất do dịch vụ AI cung cấp",
             example = "Sản phẩm chứa nồng độ Vitamin B5 cao kết hợp HA giúp phục hồi màng bảo vệ da đang bị tổn thương nhanh chóng.")
     private String reasonForRecommendation;
 
@@ -68,4 +70,14 @@ public class ProductCardResponse {
     @JsonAlias({"imageUrl", "image_url"})
     @Schema(description = "Đường dẫn ảnh đại diện sản phẩm", example = "https://beautyshop.com/images/larocheposay-b5.jpg")
     private String imageUrl;
+
+    @JsonProperty("target_type")
+    @JsonAlias({"targetType", "target_type"})
+    @Schema(description = "Loại đối tượng (PRODUCT hoặc SERVICE)", example = "PRODUCT")
+    private String targetType;
+
+    @JsonProperty("duration_minutes")
+    @JsonAlias({"durationMinutes", "duration_minutes"})
+    @Schema(description = "Thời lượng thực hiện nếu là dịch vụ Spa", example = "60")
+    private Integer durationMinutes;
 }

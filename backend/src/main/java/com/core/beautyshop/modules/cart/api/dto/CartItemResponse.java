@@ -38,7 +38,7 @@ public class CartItemResponse {
     @Schema(description = "URL ảnh minh họa", example = "https://cdn.beautyshop.com/products/lrp-anthelios.png")
     private String imageUrl;
 
-    @Schema(description = "Biến thể còn được kinh doanh hay không")
+    @Schema(description = "SKU còn được kinh doanh và tra được giá; không bảo đảm đủ tồn. false cần bỏ dòng trước checkout")
     private Boolean available;
 
     public static CartItemResponse of(CartItem entity, ProductVariantSummaryDto variant) {

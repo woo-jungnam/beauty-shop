@@ -67,18 +67,21 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/actuator/health",
-                                "/actuator/prometheus"
-                                ,"/uploads/**"
+                                "/actuator/prometheus",
+                                "/uploads/**",
+                                "/ws/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/payment/sepay-webhook",
                                 "/api/v1/test/public",
+                                "/api/v1/system-configs/public/**",
                                 "/api/v1/chatbot/chat",
                                 "/api/v1/chatbot/chat/stream",
                                 "/api/v1/chatbot/health",
@@ -90,14 +93,32 @@ public class SecurityConfig {
                                 "/api/v1/brands/**",
                                 "/api/v1/attributes/**",
                                 "/api/v1/tags/**",
-                                "/api/v1/spa/services/**"
-                                ,"/api/v1/reviews/**"
+                                "/api/v1/spa/services/**",
+                                "/api/v1/reviews/**",
+                                "/api/v1/banners/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/*").permitAll()
                         .requestMatchers(
                                 "/api/v1/cart/**",
                                 "/api/v1/orders/checkout"
                         ).permitAll()
+                        .requestMatchers(
+                                "/api/v1/admin/orders/**",
+                                "/api/v1/admin/inventory/**",
+                                "/api/v1/admin/warehouses/**",
+                                "/api/v1/admin/procurement/**",
+                                "/api/v1/admin/crm/**",
+                                "/api/v1/admin/products/**",
+                                "/api/v1/admin/media/**",
+                                "/api/v1/admin/ingredients/**",
+                                "/api/v1/admin/dermatology/**",
+                                "/api/v1/admin/banners/**",
+                                "/api/v1/admin/reviews/**",
+                                "/api/v1/admin/vouchers/**",
+                                "/api/v1/admin/staff/**",
+                                "/api/v1/admin/spa/**",
+                                "/api/v1/admin/dashboard/**"
+                        ).hasAnyRole("ADMIN", "STAFF")
                         .requestMatchers(
                                 "/api/v1/admin/**",
                                 "/api/v1/chatbot/sync/**",

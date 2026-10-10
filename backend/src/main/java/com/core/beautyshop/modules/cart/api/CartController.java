@@ -22,7 +22,7 @@ public class CartController {
 
     private final CartService cartService;
 
-    @Operation(summary = "Lấy giỏ hàng hiện tại", description = "Lấy giỏ hàng dựa theo token người dùng đăng nhập hoặc sessionId (khách vãng lai).")
+    @Operation(summary = "Lấy giỏ hàng hiện tại", description = "Tài khoản đăng nhập dùng giỏ của chính mình; khách vãng lai dùng query sessionId. data có thể null nếu chưa có giỏ. Giá hiện tại chỉ là tham khảo; tồn kho được giữ khi checkout.")
     @GetMapping
     public ResponseEntity<ApiResponse<CartResponse>> getCart(
             @Parameter(description = "Session ID khách vãng lai (nếu chưa đăng nhập)", example = "guest-session-uuid-12345")
@@ -31,7 +31,7 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
-    @Operation(summary = "Thêm sản phẩm vào giỏ hàng", description = "Thêm một biến thể SKU với số lượng xác định vào giỏ hàng.")
+    @Operation(summary = "Thêm sản phẩm vào giỏ hàng", description = "Cộng số lượng vào SKU đã có; yêu cầu SKU còn bán và đủ tồn khả dụng cho tổng số lượng. Khách vãng lai phải gửi sessionId trong body; người đăng nhập dùng giỏ của mình. Chưa giữ tồn kho.")
     @PostMapping("/add")
     public ResponseEntity<ApiResponse<CartResponse>> addToCart(
             @Valid @RequestBody AddToCartRequest request) {
@@ -39,12 +39,12 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(updatedCart));
     }
 
-    @Operation(summary = "Cập nhật số lượng sản phẩm trong giỏ hàng", description = "Thay đổi số lượng của một mặt hàng cụ thể trong giỏ hàng.")
+    @Operation(summary = "Cập nhật số lượng sản phẩm trong giỏ hàng", description = "Thay số lượng của dòng thuộc giỏ chính chủ/đúng phiên khách. quantity≤0 xóa dòng; quantity>0 kiểm tồn khả dụng. quantity và sessionId là query, không phải JSON body.")
     @PutMapping("/items/{itemId}")
     public ResponseEntity<ApiResponse<CartResponse>> updateCartItem(
             @Parameter(description = "ID dòng mặt hàng trong giỏ", example = "1") @PathVariable Long itemId,
-            @Parameter(description = "Số lượng mới", example = "3") @RequestParam Integer quantity,
-            @Parameter(description = "Session ID required for guest carts")
+            @Parameter(description = "Số lượng mới; 0 hoặc âm sẽ xóa dòng", example = "3") @RequestParam Integer quantity,
+            @Parameter(description = "Bắt buộc cho giỏ khách vãng lai; phải khớp phiên sở hữu dòng")
             @RequestParam(required = false) String sessionId) {
         CartResponse updatedCart = cartService.updateCartItem(itemId, quantity, sessionId);
         return ResponseEntity.ok(ApiResponse.success(updatedCart));
@@ -54,7 +54,7 @@ public class CartController {
     @DeleteMapping("/items/{itemId}")
     public ResponseEntity<ApiResponse<CartResponse>> removeCartItem(
             @Parameter(description = "ID dòng mặt hàng cần xóa", example = "1") @PathVariable Long itemId,
-            @Parameter(description = "Session ID required for guest carts")
+            @Parameter(description = "Bắt buộc cho giỏ khách vãng lai; phải khớp phiên sở hữu dòng")
             @RequestParam(required = false) String sessionId) {
         CartResponse updatedCart = cartService.removeCartItem(itemId, sessionId);
         return ResponseEntity.ok(ApiResponse.success(updatedCart));
@@ -63,13 +63,13 @@ public class CartController {
     @Operation(summary = "Xóa toàn bộ giỏ hàng", description = "Dọn sạch tất cả sản phẩm trong giỏ hàng hiện tại.")
     @DeleteMapping("/clear")
     public ResponseEntity<ApiResponse<Void>> clearCart(
-            @Parameter(description = "Session ID required for guest carts")
+            @Parameter(description = "Bắt buộc khi chưa đăng nhập; xóa giỏ đúng phiên")
             @RequestParam(required = false) String sessionId) {
         cartService.clearCart(sessionId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    @Operation(summary = "Gộp giỏ hàng khách vãng lai vào tài khoản khi đăng nhập", description = "Khi khách hàng vãng lai đã thêm đồ vào giỏ rồi mới đăng nhập, Frontend gọi API này để chuyển các món từ sessionId sang tài khoản người dùng.")
+    @Operation(summary = "Gộp giỏ khách vãng lai vào tài khoản", description = "Yêu cầu JWT. sessionId là query; chuyển/cộng các dòng của giỏ khách vào tài khoản đang đăng nhập rồi xóa dòng giỏ nguồn. Không cho gộp giỏ thuộc tài khoản khác; thao tác không giữ tồn kho.")
     @PostMapping("/merge")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CartResponse>> mergeCart(

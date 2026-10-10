@@ -21,8 +21,17 @@ public class OrderItemResponse {
     @Schema(description = "ID biến thể SKU", example = "201")
     private Long variantId;
 
-    @Schema(description = "Tên hiển thị biến thể sản phẩm", example = "Kem Chống Nắng La Roche-Posay (Chai 50ml)")
+    @Schema(description = "Mã SKU", example = "LRP-ANTHELIOS-50ML")
+    private String sku;
+
+    @Schema(description = "Tên sản phẩm snapshot lúc mua", example = "Kem Chống Nắng La Roche-Posay Anthelios XL")
+    private String productName;
+
+    @Schema(description = "Tên biến thể snapshot lúc mua", example = "Chai 50ml")
     private String variantName;
+
+    @Schema(description = "URL ảnh snapshot lúc mua; legacy có thể null")
+    private String imageUrl;
 
     @Schema(description = "Số lượng mua", example = "2")
     private Integer quantity;

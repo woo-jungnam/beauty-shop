@@ -14,13 +14,19 @@ import java.util.List;
 public interface ServicePackageRepository extends JpaRepository<ServicePackage, Long> {
 
     @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service " +
-            "WHERE p.isActive = true AND p.isDeleted = false ORDER BY p.id")
+            "WHERE p.isActive = true AND p.isDeleted = false AND p.items IS NOT EMPTY " +
+            "AND NOT EXISTS (SELECT bad.id FROM ServicePackageItem bad WHERE bad.servicePackage = p " +
+            "AND (bad.isDeleted = true OR bad.service.isDeleted = true OR bad.service.isActive = false)) ORDER BY p.id")
     List<ServicePackage> findAllActiveWithItems();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT servicePackage FROM ServicePackage servicePackage " +
             "WHERE servicePackage.id = :id AND servicePackage.isDeleted = false")
     Optional<ServicePackage> findByIdForUpdateAndIsDeletedFalse(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service "
+            + "WHERE p.id = :id AND p.isDeleted = false")
+    Optional<ServicePackage> findDetailByIdAndIsDeletedFalse(@Param("id") Long id);
 
     @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service WHERE p.isDeleted = false ORDER BY p.id DESC")
     List<ServicePackage> findAllAdminWithItems();

@@ -8,6 +8,7 @@ import com.core.beautyshop.modules.inventory.domain.enums.WarehouseType;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.inventory.domain.WarehouseRepository;
+import com.core.beautyshop.modules.inventory.domain.WarehouseStockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,8 @@ import java.util.stream.Collectors;
 public class WarehouseServiceImpl implements WarehouseService {
 
     private final WarehouseRepository warehouseRepository;
+    private final WarehouseStockRepository stocks;
+    private final jakarta.persistence.EntityManager entities;
 
     @Override
     @Transactional(readOnly = true)
@@ -34,6 +37,8 @@ public class WarehouseServiceImpl implements WarehouseService {
     public WarehouseResponse getWarehouseById(Long id) {
         Warehouse warehouse = warehouseRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho với id: " + id));
+
+        if (Boolean.TRUE.equals(warehouse.getIsDeleted())) throw new ResourceNotFoundException("Warehouse not found: " + id);
         return mapToResponse(warehouse);
     }
 
@@ -63,8 +68,9 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     @Transactional
     public WarehouseResponse updateWarehouse(Long id, UpdateWarehouseRequest request) {
-        Warehouse warehouse = warehouseRepository.findByIdAndIsDeletedFalse(id)
+        Warehouse warehouse = warehouseRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho với id: " + id));
+        if (Boolean.TRUE.equals(warehouse.getIsDeleted())) throw new ResourceNotFoundException("Warehouse not found: " + id);
 
         if (request.getName() != null) warehouse.setName(request.getName());
         if (request.getAddress() != null) warehouse.setAddress(request.getAddress());
@@ -83,11 +89,20 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     @Transactional
     public void deleteWarehouse(Long id) {
-        Warehouse warehouse = warehouseRepository.findByIdAndIsDeletedFalse(id)
+        Warehouse warehouse = warehouseRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho với id: " + id));
+        // Same warehouse→batch order as receipts/transfers; refresh bypasses cached pre-lock state.
+        entities.refresh(warehouse, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        for (var stock : stocks.findAllByWarehouseIdForUpdate(id)) {
+            entities.refresh(stock, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            if (hasBalance(stock.getQuantity()) || hasBalance(stock.getReservedQuantity()) || hasBalance(stock.getQuarantinedQuantity()))
+                throw new BusinessException("Warehouse still contains stock, order reservations or quarantined goods; reconcile before deleting");
+        }
         warehouse.setIsDeleted(true);
         warehouseRepository.save(warehouse);
     }
+
+    private boolean hasBalance(Integer balance) { return balance != null && balance != 0; }
 
     private WarehouseResponse mapToResponse(Warehouse warehouse) {
         return WarehouseResponse.builder()

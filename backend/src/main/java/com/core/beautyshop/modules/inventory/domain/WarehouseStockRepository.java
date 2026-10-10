@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +17,14 @@ public interface WarehouseStockRepository extends JpaRepository<WarehouseStock, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from WarehouseStock s where s.id = :id")
     Optional<WarehouseStock> findByIdForUpdate(Long id);
+
+    @Query("select s.warehouse.id from WarehouseStock s where s.id = :id")
+    Optional<Long> findWarehouseIdByStockId(Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from WarehouseStock s where s.warehouse.id = :warehouseId and s.productVariantId = :variantId "
+            + "and (s.batchCode = :batchCode or (:batchCode = '' and (s.batchCode is null or trim(s.batchCode) = ''))) order by s.id")
+    List<WarehouseStock> lockBatch(Long warehouseId, Long variantId, String batchCode);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from WarehouseStock s where s.productVariantId = :variantId and s.isDeleted = false and s.warehouse.isActive = true and s.warehouse.isDeleted = false "
@@ -68,14 +78,29 @@ public interface WarehouseStockRepository extends JpaRepository<WarehouseStock, 
 
     List<WarehouseStock> findByWarehouseId(Long warehouseId);
 
+    /** Include deleted legacy batches: their nonzero balances still require reconciliation. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from WarehouseStock s where s.warehouse.id = :warehouseId order by s.id")
+    List<WarehouseStock> findAllByWarehouseIdForUpdate(Long warehouseId);
+
     Optional<WarehouseStock> findByWarehouseIdAndProductVariantIdAndBatchCode(Long warehouseId, Long productVariantId, String batchCode);
 
     @Query("select s from WarehouseStock s join fetch s.warehouse w where s.isDeleted = false and w.isDeleted = false and (s.quantity - s.reservedQuantity) <= s.minQuantity order by (s.quantity - s.reservedQuantity) asc")
     List<WarehouseStock> findLowStock();
 
     @Query("select s from WarehouseStock s join fetch s.warehouse w where s.isDeleted = false and w.isDeleted = false and s.expirationDate is not null and s.expirationDate between :today and :deadline order by s.expirationDate")
-    List<WarehouseStock> findExpiringSoon(@Param("today") java.time.LocalDate today, @Param("deadline") java.time.LocalDate deadline);
+    List<WarehouseStock> findExpiringSoon(@Param("today") LocalDate today, @Param("deadline") LocalDate deadline);
+
+    @Query("SELECT ws.productVariantId, MIN(ws.expirationDate), SUM(ws.quantity - ws.reservedQuantity) " +
+           "FROM WarehouseStock ws " +
+           "WHERE ws.isDeleted = false " +
+           "AND ws.warehouse.isActive = true AND ws.warehouse.isDeleted = false " +
+           "AND ws.expirationDate > CURRENT_DATE AND ws.expirationDate <= :maxExpirationDate " +
+           "AND (ws.quantity - ws.reservedQuantity) > 0 " +
+           "GROUP BY ws.productVariantId " +
+           "ORDER BY MIN(ws.expirationDate) ASC")
+    List<Object[]> findExpiringVariantStocksRaw(@Param("maxExpirationDate") LocalDate maxExpirationDate);
 
     @Query("select coalesce(sum(s.costPrice * s.quantity), 0) from WarehouseStock s where s.isDeleted = false")
-    java.math.BigDecimal calculateInventoryValue();
+    BigDecimal calculateInventoryValue();
 }

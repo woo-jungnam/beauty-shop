@@ -36,27 +36,28 @@ public class ProductAttributeController {
         return ResponseEntity.ok(ApiResponse.success(attributeService.getDefinitionById(id)));
     }
 
-    @Operation(summary = "Tạo định nghĩa thuộc tính mới (Admin)")
+    @Operation(summary = "Tạo định nghĩa thuộc tính mới (ADMIN / STAFF)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã tạo dữ liệu", useReturnTypeSchema = true)
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<AttributeDefinitionResponse>> createDefinition(
             @Valid @RequestBody AttributeDefinitionRequest request) {
         AttributeDefinitionResponse response = attributeService.createDefinition(request);
         return ResponseEntity.status(201).body(ApiResponse.created(response, "Tạo thuộc tính thành công"));
     }
 
-    @Operation(summary = "Cập nhật định nghĩa thuộc tính (Admin)")
+    @Operation(summary = "Cập nhật định nghĩa thuộc tính (ADMIN / STAFF)")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<AttributeDefinitionResponse>> updateDefinition(
             @PathVariable Long id,
             @Valid @RequestBody AttributeDefinitionRequest request) {
         return ResponseEntity.ok(ApiResponse.success(attributeService.updateDefinition(id, request)));
     }
 
-    @Operation(summary = "Xóa định nghĩa thuộc tính (Admin)")
+    @Operation(summary = "Xóa định nghĩa thuộc tính (ADMIN / STAFF)", description = "Xóa vật lý định nghĩa cùng các giá trị phụ thuộc.")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteDefinition(@PathVariable Long id) {
         attributeService.deleteDefinition(id);
         return ResponseEntity.ok(ApiResponse.success(null));
@@ -68,9 +69,10 @@ public class ProductAttributeController {
         return ResponseEntity.ok(ApiResponse.success(attributeService.getValuesByDefinitionId(id)));
     }
 
-    @Operation(summary = "Thêm giá trị thuộc tính (Admin)")
+    @Operation(summary = "Thêm giá trị thuộc tính (ADMIN / STAFF)", description = "ID định nghĩa trong path là nguồn chính; body.attributeDefinitionId tùy chọn và bị ghi đè. productId/value bắt buộc, productVariantId nếu có phải thuộc sản phẩm. Chuyển kiểu value theo dataType của định nghĩa.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã tạo dữ liệu", useReturnTypeSchema = true)
     @PostMapping("/{id}/values")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<AttributeValueResponse>> addValue(
             @PathVariable Long id,
             @Valid @RequestBody AttributeValueRequest request) {
@@ -78,9 +80,9 @@ public class ProductAttributeController {
         return ResponseEntity.status(201).body(ApiResponse.created(response, "Thêm giá trị thuộc tính thành công"));
     }
 
-    @Operation(summary = "Xóa giá trị thuộc tính (Admin)")
-    @DeleteMapping("/{valueId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Xóa giá trị thuộc tính (ADMIN / STAFF)", description = "Xóa vật lý giá trị thuộc tính.")
+    @DeleteMapping("/values/{valueId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteValue(@PathVariable Long valueId) {
         attributeService.deleteValue(valueId);
         return ResponseEntity.ok(ApiResponse.success(null));

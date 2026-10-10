@@ -34,12 +34,14 @@ public class SpaTicketServiceImpl implements SpaTicketService {
     private final IdentityFacade identityFacade;
     private final OrderFacade orderFacade;
     private final com.core.beautyshop.modules.spa.domain.SpaPurchaseSnapshotRepository snapshots;
+    private final com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService policies;
+    private final com.core.beautyshop.modules.spa.domain.BeautyServiceRepository services;
 
     @Override
     @Transactional(readOnly = true)
     public List<UserServiceTicketResponse> getMyTickets() {
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        return ticketRepository.findByUserIdOrderByCreatedAtDesc(currentUserId).stream()
+        return ticketRepository.findByUserIdOrderByCreatedAtDesc(currentUserId).stream().filter(t -> !Boolean.TRUE.equals(t.getIsDeleted()))
                 .map(UserServiceTicketResponse::of)
                 .collect(Collectors.toList());
     }
@@ -49,9 +51,10 @@ public class SpaTicketServiceImpl implements SpaTicketService {
     public List<UserServiceTicketResponse> getMyActiveTickets() {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         return ticketRepository.findByUserIdAndStatusOrderByCreatedAtDesc(currentUserId, TicketStatus.ACTIVE).stream()
+                .filter(ticket -> !Boolean.TRUE.equals(ticket.getIsDeleted()))
                 .filter(ticket -> ticket.getOrderId() != null)
                 .filter(ticket -> ticket.getExpiryDate() == null || ticket.getExpiryDate().isAfter(Instant.now()))
-                .filter(ticket -> ticket.getUsedSessions() < ticket.getTotalSessions())
+                .filter(ticket -> ticket.getUsedSessions() + ticket.getReservedSessions() < ticket.getTotalSessions())
                 .map(UserServiceTicketResponse::of)
                 .collect(Collectors.toList());
     }
@@ -61,9 +64,10 @@ public class SpaTicketServiceImpl implements SpaTicketService {
     public UserServiceTicketResponse getTicketById(Long id) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         UserServiceTicket ticket = ticketRepository.findById(id)
+                .filter(t -> !Boolean.TRUE.equals(t.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin vé liệu trình với ID: " + id));
 
-        if (!ticket.getUserId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
+        if (!ticket.getUserId().equals(currentUserId) && !SecurityUtils.isStaffOrAdmin()) {
             throw new AccessDeniedException("Bạn không có quyền xem thông tin vé liệu trình này!");
         }
 
@@ -71,7 +75,7 @@ public class SpaTicketServiceImpl implements SpaTicketService {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public SpaPackageOrderResult purchasePackage(PurchasePackageRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         UserSummaryDto user = identityFacade.getUserSummaryById(currentUserId);
@@ -83,9 +87,27 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         if (!Boolean.TRUE.equals(servicePackage.getIsActive())) {
             throw new BusinessException("Gói dịch vụ Spa này hiện đang tạm ngưng phục vụ");
         }
-        if (servicePackage.getPrice() == null || servicePackage.getPrice().signum() <= 0) {
+        if (servicePackage.getPrice() == null || servicePackage.getPrice().compareTo(java.math.BigDecimal.ONE) < 0) {
             throw new BusinessException("Gói dịch vụ Spa chưa có giá thanh toán hợp lệ");
         }
+
+        if (servicePackage.getValidityDays() != null && servicePackage.getValidityDays() <= 0) {
+            throw new BusinessException("Package validity days are invalid");
+        }
+        if (servicePackage.getItems() == null || servicePackage.getItems().isEmpty()
+                || servicePackage.getItems().stream().anyMatch(item -> Boolean.TRUE.equals(item.getIsDeleted())
+                    || item.getQuantity() == null || item.getQuantity() <= 0 || item.getService() == null
+                    || Boolean.TRUE.equals(item.getService().getIsDeleted())
+                    || !Boolean.TRUE.equals(item.getService().getIsActive()))) {
+            throw new BusinessException("Package contains unavailable services");
+        }
+        servicePackage.getItems().stream().map(item -> item.getService().getId()).distinct().sorted().forEach(id -> {
+            var service = services.findAvailableByIdForUpdate(id)
+                    .orElseThrow(() -> new BusinessException("Package contains an unavailable service"));
+            if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
+                throw new BusinessException("Package contains an unavailable service");
+            }
+        });
 
         SpaPackageOrderResult result = orderFacade.createSpaPackageOrder(CreateSpaPackageOrderCommand.builder()
                 .userId(currentUserId)
@@ -104,6 +126,7 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         snapshot.setOrderId(result.getOrderId());
         snapshot.setPackageId(servicePackage.getId());
         snapshot.setValidityDays(servicePackage.getValidityDays());
+        snapshot.setExpiryCheckMode(policies.expiryCheckMode());
         if (servicePackage.getItems() == null || servicePackage.getItems().isEmpty()) {
             throw new BusinessException("Package contains no services");
         }

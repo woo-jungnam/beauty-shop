@@ -26,6 +26,8 @@ public class ModularArchitectureTest {
     public static void setUp() {
         classes = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+                // Maven supports custom build directories; test fixtures never belong to the production architecture.
+                .withImportOption(location -> !location.asURI().toString().replace('\\', '/').contains("/test-classes/"))
                 .importPackages("com.core.beautyshop.modules");
         moduleNames = classes.stream()
                 .map(JavaClass::getPackageName)

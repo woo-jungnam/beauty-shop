@@ -1,0 +1,54 @@
+# Local configuration: only the public template belongs in Git.
+.env
+.env.*
+!.env.example
+*.env
+
+# Credentials and local data
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+.npmrc
+.netrc
+credentials*.json
+service-account*.json
+*service-account*.json
+*.har
+*.sql
+*.sqlite
+*.db
+artifacts/
+playwright/.auth/
+.auth/
+coverage/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+test-results/
+customer-test-results/
+e2e-report/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -29,7 +29,7 @@ public class CartResponse {
     @Schema(description = "Danh sách các mặt hàng có trong giỏ")
     private List<CartItemResponse> items;
 
-    @Schema(description = "Tổng giá trị tiền hàng trong giỏ (VND)", example = "850000")
+    @Schema(description = "Tổng quantity×giá SKU hiện tại (VND), chưa ship/voucher và chưa giữ tồn; dòng không có giá không cộng", example = "850000")
     private BigDecimal totalPrice;
 
     public static CartResponse of(Cart entity, List<CartItemResponse> itemResponses) {

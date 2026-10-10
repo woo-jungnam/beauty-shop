@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import com.core.beautyshop.shared.exception.BusinessException;
@@ -33,9 +34,42 @@ public class OrderFacadeImpl implements OrderFacade {
     private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentFacade paymentFacade;
+    private final com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refunds;
     private final com.core.beautyshop.modules.order.application.service.OrderExpirationService expirationService;
+    private final com.core.beautyshop.modules.order.application.service.SpaVisitOrderService visits;
     @org.springframework.beans.factory.annotation.Value("${app.order.payment-timeout-minutes:30}")
     private long paymentTimeoutMinutes = 30;
+
+    @Override
+    public com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult createSpaVisitOrder(
+            com.core.beautyshop.modules.order.api.dto.CreateSpaVisitOrderCommand command) { return visits.create(command); }
+    @Override
+    public com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult getSpaVisitInvoiceForUser(Long appointmentId, Long userId) {
+        return visits.forUser(appointmentId, userId);
+    }
+    @Override
+    public com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult getSpaVisitInvoiceForStaff(Long appointmentId) {
+        return visits.forStaff(appointmentId);
+    }
+    @Override
+    public com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult collectSpaVisitCash(Long appointmentId, BigDecimal amount, String receiptKey) {
+        return visits.collectCash(appointmentId, amount, receiptKey);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getConfirmedRefundAmount(java.time.Instant from, java.time.Instant to) {
+        return refunds.sumConfirmed(from, to);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<java.time.Instant> findPaidAtForUser(Long orderId, Long userId) {
+        if (orderId == null || userId == null) return Optional.empty();
+        return orderRepository.findById(orderId).filter(order -> !Boolean.TRUE.equals(order.getIsDeleted()))
+                .filter(order -> userId.equals(order.getUserId()) && order.getPaymentStatus() == PaymentStatus.PAID)
+                .map(Order::getPaidAt);
+    }
 
     @Override
     @Transactional
@@ -44,6 +78,8 @@ public class OrderFacadeImpl implements OrderFacade {
                 || command.getAmount() == null || command.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Thông tin đơn mua gói Spa không hợp lệ");
         }
+        BigDecimal amount = command.getAmount().setScale(0, java.math.RoundingMode.HALF_UP);
+        if (amount.signum() == 0) throw new BusinessException("Spa package price must be at least one VND after rounding");
 
         String checkoutKey = spaCheckoutKey(command);
         String checkoutHash = spaCheckoutHash(command);
@@ -70,10 +106,10 @@ public class OrderFacadeImpl implements OrderFacade {
                 .paymentStatus(PaymentStatus.PENDING)
                 .paymentDeadline(java.time.Instant.now().plusSeconds(paymentTimeoutMinutes * 60))
                 .status(OrderStatus.PENDING)
-                .subTotal(command.getAmount())
+                .subTotal(amount)
                 .shippingFee(BigDecimal.ZERO)
                 .discountAmount(BigDecimal.ZERO)
-                .totalAmount(command.getAmount())
+                .totalAmount(amount)
                 .paidAmount(BigDecimal.ZERO)
                 .notes(command.getNotes())
                 .items(new ArrayList<>())
@@ -125,7 +161,7 @@ public class OrderFacadeImpl implements OrderFacade {
 
         Order order = orderOptional.get();
         boolean expiredNow = false;
-        if ((order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CONFIRMED) && order.getPaymentDeadline() != null
+        if (order.getAppointmentId() == null && (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CONFIRMED) && order.getPaymentDeadline() != null
                 && !order.getPaymentDeadline().isAfter(java.time.Instant.now())) {
             expiredNow = expirationService.expire(order.getId());
             if (expiredNow) {
@@ -137,7 +173,9 @@ public class OrderFacadeImpl implements OrderFacade {
                 .add(transferAmount);
         order.setPaidAmount(accumulatedAmount);
 
-        if (expiredNow || order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.RETURNED) {
+        boolean refundedVisit = order.getAppointmentId() != null && (order.getPaymentStatus() == PaymentStatus.REFUNDED
+                || order.getPaymentStatus() == PaymentStatus.REFUND_PENDING || order.getRefundedAmount().signum() > 0);
+        if (expiredNow || order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.RETURNED || refundedVisit) {
             order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
             order.getStatusHistories().add(OrderStatusHistory.builder()
                     .order(order)
@@ -164,6 +202,7 @@ public class OrderFacadeImpl implements OrderFacade {
         }
 
         order.setPaymentStatus(PaymentStatus.PAID);
+        if (order.getPaidAt() == null) order.setPaidAt(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
 
         if (order.getStatus() == OrderStatus.PENDING) {
             order.setStatus(OrderStatus.PROCESSING);
@@ -185,10 +224,22 @@ public class OrderFacadeImpl implements OrderFacade {
 
         orderRepository.save(order);
         if (order.getStatus() != OrderStatus.CANCELLED) {
+            List<OrderEvents.OrderItemSummary> itemSummaries = order.getItems() != null
+                    ? order.getItems().stream()
+                    .map(item -> OrderEvents.OrderItemSummary.builder()
+                            .variantId(item.getProductVariantId())
+                            .quantity(item.getQuantity())
+                            .build())
+                    .toList()
+                    : java.util.List.of();
+
             eventPublisher.publishEvent(OrderEvents.OrderPaidEvent.builder()
                     .orderId(order.getId())
+                    .orderNumber(order.getOrderNumber())
                     .userId(order.getUserId())
+                    .totalAmount(order.getTotalAmount())
                     .servicePackageId(order.getServicePackageId())
+                    .items(itemSummaries)
                     .build());
         }
         return true;
@@ -216,7 +267,9 @@ public class OrderFacadeImpl implements OrderFacade {
     @Override
     @Transactional(readOnly = true)
     public Optional<String> findPaymentState(String orderNumber) {
-        return orderRepository.findByOrderNumber(orderNumber).map(order -> order.getStatus().name());
+        return orderRepository.findByOrderNumber(orderNumber).map(order -> order.getAppointmentId() != null
+                && (order.getPaymentStatus() == PaymentStatus.REFUND_PENDING || order.getPaymentStatus() == PaymentStatus.REFUNDED)
+                ? "REFUNDED_VISIT" : order.getStatus().name());
     }
 
     private String defaultText(String value, String fallback) {

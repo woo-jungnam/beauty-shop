@@ -10,11 +10,11 @@ import lombok.ToString;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Yêu cầu cấp mới Access Token bằng Refresh Token")
+@Schema(description = "Refresh hoặc logout bằng JWT refresh token, không cần access token")
 public class RefreshTokenRequest {
 
     @NotBlank(message = "Refresh token không được để trống")
-    @Schema(description = "JWT Refresh Token hợp lệ đã nhận khi đăng nhập", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "JWT refresh token của họ phiên; refresh luân chuyển token, logout thu hồi cả họ", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", requiredMode = Schema.RequiredMode.REQUIRED)
     @ToString.Exclude
     private String refreshToken;
 }

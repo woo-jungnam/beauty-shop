@@ -13,7 +13,7 @@ public class SpaOrderCancellationListener {
     @EventListener
     public void cancel(OrderEvents.OrderCancelledEvent event) {
         tickets.findByOrderIdForUpdate(event.getOrderId()).ifPresent(ticket -> {
-            if (ticket.getUsedSessions() > 0) {
+            if (ticket.getUsedSessions() > 0 || ticket.getReservedSessions() > 0) {
                 throw new BusinessException("Cancel pending appointments and reconcile consumed Spa sessions before refunding this package");
             }
             ticket.setStatus(TicketStatus.REVOKED);

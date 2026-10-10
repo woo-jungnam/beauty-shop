@@ -62,7 +62,8 @@ class ProductVariantServiceImplTest {
         ProductVariantRequest request = validRequest();
         request.setIsDefault(true);
 
-        when(variantRepository.findByIdAndIsDeletedFalse(20L)).thenReturn(Optional.of(variant));
+        when(variantRepository.findProductIdByVariantId(20L)).thenReturn(Optional.of(10L));
+        when(variantRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(variant));
         when(productRepository.findByIdForUpdateAndIsDeletedFalse(10L)).thenReturn(Optional.of(product));
         when(variantRepository.save(variant)).thenReturn(variant);
 

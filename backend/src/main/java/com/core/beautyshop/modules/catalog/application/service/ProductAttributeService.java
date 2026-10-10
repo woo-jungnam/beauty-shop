@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.catalog.application.service;
 
 import com.core.beautyshop.modules.catalog.application.dto.request.AttributeDefinitionRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.AttributeValueRequest;
+import com.core.beautyshop.modules.catalog.application.dto.request.ProductAttributeRequest;
 import com.core.beautyshop.modules.catalog.application.dto.response.AttributeDefinitionResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.AttributeValueResponse;
 
@@ -18,4 +19,6 @@ public interface ProductAttributeService {
     AttributeValueResponse addValue(AttributeValueRequest request);
     AttributeValueResponse addValue(Long definitionId, AttributeValueRequest request);
     void deleteValue(Long id);
+    List<AttributeValueResponse> replaceProductValues(Long productId,
+            List<ProductAttributeRequest> requests);
 }

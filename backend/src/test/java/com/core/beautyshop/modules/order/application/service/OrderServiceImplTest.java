@@ -16,14 +16,22 @@ import com.core.beautyshop.modules.order.domain.OrderItem;
 import com.core.beautyshop.modules.order.domain.OrderRepository;
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import com.core.beautyshop.modules.order.api.event.OrderEvents;
+import com.core.beautyshop.shared.security.services.UserDetailsImpl;
 import com.core.beautyshop.modules.order.application.dto.request.UpdateOrderStatusRequest;
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -56,6 +64,23 @@ class OrderServiceImplTest {
     @org.mockito.Spy private com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @InjectMocks private OrderServiceImpl orderService;
+
+    @AfterEach void clearSecurity() { SecurityContextHolder.clearContext(); }
+
+    @Test
+    void myOrdersUsesVisibleCustomerHistoryOnly() {
+        asCustomer(7L);
+        Order visible = Order.builder().orderNumber("ORD-PAID").items(new ArrayList<>()).statusHistories(new ArrayList<>()).build();
+        OrderResponse response = new OrderResponse();
+        when(orderRepository.findVisibleCustomerHistoryByUserId(eq(7L), any())).thenReturn(new PageImpl<>(List.of(visible)));
+        when(orderMapper.toOrderResponse(visible)).thenReturn(response);
+
+        Page<OrderResponse> page = orderService.getMyOrders(PageRequest.of(0, 20));
+
+        assertEquals(1, page.getTotalElements());
+        assertEquals(response, page.getContent().getFirst());
+        verify(orderRepository).findVisibleCustomerHistoryByUserId(eq(7L), any());
+    }
 
     @Test
     void checkoutCapsDiscountAtGrossAmount() {
@@ -92,7 +117,7 @@ class OrderServiceImplTest {
         orderService.checkout(null, request);
 
         assertEquals(new BigDecimal("100.00"), order.getDiscountAmount());
-        assertEquals(new BigDecimal("0.00"), order.getTotalAmount());
+        assertEquals(BigDecimal.ZERO, order.getTotalAmount());
     }
 
     @Test
@@ -136,5 +161,12 @@ class OrderServiceImplTest {
         orderService.updateOrderStatus(11L, request);
 
         verify(eventPublisher).publishEvent(any(OrderEvents.OrderReturnedEvent.class));
+    }
+
+    private void asCustomer(Long userId) {
+        var principal = new UserDetailsImpl(userId, "customer", "customer@example.test", "unused",
+                List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 }

@@ -50,6 +50,27 @@ public class CatalogFacadeImpl implements CatalogFacade {
     }
 
     @Override
+    public ProductVariantSummaryDto getVariantSummaryForInventory(Long variantId) {
+        if (variantId == null) throw new ResourceNotFoundException("ID biến thể không được để trống");
+        return productVariantRepository.findVariantSummaryForInventory(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm với id: " + variantId));
+    }
+
+    @Override
+    public Map<Long, ProductVariantSummaryDto> getVariantSummariesForInventory(Collection<Long> variantIds) {
+        if (variantIds == null || variantIds.isEmpty()) return Collections.emptyMap();
+        return productVariantRepository.findVariantSummariesForInventory(variantIds).stream()
+                .collect(Collectors.toMap(ProductVariantSummaryDto::getId, dto -> dto));
+    }
+
+    @Override
+    @Transactional
+    public void lockProductForRating(Long productId) {
+        productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
+    }
+
+    @Override
     public boolean variantExistsById(Long variantId) {
         if (variantId == null) {
             return false;
@@ -65,7 +86,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
     })
     public void applyDiscountPrice(Long variantId, java.math.BigDecimal discountPrice) {
         if (variantId != null) {
-            productVariantRepository.findById(variantId).ifPresent(variant -> {
+            productVariantRepository.findByIdForUpdate(variantId).ifPresent(variant -> {
                 if (discountPrice != null
                         && (discountPrice.signum() < 0 || discountPrice.compareTo(variant.getPrice()) > 0)) {
                     throw new BusinessException("Giá khuyến mãi phải nằm trong khoảng từ 0 đến giá gốc");
@@ -84,7 +105,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
     })
     public void deactivateVariant(Long variantId) {
         if (variantId != null) {
-            productVariantRepository.findById(variantId).ifPresent(variant -> {
+            productVariantRepository.findByIdForUpdate(variantId).ifPresent(variant -> {
                 variant.setIsActive(false);
                 productVariantRepository.save(variant);
             });
@@ -103,7 +124,7 @@ public class CatalogFacadeImpl implements CatalogFacade {
             @CacheEvict(value = "product_detail", allEntries = true)
     })
     public void updateProductRating(Long productId, double averageRating, int totalReviews) {
-        productRepository.findByIdForUpdateAndIsDeletedFalse(productId).ifPresent(product -> {
+        productRepository.findByIdForUpdate(productId).ifPresent(product -> {
             product.setAverageRating(averageRating);
             product.setTotalReviews(totalReviews);
         });

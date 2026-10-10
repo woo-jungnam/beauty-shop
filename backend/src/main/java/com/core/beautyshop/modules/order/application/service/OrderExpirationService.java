@@ -13,7 +13,7 @@ public class OrderExpirationService {
     @Transactional
     public boolean expire(Long id) {
         Order order = orders.findByIdForUpdate(id).orElse(null);
-        if (order == null || (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) || order.getPaymentDeadline() == null
+        if (order == null || order.getAppointmentId() != null || (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) || order.getPaymentDeadline() == null
                 || order.getPaymentDeadline().isAfter(java.time.Instant.now()) || order.getPaymentStatus() == PaymentStatus.PAID) return false;
         UpdateOrderStatusRequest request = new UpdateOrderStatusRequest();
         request.setStatus(OrderStatus.CANCELLED);

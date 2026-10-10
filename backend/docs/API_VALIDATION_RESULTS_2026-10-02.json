@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-10-02T17:27:06.8136562+07:00",
+  "scope": "Latest results from API-docs verification (66 selected checks) and final rerun of 16 OpenAPI/Swagger tests after metadata fixes",
+  "operations": 253,
+  "paths": 179,
+  "controllers": 45,
+  "swaggerGroups": 13,
+  "suites": 7,
+  "tests": 66,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "mysqlChecks": 19,
+  "newWarehouseRegressionCasesPerDatabase": 5,
+  "mysqlMigrationValidated": "V35",
+  "initialLog": "spa-api-docs-tests.log",
+  "finalLog": "spa-api-docs-final-tests.log",
+  "finalBuild": "SUCCESS",
+  "finalBuildFinishedAt": "2026-10-02T17:25:05+07:00",
+  "results": [
+    {
+      "suite": "com.core.beautyshop.OpenApiContractIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:25:04.6611949+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.ComprehensiveSwaggerAndBearerApiTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:24:22.6266582+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.modules.catalog.application.service.ProductAttributeServiceIntegrationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:13:02.0611115+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.CheckoutIntegrityIntegrationTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:12:32.4353066+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.MySqlCheckoutIntegrityTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:14:06.9915789+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.shared.exception.GlobalExceptionHandlerTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:14:28.3701393+07:00"
+    },
+    {
+      "suite": "com.core.beautyshop.architecture.ModularArchitectureTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "updatedAt": "2026-10-02T17:12:01.3446042+07:00"
+    }
+  ],
+  "passed": 66,
+  "snapshotSha256": "5f3eb08df93451a7f191c5fc8b2711b833e64537b2bc06bf2ea47d9f4b88e5ad"
+}

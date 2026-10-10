@@ -1,0 +1,72 @@
+/* Named layouts for dense administrative forms, without fixed mobile widths. */
+.admin-shell .admin-order-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.admin-shell .admin-order-filters > .form-group { min-width: 0; margin-bottom: 0; }
+.admin-shell .admin-order-filters > .btn { min-height: 43px; }
+
+.admin-shell .admin-config-list { display: grid; gap: 18px; }
+.admin-shell .admin-config-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 220px) auto 40px;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-shell .admin-config-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.admin-shell .admin-config-details { min-width: 0; overflow-wrap: anywhere; }
+.admin-shell .admin-config-details strong { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 650; }
+.admin-shell .admin-config-details > div { line-height: 1.7; }
+.admin-shell .admin-config-row > .form-group { margin-bottom: 0; }
+.admin-shell .admin-config-row > .btn { min-height: 43px; }
+.admin-shell .admin-config-delete { width: 40px; padding: 0; }
+
+.admin-shell .admin-warehouse-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--bg-surface);
+  box-shadow: var(--admin-surface-shadow);
+}
+
+.admin-shell .admin-warehouse-picker { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+.admin-shell .admin-warehouse-picker > .form-label { flex-shrink: 0; }
+.admin-shell .admin-warehouse-field { width: 280px; max-width: 100%; margin-bottom: 0; }
+.admin-shell .admin-warehouse-field .form-select { width: 100%; }
+.admin-shell .admin-review-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 20px; }
+.admin-shell .admin-review-status-field { width: 240px; max-width: 100%; margin-bottom: 0; }
+.admin-shell .admin-review-status-field .form-select { width: 100%; }
+
+@media (max-width: 1100px) {
+  .admin-shell .admin-order-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .admin-shell .admin-config-row { grid-template-columns: minmax(0, 1fr) auto 40px; gap: 12px; }
+  .admin-shell .admin-config-details { grid-column: 1 / -1; }
+}
+
+@media (max-width: 600px) {
+  .admin-shell .admin-order-filters { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .admin-shell .admin-order-filters > .btn { width: 100%; }
+  .admin-shell .admin-warehouse-toolbar { align-items: stretch; padding: 16px; }
+  .admin-shell .admin-warehouse-picker { flex-direction: column; align-items: stretch; flex-basis: 100%; gap: 9px; }
+  .admin-shell .admin-warehouse-field { width: 100%; }
+  .admin-shell .admin-warehouse-toolbar > .btn { align-self: flex-start; }
+  .admin-shell .admin-review-filters { flex-direction: column; align-items: stretch; gap: 9px; }
+  .admin-shell .admin-review-status-field { width: 100%; }
+  .admin-shell .admin-config-row { gap: 10px; }
+}

@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.venv
+venv
+**/__pycache__
+.pytest_cache
+*.db
+*.db-*
+qdrant_storage
+app/data/embedding_cache*.json
+evaluation
+test_*.py

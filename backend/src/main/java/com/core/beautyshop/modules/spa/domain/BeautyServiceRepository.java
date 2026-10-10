@@ -12,17 +12,23 @@ import org.springframework.data.domain.*;
 
 @Repository
 public interface BeautyServiceRepository extends JpaRepository<BeautyService, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from BeautyService s where s.id = :id and s.isDeleted = false")
+    Optional<BeautyService> findByIdForUpdate(@Param("id") Long id);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from BeautyService s where s.id = :id and s.isDeleted = false and s.isActive = true")
+    Optional<BeautyService> findAvailableByIdForUpdate(@Param("id") Long id);
 
     @EntityGraph(attributePaths = {"category"})
-    @Query("SELECT s FROM BeautyService s WHERE s.isActive = true")
+    @Query("SELECT s FROM BeautyService s WHERE s.isActive = true AND s.isDeleted = false")
     List<BeautyService> findAllActiveWithCategory();
 
     @EntityGraph(attributePaths = {"category"})
-    @Query("SELECT s FROM BeautyService s WHERE s.id = :id")
+    @Query("SELECT s FROM BeautyService s WHERE s.id = :id AND s.isActive = true AND s.isDeleted = false")
     Optional<BeautyService> findWithCategoryById(@Param("id") Long id);
 
     @EntityGraph(attributePaths = {"category"})
-    @Query("SELECT s FROM BeautyService s WHERE s.slug = :slug")
+    @Query("SELECT s FROM BeautyService s WHERE s.slug = :slug AND s.isActive = true AND s.isDeleted = false")
     Optional<BeautyService> findWithCategoryBySlug(@Param("slug") String slug);
 
     Optional<BeautyService> findBySlug(String slug);

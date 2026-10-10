@@ -42,6 +42,9 @@ public class Order extends Base {
     @Column(name = "payment_deadline")
     private java.time.Instant paymentDeadline;
 
+    @Column(name = "paid_at")
+    private java.time.Instant paidAt;
+
     @Column(name = "refunded_amount", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal refundedAmount = BigDecimal.ZERO;
@@ -57,6 +60,9 @@ public class Order extends Base {
 
     @Column(name = "service_package_id")
     private Long servicePackageId;
+
+    @Column(name = "appointment_id", unique = true)
+    private Long appointmentId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -129,6 +135,9 @@ public class Order extends Base {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @org.hibernate.annotations.BatchSize(size = 50)
     private List<OrderItem> items;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SpaVisitInvoiceItem> spaVisitItems;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderStatusHistory> statusHistories;

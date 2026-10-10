@@ -6,6 +6,7 @@ import com.core.beautyshop.modules.inventory.application.dto.request.WarehouseSt
 import com.core.beautyshop.modules.inventory.application.dto.response.WarehouseStockResponse;
 import com.core.beautyshop.modules.inventory.domain.Warehouse;
 import com.core.beautyshop.modules.inventory.domain.WarehouseStock;
+import com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.modules.inventory.domain.WarehouseRepository;
@@ -26,8 +27,10 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     private final WarehouseRepository warehouseRepository;
     private final CatalogFacade catalogFacade;
     private final InventoryLedgerService ledgerService;
+    private final InventoryBatchService batches;
 
     @Override
+    @Transactional(readOnly = true)
     public List<WarehouseStockResponse> getStocksByWarehouseId(Long warehouseId) {
         return stockRepository.findByWarehouseId(warehouseId).stream()
                 .map(this::mapToResponse)
@@ -37,23 +40,49 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     @Override
     @Transactional
     public WarehouseStockResponse addOrUpdateStock(Long warehouseId, WarehouseStockRequest request) {
-        Warehouse warehouse = warehouseRepository.findById(warehouseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho với id: " + warehouseId));
-        
-        ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryById(request.getProductVariantId());
+        return saveStock(warehouseId, request, "MANUAL_STOCK", null, "Admin stock update");
+    }
 
-        Optional<WarehouseStock> existingStock = stockRepository.findByWarehouseIdAndProductVariantIdAndBatchCode(warehouseId, variant.getId(), request.getBatchCode());
+    private WarehouseStockResponse saveStock(Long warehouseId, WarehouseStockRequest request,
+                                             String referenceType, String referenceId, String note) {
+        return saveStock(warehouseId, request, referenceType, referenceId, note, false);
+    }
+
+    private WarehouseStockResponse saveStock(Long warehouseId, WarehouseStockRequest request,
+                                             String referenceType, String referenceId, String note, boolean receipt) {
+        Warehouse warehouse = batches.lockWarehouse(warehouseId);
+        if (request.getQuantity() == null || request.getQuantity() < 0) throw new BusinessException("Invalid stock quantity");
+        if (receipt && request.getExpirationDate() != null && !request.getExpirationDate().isAfter(java.time.LocalDate.now()))
+            throw new BusinessException("Expired goods cannot be received into sellable stock");
+        String batchCode = InventoryBatchService.normalizeBatchCode(request.getBatchCode());
+        
+        ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryForInventory(request.getProductVariantId());
+
+        Optional<WarehouseStock> existingStock = batches.lockBatch(warehouseId, variant.getId(), batchCode);
 
         WarehouseStock stock;
         int quantityBefore;
         if (existingStock.isPresent()) {
-            stock = stockRepository.findByIdForUpdate(existingStock.get().getId()).orElseThrow();
-            if (request.getQuantity() < stock.getReservedQuantity()
-                    || request.getReservedQuantity() != null && !request.getReservedQuantity().equals(stock.getReservedQuantity())) {
+            stock = existingStock.get();
+            batches.restoreEmptyBatch(stock);
+            if (!receipt && (request.getQuantity() < stock.getReservedQuantity()
+                    || request.getReservedQuantity() != null && !request.getReservedQuantity().equals(stock.getReservedQuantity()))) {
                 throw new com.core.beautyshop.shared.exception.BusinessException("Cannot overwrite order reservations");
             }
             quantityBefore = stock.getQuantity();
-            stock.setQuantity(request.getQuantity());
+            if (receipt) {
+                if (request.getExpirationDate() != null && stock.getExpirationDate() != null
+                        && !request.getExpirationDate().equals(stock.getExpirationDate()))
+                    throw new BusinessException("Receipt cannot change the expiration date of an existing batch");
+                request.setMinQuantity(stock.getMinQuantity()); request.setMaxQuantity(stock.getMaxQuantity());
+                request.setLocation(stock.getLocation());
+                if (request.getExpirationDate() == null) request.setExpirationDate(stock.getExpirationDate());
+                if (request.getExpirationDate() != null && !request.getExpirationDate().isAfter(java.time.LocalDate.now()))
+                    throw new BusinessException("Expired goods cannot be received into sellable stock");
+                if (request.getCostPrice() == null) request.setCostPrice(stock.getCostPrice());
+            }
+            stock.setQuantity(receipt ? Math.addExact(quantityBefore, request.getQuantity()) : request.getQuantity());
+            stock.setBatchCode(batchCode);
         } else {
             if (request.getReservedQuantity() != null && request.getReservedQuantity() != 0) {
                 throw new com.core.beautyshop.shared.exception.BusinessException("Reservations must be created by checkout");
@@ -64,7 +93,7 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                     .productVariantId(variant.getId())
                     .quantity(request.getQuantity())
                     .reservedQuantity(request.getReservedQuantity() != null ? request.getReservedQuantity() : 0)
-                    .batchCode(request.getBatchCode())
+                    .batchCode(batchCode)
                     .expirationDate(request.getExpirationDate())
                     .minQuantity(request.getMinQuantity())
                     .maxQuantity(request.getMaxQuantity())
@@ -82,11 +111,18 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
         stock = stockRepository.save(stock);
         int delta = stock.getQuantity() - quantityBefore;
         if (delta != 0) {
-            ledgerService.record(stock, delta > 0 ? com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.RECEIPT
-                            : com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.ADJUSTMENT,
-                    delta, quantityBefore, stock.getQuantity(), "MANUAL_STOCK", String.valueOf(stock.getId()), "Admin stock update");
+            ledgerService.record(stock, delta > 0 ? InventoryTransactionType.RECEIPT : InventoryTransactionType.ADJUSTMENT,
+                    delta, quantityBefore, stock.getQuantity(), referenceType,
+                    referenceId == null ? String.valueOf(stock.getId()) : referenceId, note);
         }
         return mapToResponse(stock);
+    }
+
+    @Override
+    @Transactional
+    public WarehouseStockResponse receiveStock(Long warehouseId, WarehouseStockRequest request, String referenceType, String referenceId) {
+        if (request.getQuantity() == null || request.getQuantity() <= 0) throw new BusinessException("Receipt quantity must be greater than zero");
+        return saveStock(warehouseId, request, referenceType, referenceId, "Stock receipt", true);
     }
 
     @Override
@@ -114,9 +150,9 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     }
 
     private WarehouseStockResponse mapToResponse(WarehouseStock stock) {
-        String sku = catalogFacade.findVariantSummaryById(stock.getProductVariantId())
-                .map(ProductVariantSummaryDto::getSku)
-                .orElse(null);
+        ProductVariantSummaryDto variant = catalogFacade.getVariantSummariesForInventory(List.of(stock.getProductVariantId()))
+                .get(stock.getProductVariantId());
+        String sku = variant == null ? null : variant.getSku();
 
         return WarehouseStockResponse.builder()
                 .id(stock.getId())

@@ -28,6 +28,12 @@ public class UserDetailsImpl implements UserDetails {
     private Collection<? extends GrantedAuthority> authorities;
 
     private Integer tokenVersion;
+    private String sessionFamilyId;
+
+    public UserDetailsImpl(Long id, String username, String email, String password,
+                           Collection<? extends GrantedAuthority> authorities, Integer tokenVersion) {
+        this(id, username, email, password, authorities, tokenVersion, null);
+    }
 
     public UserDetailsImpl(Long id, String username, String email, String password,
                            Collection<? extends GrantedAuthority> authorities) {

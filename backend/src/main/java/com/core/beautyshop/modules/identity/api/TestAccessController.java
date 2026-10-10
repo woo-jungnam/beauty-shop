@@ -23,7 +23,7 @@ public class TestAccessController {
         return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Nội dung công khai có thể truy cập bởi mọi người")));
     }
 
-    @Operation(summary = "Kiểm tra truy cập yêu cầu đăng nhập (User / Admin)")
+    @Operation(summary = "Kiểm tra truy cập ROLE_USER hoặc ROLE_ADMIN", description = "Bearer JWT với ROLE_USER hoặc ROLE_ADMIN. ROLE_CUSTOMER/STAFF và các role chuyên trách không tự được cấp quyền tuyến thử nghiệm này.")
     @GetMapping("/user")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, String>>> userAccess() {

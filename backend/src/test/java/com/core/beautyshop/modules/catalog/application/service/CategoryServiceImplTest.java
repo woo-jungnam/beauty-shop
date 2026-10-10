@@ -11,9 +11,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.List;
+import com.core.beautyshop.modules.catalog.application.dto.response.CategoryResponse;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,5 +75,15 @@ class CategoryServiceImplTest {
 
         assertNull(child.getParentCategory());
         verify(categoryRepository).save(child);
+    }
+
+    @Test
+    void rootTreeIncludesGrandchildren() {
+        CategoryResponse root = CategoryResponse.builder().id(1L).name("Root").build();
+        CategoryResponse child = CategoryResponse.builder().id(2L).parentId(1L).name("Child").build();
+        CategoryResponse grandchild = CategoryResponse.builder().id(3L).parentId(2L).name("Grandchild").build();
+        when(categoryRepository.findAllCategoryDtoList()).thenReturn(List.of(root, child, grandchild));
+        var result = categoryService.getRootCategories();
+        assertEquals(3L, result.getFirst().getChildren().getFirst().getChildren().getFirst().getId());
     }
 }

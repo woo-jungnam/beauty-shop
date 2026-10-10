@@ -8,5 +8,6 @@ public interface ProductTagService {
     List<TagResponse> getAllTags();
     TagResponse getTagById(Long id);
     TagResponse createTag(TagRequest request);
+    TagResponse updateTag(Long id, TagRequest request);
     void deleteTag(Long id);
 }

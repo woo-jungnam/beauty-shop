@@ -15,8 +15,12 @@ public interface AppointmentService {
     List<AppointmentResponse> getMyAppointments();
     AppointmentResponse getAppointmentById(Long id);
     void cancelAppointment(Long appointmentId);
+    void cancelAppointment(Long appointmentId, String reason);
     Page<AppointmentResponse> getAllAppointments(LocalDate date, AppointmentStatus status, Pageable pageable);
     AppointmentResponse updateAppointmentStatus(Long id, UpdateAppointmentStatusRequest request);
     AppointmentResponse rescheduleAppointment(Long id, com.core.beautyshop.modules.spa.application.dto.request.RescheduleAppointmentRequest request);
+    AppointmentResponse checkIn(Long id);
+    AppointmentResponse executeItem(Long id, Long itemId, com.core.beautyshop.modules.spa.application.dto.request.ExecuteAppointmentItemRequest request);
+    Page<com.core.beautyshop.modules.spa.domain.AppointmentActionHistory> actionHistory(Long id, Pageable page);
 }
 

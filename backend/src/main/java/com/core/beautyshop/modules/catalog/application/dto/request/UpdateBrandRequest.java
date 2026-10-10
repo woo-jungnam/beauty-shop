@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Dữ liệu yêu cầu cập nhật thương hiệu")
+@Schema(description = "Cập nhật thương hiệu; field null hoặc bỏ qua giữ nguyên")
 public class UpdateBrandRequest {
 
     @Size(max = 150, message = "Tên thương hiệu không được vượt quá 150 ký tự")

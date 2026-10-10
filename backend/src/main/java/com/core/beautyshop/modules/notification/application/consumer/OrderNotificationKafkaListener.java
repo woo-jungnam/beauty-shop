@@ -81,10 +81,32 @@ public class OrderNotificationKafkaListener {
         ));
     }
 
+    @KafkaListener(
+            topics = KafkaTopicConstants.ORDER_PAID_TOPIC,
+            groupId = KafkaTopicConstants.NOTIFICATION_GROUP_ID
+    )
+    public void handleOrderPaid(@Payload OrderKafkaMessage.OrderPaidKafkaMessage message,
+                                @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+                                @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
+                                @Header(KafkaHeaders.OFFSET) long offset,
+            @Header(value = "event-id", required = false) String eventId) {
+        log.info("Kafka Consumer đã nhận OrderPaidKafkaMessage từ topic={}, partition={}, offset={}, orderId={}",
+                topic, partition, offset, message.getOrderId());
+
+        inbox.process(eventId != null ? eventId : topic + ":" + partition + ":" + offset,
+                () -> notificationService.sendOrderPaidNotification(
+                message.getOrderId(),
+                message.getOrderNumber(),
+                message.getUserId(),
+                message.getTotalAmount()
+        ));
+    }
+
     @KafkaListener(topics = {
             KafkaTopicConstants.ORDER_CREATED_TOPIC + ".DLT",
             KafkaTopicConstants.ORDER_STATUS_CHANGED_TOPIC + ".DLT",
-            KafkaTopicConstants.ORDER_CANCELLED_TOPIC + ".DLT"
+            KafkaTopicConstants.ORDER_CANCELLED_TOPIC + ".DLT",
+            KafkaTopicConstants.ORDER_PAID_TOPIC + ".DLT"
     }, groupId = "beautyshop-notification-dlt")
     public void handleDltMessage(Object payload,
                                  @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,

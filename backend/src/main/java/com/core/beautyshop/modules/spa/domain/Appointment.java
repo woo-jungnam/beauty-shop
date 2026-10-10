@@ -41,6 +41,21 @@ public class Appointment extends Base {
     @Column(name = "notes", length = 500)
     private String notes;
 
+    @Column(name = "checked_in_at")
+    private java.time.Instant checkedInAt;
+    @Column(name = "checked_in_by_user_id")
+    private Long checkedInByUserId;
+    @Column(name = "actual_started_at")
+    private java.time.Instant actualStartedAt;
+    @Column(name = "actual_completed_at")
+    private java.time.Instant actualCompletedAt;
+    @Column(name = "pending_expires_at")
+    private java.time.Instant pendingExpiresAt;
+    @Column(name = "policy_snapshot", columnDefinition = "text")
+    private String policySnapshot;
+
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<AppointmentItem> items;
+    @OrderBy("startTime ASC, id ASC")
+    @Builder.Default
+    private List<AppointmentItem> items = new java.util.ArrayList<>();
 }

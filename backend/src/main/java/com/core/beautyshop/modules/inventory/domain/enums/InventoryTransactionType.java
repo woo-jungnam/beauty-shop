@@ -6,5 +6,7 @@ public enum InventoryTransactionType {
     RETURN,
     CANCELLATION,
     ADJUSTMENT,
-    DISPOSAL
+    DISPOSAL,
+    TRANSFER_OUT,
+    TRANSFER_IN
 }

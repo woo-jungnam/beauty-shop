@@ -38,28 +38,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
+            // A supplied bearer token is authoritative; never retain an earlier thread/test authentication.
+            if (jwt != null) SecurityContextHolder.clearContext();
             java.util.Optional<UserDetailsImpl> principal = jwt == null
                     ? java.util.Optional.empty()
                     : jwtUtils.parseAccessToken(jwt);
             if (principal.isPresent()) {
                 UserDetailsImpl userDetails = principal.get();
                 if (!accessTokenRevocationChecker.isCurrent(
-                        userDetails.getId(), userDetails.getTokenVersion())) {
+                        userDetails.getId(), userDetails.getTokenVersion())
+                        || !accessTokenRevocationChecker.isSessionCurrent(userDetails.getId(), userDetails.getSessionFamilyId())) {
                     log.debug("Access token đã bị thu hồi cho userId={}", userDetails.getId());
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                } else {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         } catch (Exception e) {
+            SecurityContextHolder.clearContext();
             log.error("Không thể thiết lập xác thực người dùng: {}", e.getMessage());
         }
 

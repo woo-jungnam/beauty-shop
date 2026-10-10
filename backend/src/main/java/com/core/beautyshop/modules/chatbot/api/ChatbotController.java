@@ -22,7 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.util.Map;
 
-@Tag(name = "7. Trợ lý Chatbot AI", description = "Các API giao tiếp với trợ lý tư vấn mỹ phẩm & làm đẹp thông minh (AI RAG)")
+@Tag(name = "Trợ lý Chatbot AI", description = "Giao tiếp với dịch vụ Chatbot, kiểm tra kết nối và quản trị đồng bộ dữ liệu")
 @RestController
 @RequestMapping("/api/v1/chatbot")
 @RequiredArgsConstructor
@@ -32,24 +32,31 @@ public class ChatbotController {
 
     @Operation(
             summary = "Trò chuyện tư vấn sản phẩm (Non-streaming)",
-            description = "Gửi tin nhắn của khách hàng tới trợ lý AI RAG đa tầng để nhận câu trả lời tư vấn chuyên sâu cùng danh sách sản phẩm và tài liệu trích dẫn phù hợp."
+            description = "API công khai. Gửi message và session_id tới dịch vụ AI; trả JSON trong ApiResponse. session_id là mã hội thoại do client cung cấp, không phải phiên xác thực JWT."
     )
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<ChatResponse>> chat(
             @Valid @RequestBody ChatRequest request
     ) {
+        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
+            request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        }
         ChatResponse response = chatbotService.chat(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Nhận phản hồi tư vấn thành công"));
     }
 
     @Operation(
             summary = "Trò chuyện tư vấn sản phẩm (Streaming SSE)",
-            description = "Hội thoại tư vấn sản phẩm truyền dòng Server-Sent Events (SSE) theo thời gian thực giúp hiển thị câu trả lời từng từ một mượt mà với độ trễ thấp."
+            description = "API công khai. Trả luồng SSE gốc từ dịch vụ AI, không bọc ApiResponse. Client phải đọc text/event-stream. Lỗi sau khi bắt đầu luồng có thể được phát bằng event type=error trong HTTP 200."
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Luồng Server-Sent Events", content = @Content(mediaType = "text/event-stream", schema = @Schema(type = "string", example = "data: {\"type\":\"error\",\"detail\":\"Chatbot service unavailable\"}\n\n")))
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> chatStream(
             @Valid @RequestBody ChatRequest request
     ) {
+        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
+            request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        }
         StreamingResponseBody responseBody = outputStream -> chatbotService.streamChat(request, outputStream);
 
         return ResponseEntity.ok()
@@ -62,7 +69,7 @@ public class ChatbotController {
 
     @Operation(
             summary = "Kiểm tra phân tích ý định người dùng (NLU / Understanding)",
-            description = "Phân tích câu hỏi người dùng thành các khía cạnh: ý định (Intent), danh mục sản phẩm (Category), yêu cầu ràng buộc (Constraints) và sở thích (Preferences)."
+            description = "Chỉ ADMIN. Proxy yêu cầu phân tích message/current_state tới dịch vụ AI; data là JSON động theo phản hồi upstream."
     )
     @PostMapping("/test/understand")
     @PreAuthorize("hasRole('ADMIN')")
@@ -75,12 +82,12 @@ public class ChatbotController {
 
     @Operation(
             summary = "Kích hoạt đồng bộ dữ liệu từ MySQL vào kho vector RAG",
-            description = "Truy xuất danh mục sản phẩm từ cơ sở dữ liệu MySQL chính ở chế độ chỉ đọc và nạp chỉ mục vào hệ thống tìm kiếm vector RAG của Chatbot."
+            description = "Chỉ ADMIN. Gọi thao tác đồng bộ database của dịch vụ AI; backend chuyển tiếp limit và trả data JSON động theo kết quả upstream."
     )
     @PostMapping("/sync/database")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> syncDatabase(
-            @Parameter(description = "Giới hạn số lượng sản phẩm cần đồng bộ (để trống nếu muốn đồng bộ toàn bộ)", example = "50")
+            @Parameter(description = "Giới hạn chuyển tới dịch vụ AI; bỏ trống dùng chính sách mặc định của dịch vụ AI", example = "50")
             @RequestParam(required = false) Integer limit
     ) {
         Map<String, Object> result = chatbotService.syncDatabase(limit);
@@ -89,7 +96,7 @@ public class ChatbotController {
 
     @Operation(
             summary = "Kiểm tra tình trạng hoạt động của dịch vụ Chatbot AI",
-            description = "Kiểm tra kết nối và trạng thái của server AI RAG Chatbot."
+            description = "API công khai. HTTP 200 với ApiResponse; khi không kết nối được AI, data.status=DOWN. Kiểm tra trường status trong data thay vì chỉ mã HTTP."
     )
     @GetMapping("/health")
     public ResponseEntity<ApiResponse<Map<String, Object>>> healthCheck() {
@@ -99,8 +106,9 @@ public class ChatbotController {
 
     @Operation(
             summary = "Tải đặc tả kỹ thuật OpenAPI JSON gốc của Chatbot",
-            description = "Lấy trực tiếp schema OpenAPI / Swagger dạng JSON gốc do FastAPI Chatbot tự động tạo ra."
+            description = "API công khai. Trả trực tiếp JSON OpenAPI của dịch vụ AI, không bọc ApiResponse; khác với đặc tả /v3/api-docs của backend."
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Đặc tả JSON gốc", content = @Content(mediaType = "application/json", schema = @Schema(type = "object")))
     @GetMapping(value = "/openapi.json", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> getOpenApiJson() {
         String json = chatbotService.getOpenApiJson();

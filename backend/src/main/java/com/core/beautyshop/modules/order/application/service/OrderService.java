@@ -13,6 +13,7 @@ public interface OrderService {
 
     OrderResponse getOrderById(Long id);
     OrderResponse getOrderById(Long id, String guestSessionId);
+    OrderResponse getAdminOrderById(Long id);
 
     Page<OrderResponse> getMyOrders(Pageable pageable);
 

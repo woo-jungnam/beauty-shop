@@ -1,17 +1,22 @@
 package com.core.beautyshop.modules.catalog.application.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.io.Serializable;
+import java.time.LocalDate;
 
 @Data
 @Builder
 @NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Thông tin tóm tắt sản phẩm trong danh sách và kết quả tìm kiếm")
 public class ProductListResponse implements Serializable {
 
@@ -32,8 +37,11 @@ public class ProductListResponse implements Serializable {
     @Schema(description = "URL ảnh thu nhỏ thumbnail", example = "https://cdn.beautyshop.com/products/lrp-thumb.png")
     private String thumbnailUrl;
 
-    @Schema(description = "Giá niêm yết thấp nhất", example = "425000")
-    private BigDecimal basePrice;
+    @Schema(description = "Giá nhỏ nhất dùng discountPrice nếu có, nếu không dùng price của SKU active chưa xóa (VND); 0 nếu không có SKU", example = "380000")
+    private BigDecimal minPrice;
+
+    @Schema(description = "Giá lớn nhất dùng discountPrice nếu có, nếu không dùng price của SKU active chưa xóa (VND)", example = "480000")
+    private BigDecimal maxPrice;
 
     @Schema(description = "Trạng thái hiển thị", example = "ACTIVE")
     private ProductStatus status;
@@ -53,21 +61,62 @@ public class ProductListResponse implements Serializable {
     @Schema(description = "Tên thương hiệu", example = "La Roche-Posay")
     private String brandName;
 
+    @Schema(description = "ID thương hiệu", example = "1")
+    private Long brandId;
+
+    @Schema(description = "ID nhỏ nhất trong các danh mục liên kết; có thể null", example = "1")
+    private Long categoryId;
+
+    @Schema(description = "Hạn sử dụng sớm nhất của lô hàng cận date (nếu có)", example = "2026-11-20")
+    private LocalDate earliestExpirationDate;
+
+    @Schema(description = "Số ngày còn lại đến hạn sử dụng", example = "45")
+    private Integer daysRemaining;
+
+    @Schema(description = "Số lượng hàng cận date còn khả dụng", example = "25")
+    private Integer clearanceStock;
+
+    // JPQL Constructor for ProductRepository (15 args)
     public ProductListResponse(Long id, String name, String slug, String shortDescription,
-                               String thumbnailUrl, BigDecimal basePrice, ProductStatus status,
-                               Boolean isFeatured, Double averageRating, Integer totalReviews,
-                               Long totalSold, String brandName) {
+                               String thumbnailUrl, BigDecimal minPrice, BigDecimal maxPrice,
+                               ProductStatus status, Boolean isFeatured, Double averageRating,
+                               Integer totalReviews, Long totalSold, String brandName,
+                               Long brandId, Long categoryId) {
         this.id = id;
         this.name = name;
         this.slug = slug;
         this.shortDescription = shortDescription;
         this.thumbnailUrl = thumbnailUrl;
-        this.basePrice = basePrice;
+        this.minPrice = minPrice != null ? minPrice : BigDecimal.ZERO;
+        this.maxPrice = maxPrice != null ? maxPrice : this.minPrice;
         this.status = status;
         this.isFeatured = isFeatured;
         this.averageRating = averageRating;
         this.totalReviews = totalReviews;
         this.totalSold = totalSold;
         this.brandName = brandName;
+        this.brandId = brandId;
+        this.categoryId = categoryId;
+    }
+
+    // Backward-compatible JPQL Constructor (13 args)
+    public ProductListResponse(Long id, String name, String slug, String shortDescription,
+                               String thumbnailUrl, BigDecimal minPrice, BigDecimal maxPrice,
+                               ProductStatus status, Boolean isFeatured, Double averageRating,
+                               Integer totalReviews, Long totalSold, String brandName) {
+        this(id, name, slug, shortDescription, thumbnailUrl, minPrice, maxPrice, status, isFeatured, averageRating, totalReviews, totalSold, brandName, null, null);
+    }
+
+    // Backward-compatible getters
+    @Schema(description = "Alias tương thích của minPrice", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public BigDecimal getBasePrice() {
+        return minPrice;
+    }
+
+    @Schema(description = "Alias tương thích của minPrice", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public BigDecimal getPrice() {
+        return minPrice;
     }
 }

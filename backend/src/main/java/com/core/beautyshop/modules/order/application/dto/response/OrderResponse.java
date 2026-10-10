@@ -23,20 +23,26 @@ public class OrderResponse {
 
     @Schema(description = "ID đơn hàng", example = "1001")
     private Long id;
+    @Schema(description = "Chủ đơn tài khoản; null với đơn khách vãng lai")
+    private Long userId;
 
     @Schema(description = "ID gói liệu trình Spa nếu đây là đơn mua gói")
     private Long servicePackageId;
+    @Schema(description = "ID appointment nếu là invoice buổi lẻ; status giữ COMPLETED độc lập với trạng thái thanh toán")
+    private Long appointmentId;
+    @Schema(description = "Snapshot mục PERFORMED không dùng vé của invoice Spa; tách khỏi items sản phẩm")
+    private List<com.core.beautyshop.modules.order.api.dto.SpaVisitCharge> spaVisitItems;
 
-    @Schema(description = "Mã số đơn hàng hiển thị (Order Number)", example = "ORD-20260906-8921")
+    @Schema(description = "Mã số đơn dùng trong nội dung chuyển khoản", example = "ORD-1234ABCD")
     private String orderNumber;
 
-    @Schema(description = "Trạng thái đơn hàng hiện tại (PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED)", example = "PENDING")
+    @Schema(description = "Trạng thái phục vụ/giao hàng; COMPLETED dành cho invoice Spa, RETURNED là hàng đã trả. Khác paymentStatus", example = "PENDING")
     private OrderStatus status;
 
     @Schema(description = "Phương thức thanh toán đã chọn", example = "BANK")
     private PaymentMethod paymentMethod;
 
-    @Schema(description = "Trạng thái thanh toán (PENDING, PAID, FAILED, REFUNDED)", example = "PENDING")
+    @Schema(description = "PENDING gồm chưa đủ tiền; PAID đủ nghĩa vụ; REFUND_PENDING đang chờ xử lý tiền cần hoàn; REFUNDED đã ghi nhận hoàn", example = "PENDING")
     private PaymentStatus paymentStatus;
 
     @Schema(description = "Họ tên người nhận hàng", example = "Trần Thị Mai")
@@ -57,24 +63,39 @@ public class OrderResponse {
     @Schema(description = "Số tiền giảm giá / Voucher (VND)", example = "50000")
     private BigDecimal discountAmount;
 
-    @Schema(description = "Tổng số tiền thực tế khách cần thanh toán (VND)", example = "830000")
+    @Schema(description = "Nghĩa vụ gốc, tổng cuối làm tròn nguyên VND HALF_UP; không phải số còn thiếu", example = "830000")
     private BigDecimal totalAmount;
+    @Schema(description = "Tiền thực thu tích lũy, có thể một phần hoặc lớn hơn nghĩa vụ; không bị giảm khi hoàn")
     private BigDecimal paidAmount;
+    @Schema(description = "Tổng tiền ADMIN đã xác nhận hoàn thủ công")
     private BigDecimal refundedAmount;
+    @Schema(description = "Mã chứng từ xác nhận hoàn gần nhất")
     private String refundReference;
+    @Schema(description = "Hạn trả BANK của đơn chờ thanh toán; null nếu đã PAID hoặc invoice buổi Spa")
     private Instant paymentDeadline;
+    @Schema(description = "UTC Instant lần đầu nghĩa vụ trở thành PAID; không đổi khi retry/hoàn tiền, legacy có thể null")
+    private Instant paidAt;
+    @Schema(description = "ID voucher đã áp lúc checkout")
     private Long voucherId;
+    @Schema(description = "Hãng vận chuyển nếu được ghi khi SHIPPED")
     private String carrierName;
+    @Schema(description = "Mã vận đơn")
     private String trackingCode;
+    @Schema(description = "Lý do hủy được ghi nhận")
     private String cancelReason;
+    @Schema(description = "ID actor hủy; có thể null với tác vụ hệ thống")
     private Long cancelledBy;
+    @Schema(description = "Ghi chú lúc tạo đơn/invoice")
+    private String notes;
+    @Schema(description = "Lịch sử trạng thái và ghi chú xử lý")
+    private List<OrderStatusHistoryResponse> statusHistories;
 
     @Schema(description = "Thời gian tạo đơn (UTC Instant)", example = "2026-09-06T09:30:00Z")
     private Instant createdAt;
 
-    @Schema(description = "Danh sách chi tiết các mặt hàng đã đặt")
+    @Schema(description = "Snapshot mặt hàng sản phẩm; invoice Spa dùng spaVisitItems và không có dòng sản phẩm")
     private List<OrderItemResponse> items;
 
-    @Schema(description = "Hướng dẫn thanh toán (Chứa mã QR VietQR, số tài khoản, nội dung chuyển khoản nếu thanh toán online)")
+    @Schema(description = "Hướng dẫn khi còn cần thanh toán; có thể null khi đã PAID/hoàn hoặc ở phản hồi danh sách. Invoice BANK dùng số còn thiếu cho QR")
     private PaymentInstruction paymentInstruction;
 }

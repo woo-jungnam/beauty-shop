@@ -48,14 +48,10 @@ public class CreateProductRequest {
     @Schema(description = "URL ảnh thumbnail đại diện", example = "https://cdn.beautyshop.com/products/lrp-anthelios.png")
     private String thumbnailUrl;
 
-    @NotNull(message = "Giá gốc không được để trống")
-    @Schema(description = "Giá gốc tiêu chuẩn (VND)", example = "425000", requiredMode = Schema.RequiredMode.REQUIRED)
-    private BigDecimal basePrice;
-
-    @Schema(description = "Trạng thái ban đầu", example = "ACTIVE")
+    @Schema(description = "Trạng thái ban đầu; null dùng ACTIVE", example = "ACTIVE")
     private ProductStatus status;
 
-    @Schema(description = "Loại sản phẩm (PHYSICAL, DIGITAL, SERVICE)", example = "PHYSICAL")
+    @Schema(description = "Loại sản phẩm (PRODUCT, SERVICE, COMBO); null dùng PRODUCT", example = "PRODUCT")
     private ProductType productType;
 
     @Schema(description = "Đối tượng giới tính", example = "UNISEX")
@@ -77,6 +73,16 @@ public class CreateProductRequest {
     @Size(max = 50)
     @Schema(description = "Dung tích đóng gói", example = "50ml")
     private String volume;
+
+    @Schema(description = "Có chứa hương liệu không", example = "false")
+    private Boolean hasFragrance;
+
+    @Schema(description = "Có chứa cồn khô không", example = "false")
+    private Boolean hasAlcohol;
+
+    @Size(max = 500)
+    @Schema(description = "Tóm tắt các hoạt chất nổi bật", example = "BHA 2% + Zinc PCA")
+    private String keyActivesSummary;
 
     @Schema(description = "Đặt làm sản phẩm nổi bật", example = "false")
     private Boolean isFeatured;
@@ -100,7 +106,7 @@ public class CreateProductRequest {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Dữ liệu tạo biến thể SKU")
+    @Schema(name = "ProductCreateVariantRequest", description = "Dữ liệu tạo biến thể SKU")
     public static class VariantRequest {
         @NotBlank(message = "Mã SKU không được để trống")
         @Schema(description = "Mã SKU duy nhất", example = "LRP-ANTHELIOS-50ML", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -115,7 +121,7 @@ public class CreateProductRequest {
         @Schema(description = "Giá bán", example = "425000", requiredMode = Schema.RequiredMode.REQUIRED)
         private BigDecimal price;
 
-        @Schema(description = "Giá khuyến mãi", example = "399000")
+        @Schema(description = "Giá khuyến mãi không âm và không vượt price", example = "399000")
         @DecimalMin(value = "0.0", message = "Giá khuyến mãi phải lớn hơn hoặc bằng 0")
         private BigDecimal discountPrice;
 
@@ -142,7 +148,7 @@ public class CreateProductRequest {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Dữ liệu tạo hình ảnh")
+    @Schema(name = "ProductCreateImageRequest", description = "Gắn ảnh bằng URL, không phải upload nhị phân")
     public static class ImageRequest {
         @NotBlank(message = "Đường dẫn hình ảnh không được để trống")
         @Schema(description = "URL hình ảnh", example = "https://cdn.beautyshop.com/products/lrp-anthelios-1.png", requiredMode = Schema.RequiredMode.REQUIRED)

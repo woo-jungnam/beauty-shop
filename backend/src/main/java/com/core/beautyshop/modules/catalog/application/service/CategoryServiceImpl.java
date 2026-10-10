@@ -46,7 +46,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         return allCategories.stream()
                 .filter(c -> c.getParentId() == null)
-                .peek(root -> root.setChildren(childrenByParentId.getOrDefault(root.getId(), new ArrayList<>())))
+                .peek(root -> attachChildren(root, childrenByParentId, new HashSet<>()))
                 .collect(Collectors.toList());
     }
 
@@ -57,10 +57,7 @@ public class CategoryServiceImpl implements CategoryService {
         CategoryResponse category = categoryRepository.findCategoryDtoById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
         
-        List<CategoryResponse> children = categoryRepository.findAllCategoryDtoList().stream()
-                .filter(c -> id.equals(c.getParentId()))
-                .collect(Collectors.toList());
-        category.setChildren(children);
+        attachChildren(category, childrenByParentId(), new HashSet<>());
         return category;
     }
 
@@ -71,10 +68,7 @@ public class CategoryServiceImpl implements CategoryService {
         CategoryResponse category = categoryRepository.findCategoryDtoBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với slug: " + slug));
         
-        List<CategoryResponse> children = categoryRepository.findAllCategoryDtoList().stream()
-                .filter(c -> category.getId().equals(c.getParentId()))
-                .collect(Collectors.toList());
-        category.setChildren(children);
+        attachChildren(category, childrenByParentId(), new HashSet<>());
         return category;
     }
 
@@ -86,6 +80,7 @@ public class CategoryServiceImpl implements CategoryService {
             @CacheEvict(value = "product_detail", allEntries = true)
     })
     public CategoryResponse createCategory(CreateCategoryRequest request) {
+        categoryRepository.findAllForHierarchyUpdate();
         if (categoryRepository.existsBySlug(request.getSlug())) {
             throw new BusinessException("Slug danh mục đã tồn tại: " + request.getSlug());
         }
@@ -116,6 +111,9 @@ public class CategoryServiceImpl implements CategoryService {
             @CacheEvict(value = "product_detail", allEntries = true)
     })
     public CategoryResponse updateCategory(Long id, UpdateCategoryRequest request) {
+        // Tree mutations share the same ordered locks, so concurrent A->B and B->A
+        // changes cannot both validate against the old hierarchy.
+        categoryRepository.findAllForHierarchyUpdate();
         Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
 
@@ -156,6 +154,7 @@ public class CategoryServiceImpl implements CategoryService {
             @CacheEvict(value = "product_detail", allEntries = true)
     })
     public void deleteCategory(Long id) {
+        categoryRepository.findAllForHierarchyUpdate();
         Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));
 
@@ -194,5 +193,18 @@ public class CategoryServiceImpl implements CategoryService {
             }
             current = current.getParentCategory();
         }
+    }
+
+    private Map<Long, List<CategoryResponse>> childrenByParentId() {
+        return categoryRepository.findAllCategoryDtoList().stream().filter(row -> row.getParentId() != null)
+                .collect(Collectors.groupingBy(CategoryResponse::getParentId));
+    }
+
+    private void attachChildren(CategoryResponse category, Map<Long, List<CategoryResponse>> children, Set<Long> ancestors) {
+        if (!ancestors.add(category.getId())) throw new BusinessException("Cây danh mục hiện có chu trình không hợp lệ");
+        List<CategoryResponse> rows = children.getOrDefault(category.getId(), List.of());
+        for (CategoryResponse child : rows) attachChildren(child, children, ancestors);
+        category.setChildren(new ArrayList<>(rows));
+        ancestors.remove(category.getId());
     }
 }

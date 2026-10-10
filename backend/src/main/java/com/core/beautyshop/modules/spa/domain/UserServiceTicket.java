@@ -33,6 +33,14 @@ public class UserServiceTicket extends Base {
     @Builder.Default
     private Integer usedSessions = 0;
 
+    @Column(name = "reserved_sessions", nullable = false)
+    @Builder.Default
+    private Integer reservedSessions = 0;
+
+    @Column(name = "expiry_check_mode", nullable = false, length = 30)
+    @Builder.Default
+    private String expiryCheckMode = "BOOKING_TIME";
+
     @ElementCollection
     @org.hibernate.annotations.BatchSize(size = 50)
     @CollectionTable(name = "ticket_entitlements", joinColumns = @JoinColumn(name = "ticket_id"))

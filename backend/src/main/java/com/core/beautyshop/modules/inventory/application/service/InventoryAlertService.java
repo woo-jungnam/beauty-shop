@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.inventory.application.service;
 
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.inventory.domain.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class InventoryAlertService {
         }).toList();
     }
 
+    @Schema(description = "Lô đạt điều kiện cảnh báo; quantity là tồn bán được có gồm reserved, không gồm quarantine; sku có thể null khi catalog không còn bán")
     public record StockAlert(Long stockId, Long warehouseId, String warehouseName, Long productVariantId, String sku,
                              String batchCode, Integer quantity, Integer reservedQuantity, Integer minQuantity,
                              LocalDate expirationDate, BigDecimal costPrice) { }

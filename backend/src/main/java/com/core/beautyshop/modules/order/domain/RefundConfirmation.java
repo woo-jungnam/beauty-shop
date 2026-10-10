@@ -8,4 +8,6 @@ public class RefundConfirmation {
     @Column(name = "bank_reference", nullable = false, unique = true, length = 100) private String reference;
     @Column(nullable = false, precision = 12, scale = 2) private java.math.BigDecimal amount;
     @Column(name = "confirmed_at", nullable = false) private java.time.Instant confirmedAt = java.time.Instant.now();
+    @Column(name = "confirmed_by_user_id") private Long confirmedByUserId;
+    @Column(name = "approval_reason", length = 250) private String approvalReason;
 }

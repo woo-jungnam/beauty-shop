@@ -17,7 +17,7 @@ public class BankPaymentStrategy implements PaymentStrategy {
     @Value("${sepay.bank.account-name:BEAUTYSHOP}")
     private String bankAccountName;
 
-    @Value("${sepay.bank.account-number:0000000000}")
+    @Value("${sepay.bank.account-number:0902588750}")
     private String bankAccountNumber;
 
     @Value("${sepay.bank.bin:970422}")
@@ -26,7 +26,8 @@ public class BankPaymentStrategy implements PaymentStrategy {
     @Override
     public PaymentInstruction processPayment(PaymentOrderDto order) {
         String transferSyntax = order.getOrderNumber();
-        String amount = order.getTotalAmount() != null ? order.getTotalAmount().toBigInteger().toString() : "0";
+        String amount = order.getTotalAmount() != null
+                ? order.getTotalAmount().setScale(0, java.math.RoundingMode.HALF_UP).toPlainString() : "0";
 
         String encodedAccountName = URLEncoder.encode(bankAccountName, StandardCharsets.UTF_8);
         String encodedAddInfo = URLEncoder.encode(transferSyntax, StandardCharsets.UTF_8);

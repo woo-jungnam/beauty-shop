@@ -36,7 +36,8 @@ public class RoleController {
         return ResponseEntity.ok(ApiResponse.success(roleService.getRoleById(id)));
     }
 
-    @Operation(summary = "Tạo vai trò mới (Admin)")
+    @Operation(summary = "Tạo vai trò mới (ADMIN)", description = "roleName là mã duy nhất, không tự chuẩn hóa hoặc tự cấp quyền endpoint. Những tuyến đã có hasRole dùng đúng mã ROLE_... hiện hành.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Vai trò được tạo", useReturnTypeSchema = true)
     @PostMapping
     public ResponseEntity<ApiResponse<RoleResponse>> createRole(
             @Valid @RequestBody CreateRoleRequest request) {
@@ -44,7 +45,7 @@ public class RoleController {
         return ResponseEntity.status(201).body(ApiResponse.created(response, "Tạo vai trò thành công"));
     }
 
-    @Operation(summary = "Cập nhật vai trò (Admin)")
+    @Operation(summary = "Cập nhật vai trò (ADMIN)", description = "Role hệ thống không được đổi mã; mô tả vẫn cập nhật được. Đổi mã role tùy chỉnh làm thu hồi phiên của các tài khoản đang có role đó.")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<RoleResponse>> updateRole(
             @PathVariable Long id,
@@ -52,7 +53,7 @@ public class RoleController {
         return ResponseEntity.ok(ApiResponse.success(roleService.updateRole(id, request)));
     }
 
-    @Operation(summary = "Xóa vai trò (Admin)")
+    @Operation(summary = "Xóa vai trò tùy chỉnh (ADMIN)", description = "Không xóa role hệ thống. Role tùy chỉnh được gỡ khỏi các tài khoản liên quan, thu hồi phiên rồi xóa role.")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable Long id) {
         roleService.deleteRole(id);

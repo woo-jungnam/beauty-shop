@@ -15,6 +15,11 @@ import org.springframework.data.domain.*;
 
 @Repository
 public interface UserServiceTicketRepository extends JpaRepository<UserServiceTicket, Long> {
+    @Query(value = "select count(*) from user_service_tickets t join ticket_entitlements e on e.ticket_id = t.id "
+            + "where e.service_id = :serviceId and e.total_sessions > e.used_sessions and t.is_deleted = false "
+            + "and t.status not in ('REVOKED', 'EXPIRED') and t.order_id is not null "
+            + "and (t.expiry_date is null or t.expiry_date > :now)", nativeQuery = true)
+    long countOutstandingServiceRights(@Param("serviceId") Long serviceId, @Param("now") java.time.Instant now);
 
     @EntityGraph(attributePaths = {"servicePackage", "servicePackage.items", "servicePackage.items.service"})
     List<UserServiceTicket> findByUserId(Long userId);
@@ -46,4 +51,7 @@ public interface UserServiceTicketRepository extends JpaRepository<UserServiceTi
 
     @EntityGraph(attributePaths = {"servicePackage"})
     Page<UserServiceTicket> findByStatusAndIsDeletedFalse(TicketStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"servicePackage"})
+    Page<UserServiceTicket> findByUserIdAndStatusAndIsDeletedFalse(Long userId, TicketStatus status, Pageable pageable);
 }

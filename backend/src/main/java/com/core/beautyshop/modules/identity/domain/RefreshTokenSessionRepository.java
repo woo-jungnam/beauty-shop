@@ -13,6 +13,12 @@ import java.time.Instant;
 
 @Repository
 public interface RefreshTokenSessionRepository extends JpaRepository<RefreshTokenSession, Long> {
+    java.util.List<RefreshTokenSession> findByUserIdOrderByCreatedAtDesc(Long userId);
+    Optional<RefreshTokenSession> findByTokenHashAndIsDeletedFalse(String tokenHash);
+    @Query("SELECT session.userId FROM RefreshTokenSession session WHERE session.tokenHash = :tokenHash AND session.isDeleted = false")
+    Optional<Long> findUserIdByTokenHash(@Param("tokenHash") String tokenHash);
+    Optional<RefreshTokenSession> findByIdAndUserIdAndIsDeletedFalse(Long id, Long userId);
+    boolean existsByUserIdAndFamilyIdAndRevokedAtIsNullAndExpiresAtAfterAndIsDeletedFalse(Long userId, String familyId, Instant now);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT session FROM RefreshTokenSession session " +

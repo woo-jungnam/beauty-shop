@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
+    private final com.core.beautyshop.modules.identity.domain.UserRepository userRepository;
+    private final IdentityAdministrationGuard administrationGuard;
+    private final AuthService authService;
 
     @Override
     public List<RoleResponse> getAllRoles() {
@@ -51,10 +54,15 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional
     public RoleResponse updateRole(Long id, UpdateRoleRequest request) {
+        administrationGuard.lockAdministration();
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò với id: " + id));
         
-        if (!role.getRoleName().equals(request.getRoleName()) && 
+        boolean renamed = !role.getRoleName().equals(request.getRoleName());
+        if (renamed && administrationGuard.isSystemRole(role.getName())) {
+            throw new BusinessException("System role codes cannot be changed");
+        }
+        if (renamed &&
             roleRepository.findByRoleName(request.getRoleName()).isPresent()) {
             throw new BusinessException("Tên vai trò đã tồn tại");
         }
@@ -62,16 +70,25 @@ public class RoleServiceImpl implements RoleService {
         role.setRoleName(request.getRoleName());
         role.setDescription(request.getDescription());
         role = roleRepository.save(role);
+        if (renamed) userRepository.findByRoleIdForUpdate(id).forEach(user -> authService.forceLogoutUser(user.getId()));
         return mapToResponse(role);
     }
 
     @Override
     @Transactional
     public void deleteRole(Long id) {
-        if (!roleRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Không tìm thấy vai trò với id: " + id);
+        administrationGuard.lockAdministration();
+        Role role = roleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò với id: " + id));
+        if (administrationGuard.isSystemRole(role.getName())) throw new BusinessException("System roles cannot be deleted");
+        // Remove mappings explicitly; Hibernate-generated test schemas need not have ON DELETE CASCADE.
+        for (var user : userRepository.findByRoleIdForUpdate(id)) {
+            user.getRoles().removeIf(assigned -> id.equals(assigned.getId()));
+            userRepository.save(user);
+            authService.forceLogoutUser(user.getId());
         }
-        roleRepository.deleteById(id);
+        userRepository.flush();
+        roleRepository.delete(role);
     }
 
     private RoleResponse mapToResponse(Role role) {
