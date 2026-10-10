@@ -53,7 +53,7 @@ abstract class AbstractAdminDashboardJdbcTest {
         receipt(10, "2026-10-04 00:00:00", 200, "SEPAY", "in", "SUCCESS");
         jdbc.execute("INSERT INTO refund_confirmations VALUES (1,'2026-10-03 10:00:00',25),(2,'2026-10-04 00:00:00',50)");
         jdbc.execute("INSERT INTO users VALUES (1,'ACTIVE',false),(2,'ACTIVE',false),(3,'BLOCKED',false),(4,'ACTIVE',false),(5,'ACTIVE',true)");
-        jdbc.execute("INSERT INTO roles VALUES (1,'ROLE_CUSTOMER',false),(2,'ROLE_ADMIN',false),(3,'ROLE_USER',false)");
+        jdbc.execute("INSERT INTO roles VALUES (1,'ROLE_CUSTOMER',false),(2,'ROLE_ADMIN',false),(3,'ROLE_STAFF',false)");
         jdbc.execute("INSERT INTO user_roles VALUES (1,1),(1,2),(2,2),(3,1),(4,3),(5,1)");
         jdbc.execute("INSERT INTO warehouse_stocks VALUES (1,1,3,0,5,1,false),(2,1,8,0,5,1,false),(3,2,2,0,5,1,false),(4,2,3,0,5,1,false),(5,3,0,0,5,1,true)");
         var result = service.overview(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-04T00:00:00Z"));

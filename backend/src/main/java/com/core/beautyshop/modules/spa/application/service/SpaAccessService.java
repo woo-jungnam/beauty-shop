@@ -20,7 +20,7 @@ public class SpaAccessService {
     }
 
     public boolean canManageReception() {
-        return hasRole("ADMIN") || hasRole("STAFF");
+        return hasRole("ADMIN") || hasRole("STAFF") || hasRole("SPA_RECEPTION");
     }
 
     public boolean isAssignedTechnician(Appointment appointment) {
@@ -35,7 +35,7 @@ public class SpaAccessService {
                 || Boolean.TRUE.equals(item.getAppointment().getIsDeleted())) {
             throw new AccessDeniedException("Appointment item is unavailable");
         }
-        if (hasRole("ADMIN") || hasRole("STAFF")) return;
+        if (hasRole("ADMIN") || hasRole("STAFF") || hasRole("SPA_RECEPTION")) return;
         if (hasRole("SPA_THERAPIST") && assignedTo(item, SecurityUtils.getCurrentUserId())) return;
         throw new AccessDeniedException("Only administrators and staff may perform this item");
     }
@@ -43,13 +43,13 @@ public class SpaAccessService {
     public void requireCanViewAppointment(Appointment appointment) {
         if (appointment != null && !Boolean.TRUE.equals(appointment.getIsDeleted())
                 && (Objects.equals(appointment.getUserId(), SecurityUtils.getCurrentUserId())
-                || hasRole("ADMIN") || hasRole("STAFF")
+                || hasRole("ADMIN") || hasRole("STAFF") || hasRole("SPA_RECEPTION") || hasRole("CS_STAFF")
                 || (hasRole("SPA_THERAPIST") && isAssignedTechnician(appointment)))) return;
         throw new AccessDeniedException("You cannot view this appointment");
     }
 
     public void requireCanViewCareSummary(Appointment appointment) {
-        if (hasRole("ADMIN") || hasRole("STAFF")
+        if (hasRole("ADMIN") || hasRole("STAFF") || hasRole("CS_STAFF")
                 || (hasRole("SPA_THERAPIST") && isAssignedTechnician(appointment))) return;
         throw new AccessDeniedException("Care summaries are restricted to administrators and staff");
     }

@@ -18,4 +18,13 @@ backend/uploads/
 *.log
 *.tar.gz
 *.sql
+*.dill
+*.md
+.dart_tool/
+.flutter-plugins*
+e2e-report/
+test-results/
+customer-test-results/
+artifacts/
+target-spa-validation/
 run_cloudflared.*

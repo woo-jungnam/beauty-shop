@@ -48,6 +48,7 @@ class AppointmentOperationalRulesTest {
         availability = new BeautyServiceServiceImpl(services, packages, staff, appointments, identity, shifts, facilities);
         lenient().when(facilities.hasAvailability(anyLong(), any(), any(), any())).thenReturn(true);
         lenient().when(policies.forAppointment(any())).thenReturn(new SpaBookingPolicyService.Policy("test",0,0,0,0,"FORFEIT"));
+        lenient().when(shifts.hasScheduleOnDate(anyLong(), any())).thenReturn(true);
         var principal = new UserDetailsImpl(50L, "customer", "customer@example.test", "password",
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
