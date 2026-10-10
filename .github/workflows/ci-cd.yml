@@ -45,7 +45,17 @@ jobs:
 
       - name: Run Backend Tests (Unit & ArchUnit)
         working-directory: backend
-        run: ./mvnw test -B
+        run: |
+          ./mvnw test -B || {
+            echo "::error::Maven test execution failed! Printing reports with failures/errors:"
+            for f in target/surefire-reports/*.txt; do
+              if grep -qE "Failures: [1-9]|Errors: [1-9]" "$f"; then
+                echo "================ $f ================"
+                cat "$f"
+              fi
+            done
+            exit 1
+          }
 
       - name: Publish Test Report
         if: always()
@@ -135,3 +145,32 @@ jobs:
       - name: Run Flutter Tests
         working-directory: mobile
         run: flutter test
+
+  # =========================================================================
+  # JOB 5: Frontend CI (Vite Build Validation)
+  # =========================================================================
+  frontend-ci:
+    name: Frontend CI (Vite Build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: https://api.dermascan.world
+        run: npm run build
+
