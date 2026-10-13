@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../app/providers/AuthProvider';
 import { Button } from '../shared/ui/Button';
+import '../customer/styles/customer-auth.css';
 
 export const LoginPage = () => {
   const { login, register } = useAuth();
@@ -83,11 +84,13 @@ export const LoginPage = () => {
     try {
       const loggedUser = await login(username.trim(), password, { requireOperator: isAdminRoute });
       const roles = loggedUser?.roles || [];
-      const isOp = roles.some((r) => ['ROLE_ADMIN', 'ADMIN', 'ROLE_STAFF', 'ROLE_ORDER_STAFF', 'ROLE_INVENTORY_STAFF', 'ROLE_CATALOG_STAFF', 'ROLE_CS_STAFF'].includes(r));
-      const requestedAdmin = isAdminRoute;
+      const isAdmin = roles.some((r) => r === 'ROLE_ADMIN' || r === 'ADMIN');
+      const isStaff = roles.some((r) => r === 'ROLE_STAFF' || r === 'STAFF');
 
-      if (isOp && (requestedAdmin || roles.includes('ROLE_ADMIN') || roles.includes('ADMIN'))) {
+      if (isAdmin) {
         window.location.hash = '#/admin/dashboard';
+      } else if (isStaff) {
+        window.location.hash = '#/staff';
       } else {
         window.location.hash = '#/profile';
       }
@@ -255,121 +258,7 @@ export const LoginPage = () => {
         position: 'relative'
       }}
     >
-      <style>{`
-        @keyframes floatSlow1 {
-          0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
-          50% { transform: translateY(-16px) rotate(8deg) scale(1.04); }
-        }
-        @keyframes floatSlow2 {
-          0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
-          50% { transform: translateY(18px) rotate(-10deg) scale(0.96); }
-        }
-        @keyframes pulseGlow {
-          0%, 100% { opacity: 0.35; transform: scale(1); }
-          50% { opacity: 0.65; transform: scale(1.15); }
-        }
-        @keyframes driftOrb {
-          0% { transform: translate(0, 0); }
-          50% { transform: translate(25px, -35px); }
-          100% { transform: translate(0, 0); }
-        }
-        /* Override .customer-app { flex-direction: column } from customer-theme.css */
-        .customer-app.user-auth-fullscreen {
-          flex-direction: row;
-          max-width: none;
-        }
-        .user-auth-col-art {
-          width: 28%;
-          min-width: 320px;
-          max-width: 420px;
-          background: linear-gradient(165deg, #FFF0F3 0%, #FCE7EC 45%, #F8D5DE 100%);
-          border-right: 1px solid #F0DEE3;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          padding: 44px 32px;
-          overflow: hidden;
-          z-index: 2;
-        }
-        .user-auth-col-forms {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 40px 24px;
-          position: relative;
-          background: #FAF7F8;
-          background-image:
-            radial-gradient(circle at 90% 10%, rgba(212, 93, 121, 0.08) 0%, transparent 45%),
-            radial-gradient(circle at 10% 90%, rgba(255, 240, 243, 0.7) 0%, transparent 45%);
-        }
-        .auth-slider-viewport {
-          width: 100%;
-          max-width: 580px;
-          overflow: hidden;
-          position: relative;
-          background: #FFFFFF;
-          border: 1px solid #F0DEE3;
-          border-radius: 20px;
-          box-shadow: 0 20px 45px -15px rgba(212, 93, 121, 0.15), 0 0 0 1px rgba(240, 222, 227, 0.5);
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .auth-slider-track {
-          display: flex;
-          align-items: stretch;
-          width: 200%;
-          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .auth-slide-pane {
-          width: 50%;
-          padding: 38px 40px;
-          box-sizing: border-box;
-          opacity: 0.35;
-          transform: scale(0.97);
-          transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-        .auth-slide-pane.active {
-          opacity: 1;
-          transform: scale(1);
-        }
-        .beauty-floating-card {
-          position: absolute;
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(212, 93, 121, 0.2);
-          border-radius: 14px;
-          padding: 12px 16px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          box-shadow: 0 10px 25px -5px rgba(212, 93, 121, 0.15);
-          z-index: 3;
-        }
-        @media (max-width: 900px) {
-          .customer-app.user-auth-fullscreen {
-            flex-direction: column;
-          }
-          .user-auth-col-art {
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
-            padding: 28px 24px;
-            border-right: none;
-            border-bottom: 1px solid #F0DEE3;
-          }
-          .auth-slider-viewport {
-            max-width: 100%;
-          }
-          .auth-slide-pane {
-            padding: 28px 20px;
-          }
-        }
-      `}</style>
+
 
       {/* ================= 1/4 COLUMN: BEAUTY COSMETICS ANIMATION ART ================= */}
       <section className="user-auth-col-art" aria-label="Khám phá BeautyShop">
@@ -383,7 +272,7 @@ export const LoginPage = () => {
           borderRadius: '50%',
           backgroundColor: 'rgba(212, 93, 121, 0.22)',
           filter: 'blur(55px)',
-          animation: 'driftOrb 12s ease-in-out infinite'
+          animation: 'customerAuthDriftOrb 12s ease-in-out infinite'
         }} />
         <div style={{
           position: 'absolute',
@@ -394,7 +283,7 @@ export const LoginPage = () => {
           borderRadius: '50%',
           backgroundColor: 'rgba(255, 179, 198, 0.45)',
           filter: 'blur(50px)',
-          animation: 'pulseGlow 8s ease-in-out infinite'
+          animation: 'customerAuthPulseGlow 8s ease-in-out infinite'
         }} />
 
         {/* Brand Header */}
@@ -442,7 +331,7 @@ export const LoginPage = () => {
             style={{
               top: '10px',
               left: '0px',
-              animation: 'floatSlow1 7s ease-in-out infinite'
+              animation: 'customerAuthFloatOne 7s ease-in-out infinite'
             }}
           >
             <div style={{
@@ -470,7 +359,7 @@ export const LoginPage = () => {
             style={{
               top: '115px',
               right: '0px',
-              animation: 'floatSlow2 8.5s ease-in-out infinite'
+              animation: 'customerAuthFloatTwo 8.5s ease-in-out infinite'
             }}
           >
             <div style={{
@@ -498,7 +387,7 @@ export const LoginPage = () => {
             style={{
               bottom: '25px',
               left: '15px',
-              animation: 'floatSlow1 9s ease-in-out infinite 1s'
+              animation: 'customerAuthFloatOne 9s ease-in-out infinite 1s'
             }}
           >
             <div style={{
@@ -644,7 +533,7 @@ export const LoginPage = () => {
             }}
           >
             {/* PANE 1: LOGIN FORM */}
-            <div className={`auth-slide-pane ${authMode === 'login' ? 'active' : ''}`}>
+            <div className={`auth-slide-pane ${authMode === 'login' ? 'active' : ''}`} inert={authMode !== 'login'}>
               <div>
                 {/* Form Logo Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -701,13 +590,15 @@ export const LoginPage = () => {
 
                 <form onSubmit={handleSubmit}>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                    <label htmlFor="customer-auth-username" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
                       Tên đăng nhập hoặc Email *
                     </label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <User size={14} style={{ position: 'absolute', left: '14px', color: '#9CA3AF', pointerEvents: 'none' }} />
                       <input
                         type="text"
+                        id="customer-auth-username"
+                        autoComplete="username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Nhập username hoặc email"
@@ -738,13 +629,15 @@ export const LoginPage = () => {
                   </div>
 
                   <div style={{ marginBottom: '22px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                    <label htmlFor="customer-auth-password" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
                       Mật khẩu *
                     </label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <Lock size={14} style={{ position: 'absolute', left: '14px', color: '#9CA3AF', pointerEvents: 'none' }} />
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        id="customer-auth-password"
+                        autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
@@ -833,7 +726,7 @@ export const LoginPage = () => {
             </div>
 
             {/* PANE 2: REGISTER FORM */}
-            <div className={`auth-slide-pane ${authMode === 'register' ? 'active' : ''}`}>
+            <div className={`auth-slide-pane ${authMode === 'register' ? 'active' : ''}`} inert={authMode !== 'register'}>
               <div>
                 {/* Form Logo Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
@@ -890,13 +783,15 @@ export const LoginPage = () => {
 
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                  <label htmlFor="customer-auth-regFullName" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                     Họ và tên *
                   </label>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <User size={13} style={{ position: 'absolute', left: '12px', color: '#9CA3AF', pointerEvents: 'none' }} />
                     <input
                       type="text"
+                      id="customer-auth-regFullName"
+                      autoComplete="name"
                       value={regFullName}
                       onChange={(e) => setRegFullName(e.target.value)}
                       placeholder="Nguyễn Văn A"
@@ -927,13 +822,15 @@ export const LoginPage = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                    <label htmlFor="customer-auth-regEmail" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                       Email *
                     </label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <Mail size={13} style={{ position: 'absolute', left: '11px', color: '#9CA3AF', pointerEvents: 'none' }} />
                       <input
                         type="email"
+                        id="customer-auth-regEmail"
+                        autoComplete="email"
                         value={regEmail}
                         onChange={(e) => setRegEmail(e.target.value)}
                         placeholder="email@domain.com"
@@ -952,13 +849,15 @@ export const LoginPage = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                    <label htmlFor="customer-auth-regPhone" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                       Số điện thoại
                     </label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <Phone size={13} style={{ position: 'absolute', left: '11px', color: '#9CA3AF', pointerEvents: 'none' }} />
                       <input
                         type="tel"
+                        id="customer-auth-regPhone"
+                        autoComplete="tel"
                         value={regPhone}
                         onChange={(e) => setRegPhone(e.target.value)}
                         placeholder="0912345678"
@@ -978,11 +877,13 @@ export const LoginPage = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                    <label htmlFor="customer-auth-regUsername" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                       Tên tài khoản *
                     </label>
                     <input
                       type="text"
+                      id="customer-auth-regUsername"
+                      autoComplete="username"
                       value={regUsername}
                       onChange={(e) => setRegUsername(e.target.value)}
                       placeholder="nguyena"
@@ -1000,11 +901,13 @@ export const LoginPage = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                    <label htmlFor="customer-auth-regPassword" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                       Mật khẩu *
                     </label>
                     <input
                       type="password"
+                      id="customer-auth-regPassword"
+                      autoComplete="new-password"
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="Tối thiểu 6 ký tự"

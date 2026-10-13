@@ -272,15 +272,21 @@ export const App = () => {
   }
 
   // Check if current route is for Spa Reception portal
-  const isReceptionRoute =
-    currentHash.startsWith("reception") ||
-    currentHash.startsWith("staff") ||
+  const isDedicatedReceptionRoute =
+    currentHash === "reception" ||
+    currentHash === "staff" ||
     currentHash === "admin/spa-reception";
 
   const isSpaStaffOnly = isSpaReception && !isAdmin;
 
-  // Dedicated Spa Receptionist Portal for Spa staff or direct reception route
-  if ((isSpaStaffOnly || isReceptionRoute) && isAuthenticated && isOperator) {
+  // Dedicated Spa Receptionist Portal for direct reception route or staff landing
+  const shouldShowReceptionPortal =
+    (isDedicatedReceptionRoute || (isSpaStaffOnly && !currentHash.startsWith("admin"))) &&
+    isAuthenticated &&
+    isOperator;
+
+  if (shouldShowReceptionPortal) {
+    const ReceptionPage = ADMIN_PAGES['spa-reception'];
     return (
       <Suspense
         fallback={
@@ -301,11 +307,11 @@ export const App = () => {
           </div>
         }
       >
-        <SpaStaffApp
+        {currentHash === 'reception' || currentHash === 'admin/spa-reception' ? <ReceptionPage /> : <SpaStaffApp
           onSwitchToAdmin={() => {
-            window.location.hash = "/admin/dashboard";
+            window.location.hash = "/admin/spa";
           }}
-        />
+        />}
       </Suspense>
     );
   }

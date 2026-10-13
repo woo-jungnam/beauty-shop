@@ -13,6 +13,8 @@ export const Modal = ({
   children,
   footer,
   maxWidth = '560px',
+  className = '',
+  presentation = 'modal',
 }) => {
   const dialogRef = useRef(null);
   const backdropRef = useRef(null);
@@ -104,7 +106,7 @@ export const Modal = ({
   return (
     <div
       ref={backdropRef}
-      className={`modal-backdrop ${isOpen ? 'is-open' : 'is-closing'}`}
+      className={`modal-backdrop ${isOpen ? 'is-open' : 'is-closing'} ${className} ${presentation === 'drawer' ? 'modal-drawer-backdrop' : ''}`}
       inert={!isOpen ? true : undefined}
       aria-hidden={!isOpen ? true : undefined}
       onClick={(event) => {

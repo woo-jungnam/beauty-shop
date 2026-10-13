@@ -49,7 +49,7 @@ export const CheckoutPage = ({ onNavigate }) => {
 
   if (items.length === 0) {
     return (
-      <div className="customer-container" style={{ padding: '80px 20px', textAlign: 'center' }}>
+      <div className="customer-container customer-empty-state" style={{ padding: '80px 20px', textAlign: 'center' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', color: 'var(--c-primary)' }}>Giỏ hàng của bạn đang trống</h2>
         <p style={{ color: 'var(--c-text-muted)', marginTop: '8px' }}>Vui lòng chọn sản phẩm vào giỏ hàng trước khi tiến hành thanh toán.</p>
         <button onClick={() => onNavigate('products')} className="btn-luxury-primary" style={{ marginTop: '20px' }}>
@@ -164,7 +164,7 @@ export const CheckoutPage = ({ onNavigate }) => {
   };
 
   return (
-    <div className="customer-container" style={{ padding: '32px 20px 80px 20px' }}>
+    <div className="customer-container customer-checkout-page" style={{ padding: '32px 20px 80px 20px' }}>
       {/* Title */}
       <div style={{ marginBottom: '28px' }}>
         <button
@@ -185,12 +185,13 @@ export const CheckoutPage = ({ onNavigate }) => {
           <ArrowLeft size={14} /> Quay lại mua sắm
         </button>
         <h1 style={{ fontSize: '28px', margin: 0, fontFamily: 'var(--font-serif)', color: 'var(--c-primary)' }}>
-          Thanh Toán Đơn Hàng (1-Page Checkout)
+          Thanh toán đơn hàng
         </h1>
+        <p style={{ marginTop: '8px', color: 'var(--c-text-muted)' }}>Điền thông tin nhận hàng và chọn phương thức thanh toán phù hợp với bạn.</p>
       </div>
 
       {errorMessage && (
-        <div style={{
+        <div role="alert" style={{
           backgroundColor: '#FEF2F2',
           border: '1px solid #FCA5A5',
           borderRadius: 'var(--radius-md)',
@@ -208,7 +209,7 @@ export const CheckoutPage = ({ onNavigate }) => {
       )}
 
       <form onSubmit={handleSubmitOrder}>
-        <div style={{
+        <div className="customer-checkout-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
           gap: '36px',
@@ -228,13 +229,16 @@ export const CheckoutPage = ({ onNavigate }) => {
                 1. Thông Tin Người Nhận
               </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="customer-form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>HỌ VÀ TÊN *</label>
+                  <label htmlFor="checkout-fullName" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>HỌ VÀ TÊN *</label>
                   <input
                     required
                     type="text"
                     placeholder="Nguyễn Văn A"
+                    id="checkout-fullName"
+                    name="name"
+                    autoComplete="name"
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', outline: 'none' }}
@@ -242,11 +246,14 @@ export const CheckoutPage = ({ onNavigate }) => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>SỐ ĐIỆN THOẠI *</label>
+                  <label htmlFor="checkout-phone" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>SỐ ĐIỆN THOẠI *</label>
                   <input
                     required
                     type="tel"
                     placeholder="0987654321"
+                    id="checkout-phone"
+                    name="tel"
+                    autoComplete="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', outline: 'none' }}
@@ -255,10 +262,13 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
 
               <div style={{ marginTop: '14px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>EMAIL NHẬN THÔNG BÁO VẬN ĐƠN</label>
+                <label htmlFor="checkout-email" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>EMAIL NHẬN THÔNG BÁO VẬN ĐƠN</label>
                 <input
                   type="email"
                   placeholder="email@example.com"
+                  id="checkout-email"
+                  name="email"
+                  autoComplete="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', outline: 'none' }}
@@ -277,10 +287,13 @@ export const CheckoutPage = ({ onNavigate }) => {
                 2. Địa Chỉ Nhận Hàng
               </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
+              <div className="customer-address-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>TỈNH / THÀNH *</label>
+                  <label htmlFor="checkout-city" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>TỈNH / THÀNH *</label>
                   <select
+                    id="checkout-city"
+                    name="address-level1"
+                    autoComplete="address-level1"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
@@ -294,8 +307,11 @@ export const CheckoutPage = ({ onNavigate }) => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>QUẬN / HUYỆN *</label>
+                  <label htmlFor="checkout-district" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>QUẬN / HUYỆN *</label>
                   <select
+                    id="checkout-district"
+                    name="address-level2"
+                    autoComplete="address-level2"
                     value={formData.district}
                     onChange={(e) => setFormData({ ...formData, district: e.target.value })}
                     style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
@@ -311,8 +327,11 @@ export const CheckoutPage = ({ onNavigate }) => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>PHƯỜNG / XÃ *</label>
+                  <label htmlFor="checkout-ward" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>PHƯỜNG / XÃ *</label>
                   <select
+                    id="checkout-ward"
+                    name="address-level3"
+                    autoComplete="address-level3"
                     value={formData.ward}
                     onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
                     style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
@@ -327,11 +346,14 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>ĐỊA CHỈ CHI TIẾT (SỐ NHÀ, TÊN ĐƯỜNG) *</label>
+                <label htmlFor="checkout-address" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>ĐỊA CHỈ CHI TIẾT (SỐ NHÀ, TÊN ĐƯỜNG) *</label>
                 <input
                   required
                   type="text"
                   placeholder="Ví dụ: 123 Lê Lợi, Tòa nhà Vincom..."
+                  id="checkout-address"
+                  name="street-address"
+                  autoComplete="street-address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', outline: 'none' }}
@@ -339,10 +361,13 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
 
               <div style={{ marginTop: '14px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>GHI CHÚ GIAO HÀNG</label>
+                <label htmlFor="checkout-note" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>GHI CHÚ GIAO HÀNG</label>
                 <input
                   type="text"
                   placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."
+                  id="checkout-note"
+                  name="off"
+                  autoComplete="off"
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', outline: 'none' }}

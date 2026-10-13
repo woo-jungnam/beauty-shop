@@ -27,33 +27,71 @@ import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 
+const TRANSACTION_TYPE_MAP = {
+  RECEIPT: { label: 'Nhập kho', variant: 'success' },
+  SALE: { label: 'Xuất bán hàng', variant: 'info' },
+  RETURN: { label: 'Hàng trả (Cách ly)', variant: 'warning' },
+  CANCELLATION: { label: 'Hủy đơn (Nhả giữ chỗ)', variant: 'default' },
+  ADJUSTMENT: { label: 'Điều chỉnh kiểm kê', variant: 'warning' },
+  DISPOSAL: { label: 'Xuất tiêu hủy', variant: 'danger' },
+  TRANSFER_IN: { label: 'Nhận chuyển kho', variant: 'success' },
+  TRANSFER_OUT: { label: 'Xuất chuyển kho', variant: 'info' },
+};
+
+const REFERENCE_TYPE_MAP = {
+  ORDER: 'Đơn hàng',
+  TRANSFER: 'Điều chuyển kho',
+  STOCKTAKE: 'Kiểm kê kho',
+  STOCK_DELETE: 'Xóa lô hàng',
+  MANUAL_STOCK: 'Cập nhật lô hàng',
+  MANUAL_RECEIPT: 'Nhập kho trực tiếp',
+  PURCHASE_ORDER: 'Phiếu mua hàng',
+  RETURN_INSPECTION: 'Xử lý hàng hoàn',
+};
+
+const WAREHOUSE_TYPE_MAP = {
+  CENTRAL: 'Kho Tổng',
+  BRANCH: 'Chi Nhánh / Spa',
+  TRANSIT: 'Trung Chuyển',
+};
+
+const getDaysUntilExpiration = (expDate) => {
+  if (!expDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(expDate);
+  target.setHours(0, 0, 0, 0);
+  const diffTime = target - today;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
 export const InventoryPage = () => {
   const [activeTab, setActiveTab] = useState('ledger');
   const [loading, setLoading] = useState(false);
 
-  // Ledger state
+  // Sổ cái biến động kho
   const [transactions, setTransactions] = useState([]);
   const [ledgerPage, setLedgerPage] = useState(0);
   const [ledgerTotalPages, setLedgerTotalPages] = useState(1);
   const [ledgerTotalElements, setLedgerTotalElements] = useState(0);
 
-  // Alerts
+  // Cảnh báo tồn & cận hạn
   const [lowStockList, setLowStockList] = useState([]);
   const [expiringList, setExpiringList] = useState([]);
 
-  // Warehouses
+  // Kho bãi & Lô tồn
   const [warehouses, setWarehouses] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [warehouseStocks, setWarehouseStocks] = useState([]);
 
-  // Inspection modal
+  // Modal xử lý hàng hoàn trả cách ly
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
   const [inspectQuantity, setInspectQuantity] = useState(1);
-  const [inspectRestock, setInspectRestock] = useState(false);
+  const [inspectRestock, setInspectRestock] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Create Warehouse modal
+  // Modal tạo kho mới
   const [createWhModalOpen, setCreateWhModalOpen] = useState(false);
   const [whName, setWhName] = useState('');
   const [whCode, setWhCode] = useState('');
@@ -64,33 +102,33 @@ export const InventoryPage = () => {
   const [whType, setWhType] = useState('CENTRAL');
   const [whSubmitting, setWhSubmitting] = useState(false);
 
-  // Inbound Stock Receipt modal
+  // Modal nhập kho hàng hóa
   const [inboundModalOpen, setInboundModalOpen] = useState(false);
   const [inboundVariantId, setInboundVariantId] = useState('');
   const [inboundQuantity, setInboundQuantity] = useState('50');
   const [inboundCostPrice, setInboundCostPrice] = useState('150000');
-  const [inboundBatchCode, setInboundBatchCode] = useState('BATCH-2026-09');
+  const [inboundBatchCode, setInboundBatchCode] = useState('LO-2026-10');
   const [inboundExpDate, setInboundExpDate] = useState('2027-12-31');
   const [inboundMinQty, setInboundMinQty] = useState('10');
   const [inboundMaxQty, setInboundMaxQty] = useState('500');
   const [inboundSubmitting, setInboundSubmitting] = useState(false);
 
-  // Adjust stock modal
+  // Modal điều chỉnh số lượng sau kiểm kê
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [selectedStockForAdjust, setSelectedStockForAdjust] = useState(null);
   const [adjustQuantityAfter, setAdjustQuantityAfter] = useState('0');
-  const [adjustReason, setAdjustReason] = useState('Kiểm kê định kỳ');
+  const [adjustReason, setAdjustReason] = useState('Kiểm kê kho định kỳ');
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
 
-  // Transfer stock modal
+  // Modal điều chuyển kho
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [selectedStockForTransfer, setSelectedStockForTransfer] = useState(null);
   const [targetWhId, setTargetWhId] = useState('');
   const [transferQuantity, setTransferQuantity] = useState('1');
-  const [transferReason, setTransferReason] = useState('Điều phối luân chuyển kho');
+  const [transferReason, setTransferReason] = useState('Điều phối luân chuyển hàng giữa các kho');
   const [transferSubmitting, setTransferSubmitting] = useState(false);
 
-  // Load Transactions
+  // Tải dữ liệu Sổ cái
   const fetchLedger = async (p = 0) => {
     setLoading(true);
     try {
@@ -105,7 +143,7 @@ export const InventoryPage = () => {
     }
   };
 
-  // Load Alerts
+  // Tải dữ liệu Cảnh báo
   const fetchAlerts = async () => {
     setLoading(true);
     try {
@@ -120,7 +158,7 @@ export const InventoryPage = () => {
     }
   };
 
-  // Load Warehouses
+  // Tải danh sách kho
   const fetchWarehouses = async () => {
     setLoading(true);
     try {
@@ -135,7 +173,7 @@ export const InventoryPage = () => {
     }
   };
 
-  // Load Warehouse Stocks
+  // Tải tồn kho theo kho bãi
   const fetchWarehouseStocks = async (whId) => {
     if (!whId) return;
     setLoading(true);
@@ -161,8 +199,9 @@ export const InventoryPage = () => {
 
   const handleOpenInspect = (stock) => {
     setSelectedStock(stock);
-    setInspectQuantity(1);
-    setInspectRestock(false);
+    const maxQty = stock.quarantinedQuantity || 1;
+    setInspectQuantity(Math.min(1, maxQty));
+    setInspectRestock(true);
     setInspectModalOpen(true);
   };
 
@@ -179,7 +218,7 @@ export const InventoryPage = () => {
       if (activeTab === 'warehouses') fetchWarehouseStocks(selectedWarehouseId);
       else fetchAlerts();
     } catch (err) {
-      alert(err.message || 'Lỗi kiểm kê tồn kho');
+      alert(err.message || 'Lỗi khi xử lý hàng kiểm định');
     } finally {
       setSubmitting(false);
     }
@@ -209,13 +248,13 @@ export const InventoryPage = () => {
   };
 
   const handleDeleteWarehouse = async (id) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa kho bãi #${id}?`)) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa kho bãi #${id}? (Kho phải hết sạch tồn kho mới được xóa)`)) return;
     try {
       await apiClient.delete(ENDPOINTS.INVENTORY.WAREHOUSE_DETAIL(id));
       setSelectedWarehouseId(null);
       fetchWarehouses();
     } catch (err) {
-      alert(err.message || 'Lỗi xóa kho bãi');
+      alert(err.message || 'Lỗi khi xóa kho bãi');
     }
   };
 
@@ -248,19 +287,23 @@ export const InventoryPage = () => {
   };
 
   const handleDeleteStock = async (stockId) => {
-    if (!window.confirm(`Xóa bản ghi tồn kho #${stockId}?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn xóa lô tồn kho #${stockId}? Số tồn còn lại sẽ được ghi nhận xuất hủy.`)) return;
     try {
       await apiClient.delete(ENDPOINTS.INVENTORY.STOCK_DELETE(stockId));
       fetchWarehouseStocks(selectedWarehouseId);
     } catch (err) {
-      alert(err.message || 'Lỗi xóa bản ghi tồn kho');
+      alert(err.message || 'Lỗi khi xóa lô tồn kho');
     }
   };
 
   const handleOpenAdjustModal = (stock) => {
-    setSelectedStockForAdjust(stock);
+    const normalizedStock = {
+      ...stock,
+      id: stock.id || stock.stockId,
+    };
+    setSelectedStockForAdjust(normalizedStock);
     setAdjustQuantityAfter(String(stock.quantity ?? 0));
-    setAdjustReason('Kiểm kê định kỳ');
+    setAdjustReason('Kiểm kê kho định kỳ');
     setAdjustModalOpen(true);
   };
 
@@ -274,7 +317,8 @@ export const InventoryPage = () => {
         reason: adjustReason.trim(),
       });
       setAdjustModalOpen(false);
-      fetchWarehouseStocks(selectedWarehouseId);
+      if (activeTab === 'warehouses') fetchWarehouseStocks(selectedWarehouseId);
+      else fetchAlerts();
     } catch (err) {
       alert(err.message || 'Lỗi điều chỉnh tồn kho');
     } finally {
@@ -283,11 +327,15 @@ export const InventoryPage = () => {
   };
 
   const handleOpenTransferModal = (stock) => {
-    setSelectedStockForTransfer(stock);
+    const normalizedStock = {
+      ...stock,
+      id: stock.id || stock.stockId,
+    };
+    setSelectedStockForTransfer(normalizedStock);
     const targets = warehouses.filter((warehouse) => String(warehouse.id) !== String(selectedWarehouseId));
     setTargetWhId(targets[0]?.id ? String(targets[0].id) : '');
     setTransferQuantity('1');
-    setTransferReason('Điều phối tồn kho');
+    setTransferReason('Điều phối hàng giữa các kho');
     setTransferModalOpen(true);
   };
 
@@ -304,13 +352,13 @@ export const InventoryPage = () => {
       setTransferModalOpen(false);
       fetchWarehouseStocks(selectedWarehouseId);
     } catch (err) {
-      alert(err.message || 'Lỗi chuyển kho');
+      alert(err.message || 'Lỗi khi điều chuyển kho');
     } finally {
       setTransferSubmitting(false);
     }
   };
 
-  // Ledger Table Columns
+  // Cột bảng: Sổ cái biến động kho
   const ledgerColumns = [
     {
       header: 'Thời điểm',
@@ -318,11 +366,11 @@ export const InventoryPage = () => {
       width: '140px',
     },
     {
-      header: 'Biến thể SKU / Tên',
+      header: 'Biến thể SKU / Sản phẩm',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{row.productName || `Variant #${row.variantId}`}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: {row.sku || '-'}</div>
+          <div style={{ fontWeight: 600 }}>{row.productName || `Biến thể #${row.variantId}`}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Mã SKU: {row.sku || '-'}</div>
         </div>
       ),
     },
@@ -334,17 +382,13 @@ export const InventoryPage = () => {
       header: 'Loại biến động',
       accessor: (row) => {
         const type = row.transactionType;
-        let variant = 'default';
-        if (type === 'INBOUND' || type === 'RETURN') variant = 'success';
-        else if (type === 'OUTBOUND') variant = 'info';
-        else if (type === 'EXPIRED') variant = 'danger';
-        else if (type === 'ADJUSTMENT') variant = 'warning';
-        return <Badge variant={variant}>{type}</Badge>;
+        const meta = TRANSACTION_TYPE_MAP[type] || { label: type, variant: 'default' };
+        return <Badge variant={meta.variant}>{meta.label}</Badge>;
       },
-      width: '120px',
+      width: '150px',
     },
     {
-      header: 'Số lượng thay đổi',
+      header: 'Biến động',
       accessor: (row) => (
         <span
           style={{
@@ -357,7 +401,7 @@ export const InventoryPage = () => {
         </span>
       ),
       align: 'right',
-      width: '130px',
+      width: '100px',
     },
     {
       header: 'Đơn giá vốn',
@@ -365,71 +409,87 @@ export const InventoryPage = () => {
       align: 'right',
     },
     {
-      header: 'Tham chiếu / Ghi chú',
-      accessor: (row) => (
-        <div style={{ fontSize: '12px' }}>
-          <div>{row.referenceType ? `${row.referenceType}: ${row.referenceId}` : '-'}</div>
-          {row.note && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.note}</div>}
-        </div>
-      ),
+      header: 'Tham chiếu & Ghi chú',
+      accessor: (row) => {
+        const refLabel = REFERENCE_TYPE_MAP[row.referenceType] || row.referenceType;
+        return (
+          <div style={{ fontSize: '12px' }}>
+            <div>{refLabel ? `${refLabel}: ${row.referenceId || ''}` : '-'}</div>
+            {row.note && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.note}</div>}
+          </div>
+        );
+      },
     },
   ];
 
-  // Alert Columns
+  // Cột bảng: Cảnh báo tồn kho & Cận hạn
   const alertColumns = [
     {
-      header: 'Mã tồn / Stock ID',
+      header: 'Mã lô',
       accessor: 'stockId',
-      width: '90px',
+      width: '80px',
     },
     {
-      header: 'Kho',
+      header: 'Kho bãi',
       accessor: 'warehouseName',
     },
     {
-      header: 'Sản phẩm & SKU',
+      header: 'Sản phẩm & Phân loại',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{row.productName}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Biến thể: {row.variantName} (SKU: {row.sku})
-          </div>
+          <div style={{ fontWeight: 600 }}>{row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId}`}</div>
+          {row.batchCode && (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Mã lô: {row.batchCode}</div>
+          )}
         </div>
       ),
     },
     {
-      header: 'Tồn thực',
-      accessor: 'quantity',
+      header: 'Tồn thực tế',
+      accessor: (row) => formatNumber(row.quantity),
       align: 'right',
     },
     {
-      header: 'Khả dụng',
-      accessor: 'availableQuantity',
+      header: 'Khả dụng bán',
+      accessor: (row) => (
+        <strong style={{ color: 'var(--color-primary-700)' }}>
+          {formatNumber(Math.max(0, (row.quantity ?? 0) - (row.reservedQuantity ?? 0)))}
+        </strong>
+      ),
       align: 'right',
     },
     {
-      header: 'Tối thiểu',
-      accessor: 'minQuantity',
+      header: 'Mức tối thiểu',
+      accessor: (row) => formatNumber(row.minQuantity ?? 0),
       align: 'right',
     },
     {
       header: 'Hạn dùng (FEFO)',
-      accessor: (row) => (
-        <span style={{ color: row.daysUntilExpiration <= 7 ? 'var(--color-danger-700)' : 'inherit', fontWeight: 600 }}>
-          {formatDate(row.expirationDate)}
-          {row.daysUntilExpiration != null && (
-            <span style={{ fontSize: '11px', display: 'block' }}>
-              (Còn {row.daysUntilExpiration} ngày)
-            </span>
-          )}
-        </span>
-      ),
+      accessor: (row) => {
+        const daysLeft = getDaysUntilExpiration(row.expirationDate);
+        return (
+          <span style={{ color: daysLeft != null && daysLeft <= 7 ? 'var(--color-danger-700)' : 'inherit', fontWeight: 600 }}>
+            {formatDate(row.expirationDate) || 'Không có'}
+            {daysLeft != null && (
+              <span style={{ fontSize: '11px', display: 'block' }}>
+                {daysLeft < 0 ? '(Đã hết hạn)' : `(Còn ${daysLeft} ngày)`}
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       header: 'Thao tác',
       accessor: (row) => (
-        <Button variant="outline" size="sm" onClick={() => handleOpenInspect(row)} icon={ClipboardCheck}>
-          Kiểm định
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleOpenAdjustModal(row)}
+          icon={ArrowUpRight}
+          title="Kiểm đếm & điều chỉnh số lượng tồn"
+        >
+          Kiểm kê
         </Button>
       ),
       align: 'right',
@@ -437,57 +497,95 @@ export const InventoryPage = () => {
     },
   ];
 
-  // Warehouse Stocks Table Columns
+  // Cột bảng: Tồn kho biến thể theo kho bãi
   const warehouseStockColumns = [
     {
-      header: 'ID',
+      header: 'Mã lô',
       accessor: 'id',
-      width: '60px',
+      width: '70px',
     },
     {
       header: 'Biến thể SKU',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{row.productName || `Variant #${row.productVariantId}`}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>SKU: {row.sku || row.variantName}</div>
+          <div style={{ fontWeight: 600 }}>{row.sku || `Biến thể #${row.productVariantId}`}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID biến thể: {row.productVariantId}</div>
         </div>
       ),
     },
     {
-      header: 'Lô hàng',
-      accessor: (row) => row.batchCode || row.batchNumber || 'Mặc định',
+      header: 'Mã lô sản xuất',
+      accessor: (row) => row.batchCode || 'Mặc định (Không mã)',
     },
     {
-      header: 'Số lượng tồn',
+      header: 'Tồn bán được',
       accessor: (row) => <strong>{formatNumber(row.quantity)}</strong>,
       align: 'right',
     },
     {
-      header: 'Tạm giữ',
+      header: 'Đang giữ cho đơn',
       accessor: (row) => formatNumber(row.reservedQuantity || 0),
       align: 'right',
     },
     {
-      header: 'Giá vốn',
+      header: 'Hàng cách ly (Hoàn)',
+      accessor: (row) =>
+        row.quarantinedQuantity > 0 ? (
+          <Badge variant="warning">{formatNumber(row.quarantinedQuantity)}</Badge>
+        ) : (
+          <span style={{ color: 'var(--text-muted)' }}>0</span>
+        ),
+      align: 'right',
+    },
+    {
+      header: 'Đơn giá vốn',
       accessor: (row) => formatCurrency(row.costPrice),
       align: 'right',
     },
     {
       header: 'Hạn sử dụng',
-      accessor: (row) => formatDate(row.expirationDate),
+      accessor: (row) => formatDate(row.expirationDate) || 'Không có',
     },
     {
       header: 'Thao tác',
       accessor: (row) => (
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-          <Button variant="outline" size="sm" onClick={() => handleOpenInspect(row)} icon={ClipboardCheck} title="Kiểm định lô" />
-          <Button variant="outline" size="sm" onClick={() => handleOpenAdjustModal(row)} icon={ArrowUpRight} title="Điều chỉnh sau kiểm kê" />
-          <Button variant="outline" size="sm" onClick={() => handleOpenTransferModal(row)} icon={ArrowDownLeft} title="Chuyển sang kho khác" />
-          <Button variant="outline" size="sm" onClick={() => handleDeleteStock(row.id)} icon={Trash2} title="Xóa tồn kho" />
+          {row.quarantinedQuantity > 0 && (
+            <Button
+              variant="warning"
+              size="sm"
+              onClick={() => handleOpenInspect(row)}
+              icon={ClipboardCheck}
+              title="Xử lý hàng hoàn trả cách ly"
+            >
+              Xử lý hoàn
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleOpenAdjustModal(row)}
+            icon={ArrowUpRight}
+            title="Điều chỉnh số lượng sau kiểm kê"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleOpenTransferModal(row)}
+            icon={ArrowDownLeft}
+            title="Chuyển sang kho khác"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleDeleteStock(row.id)}
+            icon={Trash2}
+            title="Xóa lô tồn kho này"
+          />
         </div>
       ),
       align: 'right',
-      width: '130px',
+      width: '160px',
     },
   ];
 
@@ -495,9 +593,9 @@ export const InventoryPage = () => {
     <div className="content-container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Quản trị Kho bãi, Tồn kho & Sổ cái FEFO</h1>
+          <h1 className="page-title">Quản lý Kho bãi & Sổ cái Tồn kho FEFO</h1>
           <p className="page-subtitle">
-            Giám sát mức an toàn tồn kho, hạn sử dụng mỹ phẩm, điều phối kho bãi và nhập kho hàng hóa
+            Theo dõi luân chuyển tồn kho, kiểm soát hạn sử dụng mỹ phẩm và điều phối hàng hóa giữa các kho
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -527,14 +625,14 @@ export const InventoryPage = () => {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Danh sách Tab */}
       <div className="tabs-header">
         <button
           className={`tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
           onClick={() => setActiveTab('ledger')}
         >
           <Boxes size={15} />
-          Sổ cái luân chuyển ({ledgerTotalElements})
+          Sổ cái biến động kho ({ledgerTotalElements})
         </button>
         <button
           className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
@@ -548,11 +646,11 @@ export const InventoryPage = () => {
           onClick={() => setActiveTab('warehouses')}
         >
           <Building2 size={15} />
-          Kho bãi & Nhập tồn kho thực tế ({warehouses.length})
+          Kho bãi & Quản lý lô tồn ({warehouses.length})
         </button>
       </div>
 
-      {/* Tab Content: Ledger */}
+      {/* Tab 1: Sổ cái biến động */}
       {activeTab === 'ledger' && (
         <div className="card">
           <DataTable
@@ -577,7 +675,7 @@ export const InventoryPage = () => {
         </div>
       )}
 
-      {/* Tab Content: Alerts */}
+      {/* Tab 2: Cảnh báo */}
       {activeTab === 'alerts' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
@@ -612,17 +710,20 @@ export const InventoryPage = () => {
         </div>
       )}
 
-      {/* Tab Content: Warehouses */}
+      {/* Tab 3: Kho bãi & Lô tồn */}
       {activeTab === 'warehouses' && (
         <div>
           <div className="admin-warehouse-toolbar">
             <div className="admin-warehouse-picker">
-              <label htmlFor="admin-warehouse-select" className="form-label">Chọn kho vận hành</label>
+              <label htmlFor="admin-warehouse-select" className="form-label">Chọn kho làm việc</label>
               <Select
                 id="admin-warehouse-select"
                 value={selectedWarehouseId || ''}
                 onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                options={warehouses.map((w) => ({ label: `${w.name} (${w.code})`, value: String(w.id) }))}
+                options={warehouses.map((w) => ({
+                  label: `${w.name} (${w.code}) · ${WAREHOUSE_TYPE_MAP[w.warehouseType] || w.warehouseType || 'Kho'}`,
+                  value: String(w.id),
+                }))}
                 className="admin-warehouse-field"
               />
             </div>
@@ -641,22 +742,22 @@ export const InventoryPage = () => {
 
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Danh sách tồn kho biến thể trong kho</span>
+              <span className="card-title">Danh sách các lô tồn kho trong kho đang chọn</span>
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Tổng cộng {warehouseStocks.length} SKU
+                Tổng cộng {warehouseStocks.length} lô hàng
               </span>
             </div>
             <DataTable
               columns={warehouseStockColumns}
               data={warehouseStocks}
               loading={loading}
-              emptyMessage="Kho bãi này chưa có dữ liệu tồn kho biến thể nào. Nhấn 'Nhập kho hàng hóa' để nhập."
+              emptyMessage="Kho này hiện chưa có dữ liệu tồn kho. Bấm 'Nhập kho hàng hóa' để thêm."
             />
           </div>
         </div>
       )}
 
-      {/* MODAL 1: CREATE NEW WAREHOUSE */}
+      {/* MODAL 1: TẠO KHO BÃI MỚI */}
       <Modal
         isOpen={createWhModalOpen}
         onClose={() => setCreateWhModalOpen(false)}
@@ -665,7 +766,7 @@ export const InventoryPage = () => {
       >
         <form onSubmit={handleCreateWarehouse}>
           <div className="grid-2">
-            <Input label="Tên kho *" value={whName} onChange={(e) => setWhName(e.target.value)} required placeholder="Kho Trung Tâm Tân Bình" />
+            <Input label="Tên kho *" value={whName} onChange={(e) => setWhName(e.target.value)} required placeholder="Kho Tổng Tân Bình" />
             <Input label="Mã kho (Code) *" value={whCode} onChange={(e) => setWhCode(e.target.value)} required placeholder="KHO-TB-01" />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
@@ -676,14 +777,14 @@ export const InventoryPage = () => {
             <Input label="Địa chỉ cụ thể" value={whAddress} onChange={(e) => setWhAddress(e.target.value)} placeholder="123 Hoàng Hoa Thám, P.13" />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Input label="Tên thủ kho / Quản lý" value={whManager} onChange={(e) => setWhManager(e.target.value)} placeholder="Nguyễn Văn A" />
+            <Input label="Thủ kho / Người quản lý" value={whManager} onChange={(e) => setWhManager(e.target.value)} placeholder="Nguyễn Văn A" />
             <Select
-              label="Loại kho"
+              label="Loại kho bãi"
               value={whType}
               onChange={(e) => setWhType(e.target.value)}
               options={[
                 { label: 'Kho Tổng (Central)', value: 'CENTRAL' },
-                { label: 'Kho Cửa Hàng / Spa (Branch)', value: 'BRANCH' },
+                { label: 'Kho Chi Nhánh / Spa (Branch)', value: 'BRANCH' },
                 { label: 'Kho Trung Chuyển (Transit)', value: 'TRANSIT' },
               ]}
             />
@@ -695,11 +796,11 @@ export const InventoryPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 2: INBOUND STOCK RECEIPT */}
+      {/* MODAL 2: NHẬP KHO HÀNG HÓA */}
       <Modal
         isOpen={inboundModalOpen}
         onClose={() => setInboundModalOpen(false)}
-        title={`Nhập Tồn Kho vào: ${warehouses.find((w) => String(w.id) === String(selectedWarehouseId))?.name || 'Kho đã chọn'}`}
+        title={`Nhập Hàng Vào Kho: ${warehouses.find((w) => String(w.id) === String(selectedWarehouseId))?.name || 'Kho đã chọn'}`}
         maxWidth="540px"
       >
         <form onSubmit={handleInboundStock}>
@@ -716,7 +817,7 @@ export const InventoryPage = () => {
             <Input label="Đơn giá vốn (VNĐ) *" type="number" value={inboundCostPrice} onChange={(e) => setInboundCostPrice(e.target.value)} required />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Input label="Mã lô sản xuất (Batch Code)" value={inboundBatchCode} onChange={(e) => setInboundBatchCode(e.target.value)} />
+            <Input label="Mã lô sản xuất (Batch Code)" value={inboundBatchCode} onChange={(e) => setInboundBatchCode(e.target.value)} placeholder="LO-2026-10" />
             <Input label="Hạn sử dụng (Expiration Date)" type="date" value={inboundExpDate} onChange={(e) => setInboundExpDate(e.target.value)} />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
@@ -730,77 +831,91 @@ export const InventoryPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 3: INSPECTION */}
+      {/* MODAL 3: XỬ LÝ HÀNG HOÀN TRẢ CÁCH LY */}
       <Modal
         isOpen={inspectModalOpen}
         onClose={() => setInspectModalOpen(false)}
-        title="Ghi nhận kiểm định tồn kho thực tế"
+        title="Kiểm định & Xử lý hàng hoàn trả cách ly"
       >
         <form onSubmit={handleInspectSubmit}>
           <div
             style={{
-              padding: '10px 12px',
+              padding: '12px',
               backgroundColor: 'var(--color-primary-50)',
               border: '1px solid var(--border-subtle)',
-              fontSize: '12px',
+              fontSize: '13px',
               marginBottom: '16px',
+              borderRadius: '6px',
             }}
           >
-            Sản phẩm / SKU kiểm định: <strong>{selectedStock?.productName || selectedStock?.variantName || selectedStock?.sku}</strong>
+            <div>Lô hàng: <strong>{selectedStock?.sku || selectedStock?.productName || `Lô #${selectedStock?.id || selectedStock?.stockId}`}</strong></div>
+            <div style={{ marginTop: '4px' }}>
+              Số lượng đang cách ly: <strong style={{ color: 'var(--color-warning-700)' }}>{selectedStock?.quarantinedQuantity ?? 0}</strong> sản phẩm
+            </div>
           </div>
 
           <Input
-            label="Số lượng mẫu kiểm định / hư hại"
+            label="Số lượng hàng hoàn cần xử lý *"
             type="number"
             min={1}
+            max={selectedStock?.quarantinedQuantity || 1}
             value={inspectQuantity}
             onChange={(e) => setInspectQuantity(e.target.value)}
             required
           />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '14px' }}>
             <input
               type="checkbox"
               id="restockCheck"
               checked={inspectRestock}
               onChange={(e) => setInspectRestock(e.target.checked)}
-              style={{ width: '16px', height: '16px' }}
+              style={{ width: '18px', height: '18px', marginTop: '2px' }}
             />
             <label htmlFor="restockCheck" style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
-              Đã kiểm tra chất lượng đạt chuẩn và nhập lại kho (Restock)
+              Hàng đạt chuẩn chất lượng: Cho phép nhập lại kho bán tiếp (Restock)
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>
+                (Nếu bỏ chọn, số lượng này sẽ được ghi nhận xuất tiêu hủy / bỏ khỏi kho)
+              </div>
             </label>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setInspectModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={submitting}>Ghi nhận kiểm kê</Button>
+            <Button variant="primary" type="submit" loading={submitting}>Xác nhận xử lý</Button>
           </div>
         </form>
       </Modal>
 
-      {/* Adjust Stock Modal */}
+      {/* MODAL 4: ĐIỀU CHỈNH SỐ LƯỢNG SAU KIỂM KÊ */}
       <Modal
         isOpen={adjustModalOpen}
         onClose={() => setAdjustModalOpen(false)}
-        title="Điều chỉnh số tồn sau kiểm đếm"
+        title="Điều chỉnh số lượng sau kiểm kê"
         maxWidth="500px"
       >
         <form onSubmit={handleAdjustSubmit}>
           <div
             style={{
-              padding: '10px 12px',
+              padding: '12px',
               backgroundColor: 'var(--color-primary-50)',
               border: '1px solid var(--border-subtle)',
-              fontSize: '12px',
+              fontSize: '13px',
               marginBottom: '16px',
+              borderRadius: '6px',
             }}
           >
-            <div>Lô SKU: <strong>{selectedStockForAdjust?.productName || selectedStockForAdjust?.sku}</strong></div>
-            <div>Số lượng hiện tại: <strong>{selectedStockForAdjust?.quantity ?? 0}</strong> (Tạm giữ: <strong>{selectedStockForAdjust?.reservedQuantity ?? 0}</strong>)</div>
+            <div>Lô SKU: <strong>{selectedStockForAdjust?.sku || selectedStockForAdjust?.productName || `Lô #${selectedStockForAdjust?.id}`}</strong></div>
+            <div style={{ marginTop: '4px' }}>
+              Tồn bán được hiện tại: <strong>{selectedStockForAdjust?.quantity ?? 0}</strong> | Đang giữ chỗ cho đơn: <strong style={{ color: 'var(--color-danger-700)' }}>{selectedStockForAdjust?.reservedQuantity ?? 0}</strong>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              * Số lượng sau kiểm kê không được thấp hơn lượng hàng đang giữ chỗ cho các đơn hàng.
+            </div>
           </div>
 
           <Input
-            label="Số lượng tồn thực tế sau kiểm kê (≥ tạm giữ)"
+            label="Số lượng tồn thực tế sau kiểm kê *"
             type="number"
             min={selectedStockForAdjust?.reservedQuantity ?? 0}
             value={adjustQuantityAfter}
@@ -810,22 +925,22 @@ export const InventoryPage = () => {
 
           <div style={{ marginTop: '12px' }}>
             <Input
-              label="Lý do điều chỉnh (bắt buộc)"
+              label="Lý do điều chỉnh (bắt buộc) *"
               value={adjustReason}
               onChange={(e) => setAdjustReason(e.target.value)}
-              placeholder="VD: Kiểm kê định kỳ, sai lệch kiểm đếm..."
+              placeholder="VD: Kiểm kê kho định kỳ, chênh lệch thực tế..."
               required
             />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setAdjustModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={adjustSubmitting}>Xác nhận điều chỉnh</Button>
+            <Button variant="primary" type="submit" loading={adjustSubmitting}>Lưu kết quả kiểm kê</Button>
           </div>
         </form>
       </Modal>
 
-      {/* Transfer Stock Modal */}
+      {/* MODAL 5: ĐIỀU CHUYỂN KHO */}
       <Modal
         isOpen={transferModalOpen}
         onClose={() => setTransferModalOpen(false)}
@@ -835,32 +950,36 @@ export const InventoryPage = () => {
         <form onSubmit={handleTransferSubmit}>
           <div
             style={{
-              padding: '10px 12px',
+              padding: '12px',
               backgroundColor: 'var(--color-primary-50)',
               border: '1px solid var(--border-subtle)',
-              fontSize: '12px',
+              fontSize: '13px',
               marginBottom: '16px',
+              borderRadius: '6px',
             }}
           >
-            <div>Lô SKU: <strong>{selectedStockForTransfer?.productName || selectedStockForTransfer?.sku}</strong></div>
-            <div>
-              Khả dụng để chuyển: <strong>{Math.max(0, (selectedStockForTransfer?.quantity ?? 0) - (selectedStockForTransfer?.reservedQuantity ?? 0))}</strong>
+            <div>Lô SKU: <strong>{selectedStockForTransfer?.sku || selectedStockForTransfer?.productName || `Lô #${selectedStockForTransfer?.id}`}</strong></div>
+            <div style={{ marginTop: '4px' }}>
+              Khả dụng để chuyển: <strong style={{ color: 'var(--color-success-700)' }}>{Math.max(0, (selectedStockForTransfer?.quantity ?? 0) - (selectedStockForTransfer?.reservedQuantity ?? 0))}</strong>
             </div>
           </div>
 
           <Select
-            label="Chọn kho đích nhận hàng"
+            label="Chọn kho nhận hàng *"
             value={targetWhId}
             onChange={(e) => setTargetWhId(e.target.value)}
             options={warehouses
               .filter((w) => String(w.id) !== String(selectedWarehouseId))
-              .map((w) => ({ label: `${w.name} (${w.warehouseCode || `#${w.id}`})`, value: String(w.id) }))}
+              .map((w) => ({
+                label: `${w.name} (${w.code || `#${w.id}`}) · ${WAREHOUSE_TYPE_MAP[w.warehouseType] || ''}`,
+                value: String(w.id),
+              }))}
             required
           />
 
           <div style={{ marginTop: '12px' }}>
             <Input
-              label="Số lượng cần chuyển"
+              label="Số lượng cần chuyển *"
               type="number"
               min={1}
               max={Math.max(1, (selectedStockForTransfer?.quantity ?? 0) - (selectedStockForTransfer?.reservedQuantity ?? 0))}
@@ -872,10 +991,10 @@ export const InventoryPage = () => {
 
           <div style={{ marginTop: '12px' }}>
             <Input
-              label="Lý do điều chuyển"
+              label="Lý do điều chuyển *"
               value={transferReason}
               onChange={(e) => setTransferReason(e.target.value)}
-              placeholder="VD: Điều phối tồn kho, chi viện cơ sở..."
+              placeholder="VD: Điều phối chi viện hàng cho chi nhánh..."
               required
             />
           </div>

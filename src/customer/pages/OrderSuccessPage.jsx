@@ -203,7 +203,7 @@ export const OrderSuccessPage = ({
   };
 
   return (
-    <div className="customer-container" style={{ padding: '40px 20px 80px 20px', maxWidth: '780px' }}>
+    <div className="customer-container customer-order-success-page" style={{ padding: '40px 20px 80px 20px', maxWidth: '780px' }}>
       <div style={{
         backgroundColor: '#FFFFFF',
         borderRadius: 'var(--radius-lg)',

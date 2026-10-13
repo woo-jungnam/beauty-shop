@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Star, ShoppingBag, Eye, Sparkles, Check, Heart } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Star, ShoppingBag, Eye, Check, Heart } from 'lucide-react';
 import { useCustomerCart } from '../../stores/customerCartStore';
 import { cleanDisplayName, resolveMediaUrl } from '../../../shared/utils/formatters';
+import { recordSearchClick } from '../../utils/productInteractions';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -18,19 +19,24 @@ export const resolveProductImage = (product) => {
   return 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=85';
 };
 
-export const ProductCard = ({ product, onNavigate, onQuickView }) => {
-  const { addItem } = useCustomerCart();
+export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = false }) => {
+  const { addItem, isLoading } = useCustomerCart();
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const addPendingRef = useRef(false);
+  const feedbackTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(feedbackTimerRef.current), []);
 
   // Image resolution from backend product data or authentic catalog map
   const imageUrl = resolveProductImage(product);
 
   // Compute pricing from default variant or direct fields
   const variants = product.variants || [];
-  const defaultVariant = variants[0] || null;
-  const price = Number(defaultVariant?.discountPrice || defaultVariant?.price || product.minPrice || product.basePrice || product.price || 0);
-  const originalPrice = Number(defaultVariant?.originalPrice || (product.maxPrice && product.maxPrice > price ? product.maxPrice : null) || product.originalPrice || price);
+  const activeVariants = variants.filter((variant) => variant.isActive === true && !variant.isDeleted);
+  const defaultVariant = activeVariants.find((variant) => variant.isDefault) || activeVariants[0] || null;
+  const price = Number(defaultVariant?.discountPrice ?? defaultVariant?.price ?? product.minPrice ?? product.basePrice ?? product.price ?? 0);
+  const originalPrice = Number(defaultVariant?.originalPrice ?? defaultVariant?.price ?? product.originalPrice ?? price);
   const discountPercent = originalPrice > price
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
@@ -41,11 +47,22 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
   const soldCount = Number(product.totalSold ?? product.soldCount ?? 0);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  const handleQuickAdd = (e) => {
+  const handleQuickAdd = async (e) => {
     e.stopPropagation();
-    addItem(product, defaultVariant, 1);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1200);
+    if (addPendingRef.current || isLoading) return;
+    addPendingRef.current = true;
+    setIsAdding(true);
+    setJustAdded(false);
+    try {
+      if (await addItem(product, defaultVariant, 1)) {
+        setJustAdded(true);
+        clearTimeout(feedbackTimerRef.current);
+        feedbackTimerRef.current = setTimeout(() => setJustAdded(false), 1200);
+      }
+    } finally {
+      addPendingRef.current = false;
+      setIsAdding(false);
+    }
   };
 
   const handleToggleWishlist = (e) => {
@@ -54,8 +71,9 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
   };
 
   return (
-    <div
+    <article
       className="luxury-card product-card-resolved"
+      aria-label={`Xem sản phẩm ${product.name}`}
       style={{
         position: 'relative',
         display: 'flex',
@@ -67,21 +85,23 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
         backgroundColor: '#FFFFFF',
         height: '100%'
       }}
-      onClick={() => onNavigate(`product/${product.id}`)}
+      onClick={() => { if (fromSearch) recordSearchClick(product.id); onNavigate(`product/${product.id}`); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* 1. Image Media Container */}
-      <div style={{
+      <div className="product-card-media" style={{
         position: 'relative',
         width: '100%',
-        paddingTop: '100%', // 1:1 Aspect Ratio
+        paddingTop: 'var(--product-card-media-padding, 100%)',
         backgroundColor: '#F8F6F2',
         overflow: 'hidden'
       }}>
         <img 
           src={imageUrl} 
           alt={product.name}
+          loading="lazy"
+          decoding="async"
           onError={(e) => {
             e.currentTarget.onerror = null;
             const fallback = resolveProductImage(product);
@@ -95,7 +115,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
             left: 0,
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: 'var(--product-card-image-fit, cover)',
             transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
             transform: isHovered ? 'scale(1.06)' : 'scale(1)'
           }}
@@ -191,6 +211,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
+              if (fromSearch) recordSearchClick(product.id);
               onQuickView(product);
             }}
             title="Xem nhanh chi tiết"
@@ -231,7 +252,11 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
           zIndex: 3
         }}>
           <button
+            type="button"
             onClick={handleQuickAdd}
+            disabled={isAdding || isLoading}
+            aria-busy={isAdding}
+            aria-label={`Thêm ${product.name} vào giỏ`}
             style={{
               width: '100%',
               padding: '9px 14px',
@@ -257,7 +282,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
             ) : (
               <>
                 <ShoppingBag size={14} color="#FFFFFF" />
-                <span>Thêm vào giỏ</span>
+                <span>{isAdding ? 'Đang thêm…' : 'Thêm vào giỏ'}</span>
               </>
             )}
           </button>
@@ -265,9 +290,9 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
       </div>
 
       {/* 2. Content Body - Pastel Pink Theme */}
-      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div className="product-card-body" style={{ padding: 'var(--product-card-body-padding, 12px 14px)', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* Brand label */}
-        <div style={{
+        <div className="product-card-brand" title={cleanDisplayName(brandName)} style={{
           fontSize: '11px',
           fontWeight: 800,
           color: 'var(--c-primary, #D45D79)',
@@ -293,11 +318,11 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
           minHeight: '36px',
           letterSpacing: '-0.01em'
         }}>
-          {product.name}
+          <a className="product-card-title-link" href={`#/product/${product.id}`} onClick={(event) => { event.stopPropagation(); if (fromSearch) recordSearchClick(product.id); }}>{product.name}</a>
         </h3>
 
         {/* Rating and Volume / Sales */}
-        <div style={{
+        <div className="product-card-rating" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -339,7 +364,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
         </div>
 
         {/* Price Row - Rose Red Bold Accent */}
-        <div style={{
+        <div className="product-card-price" style={{
           display: 'flex',
           alignItems: 'baseline',
           gap: '8px',
@@ -366,6 +391,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView }) => {
           )}
         </div>
       </div>
-    </div>
+    </article>
   );
 };

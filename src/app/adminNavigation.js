@@ -22,6 +22,7 @@ export const ADMIN_SECTIONS = [
         label: "Tổng quan",
         description: "Báo cáo & hiệu quả kinh doanh",
         icon: LayoutDashboard,
+        role: "ROLE_STAFF",
         keywords: "dashboard doanh thu báo cáo overview",
       },
     ],
@@ -34,7 +35,7 @@ export const ADMIN_SECTIONS = [
         label: "Đơn hàng",
         description: "Theo dõi & xử lý đơn hàng",
         icon: ShoppingBag,
-        role: "ROLE_ORDER_STAFF",
+        role: "ROLE_STAFF",
         keywords: "order đơn hàng giao vận",
       },
       {
@@ -42,7 +43,7 @@ export const ADMIN_SECTIONS = [
         label: "Sản phẩm",
         description: "Danh mục, thương hiệu, biến thể & thuộc tính",
         icon: Package,
-        role: "ROLE_CATALOG_STAFF",
+        role: "ROLE_STAFF",
         keywords:
           "catalog sku mỹ phẩm danh mục thương hiệu thuộc tính attribute tag thẻ nhãn hoạt chất thành phần da liễu",
       },
@@ -51,7 +52,7 @@ export const ADMIN_SECTIONS = [
         label: "Kho & tồn kho",
         description: "Quản lý kho, lô hàng & kiểm kê",
         icon: Boxes,
-        role: "ROLE_INVENTORY_STAFF",
+        role: "ROLE_STAFF",
         keywords: "stock inventory kho kiểm kê",
       },
       {
@@ -59,7 +60,7 @@ export const ADMIN_SECTIONS = [
         label: "Mua hàng",
         description: "Nhà cung cấp & phiếu nhập",
         icon: ClipboardList,
-        role: "ROLE_INVENTORY_STAFF",
+        role: "ROLE_STAFF",
         keywords: "supplier procurement nhà cung cấp nhập hàng",
       },
     ],
@@ -72,7 +73,7 @@ export const ADMIN_SECTIONS = [
         label: "Lễ tân & Quầy Spa",
         description: "Tiếp đón, check-in, phân ca KTV & thu ngân tại quầy",
         icon: UserCheck,
-        role: ["ROLE_STAFF", "ROLE_SPA_RECEPTION", "ROLE_ADMIN"],
+        role: "ROLE_STAFF",
         keywords:
           "reception lễ tân tiếp đón check-in thu ngân thanh toán quầy spa lịch hẹn đặt lịch",
       },
@@ -81,7 +82,7 @@ export const ADMIN_SECTIONS = [
         label: "Spa & lịch hẹn",
         description: "Lịch hẹn, liệu trình, tài nguyên & nhân sự",
         icon: CalendarDays,
-        role: ["ROLE_STAFF", "ROLE_SPA_RECEPTION", "ROLE_SPA_THERAPIST"],
+        role: "ROLE_STAFF",
         keywords:
           "spa appointment dịch vụ lịch hẹn nhân viên kỹ thuật viên buồng phòng giường máy móc bảo trì khảo sát an toàn vé liệu trình",
       },
@@ -90,7 +91,7 @@ export const ADMIN_SECTIONS = [
         label: "Khách hàng",
         description: "Hồ sơ & chăm sóc khách hàng",
         icon: HeartHandshake,
-        role: "ROLE_CS_STAFF",
+        role: "ROLE_STAFF",
         keywords: "crm customer hồ sơ chăm sóc khách",
       },
       {
@@ -98,6 +99,7 @@ export const ADMIN_SECTIONS = [
         label: "Khuyến mãi",
         description: "Ưu đãi & mã giảm giá",
         icon: TicketPercent,
+        role: "ROLE_STAFF",
         keywords: "voucher promotion giảm giá ưu đãi",
       },
       {
@@ -105,7 +107,7 @@ export const ADMIN_SECTIONS = [
         label: "Đánh giá",
         description: "Kiểm duyệt & phản hồi đánh giá",
         icon: MessageSquareText,
-        role: "ROLE_CS_STAFF",
+        role: "ROLE_STAFF",
         keywords: "review nhận xét phản hồi kiểm duyệt",
       },
     ],

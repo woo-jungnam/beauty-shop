@@ -9,6 +9,9 @@ import {
   Edit,
   Trash2,
   KeyRound,
+  Key,
+  Copy,
+  Check,
   Search,
   History,
   XCircle,
@@ -19,6 +22,8 @@ import {
   formatNumber,
   formatDateTime,
   getUserStatusBadge,
+  getMembershipTierLabel,
+  getRoleLabel,
 } from '../shared/utils/formatters';
 import { Button } from '../shared/ui/Button';
 import { Input } from '../shared/ui/Input';
@@ -54,6 +59,12 @@ export const UsersPage = () => {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [statusHistoryList, setStatusHistoryList] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // --- RESET PASSWORD STATE ---
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetResult, setResetResult] = useState(null);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
 
   // --- ROLES STATE ---
   const [roles, setRoles] = useState([]);
@@ -148,6 +159,32 @@ export const UsersPage = () => {
     } catch (err) {
       alert(err.message || 'Lỗi buộc đăng xuất');
     }
+  };
+
+  const handleResetPassword = async (user) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn đặt lại mật khẩu tạm thời cho tài khoản "${user.username}"?\n\nToàn bộ phiên đăng nhập hiện tại của người dùng này sẽ bị thu hồi ngay lập tức.`)) {
+      return;
+    }
+    setResetSubmitting(true);
+    try {
+      const res = await apiClient.post(ENDPOINTS.USERS.RESET_PASSWORD(user.id));
+      const data = res.data || res;
+      setResetResult(data);
+      setCopiedPassword(false);
+      setResetModalOpen(true);
+      fetchUsers(page);
+    } catch (err) {
+      alert(err.message || 'Lỗi khi đặt lại mật khẩu');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    if (!resetResult?.temporaryPassword) return;
+    navigator.clipboard.writeText(resetResult.temporaryPassword);
+    setCopiedPassword(true);
+    setTimeout(() => setCopiedPassword(false), 2000);
   };
 
   const handleOpenRoles = async (user) => {
@@ -257,7 +294,7 @@ export const UsersPage = () => {
   };
 
   const handleDeleteRole = async (role) => {
-    if (['ROLE_ADMIN', 'ROLE_CUSTOMER', 'ROLE_STAFF'].includes(role.roleName)) {
+    if (['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER'].includes(role.roleName)) {
       alert('Đây là vai trò hệ thống mặc định (Core System Role), không được phép xóa.');
       return;
     }
@@ -299,29 +336,30 @@ export const UsersPage = () => {
       header: 'Hạng & Điểm thưởng',
       accessor: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Badge variant="info">{row.membershipTier || 'MEMBER'}</Badge>
+          <Badge variant="info">{getMembershipTierLabel(row.membershipTier)}</Badge>
           <span style={{ fontSize: '12px', fontWeight: 600 }}>
-            {formatNumber(row.loyaltyPoints || 0)} pts
+            {formatNumber(row.loyaltyPoints || 0)} điểm
           </span>
         </div>
       ),
     },
     {
-      header: 'Vai trò (Roles)',
+      header: 'Vai trò tài khoản',
       accessor: (row) => (
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
           {(row.roles || []).map((r, idx) => (
             <span
               key={idx}
               style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 4px',
-                backgroundColor: r.includes('ADMIN') ? 'var(--color-primary-900)' : 'var(--color-primary-200)',
-                color: r.includes('ADMIN') ? '#FFFFFF' : 'var(--color-primary-800)',
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '2px 6px',
+                borderRadius: '3px',
+                backgroundColor: r.includes('ADMIN') ? 'var(--color-primary-900)' : 'var(--color-primary-100)',
+                color: r.includes('ADMIN') ? '#FFFFFF' : 'var(--color-primary-900)',
               }}
             >
-              {r.replace('ROLE_', '')}
+              {getRoleLabel(r)}
             </span>
           ))}
         </div>
@@ -341,6 +379,15 @@ export const UsersPage = () => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
           <Button variant="outline" size="sm" onClick={() => handleOpenRoles(row)} icon={KeyRound} title="Gán vai trò">
             Phân quyền
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleResetPassword(row)}
+            icon={Key}
+            title="Đặt lại mật khẩu tạm thời"
+          >
+            Đổi mật khẩu
           </Button>
           <Button variant="outline" size="sm" onClick={() => handleOpenSessions(row)} title="Xem phiên đăng nhập">
             Phiên
@@ -372,6 +419,15 @@ export const UsersPage = () => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
           <Button variant="outline" size="sm" onClick={() => handleOpenRoles(row)} icon={KeyRound} title="Gán vai trò">
             Phân quyền
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleResetPassword(row)}
+            icon={Key}
+            title="Đặt lại mật khẩu tạm thời"
+          >
+            Đổi mật khẩu
           </Button>
           <Button variant="outline" size="sm" onClick={() => handleOpenSessions(row)} title="Xem phiên đăng nhập">
             Phiên
@@ -421,7 +477,7 @@ export const UsersPage = () => {
             <div style={{ fontWeight: 700, fontFamily: 'monospace', fontSize: '13px' }}>
               {row.roleName}
             </div>
-            {['ROLE_ADMIN', 'ROLE_CUSTOMER', 'ROLE_STAFF'].includes(row.roleName) && (
+            {['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER'].includes(row.roleName) && (
               <span style={{ fontSize: '10px', color: 'var(--color-accent-700)', fontWeight: 600 }}>
                 Hệ thống cốt lõi (Core)
               </span>
@@ -450,7 +506,7 @@ export const UsersPage = () => {
       header: 'Thao tác',
       align: 'right',
       render: (row) => {
-        const isCoreRole = ['ROLE_ADMIN', 'ROLE_CUSTOMER', 'ROLE_STAFF'].includes(row.roleName);
+        const isCoreRole = ['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER'].includes(row.roleName);
         return (
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
             <Button
@@ -634,7 +690,7 @@ export const UsersPage = () => {
                   { label: 'Tất cả trạng thái', value: '' },
                   { label: 'Kích hoạt (ACTIVE)', value: 'ACTIVE' },
                   { label: 'Tạm khóa (INACTIVE)', value: 'INACTIVE' },
-                  { label: 'Cấm vĩnh viễn (BLOCKED)', value: 'BLOCKED' },
+                  { label: 'Cấm tài khoản (Khóa vĩnh viễn)', value: 'BLOCKED' },
                 ]}
               />
             </div>
@@ -645,7 +701,7 @@ export const UsersPage = () => {
                 onChange={(e) => setRoleFilter(e.target.value)}
                 options={[
                   { label: 'Tất cả vai trò', value: '' },
-                  ...roles.map((r) => ({ label: r.roleName.replace('ROLE_', ''), value: r.roleName.replace('ROLE_', '') })),
+                  ...roles.map((r) => ({ label: getRoleLabel(r.roleName), value: r.roleName.replace('ROLE_', '') })),
                 ]}
               />
             </div>
@@ -744,7 +800,7 @@ export const UsersPage = () => {
               { header: 'Thời điểm', accessor: (row) => formatDateTime(row.createdAt), width: '150px' },
               { header: 'Trạng thái cũ', accessor: (row) => <Badge variant={getUserStatusBadge(row.previousStatus).variant}>{getUserStatusBadge(row.previousStatus).text}</Badge> },
               { header: 'Trạng thái mới', accessor: (row) => <Badge variant={getUserStatusBadge(row.newStatus).variant}>{getUserStatusBadge(row.newStatus).text}</Badge> },
-              { header: 'Người thực hiện', accessor: (row) => row.changedBy || 'SYSTEM' },
+              { header: 'Người thực hiện', accessor: (row) => row.changedBy === 'SYSTEM' ? 'Hệ thống tự động' : (row.changedBy || 'Hệ thống') },
               { header: 'Lý do', accessor: (row) => row.reason || '—' },
             ]}
             data={statusHistoryList}
@@ -906,7 +962,7 @@ export const UsersPage = () => {
             label="Tên vai trò (Định danh hệ thống)"
             value={roleName}
             onChange={(e) => setRoleName(e.target.value)}
-            placeholder="ROLE_INVENTORY_STAFF, ROLE_AUDITOR..."
+            placeholder="ROLE_STAFF, ROLE_USER..."
             required
           />
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '-8px', marginBottom: '12px' }}>
@@ -921,6 +977,80 @@ export const UsersPage = () => {
             required
           />
         </form>
+      </Modal>
+
+      {/* Reset Password Result Modal */}
+      <Modal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        title={`Đặt lại mật khẩu: ${resetResult?.username || ''}`}
+        maxWidth="500px"
+        footer={
+          <Button variant="primary" onClick={() => setResetModalOpen(false)}>
+            Đã lưu & Đóng
+          </Button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: 'var(--color-primary-50)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '13px',
+              borderRadius: '6px',
+            }}
+          >
+            <div>Tài khoản: <strong>{resetResult?.username}</strong></div>
+            <div>Email: <strong>{resetResult?.email}</strong></div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {resetResult?.message}
+            </div>
+          </div>
+
+          <div>
+            <label className="form-label" style={{ fontWeight: 700 }}>Mật khẩu tạm thời mới:</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
+              <div
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  backgroundColor: '#F3F4F6',
+                  border: '1px solid var(--border-subtle)',
+                  fontFamily: 'monospace',
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  color: 'var(--color-primary-900)',
+                  borderRadius: '4px',
+                  userSelect: 'all',
+                }}
+              >
+                {resetResult?.temporaryPassword}
+              </div>
+              <Button
+                variant={copiedPassword ? 'primary' : 'outline'}
+                onClick={handleCopyPassword}
+                icon={copiedPassword ? Check : Copy}
+              >
+                {copiedPassword ? 'Đã sao chép' : 'Sao chép'}
+              </Button>
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: '10px',
+              backgroundColor: 'var(--color-warning-50)',
+              border: '1px solid var(--color-warning-600)',
+              fontSize: '12px',
+              color: 'var(--color-warning-700)',
+              borderRadius: '4px',
+            }}
+          >
+            ⚠️ <strong>Lưu ý bảo mật:</strong> Hãy sao chép và gửi mật khẩu tạm này cho người dùng qua kênh liên lạc an toàn. Yêu cầu họ đổi lại mật khẩu cá nhân ngay sau khi đăng nhập thành công.
+          </div>
+        </div>
       </Modal>
     </div>
   );

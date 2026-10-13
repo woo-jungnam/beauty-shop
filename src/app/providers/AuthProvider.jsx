@@ -64,10 +64,7 @@ export const AuthProvider = ({ children }) => {
     // Verify administrator / staff authority for Operator Console login.
     const operationalRoles = [
       'ROLE_ADMIN', 'ADMIN',
-      'ROLE_STAFF', 'STAFF',
-      'ROLE_SPA_RECEPTION', 'SPA_RECEPTION',
-      'ROLE_SPA_THERAPIST', 'SPA_THERAPIST',
-      'ROLE_ORDER_STAFF', 'ROLE_INVENTORY_STAFF', 'ROLE_CATALOG_STAFF', 'ROLE_CS_STAFF'
+      'ROLE_STAFF', 'STAFF'
     ];
     if (requireOperator && !roles.some((role) => operationalRoles.includes(role))) {
       throw new Error('Tài khoản của bạn không có quyền truy cập hệ thống vận hành. Vui lòng liên hệ quản trị hệ thống.');
@@ -138,15 +135,13 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated: !!token && !!user,
     isAdmin: user?.roles?.some((r) => r === 'ROLE_ADMIN' || r === 'ADMIN') ?? false,
+    isStaff: user?.roles?.some((r) => r === 'ROLE_STAFF' || r === 'STAFF') ?? false,
     isOperator: user?.roles?.some((r) => [
       'ROLE_ADMIN', 'ADMIN',
-      'ROLE_STAFF', 'STAFF',
-      'ROLE_SPA_RECEPTION', 'SPA_RECEPTION',
-      'ROLE_SPA_THERAPIST', 'SPA_THERAPIST',
-      'ROLE_ORDER_STAFF', 'ROLE_INVENTORY_STAFF', 'ROLE_CATALOG_STAFF', 'ROLE_CS_STAFF'
+      'ROLE_STAFF', 'STAFF'
     ].includes(r)) ?? false,
-    isSpaReception: user?.roles?.some((r) => ['ROLE_SPA_RECEPTION', 'SPA_RECEPTION', 'ROLE_STAFF', 'ROLE_ADMIN', 'ADMIN'].includes(r)) ?? false,
-    isSpaTherapist: user?.roles?.some((r) => ['ROLE_SPA_THERAPIST', 'SPA_THERAPIST'].includes(r)) ?? false,
+    isSpaReception: user?.roles?.some((r) => ['ROLE_STAFF', 'STAFF', 'ROLE_ADMIN', 'ADMIN'].includes(r)) ?? false,
+    isSpaTherapist: user?.roles?.some((r) => ['ROLE_STAFF', 'STAFF'].includes(r)) ?? false,
     login,
     register,
     logout,

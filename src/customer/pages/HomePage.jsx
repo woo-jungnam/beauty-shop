@@ -24,12 +24,15 @@ import { useCustomerCart } from '../stores/customerCartStore';
 import { apiClient } from '../../shared/api/client';
 import { ENDPOINTS } from '../../shared/api/endpoints';
 import { getGuestSessionId } from '../../shared/utils/session';
+import { useHomeSectionLimits } from '../components/ui/useHomeSectionLimits';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 };
 
 export const HomePage = ({ onNavigate }) => {
+  const homePageRef = useRef(null);
+  const sectionLimits = useHomeSectionLimits(homePageRef);
   const { addItem } = useCustomerCart();
   const [products, setProducts] = useState([]);
   const [spaServices, setSpaServices] = useState([]);
@@ -69,7 +72,6 @@ export const HomePage = ({ onNavigate }) => {
   const [loadingCategoryProducts, setLoadingCategoryProducts] = useState(false);
   const [catalogSearchTerm, setCatalogSearchTerm] = useState('');
   const [catalogSortBy, setCatalogSortBy] = useState('DEFAULT');
-  const [visibleCount, setVisibleCount] = useState(12);
 
   // 4. Spa Service Category Filter State
   const [activeSpaCategory, setActiveSpaCategory] = useState('ALL');
@@ -178,7 +180,7 @@ export const HomePage = ({ onNavigate }) => {
     return list;
   }, [products, categoryProducts, catalogSearchTerm, catalogSortBy]);
 
-  // 8 random discovery products — balanced 2x4 on desktop, 4x2 on mobile
+  // Keep the discovery order stable while the visible limit changes with the grid.
   const randomProducts = useMemo(() => {
     if (products.length === 0) return [];
     const arr = [...products];
@@ -186,8 +188,17 @@ export const HomePage = ({ onNavigate }) => {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    return arr.slice(0, 8);
+    return arr;
   }, [products]);
+
+  const openCatalog = () => {
+    const params = new URLSearchParams();
+    if (catalogCategoryFilter !== 'ALL') params.set('categoryId', catalogCategoryFilter);
+    if (catalogSearchTerm.trim()) params.set('search', catalogSearchTerm.trim());
+    const sort = { PRICE_ASC: 'price_asc', PRICE_DESC: 'price_desc', RATING: 'rating' }[catalogSortBy];
+    if (sort) params.set('sort', sort);
+    onNavigate(`products${params.size ? `?${params.toString()}` : ''}`);
+  };
 
   // Dynamic category filter pills from API
   const dynamicCatalogCategories = useMemo(() => {
@@ -463,7 +474,7 @@ export const HomePage = ({ onNavigate }) => {
 
   // Hero Carousel Auto-Play
   useEffect(() => {
-    if (isHeroHovered || heroSlides.length <= 1) return;
+    if (isHeroHovered || heroSlides.length <= 1 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const heroTimer = setInterval(() => {
       setActiveHeroSlide(prev => (prev + 1) % heroSlides.length);
     }, 5500);
@@ -496,12 +507,12 @@ export const HomePage = ({ onNavigate }) => {
 
   const getFilteredSpa = () => {
     if (!spaServices || spaServices.length === 0) return [];
-    if (activeSpaCategory === 'ALL') return spaServices.slice(0, 6);
-    return spaServices.filter(s => String(s.categoryId) === String(activeSpaCategory)).slice(0, 6);
+    if (activeSpaCategory === 'ALL') return spaServices.slice(0, sectionLimits.spa);
+    return spaServices.filter(s => String(s.categoryId) === String(activeSpaCategory)).slice(0, sectionLimits.spa);
   };
 
   return (
-    <div className="customer-home-page" style={{ display: 'flex', flexDirection: 'column', gap: '56px', paddingBottom: '70px' }}>
+    <div ref={homePageRef} className="customer-home-page" style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '56px' }}>
 
       {/* =========================================================================
           1. LUXURY EDITORIAL HERO BANNER (CAROUSEL WITH DYNAMIC SLIDES)
@@ -510,27 +521,12 @@ export const HomePage = ({ onNavigate }) => {
         className="hero-slider-container"
         onMouseEnter={() => setIsHeroHovered(true)}
         onMouseLeave={() => setIsHeroHovered(false)}
-        style={{
-          position: 'relative',
-          padding: 0,
-          minHeight: '640px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          backgroundColor: '#8C2A47'
-        }}
+        onFocusCapture={() => setIsHeroHovered(true)}
+        onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsHeroHovered(false); }}
+        aria-label="Bộ sưu tập và ưu đãi nổi bật"
       >
         <div style={{ position: 'relative', zIndex: 3, width: '100%' }}>
-          <div className="home-banner-block hero-content-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.65fr) minmax(280px, 0.8fr)',
-            alignItems: 'stretch',
-            gap: '16px',
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.16)',
-            borderRadius: 0,
-            padding: '28px',
-            minHeight: '640px',
-            boxShadow: '0 25px 60px -20px rgba(0, 0, 0, 0.55)'
-          }}>
+          <div className="customer-container home-banner-block hero-content-grid">
             {/* Main Banner */}
             {(() => {
               const currentSlide = heroSlides[activeHeroSlide] || heroSlides[0] || {};
@@ -543,8 +539,8 @@ export const HomePage = ({ onNavigate }) => {
                   position: 'relative',
                   overflow: 'hidden',
                   borderRadius: 'calc(var(--radius-lg) - 6px)',
-                  padding: '64px',
-                  minHeight: '584px',
+                  padding: '40px 48px',
+                  minHeight: '420px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'center',
@@ -580,7 +576,7 @@ export const HomePage = ({ onNavigate }) => {
                     color: '#FFFFFF',
                     margin: '0 0 16px 0',
                     letterSpacing: '-0.02em',
-                    minHeight: '110px'
+                    maxWidth: '620px'
                   }}>
                     {currentSlide.title}
                   </h1>
@@ -715,6 +711,7 @@ export const HomePage = ({ onNavigate }) => {
                           setActiveHeroSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length);
                         }}
                         aria-label="Slide trước"
+                        className="hero-carousel-arrow hero-carousel-prev"
                         style={{
                           position: 'absolute',
                           left: '18px',
@@ -753,6 +750,7 @@ export const HomePage = ({ onNavigate }) => {
                           setActiveHeroSlide(prev => (prev + 1) % heroSlides.length);
                         }}
                         aria-label="Slide tiếp theo"
+                        className="hero-carousel-arrow hero-carousel-next"
                         style={{
                           position: 'absolute',
                           right: '18px',
@@ -800,8 +798,8 @@ export const HomePage = ({ onNavigate }) => {
                   style={{
                     position: 'relative',
                     overflow: 'hidden',
-                    minHeight: '284px',
-                    padding: '34px',
+                    minHeight: '202px',
+                    padding: '24px',
                     borderRadius: 'calc(var(--radius-lg) - 6px)',
                     cursor: 'pointer',
                     display: 'flex',
@@ -923,7 +921,7 @@ export const HomePage = ({ onNavigate }) => {
           backgroundColor: '#FFFFFF',
           borderRadius: 'var(--radius-md, 6px)',
           border: '1px solid var(--c-border)',
-          padding: '24px 28px',
+          padding: 'clamp(12px, 1.5vw, 20px)',
           boxShadow: 'var(--shadow-card)'
         }}>
           {/* Flash Sale Header Bar - Hasaki Style */}
@@ -983,9 +981,9 @@ export const HomePage = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Flash Sale Product Row - 4 Items Balanced */}
-          <div className="flash-sale-grid-4">
-            {((clearanceProducts && clearanceProducts.length > 0 ? clearanceProducts : products).slice(0, 4)).map((prod, idx) => {
+          {/* Compact deals adapt to the available screen width. */}
+          <div className="flash-sale-grid">
+            {((clearanceProducts && clearanceProducts.length > 0 ? clearanceProducts : products).slice(0, sectionLimits.deals)).map((prod, idx) => {
               const remainingStock = prod.clearanceStock ?? (prod.stock ?? 10);
               const soldCount = prod.totalSold || 0;
               const claimed = prod.clearanceStock
@@ -995,7 +993,7 @@ export const HomePage = ({ onNavigate }) => {
                 <div key={prod.id || idx} style={{ display: 'flex', flexDirection: 'column' }}>
                   <ProductCard product={prod} onNavigate={onNavigate} onQuickView={setQuickViewProduct} />
                   {/* Stock claim status bar */}
-                  <div style={{ marginTop: '10px', padding: '0 4px' }}>
+                  <div className="home-deal-stock" style={{ marginTop: '10px', padding: '0 4px' }}>
                     <div className="flash-deal-progress-bg">
                       <div className="flash-deal-progress-fill" style={{ width: `${claimed}%` }} />
                     </div>
@@ -1041,11 +1039,11 @@ export const HomePage = ({ onNavigate }) => {
 
         <div className="category-grid-8">
           {loading ? (
-            [1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-              <div key={n} style={{ height: '140px', borderRadius: 'var(--radius-md)' }} className="skeleton-shimmer" />
+            Array.from({ length: sectionLimits.categories }, (_, n) => (
+              <div key={n} className="skeleton-shimmer home-category-skeleton" />
             ))
           ) : (
-            categories.slice(0, 8).map((cat) => (
+            categories.slice(0, sectionLimits.categories).map((cat) => (
               <div
                 key={cat.id}
                 className="category-tile-card"
@@ -1086,11 +1084,11 @@ export const HomePage = ({ onNavigate }) => {
 
         <div className="brands-grid-12">
           {loading ? (
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-              <div key={n} style={{ height: '90px', borderRadius: 'var(--radius-md)' }} className="skeleton-shimmer" />
+            Array.from({ length: sectionLimits.brands }, (_, n) => (
+              <div key={n} className="skeleton-shimmer home-brand-skeleton" />
             ))
           ) : (
-            brands.slice(0, 12).map((brand) => (
+            brands.slice(0, sectionLimits.brands).map((brand) => (
               <div
                 key={brand.id}
                 className="brand-partner-card"
@@ -1145,19 +1143,19 @@ export const HomePage = ({ onNavigate }) => {
             Gợi ý cho bạn
           </h2>
           <p className="section-desc-editorial">
-            Hệ thống phân tích lịch sử quan tâm và sở thích thành phần để tự động đề xuất dược mỹ phẩm tối ưu nhất cho bạn.
+            Gợi ý dựa trên các sản phẩm bạn quan tâm. Khi chưa có đủ lịch sử, bạn sẽ thấy sản phẩm nổi bật và bán chạy.
           </p>
         </div>
 
         {loading ? (
           <div className="customer-product-grid product-skeleton-frame">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            {Array.from({ length: sectionLimits.recommendations }, (_, n) => (
               <ProductCardSkeleton key={n} />
             ))}
           </div>
         ) : (
           <div className="customer-product-grid">
-            {((recommendedProducts && recommendedProducts.length > 0) ? recommendedProducts : randomProducts).map((prod) => (
+            {((recommendedProducts && recommendedProducts.length > 0) ? recommendedProducts : randomProducts).slice(0, sectionLimits.recommendations).map((prod) => (
               <ProductCard
                 key={prod.id}
                 product={prod}
@@ -1244,7 +1242,6 @@ export const HomePage = ({ onNavigate }) => {
                 key={tab.id}
                 onClick={() => {
                   setCatalogCategoryFilter(tab.id);
-                  setVisibleCount(12);
                 }}
                 className={`tab-filter-btn ${active ? 'active' : ''}`}
                 style={{
@@ -1268,7 +1265,7 @@ export const HomePage = ({ onNavigate }) => {
         {/* Product Grid */}
         {loading || loadingCategoryProducts ? (
           <div className="customer-product-grid product-skeleton-frame">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            {Array.from({ length: sectionLimits.catalog }, (_, n) => (
               <ProductCardSkeleton key={n} />
             ))}
           </div>
@@ -1296,7 +1293,7 @@ export const HomePage = ({ onNavigate }) => {
           </div>
         ) : (
           <div className="customer-product-grid">
-            {allStoreProducts.slice(0, visibleCount).map((prod) => (
+            {allStoreProducts.slice(0, sectionLimits.catalog).map((prod) => (
               <ProductCard
                 key={prod.id}
                 product={prod}
@@ -1307,24 +1304,14 @@ export const HomePage = ({ onNavigate }) => {
           </div>
         )}
 
-        {/* Catalog Navigation & Load More Actions */}
+        {/* Keep the home preview short and open the complete catalog with its filters. */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginTop: '36px', flexWrap: 'wrap' }}>
-          {allStoreProducts.length > visibleCount && (
-            <button
-              onClick={() => setVisibleCount((prev) => prev + 8)}
-              className="btn-luxury-outline"
-              style={{ padding: '12px 28px', fontSize: '13.5px' }}
-            >
-              <span>Hiển thị thêm ({allStoreProducts.length - visibleCount} sản phẩm còn lại)</span>
-            </button>
-          )}
-
           <button
-            onClick={() => onNavigate('products')}
+            onClick={openCatalog}
             className="btn-luxury-primary"
             style={{ padding: '12px 28px', fontSize: '13.5px' }}
           >
-            <span>Khám phá toàn bộ danh mục sản phẩm chi tiết</span>
+            <span>Xem tất cả sản phẩm</span>
             <ArrowRight size={15} />
           </button>
         </div>
@@ -1363,8 +1350,8 @@ export const HomePage = ({ onNavigate }) => {
             ))}
           </div>
 
-          {/* Spa Service Cards Grid - 6 Items Balanced */}
-          <div className="spa-grid-6">
+          {/* Responsive treatment cards. */}
+          <div className="spa-services-grid">
             {getFilteredSpa().map((spa) => (
               <div
                 key={spa.id}
@@ -1376,6 +1363,11 @@ export const HomePage = ({ onNavigate }) => {
                     src={getSpaServiceImage(spa)}
                     alt={spa.name}
                     loading="lazy"
+                    onError={(event) => {
+                      if (event.currentTarget.getAttribute('src') !== '/images/spa/facial-care.jpg') {
+                        event.currentTarget.src = '/images/spa/facial-care.jpg';
+                      }
+                    }}
                   />
                   <div style={{
                     position: 'absolute',
@@ -1397,29 +1389,23 @@ export const HomePage = ({ onNavigate }) => {
                   </div>
                 </div>
 
-                <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1 }}>
+                <div className="home-spa-card-body">
                   <div>
                     <span style={{ fontSize: '11px', color: 'var(--c-gold-hover)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       {spa.categoryName || 'Trị liệu Y Khoa'}
                     </span>
-                    <h3 style={{ fontSize: '17px', fontWeight: 700, margin: '6px 0 8px 0', color: 'var(--c-primary)', fontFamily: 'var(--font-sans)', lineHeight: 1.35 }}>
+                    <h3>
                       {spa.name}
                     </h3>
-                    <p style={{ fontSize: '13px', color: 'var(--c-text-muted)', lineHeight: 1.55, margin: '0 0 18px 0' }}>
+                    <p>
                       {spa.shortDescription || 'Quy trình chuẩn hóa khử khuẩn khép kín, massage bấm huyệt và phục hồi chuyên sâu.'}
                     </p>
                   </div>
 
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingTop: '16px',
-                    borderTop: '1px solid var(--c-border-subtle)'
-                  }}>
+                  <div className="home-spa-card-footer">
                     <div>
                       <div style={{ fontSize: '11px', color: 'var(--c-text-light)' }}>Giá trọn gói</div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--c-gold-hover)', fontFamily: 'var(--font-mono)' }}>
+                      <div className="home-spa-card-price">
                         {spa.basePrice ? formatCurrency(spa.basePrice) : 'Liên hệ tư vấn'}
                       </div>
                     </div>
@@ -1427,7 +1413,6 @@ export const HomePage = ({ onNavigate }) => {
                     <button
                       onClick={() => onNavigate(`booking?serviceId=${spa.id}`)}
                       className="btn-luxury-primary"
-                      style={{ padding: '9px 18px', fontSize: '12.5px' }}
                     >
                       <Calendar size={13} />
                       <span>Đặt lịch ngay</span>

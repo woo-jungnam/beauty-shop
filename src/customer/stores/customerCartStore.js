@@ -25,6 +25,7 @@ let memoryState = {
   isCartOpen: false,
   isLoading: false,
   cartId: null,
+  cartError: '',
   freeShippingThreshold: DEFAULT_FALLBACK_THRESHOLD,
   defaultShippingFee: DEFAULT_FALLBACK_SHIPPING_FEE,
 };
@@ -42,12 +43,43 @@ const mapBackendItem = (ci) => ({
   name: ci.variantName || ci.sku || 'Sản phẩm',
   variantName: ci.variantName || ci.sku || '',
   sku: ci.sku,
-  price: Number(ci.price || 0),
-  originalPrice: Number(ci.price || 0),
+  price: Number(ci.price ?? 0),
+  originalPrice: Number(ci.price ?? 0),
   image: (ci.imageUrl && !ci.imageUrl.includes('img.com')) ? ci.imageUrl : '',
-  quantity: ci.quantity || 1,
+  quantity: ci.quantity,
   available: ci.available !== false,
 });
+
+const isPositiveId = (value) => (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value)))
+  && Number.isSafeInteger(Number(value)) && Number(value) > 0;
+const isMoney = (value) => value !== null && value !== undefined && value !== ''
+  && (typeof value === 'number' || typeof value === 'string')
+  && Number.isFinite(Number(value)) && Number(value) >= 0;
+const isActiveVariant = (variant) => isPositiveId(variant?.id) && variant.isActive === true
+  && !variant.isDeleted && typeof variant.sku === 'string' && variant.sku.trim().length > 0;
+
+// Unavailable historical lines may have a null price/SKU; they are still valid cart data.
+const isValidCart = (cart) => isPositiveId(cart?.id) && Array.isArray(cart.items)
+  && isMoney(cart.totalPrice)
+  && cart.items.every((item) => isPositiveId(item?.id) && isPositiveId(item.variantId)
+    && Number.isSafeInteger(item.quantity) && item.quantity > 0
+    && typeof item.available === 'boolean'
+    && (item.available === false || (isMoney(item.price) && typeof item.sku === 'string' && item.sku.trim().length > 0)))
+  && new Set(cart.items.map((item) => Number(item.id))).size === cart.items.length
+  && new Set(cart.items.map((item) => Number(item.variantId))).size === cart.items.length;
+
+// ApiResponse omits null data; only this GET envelope proves that no cart exists.
+const isEmptyCartEnvelope = (response) => response?.status === 200 && response.message === 'Success'
+  && response.path === '/api/v1/cart' && typeof response.timestamp === 'string' && response.timestamp.length > 0
+  && response.success !== false && response.errorCode == null && response.errors == null
+  && !Object.hasOwn(response, 'data') && !Object.hasOwn(response, 'items') && !Object.hasOwn(response, 'id');
+
+const cartErrorMessage = (error, fallback) => {
+  const message = error?.response?.data?.message || error?.message || '';
+  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(message)
+      && !/Exception|SQL|stack trace|java\./i.test(message)) return message;
+  return fallback;
+};
 
 const loadStoredCart = () => {
   try {
@@ -80,18 +112,32 @@ const saveCart = () => {
 
 export const cartActions = {
   fetchCart: async () => {
+    if (memoryState.isLoading) return false;
     try {
       memoryState.isLoading = true;
+      notifyListeners();
       const sessionId = getGuestSessionId();
       const res = await apiClient.get(ENDPOINTS.CART.GET(sessionId));
-      const cartData = res?.data || res;
-      if (cartData && Array.isArray(cartData.items)) {
+      const cartData = res && Object.hasOwn(res, 'data') ? res.data : res;
+      if (res?.success !== false && (cartData === null || isEmptyCartEnvelope(res))) {
+        memoryState.items = [];
+        memoryState.cartId = null;
+        memoryState.cartError = '';
+        saveCart();
+        return true;
+      }
+      if (res?.success !== false && isValidCart(cartData)) {
         memoryState.items = cartData.items.map(mapBackendItem);
         memoryState.cartId = cartData.id || null;
+        memoryState.cartError = '';
         saveCart();
+        return true;
       }
+      memoryState.cartError = 'Chưa xác minh được dữ liệu giỏ hàng. Vui lòng kiểm tra lại.';
+      return false;
     } catch (err) {
-      console.warn('Failed to fetch cart from backend, using cached state', err);
+      memoryState.cartError = cartErrorMessage(err, 'Không thể kiểm tra giỏ hàng. Vui lòng thử lại sau.');
+      return false;
     } finally {
       memoryState.isLoading = false;
       notifyListeners();
@@ -99,77 +145,71 @@ export const cartActions = {
   },
 
   addItem: async (product, variant, qty = 1) => {
-    let variantId = variant?.id;
-    if (!variantId && product?.variants && product.variants.length > 0) {
-      variantId = product.variants[0].id;
-    }
-
-    if (!variantId && product?.id) {
-      try {
-        const prodRes = await apiClient.get(ENDPOINTS.CATALOG.PUBLIC_PRODUCT_DETAIL(product.id));
-        const fullProd = prodRes?.data || prodRes;
-        if (fullProd?.variants && fullProd.variants.length > 0) {
-          const activeVariants = fullProd.variants.filter((v) => v.isActive !== false && !v.isDeleted);
-          const defaultVar = activeVariants.find((v) => v.isDefault) || activeVariants[0] || fullProd.variants[0];
-          variantId = defaultVar?.id;
-        }
-      } catch (e) {
-        console.warn('Cannot resolve variant for product', product.id, e);
-      }
-    }
-
-    if (!variantId) {
-      console.error('No variant ID found for product', product);
+    const fail = (message) => {
+      memoryState.cartError = message;
+      notifyListeners();
       return false;
-    }
-
-    const sessionId = getGuestSessionId();
+    };
+    if (memoryState.isLoading) return fail('Giỏ hàng đang được cập nhật. Vui lòng đợi một chút.');
+    memoryState.cartError = '';
+    if (!Number.isSafeInteger(qty) || qty <= 0) return fail('Số lượng phải là số nguyên dương.');
+    if (variant && (variant.isActive === false || variant.isDeleted)) return fail('Phân loại này hiện không được bán.');
     memoryState.isLoading = true;
     notifyListeners();
 
     try {
+      const pickVariant = (variants) => {
+        const active = (Array.isArray(variants) ? variants : []).filter(isActiveVariant);
+        return variant ? active.find((item) => Number(item.id) === Number(variant.id))
+          : active.find((item) => item.isDefault) || active[0];
+      };
+      let selectedVariant = isActiveVariant(variant) ? variant : pickVariant(product?.variants);
+      if (!selectedVariant && isPositiveId(product?.id)) {
+        let prodRes;
+        try {
+          prodRes = await apiClient.get(ENDPOINTS.CATALOG.PUBLIC_PRODUCT_DETAIL(product.id));
+        } catch (error) {
+          return fail(cartErrorMessage(error, 'Không thể tải phân loại sản phẩm. Vui lòng thử lại.'));
+        }
+        const fullProduct = prodRes?.data ?? prodRes;
+        if (Number(fullProduct?.id) === Number(product.id)) selectedVariant = pickVariant(fullProduct.variants);
+      }
+      if (!selectedVariant) return fail('Sản phẩm chưa có phân loại đang bán với mã SKU hợp lệ.');
+      if (selectedVariant.stockQuantity != null
+          && (!Number.isSafeInteger(selectedVariant.stockQuantity) || selectedVariant.stockQuantity < qty)) {
+        return fail('Số lượng yêu cầu vượt quá số hàng hiện có của phân loại này.');
+      }
+      const variantId = Number(selectedVariant.id);
+      const previousQuantity = memoryState.items.find((item) => Number(item.variantId) === variantId)?.quantity ?? 0;
       const res = await apiClient.post(ENDPOINTS.CART.ADD, {
         variantId,
         quantity: qty,
-        sessionId,
+        sessionId: getGuestSessionId(),
       });
-      const cartData = res?.data || res;
-      if (cartData && Array.isArray(cartData.items)) {
-        memoryState.items = cartData.items.map(mapBackendItem);
-        memoryState.cartId = cartData.id || null;
+      const cartData = res?.data ?? res;
+      const confirmedItem = cartData?.items?.find?.((item) => Number(item.variantId) === variantId);
+      const minimumQuantity = Number(cartData?.id) === Number(memoryState.cartId) ? previousQuantity + qty : qty;
+      if (res?.success === false || !isValidCart(cartData) || confirmedItem?.available !== true
+          || confirmedItem.quantity < minimumQuantity) {
+        return fail('Máy chủ chưa xác nhận sản phẩm trong giỏ. Vui lòng kiểm tra giỏ trước khi thử lại.');
       }
+      memoryState.items = cartData.items.map(mapBackendItem);
+      memoryState.cartId = cartData.id || null;
+      memoryState.cartError = '';
       memoryState.isCartOpen = true;
       saveCart();
       return true;
     } catch (err) {
-      console.error('Failed to add item to backend cart', err);
-      // Fallback local update if network temporary issue
-      const itemId = `v-${variantId}`;
-      const price = Number(variant?.price || product.price || 0);
-      const existing = memoryState.items.find(i => i.variantId === variantId);
-      if (existing) {
-        existing.quantity += qty;
-      } else {
-        memoryState.items.push({
-          itemId,
-          variantId,
-          name: product.name,
-          variantName: variant?.variantName || variant?.sku || '',
-          sku: variant?.sku || '',
-          price,
-          originalPrice: price,
-          image: product.featuredImage || product.thumbnailUrl || '',
-          quantity: qty,
-          available: true,
-        });
-      }
-      memoryState.isCartOpen = true;
-      saveCart();
-      return false;
+      return fail(cartErrorMessage(err, 'Không thể thêm sản phẩm vào giỏ. Vui lòng kiểm tra giỏ trước khi thử lại.'));
     } finally {
       memoryState.isLoading = false;
       notifyListeners();
     }
+  },
+
+  clearCartError: () => {
+    memoryState.cartError = '';
+    notifyListeners();
   },
 
   updateQuantity: async (itemId, qty) => {
@@ -274,7 +314,7 @@ export const cartActions = {
         memoryState.defaultShippingFee = Number(data['shipping.default_fee']);
       }
       notifyListeners();
-    } catch (_) {}
+    } catch {}
   },
 };
 
@@ -319,6 +359,8 @@ export const useCustomerCart = () => {
     totalAmount,
     isCartOpen: memoryState.isCartOpen,
     isLoading: memoryState.isLoading,
+    cartError: memoryState.cartError,
+    clearCartError: cartActions.clearCartError,
     addItem: cartActions.addItem,
     updateQuantity: cartActions.updateQuantity,
     removeItem: cartActions.removeItem,

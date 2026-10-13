@@ -463,7 +463,6 @@ export const ProductsPage = () => {
               price: initialVariantPrice ? parseFloat(initialVariantPrice) : 0,
               volume: initialVariantVolume.trim() || undefined,
               isDefault: true,
-              isActive: true,
             }
           ]
         };
@@ -1102,7 +1101,7 @@ export const ProductsPage = () => {
       header: 'Trạng thái',
       accessor: (row) => (
         <Badge variant={row.status === 'ACTIVE' ? 'success' : 'default'}>
-          {row.status === 'ACTIVE' ? 'PUBLISHED' : row.status || 'DRAFT'}
+          {row.status === 'ACTIVE' ? 'Đang bán' : 'Tạm ẩn'}
         </Badge>
       ),
       width: '100px',
@@ -1280,7 +1279,7 @@ export const ProductsPage = () => {
       header: 'Vị trí',
       accessor: (row) => (
         <Badge variant={row.position === 'HERO_SLIDE' ? 'primary' : row.position === 'HERO_SIDE' ? 'warning' : 'default'}>
-          {row.position}
+          {row.position === 'HERO_SLIDE' ? 'Banner chính' : row.position === 'HERO_SIDE' ? 'Banner phụ' : (row.position || 'Mặc định')}
         </Badge>
       ),
       width: '120px'
@@ -1293,7 +1292,7 @@ export const ProductsPage = () => {
     { header: 'Thứ tự', accessor: 'sortOrder', width: '70px', align: 'center' },
     {
       header: 'Trạng thái',
-      accessor: (row) => <Badge variant={row.isActive ? 'success' : 'default'}>{row.isActive ? 'ACTIVE' : 'TẮT'}</Badge>,
+      accessor: (row) => <Badge variant={row.isActive ? 'success' : 'default'}>{row.isActive ? 'Đang bật' : 'Tắt'}</Badge>,
       width: '90px'
     },
     {
@@ -1377,7 +1376,7 @@ export const ProductsPage = () => {
       header: 'Hoạt chất chính',
       accessor: (row) => (
         <Badge variant={(row.activeIngredient ?? row.isActiveIngredient) ? 'info' : 'default'}>
-          {(row.activeIngredient ?? row.isActiveIngredient) ? 'ACTIVE' : 'INACTIVE'}
+          {(row.activeIngredient ?? row.isActiveIngredient) ? 'Có' : 'Không'}
         </Badge>
       ),
       width: '110px',

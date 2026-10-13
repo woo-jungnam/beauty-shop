@@ -14,6 +14,7 @@ import {
   formatDateTime,
   getOrderStatusBadge,
   getPaymentStatusBadge,
+  getPaymentMethodLabel,
 } from '../shared/utils/formatters';
 import { Button } from '../shared/ui/Button';
 import { Input } from '../shared/ui/Input';
@@ -326,13 +327,13 @@ export const OrdersPage = () => {
             className="form-group-compact"
           >
             <option value="">Tất cả trạng thái</option>
-            <option value="PENDING">Chờ xác nhận (PENDING)</option>
-            <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
-            <option value="PROCESSING">Đang chuẩn bị hàng (PROCESSING)</option>
-            <option value="SHIPPED">Đang vận chuyển (SHIPPED)</option>
-            <option value="DELIVERED">Đã giao thành công (DELIVERED)</option>
-            <option value="CANCELLED">Đã hủy đơn (CANCELLED)</option>
-            <option value="RETURNED">Đã trả hàng (RETURNED)</option>
+            <option value="PENDING">Chờ xác nhận</option>
+            <option value="CONFIRMED">Đã xác nhận</option>
+            <option value="PROCESSING">Đang chuẩn bị hàng</option>
+            <option value="SHIPPED">Đang giao hàng</option>
+            <option value="DELIVERED">Đã giao thành công</option>
+            <option value="CANCELLED">Đã hủy đơn</option>
+            <option value="RETURNED">Đã hoàn trả</option>
           </Select>
 
           <Select
@@ -343,9 +344,9 @@ export const OrdersPage = () => {
           >
             <option value="">Tất cả thanh toán</option>
             <option value="PENDING">Chờ thanh toán</option>
-            <option value="PAID">Đã thanh toán (PAID)</option>
+            <option value="PAID">Đã thanh toán</option>
             <option value="REFUND_PENDING">Chờ hoàn tiền</option>
-            <option value="REFUNDED">Đã hoàn tiền (REFUNDED)</option>
+            <option value="REFUNDED">Đã hoàn tiền</option>
             <option value="FAILED">Thanh toán thất bại</option>
           </Select>
 
@@ -398,8 +399,13 @@ export const OrdersPage = () => {
                     {getPaymentStatusBadge(selectedOrder.paymentStatus).text}
                   </Badge>
                 </div>
-                {selectedOrder.carrierName && (
+                {selectedOrder.paymentMethod && (
                   <div style={{ marginTop: '8px', fontSize: '12px' }}>
+                    Hình thức: <strong>{getPaymentMethodLabel(selectedOrder.paymentMethod)}</strong>
+                  </div>
+                )}
+                {selectedOrder.carrierName && (
+                  <div style={{ marginTop: '4px', fontSize: '12px' }}>
                     Đơn vị giao: <strong>{selectedOrder.carrierName}</strong>
                   </div>
                 )}
@@ -546,12 +552,12 @@ export const OrdersPage = () => {
             value={targetStatus}
             onChange={(e) => setTargetStatus(e.target.value)}
           >
-            <option value="CONFIRMED">Xác nhận đơn hàng (CONFIRMED)</option>
-            <option value="PROCESSING">Chuyển sang chuẩn bị hàng (PROCESSING)</option>
-            <option value="SHIPPED">Xuất kho bàn giao vận chuyển (SHIPPED)</option>
-            <option value="DELIVERED">Xác nhận giao thành công (DELIVERED)</option>
-            <option value="CANCELLED">Hủy đơn hàng (CANCELLED)</option>
-            <option value="RETURNED">Khách trả hàng về kho (RETURNED)</option>
+            <option value="CONFIRMED">Xác nhận đơn hàng</option>
+            <option value="PROCESSING">Chuyển sang chuẩn bị hàng</option>
+            <option value="SHIPPED">Xuất kho bàn giao vận chuyển</option>
+            <option value="DELIVERED">Xác nhận giao thành công</option>
+            <option value="CANCELLED">Hủy đơn hàng</option>
+            <option value="RETURNED">Khách trả hàng về kho</option>
           </Select>
 
           {targetStatus === 'SHIPPED' && (

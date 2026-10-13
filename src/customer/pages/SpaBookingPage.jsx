@@ -1,497 +1,579 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Calendar,
-  Clock,
-  User,
-  Sparkles,
-  ArrowRight,
-  QrCode,
-  Check,
-  ShieldCheck,
-  Award,
-  Stethoscope,
-  Copy,
-  Building2,
-  Ticket,
   AlertCircle,
-  Phone,
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  Copy,
+  Flower2,
+  Leaf,
+  LoaderCircle,
   Mail,
-  FileText,
-  Sun,
+  MapPin,
   Moon,
-  Star,
-  ChevronRight,
-  Info
-} from 'lucide-react';
-import { apiClient } from '../../shared/api/client';
-import { ENDPOINTS } from '../../shared/api/endpoints';
-import { useAuth } from '../../app/providers/AuthProvider';
+  Phone,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  Ticket,
+  User,
+} from "lucide-react";
+import { apiClient } from "../../shared/api/client";
+import { ENDPOINTS } from "../../shared/api/endpoints";
+import { useAuth } from "../../app/providers/AuthProvider";
+import {
+  getVietnamDateString,
+  resolveMediaUrl,
+} from "../../shared/utils/formatters";
+import "../styles/spa-booking.css";
 
-const formatCurrency = (val) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+const formatCurrency = (value) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+    value || 0,
+  );
+const readData = (response) => response?.data ?? response;
+const getCategory = (service) =>
+  service.categoryName ||
+  (typeof service.category === "string"
+    ? service.category
+    : service.category?.name) ||
+  "Chăm sóc da";
+const getServiceImage = (service) => {
+  const url = service?.thumbnailUrl;
+  if (!url) return "/images/spa/facial-care.jpg";
+  return url.startsWith("/images/spa/") ? url : resolveMediaUrl(url);
 };
-
-const getSpaServiceImage = (service) => {
-  if (service?.thumbnailUrl) return service.thumbnailUrl;
-  const name = (service?.name || '').toLowerCase();
-  const cat = (service?.categoryName || '').toLowerCase();
-
-  if (name.includes('aqua peel') || name.includes('làm sạch') || name.includes('peel') || cat.includes('làm sạch'))
-    return 'https://images.unsplash.com/photo-1570554520913-ce2a90ccc23b?auto=format&fit=crop&w=700&q=80';
-  if (name.includes('mụn') || name.includes('acne') || name.includes('bio-light') || name.includes('vi khuẩn'))
-    return 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=700&q=80';
-  if (name.includes('nước') || name.includes('vitamin') || name.includes('niacinamide') || name.includes('sáng da'))
-    return 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=700&q=80';
-  if (name.includes('hifu') || name.includes('nâng cơ') || name.includes('v-line'))
-    return 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=700&q=80';
-  if (name.includes('galvanic') || name.includes('điện di') || name.includes('ion'))
-    return 'https://images.unsplash.com/photo-1600428877878-1a0fcc0ba376?auto=format&fit=crop&w=700&q=80';
-  if (name.includes('massage') || name.includes('body'))
-    return 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=700&q=80';
-
-  const spaPool = [
-    'https://images.unsplash.com/photo-1570554520913-ce2a90ccc23b?auto=format&fit=crop&w=700&q=80',
-    'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=700&q=80',
-    'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=700&q=80',
-    'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=700&q=80',
-  ];
-  return spaPool[(service?.id || 0) % spaPool.length];
+const handleServiceImageError = (event) => {
+  if (
+    event.currentTarget.getAttribute("src") !== "/images/spa/facial-care.jpg"
+  ) {
+    event.currentTarget.src = "/images/spa/facial-care.jpg";
+  }
 };
-
-const PRESET_SKIN_TAGS = [
-  'Da dầu nhờn vùng chữ T',
-  'Mụn sưng viêm / Mụn cám',
-  'Da nhạy cảm, dễ đỏ rát',
-  'Đang dùng Retinol / BHA',
-  'Da sạm màu, thâm mụn',
-  'Phụ nữ mang thai / Cho con bú',
+const formatDate = (
+  date,
+  options = { day: "2-digit", month: "2-digit", year: "numeric" },
+) =>
+  new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    ...options,
+  }).format(new Date(date + "T12:00:00+07:00"));
+const getStaffName = (staff) =>
+  staff.fullName || staff.username || `Chuyên viên #${staff.id}`;
+const SKIN_TAGS = [
+  "Da dầu, dễ nổi mụn",
+  "Da nhạy cảm",
+  "Da khô, thiếu ẩm",
+  "Đang dùng Retinol / BHA",
+  "Tiền sử dị ứng",
+  "Mang thai / Cho con bú",
 ];
+
+const StepHeading = ({ number, title, description, complete }) => (
+  <div className="booking-section-heading">
+    <span className={`booking-step-number ${complete ? "is-complete" : ""}`}>
+      {complete ? <Check size={18} aria-hidden="true" /> : number}
+    </span>
+    <div>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </div>
+  </div>
+);
 
 export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
   const { user, isAuthenticated } = useAuth();
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState('ALL');
-
-  // Form Booking State
+  const [serviceError, setServiceError] = useState(false);
+  const [serviceVersion, setServiceVersion] = useState(0);
+  const [category, setCategory] = useState("ALL");
   const [selectedService, setSelectedService] = useState(null);
-  const [selectedStaff, setSelectedStaff] = useState('AUTO');
-  const [qualifiedStaff, setQualifiedStaff] = useState([]);
-  const [availableSlots, setAvailableSlots] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [staffError, setStaffError] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState("AUTO");
+  const [selectedDate, setSelectedDate] = useState(() =>
+    getVietnamDateString(),
+  );
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [loadedSlotContext, setLoadedSlotContext] = useState("");
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [myActiveTickets, setMyActiveTickets] = useState([]);
+  const [slotError, setSlotError] = useState(false);
+  const [slotVersion, setSlotVersion] = useState(0);
+  const [tickets, setTickets] = useState([]);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+  const [skinTags, setSkinTags] = useState([]);
+  const [contact, setContact] = useState({
+    fullName: "",
+    phone: "",
+    email: "",
+    note: "",
   });
-  const [selectedSlot, setSelectedSlot] = useState('');
-  const [selectedSkinTags, setSelectedSkinTags] = useState([]);
-  const [customerInfo, setCustomerInfo] = useState({
-    fullName: '',
-    phone: '',
-    email: '',
-    skinNote: '',
-  });
-
-  const [bookingResult, setBookingResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [bookingError, setBookingError] = useState(null);
-  const [copiedCode, setCopiedCode] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [bookingResult, setBookingResult] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const formRef = useRef(null);
+  const successRef = useRef(null);
 
-  // Auto-fill from authenticated user
+  const today = getVietnamDateString();
+  const slotContext = `${selectedService?.id || ""}/${selectedDate}/${selectedStaff}`;
+  const validSlot = Boolean(
+    selectedSlot &&
+      loadedSlotContext === slotContext &&
+      slots.includes(selectedSlot) &&
+      !loadingSlots &&
+      !slotError,
+  );
+  const contactComplete = Boolean(
+    contact.fullName.trim() && contact.phone.trim(),
+  );
+  const currentStep = !selectedService ? 1 : !validSlot ? 2 : 3;
+  const servicePrice =
+    selectedService?.basePrice ?? selectedService?.price ?? 0;
+  const total = selectedTicketId ? 0 : servicePrice;
+  const selectedStaffName =
+    selectedStaff === "AUTO"
+      ? "Spa sắp xếp chuyên viên"
+      : getStaffName(
+          staff.find((person) => String(person.id) === selectedStaff) || {
+            id: selectedStaff,
+          },
+        );
+
   useEffect(() => {
-    if (user) {
-      setCustomerInfo((prev) => ({
-        ...prev,
-        fullName: prev.fullName || user.fullName || '',
-        phone: prev.phone || user.phone || '',
-        email: prev.email || user.email || '',
-      }));
-    }
+    if (!user) return;
+    setContact((previous) => ({
+      ...previous,
+      fullName: previous.fullName || user.fullName || "",
+      phone: previous.phone || user.phoneNumber || user.phone || "",
+      email: previous.email || user.email || "",
+    }));
   }, [user]);
 
-  // Load active user tickets
   useEffect(() => {
+    let cancelled = false;
+    setLoadingServices(true);
+    setServiceError(false);
+    apiClient
+      .get(ENDPOINTS.SPA.PUBLIC_SERVICES)
+      .then((response) => {
+        if (cancelled) return;
+        const data = readData(response);
+        const list = Array.isArray(data)
+          ? data.filter((service) => service.isActive !== false)
+          : [];
+        setServices(list);
+        setSelectedService(
+          (previous) =>
+            list.find(
+              (service) => String(service.id) === String(preselectedServiceId),
+            ) ||
+            list.find((service) => service.id === previous?.id) ||
+            list[0] ||
+            null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setServiceError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingServices(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [preselectedServiceId, serviceVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStaff([]);
+    setStaffError(false);
+    setSelectedStaff("AUTO");
+    if (!selectedService?.id) {
+      setLoadingStaff(false);
+      return;
+    }
+    setLoadingStaff(true);
+    apiClient
+      .get(`/api/v1/spa/services/${selectedService.id}/staff`)
+      .then((response) => {
+        if (cancelled) return;
+        const data = readData(response);
+        setStaff(Array.isArray(data) ? data : data?.content || []);
+      })
+      .catch(() => {
+        if (!cancelled) setStaffError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStaff(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedService?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSelectedSlot("");
+    setSlots([]);
+    setLoadedSlotContext("");
+    setSlotError(false);
+    if (!selectedService?.id || !selectedDate) {
+      setLoadingSlots(false);
+      return;
+    }
+    setLoadingSlots(true);
+    const query = new URLSearchParams({ date: selectedDate });
+    if (selectedStaff !== "AUTO") query.set("staffId", selectedStaff);
+    apiClient
+      .get(
+        `/api/v1/spa/services/${selectedService.id}/available-slots?${query}`,
+      )
+      .then((response) => {
+        if (cancelled) return;
+        const data = readData(response);
+        setSlots(
+          Array.isArray(data)
+            ? data.filter((slot) => typeof slot === "string")
+            : [],
+        );
+        setLoadedSlotContext(slotContext);
+      })
+      .catch(() => {
+        if (!cancelled) setSlotError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSlots(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedService?.id, selectedDate, selectedStaff, slotVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
     if (!isAuthenticated) {
-      setMyActiveTickets([]);
+      setTickets([]);
       setSelectedTicketId(null);
       return;
     }
-    let isCancelled = false;
-    const loadTickets = async () => {
-      try {
-        const res = await apiClient.get(ENDPOINTS.SPA.MY_ACTIVE_TICKETS || '/api/v1/spa/tickets/my-active-tickets');
-        const list = res?.data || res || [];
-        if (!isCancelled) {
-          setMyActiveTickets(Array.isArray(list) ? list : []);
-        }
-      } catch (err) {
-        console.warn('Failed to load active tickets', err);
-      }
+    apiClient
+      .get(ENDPOINTS.SPA.MY_ACTIVE_TICKETS)
+      .then((response) => {
+        if (cancelled) return;
+        const data = readData(response);
+        setTickets(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setTickets([]);
+      });
+    return () => {
+      cancelled = true;
     };
-    loadTickets();
-    return () => { isCancelled = true; };
   }, [isAuthenticated]);
 
-  // Reset ticket if not applicable for selected service
+  const applicableTickets = useMemo(
+    () =>
+      tickets.filter(
+        (ticket) => (ticket.remainingByService?.[selectedService?.id] ?? 0) > 0,
+      ),
+    [tickets, selectedService?.id],
+  );
   useEffect(() => {
-    if (selectedTicketId && selectedService?.id) {
-      const ticket = myActiveTickets.find((t) => t.id === selectedTicketId);
-      if (!ticket || (ticket.remainingByService?.[selectedService.id] ?? 0) <= 0) {
-        setSelectedTicketId(null);
-      }
+    if (
+      selectedTicketId &&
+      !applicableTickets.some(
+        (ticket) => String(ticket.id) === String(selectedTicketId),
+      )
+    )
+      setSelectedTicketId(null);
+  }, [applicableTickets, selectedTicketId]);
+
+  useEffect(() => {
+    if (bookingResult) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      successRef.current?.focus({ preventScroll: true });
     }
-  }, [selectedService?.id, myActiveTickets, selectedTicketId]);
+  }, [bookingResult]);
 
-  // Load Services from backend API
   useEffect(() => {
-    const loadServices = async () => {
-      setLoadingServices(true);
-      try {
-        const res = await apiClient.get(ENDPOINTS.SPA.PUBLIC_SERVICES || '/api/v1/spa/services');
-        const list = res?.data || res || [];
-        const validList = Array.isArray(list) ? list : [];
-        setServices(validList);
-        if (preselectedServiceId) {
-          const matched = validList.find((s) => String(s.id) === String(preselectedServiceId));
-          if (matched) setSelectedService(matched);
-        } else if (validList.length > 0) {
-          setSelectedService(validList[0]);
-        }
-      } catch (err) {
-        console.error('Failed to load spa services', err);
-      } finally {
-        setLoadingServices(false);
-      }
-    };
-    loadServices();
-  }, [preselectedServiceId]);
-
-  // Load qualified staff when selected service changes
-  useEffect(() => {
-    if (!selectedService?.id) return;
-    let isCancelled = false;
-    const loadStaff = async () => {
-      try {
-        const res = await apiClient.get(`/api/v1/spa/services/${selectedService.id}/staff`);
-        let list = res?.data || res || [];
-        list = Array.isArray(list) ? list : (list?.content || []);
-        if (!list || list.length === 0) {
-          try {
-            const allRes = await apiClient.get(ENDPOINTS.SPA.PUBLIC_STAFF || '/api/v1/spa/services/staff');
-            const allData = allRes?.data || allRes || [];
-            list = Array.isArray(allData) ? allData : (allData?.content || []);
-          } catch (_) {}
-        }
-        if (!isCancelled) {
-          setQualifiedStaff(Array.isArray(list) ? list : []);
-        }
-      } catch (e) {
-        console.warn('Failed to load staff for service', e);
-      }
-    };
-    loadStaff();
-    return () => { isCancelled = true; };
-  }, [selectedService?.id]);
-
-  // Load available time slots from backend
-  useEffect(() => {
-    if (!selectedService?.id || !selectedDate) return;
-    let isCancelled = false;
-    const loadSlots = async () => {
-      setLoadingSlots(true);
-      try {
-        const staffParam = selectedStaff !== 'AUTO' ? `&staffId=${encodeURIComponent(selectedStaff)}` : '';
-        const res = await apiClient.get(`/api/v1/spa/services/${selectedService.id}/available-slots?date=${encodeURIComponent(selectedDate)}${staffParam}`);
-        const slots = res?.data || res || [];
-        if (!isCancelled) {
-          if (Array.isArray(slots) && slots.length > 0) {
-            setAvailableSlots(slots);
-            setSelectedSlot((prev) => (slots.includes(prev) ? prev : slots[0]));
-          } else {
-            setAvailableSlots([]);
-            setSelectedSlot('');
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to load available slots', e);
-        if (!isCancelled) {
-          setAvailableSlots([]);
-          setSelectedSlot('');
-        }
-      } finally {
-        if (!isCancelled) setLoadingSlots(false);
-      }
-    };
-    loadSlots();
-    return () => { isCancelled = true; };
-  }, [selectedService?.id, selectedDate, selectedStaff]);
-
-  // Categories list
-  const serviceCategories = useMemo(() => {
-    const set = new Set();
-    services.forEach(s => {
-      if (s.categoryName) set.add(s.categoryName);
-      else if (s.category) set.add(s.category);
+    if (!bookingError) return;
+    const error = document.getElementById("spa-booking-error");
+    error?.scrollIntoView({
+      block: "center",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
     });
-    return ['ALL', ...Array.from(set)];
-  }, [services]);
+    error?.focus({ preventScroll: true });
+  }, [bookingError]);
 
-  const filteredServices = useMemo(() => {
-    if (activeCategoryFilter === 'ALL') return services;
-    return services.filter(s => (s.categoryName || s.category) === activeCategoryFilter);
-  }, [services, activeCategoryFilter]);
+  const categories = useMemo(
+    () => [...new Set(services.map(getCategory))],
+    [services],
+  );
+  const visibleServices =
+    category === "ALL"
+      ? services
+      : services.filter((service) => getCategory(service) === category);
+  const dates = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(today + "T12:00:00+07:00");
+        date.setUTCDate(date.getUTCDate() + index);
+        const iso = getVietnamDateString(date);
+        return {
+          iso,
+          label:
+            index === 0
+              ? "Hôm nay"
+              : index === 1
+                ? "Ngày mai"
+                : formatDate(iso, { weekday: "short" }),
+          day: formatDate(iso, { day: "2-digit", month: "2-digit" }),
+        };
+      }),
+    [today],
+  );
 
-  const getQuickDates = () => {
-    const dates = [];
-    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-    for (let i = 0; i < 4; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      const iso = d.toISOString().split('T')[0];
-      const label = i === 0 ? 'Hôm nay' : i === 1 ? 'Ngày mai' : days[d.getDay()];
-      const dayMonth = `${d.getDate()}/${d.getMonth() + 1}`;
-      dates.push({ iso, label, dayMonth });
-    }
-    return dates;
+  const goToStep = (step) => {
+    const element = document.getElementById(`spa-step-${step}`);
+    element?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "start",
+    });
+    element?.focus({ preventScroll: true });
   };
-
-  const morningSlots = useMemo(() => {
-    return availableSlots.filter(s => {
-      const hour = parseInt(s.split(':')[0], 10);
-      return hour < 12;
-    });
-  }, [availableSlots]);
-
-  const afternoonSlots = useMemo(() => {
-    return availableSlots.filter(s => {
-      const hour = parseInt(s.split(':')[0], 10);
-      return hour >= 12;
-    });
-  }, [availableSlots]);
-
-  const toggleSkinTag = (tag) => {
-    setSelectedSkinTags(prev => {
-      const exists = prev.includes(tag);
-      const next = exists ? prev.filter(t => t !== tag) : [...prev, tag];
-      setCustomerInfo(c => ({
-        ...c,
-        skinNote: next.join(', ')
-      }));
-      return next;
-    });
+  const chooseService = (service) => {
+    setSelectedService(service);
+    setSelectedStaff("AUTO");
+    setSelectedSlot("");
+    setBookingError("");
   };
-
-  const handleCopyTicket = (code) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+  const changeDate = (date) => {
+    if (!date || date < today) return;
+    setSelectedDate(date);
+    setSelectedSlot("");
+    setBookingError("");
   };
+  const toggleTag = (tag) =>
+    setSkinTags((previous) =>
+      previous.includes(tag)
+        ? previous.filter((item) => item !== tag)
+        : [...previous, tag],
+    );
 
-  const handleConfirmBooking = async (e) => {
-    if (e) e.preventDefault();
-    setBookingError(null);
-
-    if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập tài khoản để xác nhận và quản lý lịch hẹn.');
-      if (typeof onNavigate === 'function') onNavigate('login');
+  const confirmBooking = async (event) => {
+    event.preventDefault();
+    if (submitting) return;
+    setBookingError("");
+    if (!isAuthenticated) return onNavigate("login");
+    if (!selectedService || !validSlot) {
+      setBookingError(
+        "Vui lòng chọn một khung giờ còn trống trước khi xác nhận.",
+      );
+      goToStep(2);
       return;
     }
-    if (!selectedService?.id) {
-      alert('Vui lòng chọn một liệu trình Spa.');
+    if (!contactComplete) {
+      goToStep(3);
       return;
     }
-    if (!selectedSlot) {
-      alert('Vui lòng chọn khung giờ hẹn khả dụng.');
-      return;
-    }
-    if (!customerInfo.fullName.trim() || !customerInfo.phone.trim()) {
-      alert('Vui lòng điền đầy đủ Họ tên và Số điện thoại liên hệ.');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const payload = {
+      const notes = [...skinTags, contact.note.trim()]
+        .filter(Boolean)
+        .join("; ");
+      const response = await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, {
         appointmentDate: selectedDate,
-        startTime: selectedSlot.length === 5 ? `${selectedSlot}:00` : selectedSlot,
-        notes: customerInfo.skinNote?.trim() || undefined,
+        startTime:
+          selectedSlot.length === 5 ? selectedSlot + ":00" : selectedSlot,
+        notes: notes || undefined,
         items: [
           {
             serviceId: selectedService.id,
-            staffId: selectedStaff !== 'AUTO' ? Number(selectedStaff) : null,
+            staffId: selectedStaff === "AUTO" ? null : Number(selectedStaff),
             ticketId: selectedTicketId ? Number(selectedTicketId) : null,
-          }
-        ]
-      };
-      const res = await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT || '/api/v1/appointments/book', payload);
-      const createdAppointment = res?.data || res;
-      if (!createdAppointment || !createdAppointment.id) {
-        throw new Error('Máy chủ không trả về thông tin lịch hẹn hợp lệ.');
-      }
-
-      const effectivePrice = selectedTicketId ? 0 : (selectedService.basePrice ?? selectedService.price ?? 0);
-      const assignedStaffName = selectedStaff === 'AUTO'
-        ? 'Chuyên viên / Bác sĩ chỉ định'
-        : (qualifiedStaff.find((s) => String(s.id) === String(selectedStaff))?.fullName || `Chuyên viên #${selectedStaff}`);
-
-      setBookingResult({
-        ticketCode: `SPA-${createdAppointment.id}`,
-        appointmentId: createdAppointment.id,
-        status: createdAppointment.status || 'PENDING',
-        serviceName: selectedService.name,
-        duration: selectedService.durationMinutes || 60,
-        price: effectivePrice,
-        isTicketUsed: Boolean(selectedTicketId),
-        ticketId: selectedTicketId,
-        date: selectedDate,
-        time: selectedSlot,
-        staff: assignedStaffName,
-        customerName: customerInfo.fullName || user?.fullName || 'Khách hàng',
-        phone: customerInfo.phone || user?.phone || '',
-        email: customerInfo.email || user?.email || '',
-        branch: 'Chi nhánh 1: 123 Đồng Khởi, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh'
+          },
+        ],
       });
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    } catch (err) {
-      console.error('Booking failed:', err);
-      const msg = err.response?.data?.message || err.message || 'Không thể đặt lịch hẹn. Vui lòng kiểm tra lại thời gian hoặc tài khoản.';
-      setBookingError(msg);
-      alert(msg);
+      const created = readData(response);
+      if (!created?.id)
+        throw new Error("Chưa nhận được xác nhận lịch hẹn. Vui lòng thử lại.");
+      setBookingResult({
+        id: created.id,
+        code: `SPA-${created.id}`,
+        status: created.status || "PENDING",
+        date: created.appointmentDate || selectedDate,
+        time: created.startTime || selectedSlot,
+        service: created.items?.[0]?.serviceName || selectedService.name,
+        duration: selectedService.durationMinutes || 60,
+        staff: selectedStaffName,
+        price: total,
+        ticketId: selectedTicketId,
+        customer: created.customerName || contact.fullName,
+        phone: created.customerPhone || contact.phone,
+      });
+    } catch (error) {
+      setBookingError(
+        error.response?.data?.message ||
+          error.message ||
+          "Chưa thể đặt lịch. Vui lòng thử lại.",
+      );
+      if ((error.status || error.response?.status) === 409) {
+        setSelectedSlot("");
+        setSlotVersion((version) => version + 1);
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
-  // If already booked, show the Digital VIP Boarding Pass ticket
+  const continueBooking = () => {
+    if (!selectedService) return goToStep(1);
+    if (!validSlot) return goToStep(2);
+    if (!isAuthenticated) return onNavigate("login");
+    if (!contactComplete) {
+      goToStep(3);
+      document
+        .getElementById(
+          !contact.fullName.trim() ? "spa-full-name" : "spa-phone",
+        )
+        ?.focus({ preventScroll: true });
+      return;
+    }
+    formRef.current?.requestSubmit();
+  };
+  const actionLabel = !selectedService
+    ? "Chọn dịch vụ"
+    : !validSlot
+      ? "Chọn giờ hẹn"
+      : !isAuthenticated
+        ? "Đăng nhập để đặt lịch"
+        : !contactComplete
+          ? "Điền thông tin"
+          : "Xác nhận lịch hẹn";
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(bookingResult.code);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   if (bookingResult) {
     return (
-      <div className="spa-booking-wide-layout" style={{ maxWidth: '680px' }}>
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 0,
-          border: '1px solid var(--c-border, #E5E7EB)',
-          padding: '36px 28px',
-          boxShadow: 'none',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: 0,
-            backgroundColor: '#ECFDF5',
-            color: '#059669',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px auto',
-            border: '1px solid #A7F3D0'
-          }}>
-            <Check size={32} strokeWidth={2} />
-          </div>
-
-          <h2 style={{ fontSize: '22px', margin: '0 0 8px 0', fontFamily: 'sans-serif', fontWeight: 700, color: 'var(--c-primary, #8C2A47)' }}>
-            Đặt lịch hẹn Spa thành công
-          </h2>
-          <p style={{ fontSize: '13.5px', color: 'var(--c-text-muted)', margin: '0 0 28px 0', lineHeight: 1.5 }}>
-            Phiếu giữ chỗ điện tử đã được ghi nhận. Vui lòng xuất trình mã QR bên dưới khi đến phòng khám để check-in:
+      <div className="spa-booking-page booking-success-page">
+        <div ref={successRef} className="booking-success" tabIndex={-1}>
+          <span className="booking-success-icon">
+            <CheckCircle2 size={34} />
+          </span>
+          <span className="booking-eyebrow">MỘT CUỘC HẸN DÀNH CHO BẠN</span>
+          <h1>Hẹn gặp bạn tại BeautyShop.</h1>
+          <p>
+            Lịch hẹn đã được ghi nhận. Bạn có thể theo dõi trạng thái trong tài
+            khoản và xuất trình mã đặt lịch khi đến Spa.
           </p>
-
-          {/* Boarding Pass Ticket */}
-          <div style={{
-            margin: '0 auto 32px auto',
-            backgroundColor: '#FAFAFA',
-            borderRadius: 0,
-            border: '1px solid var(--c-border)',
-            overflow: 'hidden',
-            boxShadow: 'none'
-          }}>
-            <div style={{
-              backgroundColor: 'var(--c-primary, #8C2A47)',
-              color: '#FFFFFF',
-              padding: '14px 20px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              borderRadius: 0
-            }}>
-              <div>
-                <div style={{ fontSize: '10px', letterSpacing: '0.08em', fontWeight: 700, opacity: 0.9 }}>BEAUTY CLINIC & SPA</div>
-                <div style={{ fontSize: '15px', fontWeight: 700 }}>PHIẾU KHÁM ĐIỆN TỬ</div>
-              </div>
-              <span style={{ border: '1px solid rgba(255,255,255,0.4)', padding: '3px 8px', fontSize: '11px', fontWeight: 600 }}>
-                CHECK-IN
+          <div className="booking-confirmation-ticket">
+            <div className="booking-confirmation-top">
+              <Flower2 size={24} />
+              <span>
+                BEAUTYSHOP <small>CLINIC & SPA</small>
+              </span>
+              <span className="booking-status">
+                {bookingResult.status === "CONFIRMED"
+                  ? "Đã xác nhận"
+                  : bookingResult.status === "PENDING"
+                    ? "Chờ xác nhận"
+                    : bookingResult.status}
               </span>
             </div>
-
-            <div style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
-                <span style={{ fontSize: '12.5px', color: 'var(--c-text-light)', fontWeight: 600 }}>Mã vé giữ chỗ:</span>
-                <strong style={{ fontSize: '24px', color: '#9F1239', fontFamily: 'monospace' }}>
-                  {bookingResult.ticketCode}
-                </strong>
+            <div className="booking-confirmation-code">
+              <span>Mã đặt lịch của bạn</span>
+              <div>
+                <strong>{bookingResult.code}</strong>
                 <button
-                  onClick={() => handleCopyTicket(bookingResult.ticketCode)}
-                  title="Sao chép mã vé"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-primary)', padding: '4px' }}
+                  type="button"
+                  onClick={copyCode}
+                  aria-label="Sao chép mã đặt lịch"
                 >
-                  {copiedCode ? <Check size={18} color="#059669" /> : <Copy size={18} />}
+                  {copied ? <Check size={19} /> : <Copy size={19} />}
                 </button>
               </div>
-
-              {/* QR Container */}
-              <div style={{
-                width: '150px',
-                height: '150px',
-                backgroundColor: '#FFFFFF',
-                margin: '0 auto 20px auto',
-                padding: '10px',
-                borderRadius: 0,
-                border: '1px solid var(--c-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: 'none'
-              }}>
-                <QrCode size={130} color="#1F2937" />
-              </div>
-
-              {/* Details List */}
-              <div style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: 0,
-                padding: '16px',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                textAlign: 'left',
-                border: '1px solid var(--c-border)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}>
-                <div>Liệu trình: <strong style={{ color: '#1F2937' }}>{bookingResult.serviceName}</strong> ({bookingResult.duration} phút)</div>
-                <div>Thời gian: <strong style={{ color: 'var(--c-primary)' }}>{bookingResult.time} ngày {bookingResult.date}</strong></div>
-                <div>Khách hàng: <strong>{bookingResult.customerName}</strong> ({bookingResult.phone})</div>
-                <div>Chuyên viên: <strong>{bookingResult.staff}</strong></div>
-                <div>Trạng thái: <strong style={{ color: '#92400E' }}>{bookingResult.status === 'PENDING' ? 'Chờ xác nhận' : bookingResult.status}</strong></div>
-                <div>Chi nhánh: <strong style={{ color: '#1F2937' }}>{bookingResult.branch}</strong></div>
-                <div style={{ borderTop: '1px solid var(--c-border)', paddingTop: '10px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{bookingResult.isTicketUsed ? 'Hình thức:' : 'Chi phí tại quầy:'}</span>
-                  <strong style={{ fontSize: '15px', color: bookingResult.isTicketUsed ? '#059669' : '#9F1239', fontFamily: 'monospace' }}>
-                    {bookingResult.isTicketUsed ? `0 ₫ (Vé liệu trình #${bookingResult.ticketId})` : formatCurrency(bookingResult.price)}
-                  </strong>
-                </div>
-              </div>
+              {copied && <small role="status">Đã sao chép mã đặt lịch</small>}
             </div>
+            <h2>{bookingResult.service}</h2>
+            <dl className="booking-confirmation-details">
+              <div>
+                <dt>
+                  <CalendarDays size={16} /> Ngày hẹn
+                </dt>
+                <dd>{formatDate(bookingResult.date)}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Clock size={16} /> Thời gian
+                </dt>
+                <dd>
+                  {bookingResult.time.slice(0, 5)} · {bookingResult.duration}{" "}
+                  phút
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <User size={16} /> Khách hàng
+                </dt>
+                <dd>{bookingResult.customer}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Phone size={16} /> Liên hệ
+                </dt>
+                <dd>{bookingResult.phone}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Sparkles size={16} /> Chuyên viên
+                </dt>
+                <dd>{bookingResult.staff}</dd>
+              </div>
+              <div>
+                <dt>Thanh toán tại Spa</dt>
+                <dd>
+                  {formatCurrency(bookingResult.price)}
+                  {bookingResult.ticketId && (
+                    <small>Áp dụng vé #{bookingResult.ticketId}</small>
+                  )}
+                </dd>
+              </div>
+            </dl>
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <button onClick={() => onNavigate('')} className="btn-luxury-outline" style={{ padding: '10px 24px', fontSize: '13px', borderRadius: 0 }}>
-              Về Trang Chủ
+          <div className="booking-success-actions">
+            <button
+              type="button"
+              className="booking-primary-button"
+              onClick={() => onNavigate("profile?tab=appointments")}
+            >
+              Xem lịch hẹn của tôi <ArrowRight size={17} />
             </button>
-            <button onClick={() => onNavigate('profile?tab=appointments')} className="btn-luxury-primary" style={{ padding: '10px 24px', fontSize: '13px', borderRadius: 0 }}>
-              Xem Lịch Hẹn Của Tôi
+            <button
+              type="button"
+              className="booking-text-button"
+              onClick={() => onNavigate("")}
+            >
+              Về trang chủ
             </button>
           </div>
         </div>
@@ -499,908 +581,789 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
     );
   }
 
-  const applicableTicket = myActiveTickets.find((t) => (t.remainingByService?.[selectedService?.id] ?? 0) > 0);
-
   return (
-    <div className="spa-booking-wide-layout">
-
-      {/* 1. Page Header & Clinic Brand Assurance */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <h1 style={{
-          fontSize: 'clamp(24px, 3.2vw, 32px)',
-          margin: '0 0 10px 0',
-          fontFamily: 'sans-serif',
-          fontWeight: 700,
-          color: '#111827',
-          letterSpacing: '-0.02em'
-        }}>
-          Đặt lịch khám và trị liệu da liễu chuẩn y khoa
-        </h1>
-
-        <p style={{
-          fontSize: '14px',
-          color: 'var(--c-text-muted)',
-          maxWidth: '780px',
-          margin: '0 auto 18px auto',
-          lineHeight: 1.6
-        }}>
-          Phác đồ điều trị 1:1 cùng Bác sĩ Da liễu, quy trình vô trùng khép kín, giữ chỗ phòng khám riêng biệt không chờ đợi.
-        </p>
-
-        {/* Top Assurance Strip - Flat, No radius, No shadow */}
-        <div style={{
-          display: 'inline-flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '14px 24px',
-          fontSize: '12.5px',
-          color: '#374151',
-          padding: '10px 20px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: 0,
-          border: '1px solid var(--c-border)',
-          boxShadow: 'none'
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-            <Stethoscope size={15} color="var(--c-primary)" />
-            Soi da 3D và tư vấn 1:1
-          </span>
-          <span style={{ color: '#D1D5DB' }}>|</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-            <Award size={15} color="var(--c-primary)" />
-            Quy trình chuẩn hóa FDA
-          </span>
-          <span style={{ color: '#D1D5DB' }}>|</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-            <ShieldCheck size={15} color="var(--c-primary)" />
-            Thanh toán tại quầy
-          </span>
+    <div className="spa-booking-page">
+      <div className="booking-container">
+        <div className="booking-breadcrumb">
+          <button type="button" onClick={() => onNavigate("")}>
+            <ArrowLeft size={15} /> Trang chủ
+          </button>
+          <span>/</span>
+          <span>Đặt lịch Spa</span>
         </div>
-      </div>
 
-      {/* 2. Main 80% Wide 2-Column Consolidated Booking Layout */}
-      <div className="spa-booking-grid-layout">
-
-        {/* LEFT COLUMN: Layered Structured Sections */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {/* ================= SECTION 1: CHỌN DỊCH VỤ ================= */}
-          <section style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 0,
-            border: '1px solid var(--c-border)',
-            padding: '24px',
-            boxShadow: 'none'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-              <div style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: 0,
-                backgroundColor: 'var(--c-primary)',
-                color: '#FFFFFF',
-                fontWeight: 700,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                1
-              </div>
+        <section className="booking-hero" aria-labelledby="spa-booking-title">
+          <div className="booking-hero-copy">
+            <span className="booking-eyebrow">
+              <span /> BEAUTYSHOP CLINIC & SPA
+            </span>
+            <h1 id="spa-booking-title">
+              Một chút thời gian,
+              <br />
+              <em>một làn da được yêu thương.</em>
+            </h1>
+            <p>
+              Chọn liệu trình phù hợp, tìm một khung giờ thuận tiện. Phần còn
+              lại, hãy để BeautyShop chăm sóc bạn.
+            </p>
+            <div className="booking-hero-benefits">
+              <span>
+                <Leaf size={16} /> Chăm sóc riêng cho bạn
+              </span>
+              <span>
+                <CalendarDays size={16} /> Chủ động chọn lịch hẹn
+              </span>
+              <span>
+                <ShieldCheck size={16} /> Thanh toán tại Spa
+              </span>
+            </div>
+          </div>
+          <div className="booking-hero-photo">
+            <img
+              src="/images/spa/spa-ritual.jpg"
+              alt="Khăn mềm, hoa và đồ chăm sóc cho một buổi Spa thư giãn"
+              width="1000"
+              height="667"
+              fetchPriority="high"
+            />
+            <span className="booking-photo-label">
+              <Flower2 size={17} /> Your moment of care
+            </span>
+            <div className="booking-photo-note">
+              <span>
+                <CalendarDays size={21} />
+              </span>
               <div>
-                <h2 style={{ fontSize: '16.5px', fontWeight: 700, margin: 0, color: '#111827' }}>
-                  Chọn liệu trình điều trị và chăm sóc da
-                </h2>
-                <div style={{ fontSize: '12.5px', color: 'var(--c-text-muted)' }}>
-                  Danh mục dịch vụ thẩm mỹ y khoa chuyên sâu theo từng loại da
-                </div>
+                <strong>Cuộc hẹn của riêng bạn</strong>
+                <small>Dễ dàng đặt lịch trong 3 bước</small>
               </div>
+              <CheckCircle2 size={18} />
             </div>
+          </div>
+        </section>
 
-            {/* Category Filter Pills - Flat Rectangular */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
-              {serviceCategories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategoryFilter(cat)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 0,
-                    fontSize: '12px',
-                    fontWeight: activeCategoryFilter === cat ? 700 : 500,
-                    cursor: 'pointer',
-                    border: activeCategoryFilter === cat ? '1px solid var(--c-primary)' : '1px solid var(--c-border)',
-                    backgroundColor: activeCategoryFilter === cat ? 'var(--c-primary)' : '#FFFFFF',
-                    color: activeCategoryFilter === cat ? '#FFFFFF' : '#374151',
-                    boxShadow: 'none'
-                  }}
-                >
-                  {cat === 'ALL' ? 'Tất cả dịch vụ' : cat}
-                </button>
-              ))}
-            </div>
-
-            {/* Service Cards Grid - Flat, No Radius, No Shadow */}
-            {loadingServices ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--c-text-muted)' }}>
-                Đang tải danh sách dịch vụ Spa...
-              </div>
-            ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '14px'
-              }}>
-                {filteredServices.map((s) => {
-                  const isSelected = selectedService?.id === s.id;
-                  const hasTicket = myActiveTickets.some((t) => (t.remainingByService?.[s.id] ?? 0) > 0);
-
-                  return (
-                    <div
-                      key={s.id}
-                      onClick={() => setSelectedService(s)}
-                      style={{
-                        borderRadius: 0,
-                        border: isSelected ? '2px solid var(--c-primary)' : '1px solid var(--c-border)',
-                        backgroundColor: isSelected ? '#FFF8F9' : '#FFFFFF',
-                        cursor: 'pointer',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        position: 'relative',
-                        boxShadow: 'none'
-                      }}
-                    >
-                      {/* Image Preview Box */}
-                      <div style={{ position: 'relative', width: '100%', height: '140px', overflow: 'hidden' }}>
-                        <img
-                          src={getSpaServiceImage(s)}
-                          alt={s.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-
-                        {/* Top Category Label */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          left: '8px',
-                          backgroundColor: '#18181B',
-                          color: '#FFFFFF',
-                          padding: '3px 7px',
-                          fontSize: '10.5px',
-                          fontWeight: 600,
-                          borderRadius: 0
-                        }}>
-                          {s.categoryName || s.category || 'Spa Clinic'}
-                        </div>
-
-                        {/* Top Duration Label */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          right: '8px',
-                          backgroundColor: '#18181B',
-                          color: '#FFFFFF',
-                          padding: '3px 7px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          borderRadius: 0
-                        }}>
-                          <Clock size={11} />
-                          <span>{s.durationMinutes || 60} phút</span>
-                        </div>
-                      </div>
-
-                      {/* Card Content */}
-                      <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
-                        <div>
-                          <strong style={{ fontSize: '14.5px', color: '#111827', display: 'block', lineHeight: 1.35, marginBottom: '4px' }}>
-                            {s.name}
-                          </strong>
-
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'var(--c-text-muted)',
-                            margin: '0 0 10px 0',
-                            lineHeight: 1.45,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden'
-                          }}>
-                            {s.shortDescription || 'Quy trình chuẩn hóa khử khuẩn, làm sạch sâu tế bào sừng và phục hồi da.'}
-                          </p>
-                        </div>
-
-                        {/* Card Footer: Price & Ticket */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--c-border)', paddingTop: '8px' }}>
-                          <div>
-                            <span style={{ fontSize: '11px', color: 'var(--c-text-light)', display: 'block' }}>Chi phí:</span>
-                            <span style={{ fontSize: '15px', fontWeight: 700, color: '#9F1239', fontFamily: 'monospace' }}>
-                              {formatCurrency(s.basePrice ?? s.price ?? 0)}
-                            </span>
-                          </div>
-
-                          {hasTicket ? (
-                            <span style={{ fontSize: '10.5px', color: '#065F46', fontWeight: 600, border: '1px solid #A7F3D0', padding: '2px 6px' }}>
-                              Có vé liệu trình
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: '11.5px', fontWeight: 700, color: isSelected ? 'var(--c-primary)' : 'var(--c-text-muted)' }}>
-                              {isSelected ? 'Đã chọn' : 'Chọn gói'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Smart Ticket Attachment Banner */}
-            {applicableTicket && (
-              <div style={{
-                marginTop: '16px',
-                padding: '12px 14px',
-                backgroundColor: '#F0FDF4',
-                border: '1px solid #86EFAC',
-                borderRadius: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Ticket size={16} color="#065F46" />
-                  <div>
-                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#065F46' }}>
-                      Có vé liệu trình cho dịch vụ này ({applicableTicket.remainingByService[selectedService?.id]} buổi còn lại)
-                    </div>
-                    <div style={{ fontSize: '11.5px', color: '#047857' }}>
-                      Áp dụng vé sẽ giữ chỗ 1 buổi và miễn phí thanh toán tại quầy.
-                    </div>
-                  </div>
-                </div>
-
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#065F46', cursor: 'pointer', backgroundColor: '#FFFFFF', padding: '5px 12px', border: '1px solid #86EFAC' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedTicketId === applicableTicket.id}
-                    onChange={(e) => setSelectedTicketId(e.target.checked ? applicableTicket.id : null)}
-                  />
-                  <span>Áp dụng vé (0 ₫)</span>
-                </label>
-              </div>
-            )}
-          </section>
-
-          {/* ================= SECTION 2: CHỌN CHUYÊN VIÊN ================= */}
-          <section style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 0,
-            border: '1px solid var(--c-border)',
-            padding: '24px',
-            boxShadow: 'none'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-              <div style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: 0,
-                backgroundColor: 'var(--c-primary)',
-                color: '#FFFFFF',
-                fontWeight: 700,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                2
-              </div>
+        <nav className="booking-stepper" aria-label="Các bước đặt lịch">
+          {[
+            {
+              number: 1,
+              title: "Chọn dịch vụ",
+              subtitle: "Liệu trình dành cho bạn",
+              complete: Boolean(selectedService),
+            },
+            {
+              number: 2,
+              title: "Ngày & giờ hẹn",
+              subtitle: "Lịch phù hợp với bạn",
+              complete: validSlot,
+            },
+            {
+              number: 3,
+              title: "Thông tin & xác nhận",
+              subtitle: "Hoàn tất cuộc hẹn",
+              complete: contactComplete && validSlot,
+            },
+          ].map((step) => (
+            <button
+              type="button"
+              key={step.number}
+              className={`${currentStep === step.number ? "is-current" : ""} ${step.complete ? "is-complete" : ""}`}
+              aria-current={currentStep === step.number ? "step" : undefined}
+              onClick={() => goToStep(step.number)}
+            >
+              <span>
+                {step.complete ? <Check size={18} /> : `0${step.number}`}
+              </span>
               <div>
-                <h2 style={{ fontSize: '16.5px', fontWeight: 700, margin: 0, color: '#111827' }}>
-                  Lựa chọn Bác sĩ và Kỹ thuật viên phụ trách
-                </h2>
-                <div style={{ fontSize: '12.5px', color: 'var(--c-text-muted)' }}>
-                  Chuyên viên đạt chứng chỉ y khoa và được phân ca chuyên môn
-                </div>
+                <strong>{step.title}</strong>
+                <small>{step.subtitle}</small>
               </div>
-            </div>
+              <ArrowRight size={17} />
+            </button>
+          ))}
+        </nav>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-              {/* Option: Auto Dispatch */}
-              <div
-                onClick={() => setSelectedStaff('AUTO')}
-                style={{
-                  padding: '16px',
-                  borderRadius: 0,
-                  border: selectedStaff === 'AUTO' ? '2px solid var(--c-primary)' : '1px solid var(--c-border)',
-                  backgroundColor: selectedStaff === 'AUTO' ? '#FFF8F9' : '#FFFFFF',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  boxShadow: 'none'
-                }}
-              >
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: 0,
-                  backgroundColor: selectedStaff === 'AUTO' ? 'var(--c-primary)' : '#F4F4F5',
-                  color: selectedStaff === 'AUTO' ? '#FFFFFF' : '#3F3F46',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 10px auto'
-                }}>
-                  <Sparkles size={22} />
-                </div>
-
-                <strong style={{ fontSize: '14px', display: 'block', color: '#111827', marginBottom: '2px' }}>
-                  Hệ thống tự xếp
-                </strong>
-                <span style={{ fontSize: '11.5px', color: 'var(--c-text-muted)', display: 'block', marginBottom: '4px' }}>
-                  Điều phối chuyên viên phù hợp
-                </span>
-                <span style={{ fontSize: '11px', color: 'var(--c-primary)', fontWeight: 600 }}>
-                  Tối ưu thời gian
-                </span>
-              </div>
-
-              {/* Specific Staff Cards */}
-              {qualifiedStaff.map((st) => {
-                const isSelected = selectedStaff === String(st.id);
-
-                return (
-                  <div
-                    key={st.id}
-                    onClick={() => setSelectedStaff(String(st.id))}
-                    style={{
-                      padding: '16px',
-                      borderRadius: 0,
-                      border: isSelected ? '2px solid var(--c-primary)' : '1px solid var(--c-border)',
-                      backgroundColor: isSelected ? '#FFF8F9' : '#FFFFFF',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      boxShadow: 'none'
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: 0,
-                        margin: '0 auto 10px auto',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: isSelected ? 'var(--c-primary)' : '#F4F4F5',
-                        color: isSelected ? '#FFFFFF' : '#52525B',
-                        border: isSelected ? '1px solid var(--c-primary)' : '1px solid var(--c-border)'
-                      }}
-                    >
-                      {st.avatarUrl ? (
-                        <img src={st.avatarUrl} alt={st.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <User size={22} />
-                      )}
-                    </div>
-
-                    <strong style={{ fontSize: '14px', display: 'block', color: '#111827', marginBottom: '2px' }}>
-                      {st.fullName || st.username || `KTV #${st.id}`}
-                    </strong>
-                    <span style={{ fontSize: '11.5px', color: 'var(--c-text-muted)', display: 'block', marginBottom: '4px' }}>
-                      {st.specialty || 'Chuyên viên da liễu'}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#92400E', fontWeight: 600 }}>
-                      Chứng chỉ y khoa
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* ================= SECTION 3: CHỌN NGÀY & KHUNG GIỜ ================= */}
-          <section style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 0,
-            border: '1px solid var(--c-border)',
-            padding: '24px',
-            boxShadow: 'none'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-              <div style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: 0,
-                backgroundColor: 'var(--c-primary)',
-                color: '#FFFFFF',
-                fontWeight: 700,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                3
-              </div>
-              <div>
-                <h2 style={{ fontSize: '16.5px', fontWeight: 700, margin: 0, color: '#111827' }}>
-                  Lựa chọn ngày hẹn và khung giờ khả dụng
-                </h2>
-                <div style={{ fontSize: '12.5px', color: 'var(--c-text-muted)' }}>
-                  Hệ thống tự động kiểm tra và giữ phòng theo thời gian thực
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Date Cards - Flat */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: '8px', color: '#374151' }}>
-                NGÀY THỰC HIỆN:
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                {getQuickDates().map((qd) => {
-                  const isSelected = selectedDate === qd.iso;
-                  return (
-                    <button
-                      key={qd.iso}
-                      type="button"
-                      onClick={() => setSelectedDate(qd.iso)}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 0,
-                        border: isSelected ? '2px solid var(--c-primary)' : '1px solid var(--c-border)',
-                        backgroundColor: isSelected ? 'var(--c-primary)' : '#FFFFFF',
-                        color: isSelected ? '#FFFFFF' : '#111827',
-                        fontWeight: 600,
-                        fontSize: '12.5px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        minWidth: '90px',
-                        boxShadow: 'none'
-                      }}
-                    >
-                      <span>{qd.label}</span>
-                      <span style={{ fontSize: '10.5px', opacity: 0.9, marginTop: '2px', fontFamily: 'monospace' }}>
-                        {qd.dayMonth}
-                      </span>
-                    </button>
-                  );
-                })}
-
-                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--c-text-light)' }}>Chọn ngày khác:</span>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    style={{
-                      padding: '7px 10px',
-                      borderRadius: 0,
-                      border: '1px solid var(--c-border)',
-                      fontSize: '12.5px',
-                      outline: 'none',
-                      fontFamily: 'monospace'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Available Time Slots Organized By Shifts */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#374151' }}>
-                  KHUNG GIỜ KHẢ DỤNG ({selectedDate}):
-                </span>
-                {loadingSlots && (
-                  <span style={{ fontSize: '11.5px', color: 'var(--c-primary)', fontWeight: 600 }}>
-                    Đang kiểm tra phòng trống...
+        <form
+          id="spa-booking-form"
+          ref={formRef}
+          className="booking-layout spa-booking-grid-layout"
+          onSubmit={confirmBooking}
+        >
+          <div className="booking-form-sections">
+            <section
+              id="spa-step-1"
+              className="booking-section"
+              tabIndex={-1}
+              aria-labelledby="spa-services-title"
+            >
+              <StepHeading
+                number="01"
+                title={
+                  <span id="spa-services-title">
+                    Bạn muốn chăm sóc da thế nào?
                   </span>
-                )}
-              </div>
-
-              {availableSlots.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {/* Morning Slots */}
-                  {morningSlots.length > 0 && (
-                    <div style={{ border: '1px solid var(--c-border)', padding: '12px', backgroundColor: '#FAFAFA' }}>
-                      <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--c-primary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        <Sun size={13} />
-                        <span>Ca sáng (08:00 - 12:00)</span>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {morningSlots.map((slot) => {
-                          const isSelected = selectedSlot === slot;
-                          return (
-                            <button
-                              key={slot}
-                              type="button"
-                              onClick={() => setSelectedSlot(slot)}
-                              style={{
-                                padding: '8px 16px',
-                                borderRadius: 0,
-                                border: isSelected ? '2px solid var(--c-primary)' : '1px solid var(--c-border)',
-                                backgroundColor: isSelected ? 'var(--c-primary)' : '#FFFFFF',
-                                color: isSelected ? '#FFFFFF' : '#111827',
-                                fontWeight: 700,
-                                fontSize: '12.5px',
-                                cursor: 'pointer',
-                                fontFamily: 'monospace',
-                                boxShadow: 'none'
-                              }}
-                            >
-                              {slot}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Afternoon / Evening Slots */}
-                  {afternoonSlots.length > 0 && (
-                    <div style={{ border: '1px solid var(--c-border)', padding: '12px', backgroundColor: '#FAFAFA' }}>
-                      <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--c-primary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        <Moon size={13} />
-                        <span>Ca chiều và tối (13:00 - 20:30)</span>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {afternoonSlots.map((slot) => {
-                          const isSelected = selectedSlot === slot;
-                          return (
-                            <button
-                              key={slot}
-                              type="button"
-                              onClick={() => setSelectedSlot(slot)}
-                              style={{
-                                padding: '8px 16px',
-                                borderRadius: 0,
-                                border: isSelected ? '2px solid var(--c-primary)' : '1px solid var(--c-border)',
-                                backgroundColor: isSelected ? 'var(--c-primary)' : '#FFFFFF',
-                                color: isSelected ? '#FFFFFF' : '#111827',
-                                fontWeight: 700,
-                                fontSize: '12.5px',
-                                cursor: 'pointer',
-                                fontFamily: 'monospace',
-                                boxShadow: 'none'
-                              }}
-                            >
-                              {slot}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : loadingSlots ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--c-text-muted)', fontSize: '12.5px' }}>
-                  Đang đồng bộ dữ liệu phòng khám...
-                </div>
-              ) : (
-                <div style={{
-                  padding: '14px 16px',
-                  backgroundColor: '#FFFBEB',
-                  border: '1px solid #FDE68A',
-                  color: '#92400E',
-                  fontSize: '12.5px',
-                  lineHeight: 1.5
-                }}>
-                  <div style={{ fontWeight: 700, marginBottom: '4px' }}>
-                    Hiện không còn khung giờ trống vào ngày {selectedDate}
-                  </div>
-                  <div>Vui lòng chọn ngày khác hoặc chọn chuyên viên tự động để xem thêm giờ trống.</div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* ================= SECTION 4: THÔNG TIN KHÁCH HÀNG & TIỀN SỬ DA ================= */}
-          <section style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 0,
-            border: '1px solid var(--c-border)',
-            padding: '24px',
-            boxShadow: 'none'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-              <div style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: 0,
-                backgroundColor: 'var(--c-primary)',
-                color: '#FFFFFF',
-                fontWeight: 700,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                4
-              </div>
-              <div>
-                <h2 style={{ fontSize: '16.5px', fontWeight: 700, margin: 0, color: '#111827' }}>
-                  Thông tin khách hàng và ghi chú da liễu
-                </h2>
-                <div style={{ fontSize: '12.5px', color: 'var(--c-text-muted)' }}>
-                  Hồ sơ đặt hẹn bảo mật đồng bộ trên hệ thống phòng khám
-                </div>
-              </div>
-            </div>
-
-            {!isAuthenticated && (
-              <div style={{
-                marginBottom: '16px',
-                padding: '10px 14px',
-                backgroundColor: '#FFFBEB',
-                border: '1px solid #FDE68A',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px'
-              }}>
-                <div style={{ fontSize: '12px', color: '#92400E' }}>
-                  Đăng nhập tài khoản để quản lý lịch hẹn trực tuyến trên thiết bị của bạn.
-                </div>
+                }
+                description="Khám phá và chọn một liệu trình phù hợp với bạn."
+                complete={Boolean(selectedService)}
+              />
+              <div
+                className="booking-category-pills"
+                role="group"
+                aria-label="Lọc danh mục dịch vụ"
+              >
                 <button
                   type="button"
-                  onClick={() => onNavigate('login')}
-                  className="btn-luxury-outline"
-                  style={{ fontSize: '11px', padding: '5px 12px', borderRadius: 0 }}
+                  aria-pressed={category === "ALL"}
+                  onClick={() => setCategory("ALL")}
                 >
-                  Đăng nhập
+                  Tất cả dịch vụ
                 </button>
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '5px', color: '#374151' }}>
-                  HỌ VÀ TÊN KHÁCH HÀNG *
-                </label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Ví dụ: Nguyễn Thị Mai Lan"
-                  value={customerInfo.fullName}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, fullName: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 0, border: '1px solid var(--c-border)', outline: 'none', fontSize: '13px', boxSizing: 'border-box' }}
-                />
+                {categories.map((name) => (
+                  <button
+                    type="button"
+                    key={name}
+                    aria-pressed={category === name}
+                    onClick={() => setCategory(name)}
+                  >
+                    {name}
+                  </button>
+                ))}
               </div>
 
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '5px', color: '#374151' }}>
-                  SỐ ĐIỆN THOẠI LIÊN HỆ *
-                </label>
-                <input
-                  required
-                  type="tel"
-                  placeholder="Ví dụ: 0901234567"
-                  value={customerInfo.phone}
-                  onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 0, border: '1px solid var(--c-border)', outline: 'none', fontSize: '13px', boxSizing: 'border-box' }}
-                />
-              </div>
-            </div>
+              {loadingServices ? (
+                <div
+                  className="booking-service-skeletons"
+                  aria-label="Đang tải dịch vụ"
+                  role="status"
+                >
+                  {[0, 1, 2, 3].map((index) => (
+                    <div key={index} className="booking-service-skeleton" />
+                  ))}
+                </div>
+              ) : serviceError ? (
+                <div className="booking-empty-state" role="alert">
+                  <AlertCircle size={26} />
+                  <strong>Chưa tải được dịch vụ Spa</strong>
+                  <p>Vui lòng kiểm tra kết nối rồi thử lại.</p>
+                  <button
+                    type="button"
+                    className="booking-text-button"
+                    onClick={() => setServiceVersion((version) => version + 1)}
+                  >
+                    <RefreshCw size={15} /> Thử lại
+                  </button>
+                </div>
+              ) : visibleServices.length === 0 ? (
+                <div className="booking-empty-state">
+                  <Flower2 size={28} />
+                  <strong>Chưa có dịch vụ trong danh mục này</strong>
+                  <p>Hãy chọn danh mục khác hoặc quay lại sau.</p>
+                </div>
+              ) : (
+                <div
+                  className="booking-service-grid"
+                  role="group"
+                  aria-label="Chọn dịch vụ Spa"
+                >
+                  {visibleServices.map((service) => {
+                    const selected = selectedService?.id === service.id;
+                    return (
+                      <button
+                        type="button"
+                        key={service.id}
+                        className={`booking-service-card ${selected ? "is-selected" : ""}`}
+                        aria-pressed={selected}
+                        aria-label={`Chọn dịch vụ ${service.name}`}
+                        onClick={() => chooseService(service)}
+                      >
+                        <span className="booking-service-image">
+                          <img
+                            src={getServiceImage(service)}
+                            alt=""
+                            loading="lazy"
+                            onError={handleServiceImageError}
+                          />
+                        </span>
+                        <span className="booking-service-content">
+                          <small>{getCategory(service)}</small>
+                          <strong>{service.name}</strong>
+                          <span className="booking-service-description">
+                            {service.shortDescription ||
+                              "Xem chi phí và thời lượng để lựa chọn liệu trình phù hợp."}
+                          </span>
+                          <span className="booking-service-meta">
+                            <span>
+                              <Clock size={13} />{" "}
+                              {service.durationMinutes || 60} phút
+                            </span>
+                            <b>
+                              {formatCurrency(
+                                service.basePrice ?? service.price ?? 0,
+                              )}
+                            </b>
+                          </span>
+                        </span>
+                        <span
+                          className="booking-service-check"
+                          aria-hidden="true"
+                        >
+                          {selected && <Check size={12} />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {applicableTickets.length > 0 && (
+                <div className="booking-ticket-benefit">
+                  <Ticket size={23} />
+                  <div>
+                    <strong>Bạn có vé liệu trình phù hợp</strong>
+                    <p>Sử dụng 1 buổi từ vé để thanh toán cho cuộc hẹn này.</p>
+                  </div>
+                  <label>
+                    <span className="booking-sr-only">
+                      Áp dụng vé liệu trình
+                    </span>
+                    <select
+                      value={selectedTicketId || ""}
+                      onChange={(event) =>
+                        setSelectedTicketId(
+                          event.target.value
+                            ? Number(event.target.value)
+                            : null,
+                        )
+                      }
+                    >
+                      <option value="">Chưa áp dụng</option>
+                      {applicableTickets.map((ticket) => (
+                        <option key={ticket.id} value={ticket.id}>
+                          Vé #{ticket.id} ·{" "}
+                          {ticket.remainingByService?.[selectedService.id]} buổi
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+            </section>
 
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '5px', color: '#374151' }}>
-                EMAIL NHẬN VÉ ĐIỆN TỬ (TÙY CHỌN)
-              </label>
-              <input
-                type="email"
-                placeholder="mailan@gmail.com"
-                value={customerInfo.email}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 0, border: '1px solid var(--c-border)', outline: 'none', fontSize: '13px', boxSizing: 'border-box' }}
+            <section
+              id="spa-step-2"
+              className="booking-section"
+              tabIndex={-1}
+              aria-labelledby="spa-schedule-title"
+            >
+              <StepHeading
+                number="02"
+                title={
+                  <span id="spa-schedule-title">
+                    Một khung giờ dành riêng cho bạn
+                  </span>
+                }
+                description="Chọn ngày và giờ còn trống. Giờ hẹn theo múi giờ Việt Nam."
+                complete={validSlot}
               />
-            </div>
+              <div className="booking-date-heading">
+                <label htmlFor="spa-date">Ngày bạn muốn đến</label>
+                <div className="booking-custom-date">
+                  <CalendarDays size={16} />
+                  <input
+                    id="spa-date"
+                    type="date"
+                    value={selectedDate}
+                    min={today}
+                    onChange={(event) => changeDate(event.target.value)}
+                    aria-label="Chọn ngày hẹn khác"
+                  />
+                </div>
+              </div>
+              <div
+                className="booking-date-strip"
+                role="group"
+                aria-label="Chọn ngày hẹn"
+              >
+                {dates.map((date) => (
+                  <button
+                    type="button"
+                    key={date.iso}
+                    className={selectedDate === date.iso ? "is-selected" : ""}
+                    aria-pressed={selectedDate === date.iso}
+                    onClick={() => changeDate(date.iso)}
+                  >
+                    <small>{date.label}</small>
+                    <strong>{date.day}</strong>
+                    <span>
+                      {selectedDate === date.iso ? (
+                        <Check size={14} />
+                      ) : (
+                        <span />
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
-            {/* Quick Medical / Skin Screening Tags - Flat */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px', color: '#374151' }}>
-                TIỀN SỬ DA LIỄU NHANH:
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {PRESET_SKIN_TAGS.map((tag) => {
-                  const isChecked = selectedSkinTags.includes(tag);
-                  return (
+              <details className="booking-provider">
+                <summary>
+                  <span>
+                    <User size={17} />{" "}
+                    {selectedStaff === "AUTO"
+                      ? "Để Spa sắp xếp chuyên viên"
+                      : selectedStaffName}
+                    <small>Bạn có thể chọn chuyên viên nếu muốn</small>
+                  </span>
+                  <ChevronDown size={17} />
+                </summary>
+                <div className="booking-staff-grid">
+                  <button
+                    type="button"
+                    className={`booking-staff-card ${selectedStaff === "AUTO" ? "is-selected" : ""}`}
+                    aria-pressed={selectedStaff === "AUTO"}
+                    onClick={() => {
+                      setSelectedStaff("AUTO");
+                      setSelectedSlot("");
+                    }}
+                  >
+                    <span className="booking-staff-avatar">
+                      <Sparkles size={20} />
+                    </span>
+                    <span>
+                      <strong>Không có yêu cầu riêng</strong>
+                      <small>Spa sắp xếp chuyên viên phù hợp</small>
+                    </span>
+                    {selectedStaff === "AUTO" && <Check size={15} />}
+                  </button>
+                  {staff.map((person) => (
                     <button
-                      key={tag}
                       type="button"
-                      onClick={() => toggleSkinTag(tag)}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: 0,
-                        fontSize: '11.5px',
-                        cursor: 'pointer',
-                        fontWeight: isChecked ? 700 : 500,
-                        border: isChecked ? '1px solid var(--c-primary)' : '1px solid var(--c-border)',
-                        backgroundColor: isChecked ? 'var(--c-primary)' : '#FFFFFF',
-                        color: isChecked ? '#FFFFFF' : '#374151',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        boxShadow: 'none'
+                      key={person.id}
+                      className={`booking-staff-card ${selectedStaff === String(person.id) ? "is-selected" : ""}`}
+                      aria-pressed={selectedStaff === String(person.id)}
+                      onClick={() => {
+                        setSelectedStaff(String(person.id));
+                        setSelectedSlot("");
                       }}
                     >
-                      {isChecked && <Check size={11} strokeWidth={2.5} />}
-                      <span>{tag}</span>
+                      <span className="booking-staff-avatar">
+                        {person.avatarUrl ? (
+                          <img
+                            src={resolveMediaUrl(person.avatarUrl)}
+                            alt=""
+                            loading="lazy"
+                          />
+                        ) : (
+                          getStaffName(person).charAt(0)
+                        )}
+                      </span>
+                      <span>
+                        <strong>{getStaffName(person)}</strong>
+                        <small>{person.specialty || "Chuyên viên Spa"}</small>
+                      </span>
+                      {selectedStaff === String(person.id) && (
+                        <Check size={15} />
+                      )}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+                {loadingStaff && (
+                  <p role="status" className="booking-muted">
+                    Đang tải chuyên viên…
+                  </p>
+                )}
+                {staffError && (
+                  <p className="booking-muted">
+                    Chưa tải được danh sách chuyên viên. Bạn vẫn có thể chọn để
+                    Spa sắp xếp.
+                  </p>
+                )}
+              </details>
+
+              <div className="booking-slot-heading">
+                <strong>Chọn giờ bắt đầu</strong>
+                <span>
+                  <i /> Giờ còn trống
+                </span>
               </div>
-            </div>
+              {loadingSlots ? (
+                <div className="booking-slot-loading" role="status">
+                  <LoaderCircle size={22} className="booking-spinner" />
+                  <span>Đang tìm khung giờ phù hợp…</span>
+                </div>
+              ) : slotError ? (
+                <div className="booking-empty-state" role="alert">
+                  <AlertCircle size={25} />
+                  <strong>Chưa kiểm tra được giờ trống</strong>
+                  <p>Thử lại để xem lịch còn trống cho ngày đã chọn.</p>
+                  <button
+                    type="button"
+                    className="booking-text-button"
+                    onClick={() => setSlotVersion((version) => version + 1)}
+                  >
+                    <RefreshCw size={15} /> Kiểm tra lại
+                  </button>
+                </div>
+              ) : !selectedService ? (
+                <div className="booking-empty-state">
+                  <CalendarDays size={26} />
+                  <p>Chọn dịch vụ ở bước 1 để xem các khung giờ phù hợp.</p>
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="booking-empty-state">
+                  <CalendarDays size={27} />
+                  <strong>Chưa có giờ trống vào ngày này</strong>
+                  <p>
+                    Chọn một ngày khác hoặc để Spa sắp xếp chuyên viên để xem
+                    thêm lịch.
+                  </p>
+                </div>
+              ) : (
+                <div className="booking-slot-groups">
+                  {[
+                    {
+                      name: "Buổi sáng",
+                      Icon: Sun,
+                      times: slots.filter(
+                        (slot) => Number(slot.split(":")[0]) < 12,
+                      ),
+                    },
+                    {
+                      name: "Buổi chiều & tối",
+                      Icon: Moon,
+                      times: slots.filter(
+                        (slot) => Number(slot.split(":")[0]) >= 12,
+                      ),
+                    },
+                  ]
+                    .filter((group) => group.times.length > 0)
+                    .map((group) => (
+                      <div className="booking-slot-group" key={group.name}>
+                        <span>
+                          <group.Icon size={16} /> {group.name}
+                        </span>
+                        <div role="group" aria-label={group.name}>
+                          {group.times.map((slot) => (
+                            <button
+                              type="button"
+                              key={slot}
+                              aria-pressed={selectedSlot === slot}
+                              className={
+                                selectedSlot === slot ? "is-selected" : ""
+                              }
+                              onClick={() => {
+                                setSelectedSlot(slot);
+                                setBookingError("");
+                              }}
+                            >
+                              {slot.slice(0, 5)}
+                              {selectedSlot === slot && <Check size={12} />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <p className="booking-schedule-note">
+                <InfoIcon /> Lịch trống được cập nhật theo dịch vụ và chuyên
+                viên bạn chọn.
+              </p>
+            </section>
 
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '5px', color: '#374151' }}>
-                GHI CHÚ THÊM CHO BÁC SĨ (NẾU CÓ):
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Ghi chú thêm về mong muốn điều trị hoặc tiền sử dị ứng khác..."
-                value={customerInfo.skinNote}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, skinNote: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 0, border: '1px solid var(--c-border)', outline: 'none', resize: 'vertical', fontSize: '12.5px', boxSizing: 'border-box' }}
+            <section
+              id="spa-step-3"
+              className="booking-section"
+              tabIndex={-1}
+              aria-labelledby="spa-contact-title"
+            >
+              <StepHeading
+                number="03"
+                title={
+                  <span id="spa-contact-title">
+                    Để chúng mình đón tiếp bạn tốt hơn
+                  </span>
+                }
+                description="Thông tin liên hệ giúp Spa xác nhận cuộc hẹn của bạn."
+                complete={contactComplete}
               />
-            </div>
-          </section>
-
-        </div>
-
-        {/* RIGHT COLUMN: Sticky Real-time Appointment Ticket Summary */}
-        <div style={{ position: 'sticky', top: '24px' }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 0,
-            border: '1px solid var(--c-border)',
-            padding: '20px',
-            boxShadow: 'none'
-          }}>
-            {/* Summary Top Tag */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid var(--c-border)', paddingBottom: '10px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-primary)', letterSpacing: '0.04em' }}>
-                PHIẾU ĐẶT HẸN DỊCH VỤ
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--c-text-muted)' }}>
-                BeautyShop Spa
-              </span>
-            </div>
-
-            {/* Selected Service Card */}
-            {selectedService ? (
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
-                <img
-                  src={getSpaServiceImage(selectedService)}
-                  alt={selectedService.name}
-                  style={{ width: '64px', height: '64px', borderRadius: 0, objectFit: 'cover', flexShrink: 0 }}
+              {!isAuthenticated && (
+                <div className="booking-login-note">
+                  <User size={18} />
+                  <span>Đăng nhập để xác nhận và theo dõi lịch hẹn.</span>
+                  <button type="button" onClick={() => onNavigate("login")}>
+                    Đăng nhập <ArrowRight size={14} />
+                  </button>
+                </div>
+              )}
+              <div className="booking-contact-grid">
+                <label htmlFor="spa-full-name">
+                  Họ và tên <span>*</span>
+                  <div className="booking-input-wrap">
+                    <User size={16} />
+                    <input
+                      id="spa-full-name"
+                      name="fullName"
+                      type="text"
+                      required
+                      autoComplete="name"
+                      placeholder="Họ và tên của bạn"
+                      value={contact.fullName}
+                      onChange={(event) =>
+                        setContact({ ...contact, fullName: event.target.value })
+                      }
+                    />
+                  </div>
+                </label>
+                <label htmlFor="spa-phone">
+                  Số điện thoại <span>*</span>
+                  <div className="booking-input-wrap">
+                    <Phone size={16} />
+                    <input
+                      id="spa-phone"
+                      name="phone"
+                      type="tel"
+                      required
+                      autoComplete="tel"
+                      placeholder="Số điện thoại liên hệ"
+                      value={contact.phone}
+                      onChange={(event) =>
+                        setContact({ ...contact, phone: event.target.value })
+                      }
+                    />
+                  </div>
+                </label>
+                <label className="booking-email-field" htmlFor="spa-email">
+                  Email <small>Không bắt buộc</small>
+                  <div className="booking-input-wrap">
+                    <Mail size={16} />
+                    <input
+                      id="spa-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="Email của bạn"
+                      value={contact.email}
+                      onChange={(event) =>
+                        setContact({ ...contact, email: event.target.value })
+                      }
+                    />
+                  </div>
+                </label>
+              </div>
+              <div className="booking-skin-tags">
+                <strong>Bạn muốn Spa lưu ý điều gì?</strong>
+                <span>Chọn nếu phù hợp với bạn · Không bắt buộc</span>
+                <div role="group" aria-label="Thông tin cần lưu ý">
+                  {SKIN_TAGS.map((tag) => (
+                    <button
+                      type="button"
+                      key={tag}
+                      aria-pressed={skinTags.includes(tag)}
+                      onClick={() => toggleTag(tag)}
+                    >
+                      {skinTags.includes(tag) && <Check size={13} />}
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="booking-note-field" htmlFor="spa-note">
+                Lời nhắn cho chuyên viên{" "}
+                <textarea
+                  id="spa-note"
+                  name="notes"
+                  rows={3}
+                  placeholder="Mong muốn chăm sóc, tình trạng da hoặc điều bạn muốn chia sẻ…"
+                  value={contact.note}
+                  onChange={(event) =>
+                    setContact({ ...contact, note: event.target.value })
+                  }
                 />
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ fontSize: '14px', color: '#111827', display: 'block', lineHeight: 1.35 }}>
-                    {selectedService.name}
-                  </strong>
-                  <span style={{ fontSize: '11.5px', color: 'var(--c-text-muted)', display: 'block', marginTop: '2px' }}>
-                    Thời lượng: {selectedService.durationMinutes || 60} phút
+              </label>
+              <div className="booking-contact-note">
+                <ShieldCheck size={16} />
+                <span>
+                  Thông tin được sử dụng để phục vụ lịch hẹn và chăm sóc bạn tại
+                  Spa.
+                </span>
+              </div>
+            </section>
+          </div>
+
+          <aside
+            className="booking-summary"
+            aria-labelledby="spa-summary-title"
+          >
+            <div className="booking-summary-heading">
+              <span className="booking-eyebrow">CUỘC HẸN CỦA BẠN</span>
+              <Flower2 size={23} />
+              <h2 id="spa-summary-title">Hẹn một buổi chăm sóc.</h2>
+              <p>Mọi thông tin, gọn trong một nơi.</p>
+            </div>
+            {selectedService ? (
+              <div className="booking-summary-service">
+                <img
+                  src={getServiceImage(selectedService)}
+                  onError={handleServiceImageError}
+                  alt=""
+                />
+                <div>
+                  <small>{getCategory(selectedService)}</small>
+                  <strong>{selectedService.name}</strong>
+                  <span>
+                    <Clock size={13} /> {selectedService.durationMinutes || 60}{" "}
+                    phút
                   </span>
                 </div>
               </div>
             ) : (
-              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--c-text-muted)', fontSize: '12.5px' }}>
-                Chưa chọn liệu trình
+              <div className="booking-summary-placeholder">
+                <Flower2 size={28} />
+                <p>Chọn dịch vụ để bắt đầu cuộc hẹn.</p>
               </div>
             )}
-
-            {/* Schedule & Staff Info */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              fontSize: '12.5px',
-              color: '#374151',
-              backgroundColor: '#FAFAFA',
-              padding: '12px',
-              borderRadius: 0,
-              border: '1px solid var(--c-border)',
-              marginBottom: '16px'
-            }}>
-              <div>Ngày hẹn: <strong>{selectedDate}</strong></div>
-              <div>Khung giờ: <strong>{selectedSlot || 'Chưa chọn'}</strong></div>
-              <div>Chuyên viên: <strong>{selectedStaff === 'AUTO' ? 'Tự động xếp tối ưu' : qualifiedStaff.find(s => String(s.id) === String(selectedStaff))?.fullName || selectedStaff}</strong></div>
-              <div>Địa điểm: <strong>123 Đồng Khởi, Quận 1, TP.HCM</strong></div>
-            </div>
-
-            {/* Pricing Section */}
-            <div style={{ borderTop: '1px solid var(--c-border)', paddingTop: '12px', marginBottom: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: 'var(--c-text-muted)', marginBottom: '6px' }}>
-                <span>Giá niêm yết:</span>
-                <span>{formatCurrency(selectedService?.basePrice ?? selectedService?.price ?? 0)}</span>
+            <dl className="booking-summary-details">
+              <div>
+                <dt>
+                  <CalendarDays size={17} /> Ngày hẹn
+                </dt>
+                <dd>
+                  {formatDate(selectedDate, {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                </dd>
               </div>
-
+              <div>
+                <dt>
+                  <Clock size={17} /> Giờ bắt đầu
+                </dt>
+                <dd className={validSlot ? "is-ready" : "is-pending"}>
+                  {validSlot ? selectedSlot.slice(0, 5) : "Bạn chưa chọn giờ"}
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <User size={17} /> Chuyên viên
+                </dt>
+                <dd>{selectedStaffName}</dd>
+              </div>
+              <div>
+                <dt>
+                  <MapPin size={17} /> Địa điểm
+                </dt>
+                <dd>123 Đồng Khởi, Quận 1, TP.HCM</dd>
+              </div>
+            </dl>
+            <div className="booking-summary-price">
+              <div>
+                <span>Giá dịch vụ</span>
+                <span>
+                  {selectedService ? formatCurrency(servicePrice) : "—"}
+                </span>
+              </div>
               {selectedTicketId && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#065F46', marginBottom: '6px', fontWeight: 600 }}>
-                  <span>Khấu trừ vé liệu trình:</span>
-                  <span>-{formatCurrency(selectedService?.basePrice ?? selectedService?.price ?? 0)}</span>
+                <div className="booking-ticket-discount">
+                  <span>Áp dụng vé #{selectedTicketId}</span>
+                  <span>−{formatCurrency(servicePrice)}</span>
                 </div>
               )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--c-border)' }}>
-                <strong style={{ fontSize: '13px', color: '#111827' }}>Thanh toán tại quầy:</strong>
-                <strong style={{ fontSize: '18px', fontWeight: 700, color: '#9F1239', fontFamily: 'monospace' }}>
-                  {selectedTicketId ? '0 ₫' : formatCurrency(selectedService?.basePrice ?? selectedService?.price ?? 0)}
-                </strong>
-              </div>
-
-              <div style={{ fontSize: '11px', color: selectedTicketId ? '#065F46' : 'var(--c-primary)', fontWeight: 600, marginTop: '4px', textAlign: 'right' }}>
-                {selectedTicketId ? `Khấu trừ 1 buổi từ vé #${selectedTicketId}` : 'Thanh toán sau khi làm dịch vụ'}
+              <div className="booking-total">
+                <div>
+                  <strong>Thanh toán tại Spa</strong>
+                  <small>
+                    {selectedTicketId
+                      ? "Sử dụng 1 buổi từ vé liệu trình"
+                      : "Bạn chưa cần thanh toán lúc đặt lịch"}
+                  </small>
+                </div>
+                <b>{selectedService ? formatCurrency(total) : "—"}</b>
               </div>
             </div>
-
             {bookingError && (
-              <div style={{
-                marginBottom: '14px',
-                padding: '8px 12px',
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
-                color: '#9F1239',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <AlertCircle size={14} color="#9F1239" />
+              <div
+                id="spa-booking-error"
+                className="booking-error"
+                role="alert"
+                tabIndex={-1}
+              >
+                <AlertCircle size={18} />
                 <span>{bookingError}</span>
               </div>
             )}
-
-            {/* Action CTA Button - Flat */}
             <button
-              onClick={handleConfirmBooking}
-              disabled={submitting || !selectedService || !selectedSlot}
-              style={{
-                width: '100%',
-                padding: '12px',
-                fontSize: '14px',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                backgroundColor: (submitting || !selectedService || !selectedSlot) ? '#E5E7EB' : 'var(--c-primary)',
-                color: (submitting || !selectedService || !selectedSlot) ? '#9CA3AF' : '#FFFFFF',
-                border: 'none',
-                borderRadius: 0,
-                boxShadow: 'none',
-                cursor: (submitting || !selectedService || !selectedSlot) ? 'not-allowed' : 'pointer'
-              }}
+              type={isAuthenticated && validSlot ? "submit" : "button"}
+              onClick={
+                isAuthenticated && validSlot ? undefined : continueBooking
+              }
+              className="booking-primary-button"
+              disabled={submitting || loadingServices || serviceError}
             >
-              <span>{submitting ? 'Đang xử lý...' : 'HOÀN TẤT ĐẶT LỊCH HẸN'}</span>
-              <Check size={16} />
+              {submitting ? (
+                <>
+                  <LoaderCircle size={18} className="booking-spinner" /> Đang
+                  xác nhận…
+                </>
+              ) : (
+                <>
+                  {!validSlot
+                    ? actionLabel
+                    : !isAuthenticated
+                      ? "Đăng nhập để đặt lịch"
+                      : "Xác nhận lịch hẹn"}
+                  <ArrowRight size={17} />
+                </>
+              )}
             </button>
-
-            <div style={{ textAlign: 'center', fontSize: '11px', color: '#6B7280', marginTop: '10px' }}>
-              Không cần đặt cọc trước · Hỗ trợ dời lịch hẹn trước 2 giờ
+            <div className="booking-summary-footer">
+              <ShieldCheck size={15} />
+              <span>
+                {validSlot
+                  ? "Kiểm tra thông tin trước khi xác nhận"
+                  : "Chọn giờ trống để tiếp tục đặt lịch"}
+              </span>
             </div>
-          </div>
+            <div className="booking-help">
+              <span>Cần hỗ trợ chọn liệu trình?</span>
+              <a href="tel:18006324">
+                <Phone size={14} /> 1800 6324
+              </a>
+            </div>
+          </aside>
+        </form>
+        <div className="booking-bottom-note">
+          <Leaf size={18} />
+          <p>
+            Mỗi làn da đều có một câu chuyện. BeautyShop ở đây để lắng nghe và
+            chăm sóc.
+          </p>
         </div>
-
+      </div>
+      <div className="booking-mobile-bar">
+        <div>
+          <small>Thanh toán tại Spa</small>
+          <strong>
+            {selectedService ? formatCurrency(total) : "Chưa chọn dịch vụ"}
+          </strong>
+        </div>
+        <button
+          type="button"
+          className="booking-primary-button"
+          disabled={submitting || loadingServices || serviceError}
+          onClick={continueBooking}
+        >
+          {submitting ? "Đang xác nhận…" : actionLabel}
+          <ArrowRight size={17} />
+        </button>
       </div>
     </div>
   );
 };
 
+const InfoIcon = () => (
+  <span className="booking-info-icon" aria-hidden="true">
+    i
+  </span>
+);
 export default SpaBookingPage;

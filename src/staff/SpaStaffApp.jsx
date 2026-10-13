@@ -33,8 +33,9 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
-import { formatCurrency, formatDate } from '../shared/utils/formatters';
+import { formatCurrency, formatDate, getVietnamDateString } from '../shared/utils/formatters';
 import { useAuth } from '../app/providers/AuthProvider';
+import { SpaVisitCheckout } from '../shared/ui/SpaVisitCheckout';
 
 export const SpaStaffApp = ({ onSwitchToAdmin }) => {
   const { user, logout, isAdmin } = useAuth();
@@ -61,10 +62,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
   // POS Checkout State
   const [posSelectedApt, setPosSelectedApt] = useState(null);
-  const [posPaymentMethod, setPosPaymentMethod] = useState('CASH');
-  const [posCashGiven, setPosCashGiven] = useState('');
-  const [posSubmitting, setPosSubmitting] = useState(false);
-  const [posReceiptDone, setPosReceiptDone] = useState(null);
 
   // Walk-in form state
   const [walkInForm, setWalkInForm] = useState({
@@ -72,7 +69,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     phone: '',
     serviceId: '',
     staffId: '',
-    appointmentDate: new Date().toISOString().split('T')[0],
+    appointmentDate: getVietnamDateString(),
     startTime: '09:00:00',
     notes: '',
     autoCheckIn: true
@@ -176,7 +173,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
   // Today KPI Metrics
   const todayKPIs = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getVietnamDateString();
     const todayList = appointments.filter(a => !dateFilter || dateFilter === 'ALL' || a.appointmentDate === todayStr);
     return {
       total: todayList.length,
@@ -213,17 +210,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
   // Action: Complete Treatment
   const handleCompleteAppointment = async (apt) => {
     try {
-      for (const item of (apt.items || [])) {
-        if (item.executionStatus === 'PLANNED' || item.executionStatus === 'IN_PROGRESS') {
-          try {
-            await apiClient.put(`/api/v1/appointments/${apt.id}/items/${item.id}/execute`, {
-              status: 'PERFORMED',
-              notes: 'Kỹ thuật viên hoàn tất liệu trình'
-            });
-          } catch (_) {}
-        }
-      }
-
       await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(apt.id), {
         status: 'COMPLETED',
         notes: 'Tiếp đón ghi nhận hoàn tất dịch vụ'
@@ -232,9 +218,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
       if (!apt.orderId) {
         setPosSelectedApt(apt);
-        setPosPaymentMethod('CASH');
-        setPosCashGiven('');
-        setPosReceiptDone(null);
         setActiveTab('pos');
       }
     } catch (e) {
@@ -363,7 +346,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
         phone: '',
         serviceId: services[0]?.id ? String(services[0].id) : '',
         staffId: '',
-        appointmentDate: new Date().toISOString().split('T')[0],
+        appointmentDate: getVietnamDateString(),
         startTime: '09:00:00',
         notes: '',
         autoCheckIn: true
@@ -374,51 +357,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
       alert(err.response?.data?.message || err.message || 'Lỗi tạo lịch hẹn tiếp đón');
     } finally {
       setWalkInSubmitting(false);
-    }
-  };
-
-  // Action: POS Checkout Payment
-  const handlePosCheckout = async (e) => {
-    e.preventDefault();
-    if (!posSelectedApt) return;
-    setPosSubmitting(true);
-    try {
-      const invRes = await apiClient.post(
-        ENDPOINTS.SPA.APPOINTMENT_INVOICE(posSelectedApt.id),
-        {
-          paymentMethod: posPaymentMethod,
-          notes: `POS Checkout tại quầy lễ tân - Thu ngân: ${user?.fullName || user?.username || 'Staff'}`
-        },
-        { headers: { 'Idempotency-Key': `pos_inv_${posSelectedApt.id}_${Date.now()}` } }
-      );
-      const invoiceData = invRes.data || invRes;
-
-      if (posPaymentMethod === 'CASH' && invoiceData?.orderNumber) {
-        const total = Number(invoiceData.totalAmount || posSelectedApt.items?.reduce((s, i) => s + Number(i.price || 0), 0) || 0);
-        if (total > 0) {
-          await apiClient.post(
-            ENDPOINTS.SPA.APPOINTMENT_CASH_RECEIPT(posSelectedApt.id),
-            { amount: total },
-            { headers: { 'Idempotency-Key': `pos_rcp_${posSelectedApt.id}_${Date.now()}` } }
-          );
-        }
-      }
-
-      setPosReceiptDone({
-        orderNumber: invoiceData?.orderNumber || `ORD-SPA-${posSelectedApt.id}`,
-        customerName: posSelectedApt.customerName,
-        phone: posSelectedApt.customerPhone,
-        serviceName: posSelectedApt.items?.[0]?.serviceName,
-        amount: invoiceData?.totalAmount || 0,
-        method: posPaymentMethod,
-        cashGiven: Number(posCashGiven || 0),
-        time: new Date().toLocaleTimeString('vi-VN')
-      });
-      fetchAppointments();
-    } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Lỗi xử lý hoá đơn POS');
-    } finally {
-      setPosSubmitting(false);
     }
   };
 
@@ -541,7 +479,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
           {/* Action Buttons - Flat */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {isAdmin && typeof onSwitchToAdmin === 'function' && (
+            {typeof onSwitchToAdmin === 'function' && (
               <button
                 onClick={onSwitchToAdmin}
                 style={{
@@ -559,7 +497,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                 }}
               >
                 <SlidersHorizontal size={13} />
-                <span>Admin Console</span>
+                <span>Quản lý dịch vụ Spa</span>
               </button>
             )}
 
@@ -600,7 +538,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           className={`spa-nav-tab ${activeTab === 'pos' ? 'active' : ''}`}
           onClick={() => {
             setActiveTab('pos');
-            setPosReceiptDone(null);
           }}
         >
           <Receipt size={16} />
@@ -676,13 +613,13 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
             <div className="spa-card" style={{ padding: '12px 18px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button
-                  onClick={() => setDateFilter(new Date().toISOString().split('T')[0])}
+                  onClick={() => setDateFilter(getVietnamDateString())}
                   style={{
                     padding: '6px 12px',
                     borderRadius: 0,
                     border: '1px solid var(--sp-border)',
-                    backgroundColor: dateFilter === new Date().toISOString().split('T')[0] ? 'var(--sp-primary)' : '#FFF',
-                    color: dateFilter === new Date().toISOString().split('T')[0] ? '#FFF' : '#374151',
+                    backgroundColor: dateFilter === getVietnamDateString() ? 'var(--sp-primary)' : '#FFF',
+                    color: dateFilter === getVietnamDateString() ? '#FFF' : '#374151',
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer'
@@ -691,13 +628,13 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                   Hôm nay
                 </button>
                 <button
-                  onClick={() => setDateFilter(new Date(Date.now() + 86400000).toISOString().split('T')[0])}
+                  onClick={() => setDateFilter(getVietnamDateString(new Date(Date.now() + 86400000)))}
                   style={{
                     padding: '6px 12px',
                     borderRadius: 0,
                     border: '1px solid var(--sp-border)',
-                    backgroundColor: dateFilter === new Date(Date.now() + 86400000).toISOString().split('T')[0] ? 'var(--sp-primary)' : '#FFF',
-                    color: dateFilter === new Date(Date.now() + 86400000).toISOString().split('T')[0] ? '#FFF' : '#374151',
+                    backgroundColor: dateFilter === getVietnamDateString(new Date(Date.now() + 86400000)) ? 'var(--sp-primary)' : '#FFF',
+                    color: dateFilter === getVietnamDateString(new Date(Date.now() + 86400000)) ? '#FFF' : '#374151',
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer'
@@ -921,7 +858,9 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                apt.status === 'IN_PROGRESS' ? 'Đang trị liệu' :
                                isCheckedIn ? 'Đã check-in' :
                                apt.status === 'CONFIRMED' ? 'Đã xác nhận' :
-                               apt.status === 'PENDING' ? 'Chờ duyệt' : apt.status}
+                               apt.status === 'PENDING' ? 'Chờ duyệt' :
+                               apt.status === 'CANCELLED' ? 'Đã hủy' :
+                               apt.status === 'NO_SHOW' ? 'Vắng mặt' : (apt.status || 'Chưa xác định')}
                             </span>
                           </td>
 
@@ -1025,14 +964,11 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                 </button>
                               )}
 
-                              {apt.status === 'COMPLETED' && !apt.orderId && (
+                              {apt.status === 'COMPLETED' && (
                                 <button
                                   onClick={() => {
                                     setPosSelectedApt(apt);
-                                    setPosPaymentMethod('CASH');
-                                    setPosCashGiven('');
-                                    setPosReceiptDone(null);
-                                    setActiveTab('pos');
+                                                            setActiveTab('pos');
                                   }}
                                   style={{
                                     backgroundColor: '#9F1239',
@@ -1141,15 +1077,14 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                   appointments.filter(a => a.status === 'COMPLETED').map(apt => {
                     const isSelected = posSelectedApt?.id === apt.id;
                     const price = apt.items?.reduce((s, i) => s + Number(i.price || 0), 0) || 0;
-                    const isPaid = Boolean(apt.orderId);
+                    const hasInvoice = Boolean(apt.orderId);
 
                     return (
                       <div
                         key={apt.id}
                         onClick={() => {
                           setPosSelectedApt(apt);
-                          setPosReceiptDone(null);
-                        }}
+                                      }}
                         style={{
                           padding: '12px 14px',
                           borderRadius: 0,
@@ -1171,8 +1106,8 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                           <div style={{ fontSize: '15px', fontWeight: 700, color: '#9F1239', fontFamily: 'monospace' }}>
                             {formatCurrency(price)}
                           </div>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: isPaid ? '#065F46' : '#92400E' }}>
-                            {isPaid ? 'Đã thu tiền' : 'Chưa thu tiền'}
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#92400E' }}>
+                            {hasInvoice ? 'Đã lập hóa đơn — kiểm tra thanh toán' : 'Chưa lập hóa đơn'}
                           </span>
                         </div>
                       </div>
@@ -1188,167 +1123,12 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                 Thu ngân và thanh toán tại quầy
               </h2>
 
-              {posReceiptDone ? (
-                <div style={{ backgroundColor: '#FAFAFA', padding: '18px', borderRadius: 0, border: '1px solid var(--sp-border)', textAlign: 'center' }}>
-                  <CheckCircle2 size={36} color="#065F46" style={{ margin: '0 auto 8px auto' }} />
-                  <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#111827' }}>Thanh toán hoàn tất</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--sp-text-muted)', margin: 0 }}>Đã ghi nhận hóa đơn vào sổ cái kế toán</p>
-
-                  <div style={{ margin: '14px 0', padding: '12px', backgroundColor: '#FFF', borderRadius: 0, border: '1px solid var(--sp-border)', textAlign: 'left', fontSize: '12.5px', lineHeight: 1.6 }}>
-                    <div>Mã hóa đơn: <strong>{posReceiptDone.orderNumber}</strong></div>
-                    <div>Khách hàng: <strong>{posReceiptDone.customerName}</strong></div>
-                    <div>Dịch vụ: <strong>{posReceiptDone.serviceName}</strong></div>
-                    <div>Số tiền: <strong style={{ color: '#9F1239' }}>{formatCurrency(posReceiptDone.amount)}</strong></div>
-                    <div>Hình thức: <strong>{posReceiptDone.method === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</strong></div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#FFF',
-                        color: '#111827',
-                        border: '1px solid var(--sp-border)',
-                        borderRadius: 0,
-                        fontSize: '12.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Printer size={13} />
-                      <span>In phiếu thu</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPosReceiptDone(null);
-                        setPosSelectedApt(null);
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: 'var(--sp-primary)',
-                        color: '#FFF',
-                        border: 'none',
-                        borderRadius: 0,
-                        fontSize: '12.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Tiếp tục thu ngân ca khác
-                    </button>
-                  </div>
-                </div>
-              ) : posSelectedApt ? (
-                <form onSubmit={handlePosCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ padding: '12px', backgroundColor: '#FAFAFA', border: '1px solid var(--sp-border)', borderRadius: 0, fontSize: '12.5px', lineHeight: 1.6 }}>
-                    <div>Khách hàng: <strong>{posSelectedApt.customerName}</strong> ({posSelectedApt.customerPhone})</div>
-                    <div>Liệu trình: <strong>{posSelectedApt.items?.[0]?.serviceName}</strong></div>
-                    <div style={{ borderTop: '1px solid var(--sp-border)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Tổng phí dịch vụ:</span>
-                      <strong style={{ fontSize: '16px', color: '#9F1239', fontFamily: 'monospace' }}>
-                        {formatCurrency(posSelectedApt.items?.reduce((s, i) => s + Number(i.price || 0), 0) || 0)}
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Hình thức thanh toán</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setPosPaymentMethod('CASH')}
-                        style={{
-                          padding: '8px',
-                          borderRadius: 0,
-                          border: posPaymentMethod === 'CASH' ? '2px solid var(--sp-primary)' : '1px solid var(--sp-border)',
-                          backgroundColor: posPaymentMethod === 'CASH' ? '#FFF8F9' : '#FFF',
-                          color: posPaymentMethod === 'CASH' ? 'var(--sp-primary)' : '#374151',
-                          fontWeight: 600,
-                          fontSize: '12.5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Tiền mặt
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPosPaymentMethod('BANK')}
-                        style={{
-                          padding: '8px',
-                          borderRadius: 0,
-                          border: posPaymentMethod === 'BANK' ? '2px solid var(--sp-primary)' : '1px solid var(--sp-border)',
-                          backgroundColor: posPaymentMethod === 'BANK' ? '#FFF8F9' : '#FFF',
-                          color: posPaymentMethod === 'BANK' ? 'var(--sp-primary)' : '#374151',
-                          fontWeight: 600,
-                          fontSize: '12.5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Quét mã VietQR
-                      </button>
-                    </div>
-                  </div>
-
-                  {posPaymentMethod === 'CASH' && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Tiền khách đưa (VND)</label>
-                      <input
-                        type="number"
-                        placeholder="Ví dụ: 500000"
-                        value={posCashGiven}
-                        onChange={(e) => setPosCashGiven(e.target.value)}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '13px', boxSizing: 'border-box' }}
-                      />
-                      {posCashGiven && Number(posCashGiven) >= (posSelectedApt.items?.[0]?.price || 0) && (
-                        <div style={{ marginTop: '6px', padding: '6px 10px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', fontSize: '12px', color: '#065F46' }}>
-                          Tiền thối lại khách: <strong>{formatCurrency(Number(posCashGiven) - Number(posSelectedApt.items?.[0]?.price || 0))}</strong>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {posPaymentMethod === 'BANK' && (
-                    <div style={{ textAlign: 'center', padding: '16px', backgroundColor: '#FAFAFA', border: '1px solid var(--sp-border)' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--sp-primary)', marginBottom: '8px' }}>
-                        Chuyển khoản VietQR qua Cổng Thanh toán SePay
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#111827', marginBottom: '6px' }}>
-                        Số tiền cần thanh toán: <strong style={{ color: '#9F1239', fontFamily: 'monospace' }}>{formatCurrency(posSelectedApt.items?.[0]?.price || 0)}</strong>
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--sp-text-muted)' }}>
-                        Mã tham chiếu đơn: <strong style={{ color: '#111827', fontFamily: 'monospace' }}>SPA-{posSelectedApt.id}</strong>
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={posSubmitting}
-                    style={{
-                      padding: '10px',
-                      backgroundColor: 'var(--sp-primary)',
-                      color: '#FFF',
-                      border: 'none',
-                      borderRadius: 0,
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      marginTop: '4px'
-                    }}
-                  >
-                    {posSubmitting ? 'Đang xuất hóa đơn...' : 'XÁC NHẬN THU TIỀN VÀ ĐÓNG CA'}
-                  </button>
-                </form>
+              {posSelectedApt ? (
+                <SpaVisitCheckout key={posSelectedApt.id} appointment={posSelectedApt} onUpdated={fetchAppointments} />
               ) : (
-                <div style={{ padding: '30px', textAlign: 'center', color: 'var(--sp-text-muted)', fontSize: '13px' }}>
-                  Chọn một ca hoàn tất bên trái để bắt đầu thanh toán tại quầy.
-                </div>
+                <p>Chọn một ca hoàn tất để xem hóa đơn và thanh toán.</p>
               )}
+
             </div>
           </div>
         )}
@@ -1567,7 +1347,10 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                           backgroundColor: tk.status === 'ACTIVE' ? '#ECFDF5' : '#F4F4F5',
                           color: tk.status === 'ACTIVE' ? '#065F46' : '#52525B'
                         }}>
-                          {tk.status === 'ACTIVE' ? 'Còn hiệu lực' : tk.status}
+                          {tk.status === 'ACTIVE' ? 'Còn hiệu lực' :
+                           tk.status === 'EXPIRED' ? 'Đã hết hạn' :
+                           tk.status === 'USED' ? 'Đã dùng hết' :
+                           tk.status === 'CANCELLED' ? 'Đã hủy' : (tk.status || 'Chưa xác định')}
                         </span>
                       </td>
                     </tr>

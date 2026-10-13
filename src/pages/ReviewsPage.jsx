@@ -237,10 +237,10 @@ export const ReviewsPage = () => {
           className="admin-review-status-field"
         >
           <option value="">Tất cả nhận xét</option>
-          <option value="PENDING">Chờ kiểm duyệt (PENDING)</option>
-          <option value="APPROVED">Đã duyệt hiển thị (APPROVED)</option>
-          <option value="REJECTED">Đã từ chối (REJECTED)</option>
-          <option value="HIDDEN">Đã ẩn (HIDDEN)</option>
+          <option value="PENDING">Chờ kiểm duyệt</option>
+          <option value="APPROVED">Đã duyệt hiển thị</option>
+          <option value="REJECTED">Đã từ chối</option>
+          <option value="HIDDEN">Đã ẩn</option>
         </Select>
       </div>
 

@@ -60,12 +60,112 @@ export const getOrderStatusBadge = (status) => {
       return { variant: 'default', text: 'Đang giao hàng' };
     case 'DELIVERED':
       return { variant: 'success', text: 'Đã giao thành công' };
+    case 'COMPLETED':
+      return { variant: 'success', text: 'Hoàn tất' };
     case 'CANCELLED':
-      return { variant: 'danger', text: 'Đã hủy' };
+      return { variant: 'danger', text: 'Đã hủy đơn' };
     case 'RETURNED':
-      return { variant: 'danger', text: 'Đã trả hàng' };
+      return { variant: 'danger', text: 'Đã hoàn trả hàng' };
     default:
       return { variant: 'default', text: status || 'Chưa xác định' };
+  }
+};
+
+export const getOrderStatusText = (status) => {
+  return getOrderStatusBadge(status).text;
+};
+
+export const getAppointmentStatusBadge = (status) => {
+  switch (status) {
+    case 'PENDING':
+      return { variant: 'warning', text: 'Chờ duyệt' };
+    case 'CONFIRMED':
+      return { variant: 'info', text: 'Đã xác nhận' };
+    case 'IN_PROGRESS':
+      return { variant: 'info', text: 'Đang thực hiện' };
+    case 'COMPLETED':
+      return { variant: 'success', text: 'Đã hoàn tất' };
+    case 'CANCELLED':
+      return { variant: 'danger', text: 'Đã hủy hẹn' };
+    case 'NO_SHOW':
+      return { variant: 'danger', text: 'Vắng mặt' };
+    default:
+      return { variant: 'default', text: status || 'Chưa xác định' };
+  }
+};
+
+export const getAppointmentStatusText = (status) => {
+  return getAppointmentStatusBadge(status).text;
+};
+
+export const getTicketStatusBadge = (status) => {
+  switch (status) {
+    case 'ACTIVE':
+      return { variant: 'success', text: 'Còn hiệu lực' };
+    case 'EXPIRED':
+      return { variant: 'danger', text: 'Đã hết hạn' };
+    case 'USED':
+      return { variant: 'default', text: 'Đã dùng hết' };
+    case 'CANCELLED':
+      return { variant: 'danger', text: 'Đã hủy' };
+    default:
+      return { variant: 'default', text: status || 'Chưa xác định' };
+  }
+};
+
+export const getTicketStatusText = (status) => {
+  return getTicketStatusBadge(status).text;
+};
+
+export const getPaymentMethodLabel = (method) => {
+  switch (method) {
+    case 'COD':
+      return 'Thanh toán khi nhận hàng (COD)';
+    case 'BANK':
+      return 'Chuyển khoản ngân hàng (QR Pay)';
+    case 'VNPAY':
+      return 'Cổng thanh toán VNPAY';
+    case 'MOMO':
+      return 'Ví MoMo';
+    case 'WALLET':
+      return 'Ví tiền tài khoản';
+    case 'CASH':
+      return 'Tiền mặt tại quầy';
+    default:
+      return method || 'Chưa chọn';
+  }
+};
+
+export const getMembershipTierLabel = (tier) => {
+  switch (tier) {
+    case 'MEMBER':
+      return 'Thành viên';
+    case 'BRONZE':
+      return 'Hạng Đồng';
+    case 'SILVER':
+      return 'Hạng Bạc';
+    case 'GOLD':
+      return 'Hạng Vàng';
+    case 'DIAMOND':
+      return 'Hạng Kim cương';
+    default:
+      return tier || 'Thành viên';
+  }
+};
+
+export const getRoleLabel = (roleName) => {
+  if (!roleName) return '-';
+  const clean = roleName.replace(/^ROLE_/, '');
+  switch (clean) {
+    case 'ADMIN':
+      return 'Quản trị viên (ADMIN)';
+    case 'STAFF':
+      return 'Nhân viên vận hành (STAFF)';
+    case 'USER':
+    case 'CUSTOMER':
+      return 'Người dùng (USER)';
+    default:
+      return clean;
   }
 };
 
@@ -129,5 +229,22 @@ export const resolveMediaUrl = (url) => {
 export const cleanDisplayName = (name) => {
   if (!name || typeof name !== 'string') return '';
   return name.replace(/\s*[\(\[（].*?[\)\]）]\s*/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
+export const getVietnamDateString = (date = new Date()) => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date instanceof Date ? date : new Date(date));
+  } catch {
+    const d = date instanceof Date ? date : new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 };
 

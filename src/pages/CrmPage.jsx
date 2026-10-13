@@ -8,7 +8,14 @@ import { Select } from '../shared/ui/Select';
 import { Modal } from '../shared/ui/Modal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
-import { formatCurrency, formatDateTime } from '../shared/utils/formatters';
+import { formatCurrency, formatDateTime, getMembershipTierLabel } from '../shared/utils/formatters';
+
+const NOTE_TYPE_MAP = {
+  GENERAL: { label: 'Chăm sóc chung', variant: 'default' },
+  SKIN_ASSESSMENT: { label: 'Đánh giá da', variant: 'info' },
+  TREATMENT: { label: 'Theo dõi liệu trình', variant: 'success' },
+  COMPLAINT: { label: 'Khiếu nại', variant: 'danger' },
+};
 
 export const CrmPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -19,10 +26,29 @@ export const CrmPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ noteType: 'GENERAL', content: '', skinProfile: '', allergies: '', contraindications: '', followUpAt: '' });
 
-  const search = async () => { setLoading(true); try { const res = await apiClient.get(`${ENDPOINTS.CRM.CUSTOMERS}?keyword=${encodeURIComponent(keyword)}`); setCustomers(res.data || res || []); } catch (err) { alert(err.message); } finally { setLoading(false); } };
+  const search = async () => { setLoading(true); try { const res = await apiClient.get(`${ENDPOINTS.CRM.CUSTOMERS}?keyword=${encodeURIComponent(keyword)}`); setCustomers(res.data || res || []); } catch (err) { alert(err.message || 'Lỗi tìm kiếm khách hàng'); } finally { setLoading(false); } };
   useEffect(() => { search(); }, []);
-  const openCustomer = async (customer) => { setSelected(customer); const res = await apiClient.get(ENDPOINTS.CRM.NOTES(customer.id)); setNotes(res.data || res || []); setModalOpen(true); };
-  const addNote = async (e) => { e.preventDefault(); await apiClient.post(ENDPOINTS.CRM.NOTES(selected.id), { ...form, followUpAt: form.followUpAt ? new Date(form.followUpAt).toISOString() : null }); const res = await apiClient.get(ENDPOINTS.CRM.NOTES(selected.id)); setNotes(res.data || res || []); setForm({ noteType: 'GENERAL', content: '', skinProfile: '', allergies: '', contraindications: '', followUpAt: '' }); };
+  const openCustomer = async (customer) => {
+    setSelected(customer);
+    try {
+      const res = await apiClient.get(ENDPOINTS.CRM.NOTES(customer.id));
+      setNotes(res.data || res || []);
+      setModalOpen(true);
+    } catch (err) {
+      alert(err.message || 'Lỗi tải ghi chú chăm sóc khách hàng');
+    }
+  };
+  const addNote = async (e) => {
+    e.preventDefault();
+    try {
+      await apiClient.post(ENDPOINTS.CRM.NOTES(selected.id), { ...form, followUpAt: form.followUpAt ? new Date(form.followUpAt).toISOString() : null });
+      const res = await apiClient.get(ENDPOINTS.CRM.NOTES(selected.id));
+      setNotes(res.data || res || []);
+      setForm({ noteType: 'GENERAL', content: '', skinProfile: '', allergies: '', contraindications: '', followUpAt: '' });
+    } catch (err) {
+      alert(err.message || 'Lỗi thêm ghi chú chăm sóc');
+    }
+  };
   const deleteNote = async (noteId) => {
     if (!window.confirm('Xóa ghi chú chăm sóc này?')) return;
     try {
@@ -35,7 +61,7 @@ export const CrmPage = () => {
   };
   const columns = [
     { header: 'Khách hàng', accessor: (row) => <div><strong>{row.fullName || row.username}</strong><br/><small>{row.username} · {row.phone || row.email || 'Chưa cập nhật'}</small></div> },
-    { header: 'Hạng', accessor: (row) => <Badge variant="info">{row.membershipTier || 'MEMBER'}</Badge> },
+    { header: 'Hạng', accessor: (row) => <Badge variant="info">{getMembershipTierLabel(row.membershipTier)}</Badge> },
     { header: 'Điểm', accessor: (row) => row.loyaltyPoints || 0, align: 'right' },
     { header: 'Đơn hàng', accessor: (row) => row.orderCount || 0, align: 'right' },
     { header: 'Lịch spa', accessor: (row) => row.appointmentCount || 0, align: 'right' },
@@ -48,7 +74,7 @@ export const CrmPage = () => {
     <Modal isOpen={modalOpen} onClose={()=>setModalOpen(false)} title={`Hồ sơ chăm sóc: ${selected?.fullName || ''}`} maxWidth="820px">
       <div className="grid-3" style={{marginBottom:16}}><div><small>Giá trị vòng đời</small><strong style={{display:'block'}}>{formatCurrency(selected?.lifetimeValue)}</strong></div><div><small>Đơn hàng</small><strong style={{display:'block'}}>{selected?.orderCount}</strong></div><div><small>Lịch spa</small><strong style={{display:'block'}}>{selected?.appointmentCount}</strong></div></div>
       <form onSubmit={addNote} className="card" style={{marginBottom:16}}><Select label="Loại ghi chú" value={form.noteType} onChange={(e)=>setForm({...form,noteType:e.target.value})} options={[{label:'Chăm sóc chung',value:'GENERAL'},{label:'Đánh giá da',value:'SKIN_ASSESSMENT'},{label:'Theo dõi liệu trình',value:'TREATMENT'},{label:'Khiếu nại',value:'COMPLAINT'}]}/><label className="form-label">Nội dung *</label><textarea required className="form-textarea" rows="3" value={form.content} onChange={(e)=>setForm({...form,content:e.target.value})}/><div className="grid-2" style={{marginTop:10}}><Input label="Tình trạng da" value={form.skinProfile} onChange={(e)=>setForm({...form,skinProfile:e.target.value})}/><Input label="Dị ứng" value={form.allergies} onChange={(e)=>setForm({...form,allergies:e.target.value})}/><Input label="Chống chỉ định" value={form.contraindications} onChange={(e)=>setForm({...form,contraindications:e.target.value})}/><Input label="Hẹn chăm sóc lại" type="datetime-local" value={form.followUpAt} onChange={(e)=>setForm({...form,followUpAt:e.target.value})}/></div><Button type="submit" style={{marginTop:12}}>Lưu ghi chú</Button></form>
-      <div style={{display:'grid',gap:8}}>{notes.map((note)=><div key={note.id} style={{border:'1px solid var(--border-subtle)',padding:12}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><div style={{display:'flex',gap:8,alignItems:'center'}}><Badge variant="info">{note.noteType}</Badge><small>{formatDateTime(note.createdAt)}</small></div><Button size="sm" variant="danger" icon={Trash2} onClick={()=>deleteNote(note.id)} title="Xóa ghi chú" /></div><p style={{marginTop:8}}>{note.content}</p>{note.skinProfile&&<small>Da: {note.skinProfile}</small>}{note.allergies&&<div><small>Dị ứng: {note.allergies}</small></div>}{note.contraindications&&<div><small>Chống chỉ định: {note.contraindications}</small></div>}</div>)}</div>
+      <div style={{display:'grid',gap:8}}>{notes.map((note)=><div key={note.id} style={{border:'1px solid var(--border-subtle)',padding:12}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><div style={{display:'flex',gap:8,alignItems:'center'}}><Badge variant={NOTE_TYPE_MAP[note.noteType]?.variant || 'default'}>{NOTE_TYPE_MAP[note.noteType]?.label || note.noteType}</Badge><small>{formatDateTime(note.createdAt)}</small></div><Button size="sm" variant="danger" icon={Trash2} onClick={()=>deleteNote(note.id)} title="Xóa ghi chú" /></div><p style={{marginTop:8}}>{note.content}</p>{note.skinProfile&&<small>Da: {note.skinProfile}</small>}{note.allergies&&<div><small>Dị ứng: {note.allergies}</small></div>}{note.contraindications&&<div><small>Chống chỉ định: {note.contraindications}</small></div>}</div>)}</div>
     </Modal>
   </div>;
 };

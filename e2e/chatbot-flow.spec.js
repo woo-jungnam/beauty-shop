@@ -17,11 +17,11 @@ async function mockStorefront(page, { unavailable = false, targetType = 'PRODUCT
       }) });
     }
     if (path === '/api/v1/products/42') {
-      return route.fulfill({ json: success({ id: 42, variants: [{ id: 99, price: 250000, isActive: true, isDefault: true }] }) });
+      return route.fulfill({ json: success({ id: 42, status: 'ACTIVE', variants: [{ id: 99, sku: 'AI-PRODUCT-42', price: 250000, stockQuantity: 10, isActive: true, isDefault: true }] }) });
     }
     if (path === '/api/v1/cart/add') {
       expect(route.request().postDataJSON().variantId).toBe(99);
-      return route.fulfill({ json: success({ id: 1, items: [{ id: 10, variantId: 99, variantName: 'Sản phẩm từ danh mục', price: 250000, quantity: 1 }] }) });
+      return route.fulfill({ json: success({ id: 1, totalPrice: 250000, items: [{ id: 10, variantId: 99, sku: 'AI-PRODUCT-42', variantName: 'Sản phẩm từ danh mục', price: 250000, quantity: 1, available: true }] }) });
     }
     if (path === '/api/v1/cart') return route.fulfill({ json: success(null) });
     if (path === '/api/v1/products' || path === '/api/v1/brands') {
@@ -70,7 +70,7 @@ test('An unavailable chatbot shows connection failure without invented product r
   await mockStorefront(page, { unavailable: true });
   await sendQuestion(page);
   await expect(page.getByText('Trợ lý AI hiện chưa kết nối được. Vui lòng gửi lại câu hỏi sau ít phút.')).toBeVisible();
-  await expect(page.getByText('○ AI tạm thời chưa kết nối')).toBeVisible();
+  await expect(page.getByText('○ Tạm thời gián đoạn')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thêm Vào Giỏ Ngay' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Gửi câu hỏi' })).toBeDisabled();
 });

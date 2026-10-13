@@ -95,42 +95,71 @@ export const ProcurementPage = () => {
 
   const saveSupplier = async (e) => {
     e.preventDefault();
-    if (editingSupplier) {
-      await apiClient.put(ENDPOINTS.PROCUREMENT.SUPPLIER(editingSupplier.id), supplierForm);
-    } else {
-      await apiClient.post(ENDPOINTS.PROCUREMENT.SUPPLIERS, supplierForm);
+    try {
+      if (editingSupplier) {
+        await apiClient.put(ENDPOINTS.PROCUREMENT.SUPPLIER(editingSupplier.id), supplierForm);
+      } else {
+        await apiClient.post(ENDPOINTS.PROCUREMENT.SUPPLIERS, supplierForm);
+      }
+      setSupplierOpen(false);
+      setEditingSupplier(null);
+      setSupplierForm({ code: '', name: '', contactName: '', email: '', phone: '', address: '', taxCode: '', active: true });
+      load();
+    } catch (err) {
+      alert(err.message || 'Lỗi lưu nhà cung cấp');
     }
-    setSupplierOpen(false);
-    setEditingSupplier(null);
-    setSupplierForm({ code: '', name: '', contactName: '', email: '', phone: '', address: '', taxCode: '', active: true });
-    load();
   };
   const createOrder = async (e) => {
     e.preventDefault();
-    const payload = { ...orderForm, expectedDate: orderForm.expectedDate || null, supplierId: Number(orderForm.supplierId), warehouseId: Number(orderForm.warehouseId), items: orderForm.items.map((item) => ({ ...item, variantId: Number(item.variantId), quantity: Number(item.quantity), unitCost: Number(item.unitCost), expirationDate: item.expirationDate || null })) };
-    await apiClient.post(ENDPOINTS.PROCUREMENT.ORDERS, payload);
-    setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] }); load();
+    try {
+      const payload = { ...orderForm, expectedDate: orderForm.expectedDate || null, supplierId: Number(orderForm.supplierId), warehouseId: Number(orderForm.warehouseId), items: orderForm.items.map((item) => ({ ...item, variantId: Number(item.variantId), quantity: Number(item.quantity), unitCost: Number(item.unitCost), expirationDate: item.expirationDate || null })) };
+      await apiClient.post(ENDPOINTS.PROCUREMENT.ORDERS, payload);
+      setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] }); load();
+    } catch (err) {
+      alert(err.message || 'Lỗi tạo phiếu mua hàng');
+    }
   };
-  const transition = async (endpoint, prompt) => { if (!window.confirm(prompt)) return; await apiClient.put(endpoint); load(); };
+  const transition = async (endpoint, prompt) => {
+    if (!window.confirm(prompt)) return;
+    try {
+      await apiClient.put(endpoint);
+      load();
+    } catch (err) {
+      alert(err.message || 'Lỗi xử lý phiếu mua hàng');
+    }
+  };
+
+  const ORDER_STATUS_MAP = {
+    DRAFT: { label: 'Bản nháp', variant: 'warning' },
+    APPROVED: { label: 'Đã duyệt', variant: 'info' },
+    RECEIVED: { label: 'Đã nhập kho', variant: 'success' },
+    CANCELLED: { label: 'Đã hủy', variant: 'danger' },
+  };
 
   const supplierColumns = [
     { header: 'Mã', accessor: 'code' }, { header: 'Nhà cung cấp', accessor: (row) => <strong>{row.name}</strong> },
     { header: 'Liên hệ', accessor: (row) => <div>{row.contactName}<br /><small>{row.phone} · {row.email}</small></div> },
-    { header: 'Mã số thuế', accessor: 'taxCode' }, { header: 'Trạng thái', accessor: (row) => <Badge variant={row.active ? 'success' : 'default'}>{row.active ? 'ACTIVE' : 'OFF'}</Badge> },
+    { header: 'Mã số thuế', accessor: 'taxCode' }, { header: 'Trạng thái', accessor: (row) => <Badge variant={row.active ? 'success' : 'default'}>{row.active ? 'Đang hoạt động' : 'Tạm ngưng'}</Badge> },
     { header: 'Thao tác', align: 'right', accessor: (row) => <div className="table-actions">
       <Button size="sm" variant="outline" onClick={() => handleOpenEditSupplier(row)}>Sửa</Button>
       <Button size="sm" variant="danger" icon={X} onClick={() => handleDeleteSupplier(row.id)} title="Xóa nhà cung cấp" />
     </div> },
   ];
   const orderColumns = [
-    { header: 'Phiếu mua', accessor: (row) => <strong>{row.orderNumber}</strong> }, { header: 'Nhà cung cấp', accessor: 'supplierName' },
-    { header: 'Kho nhận', accessor: (row) => warehouses.find((w) => w.id === row.warehouseId)?.name || `Kho #${row.warehouseId}` },
-    { header: 'Ngày dự kiến', accessor: (row) => formatDate(row.expectedDate) }, { header: 'Tổng tiền', accessor: (row) => formatCurrency(row.totalAmount), align: 'right' },
-    { header: 'Trạng thái', accessor: (row) => <Badge variant={row.status === 'RECEIVED' ? 'success' : row.status === 'CANCELLED' ? 'danger' : 'warning'}>{row.status}</Badge> },
+    { header: 'Mã phiếu mua', accessor: (row) => <strong>{row.orderNumber}</strong> }, { header: 'Nhà cung cấp', accessor: 'supplierName' },
+    { header: 'Kho nhận hàng', accessor: (row) => warehouses.find((w) => w.id === row.warehouseId)?.name || `Kho #${row.warehouseId}` },
+    { header: 'Ngày dự kiến nhận', accessor: (row) => formatDate(row.expectedDate) }, { header: 'Tổng tiền hàng', accessor: (row) => formatCurrency(row.totalAmount), align: 'right' },
+    {
+      header: 'Trạng thái',
+      accessor: (row) => {
+        const meta = ORDER_STATUS_MAP[row.status] || { label: row.status, variant: 'default' };
+        return <Badge variant={meta.variant}>{meta.label}</Badge>;
+      },
+    },
     { header: 'Thao tác', align: 'right', accessor: (row) => <div className="table-actions">
-      {row.status === 'DRAFT' && <Button size="sm" icon={Check} onClick={() => transition(ENDPOINTS.PROCUREMENT.APPROVE(row.id), 'Duyệt phiếu mua này?')}>Duyệt</Button>}
-      {row.status === 'APPROVED' && <Button size="sm" icon={PackageCheck} onClick={() => transition(ENDPOINTS.PROCUREMENT.RECEIVE(row.id), 'Xác nhận đã nhận đủ hàng? Tồn kho sẽ được cộng theo lô.')}>Nhận hàng</Button>}
-      {!['RECEIVED','CANCELLED'].includes(row.status) && <Button size="sm" variant="danger" icon={X} onClick={() => transition(ENDPOINTS.PROCUREMENT.CANCEL(row.id), 'Hủy phiếu mua này?')} />}
+      {row.status === 'DRAFT' && <Button size="sm" icon={Check} onClick={() => transition(ENDPOINTS.PROCUREMENT.APPROVE(row.id), 'Phê duyệt phiếu mua hàng này?')}>Duyệt</Button>}
+      {row.status === 'APPROVED' && <Button size="sm" icon={PackageCheck} onClick={() => transition(ENDPOINTS.PROCUREMENT.RECEIVE(row.id), 'Xác nhận đã nhận đủ hàng? Hàng sẽ được nhập tăng tồn kho theo lô.')}>Nhập kho</Button>}
+      {!['RECEIVED','CANCELLED'].includes(row.status) && <Button size="sm" variant="danger" icon={X} onClick={() => transition(ENDPOINTS.PROCUREMENT.CANCEL(row.id), 'Hủy bỏ phiếu mua hàng này?')} title="Hủy phiếu" />}
     </div> },
   ];
 

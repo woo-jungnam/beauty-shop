@@ -25,7 +25,7 @@ const formatCurrency = (val) => {
 
 export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => {
   const { user, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState(initialTab === 'tickets' ? 'overview' : initialTab);
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [profile, setProfile] = useState(user);
   const [spaTickets, setSpaTickets] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -73,7 +73,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
 
   useEffect(() => {
     if (!initialTab) return;
-    setActiveTab(initialTab === 'tickets' ? 'overview' : initialTab);
+    setActiveTab(initialTab);
   }, [initialTab]);
 
   const handleCancelAppointment = async (aptId) => {
@@ -91,7 +91,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
 
   if (!isAuthenticated) {
     return (
-      <div className="customer-container" style={{ padding: '80px 20px', textAlign: 'center' }}>
+      <div className="customer-container customer-empty-state" style={{ padding: '80px 20px', textAlign: 'center' }}>
         <h2>Vui lòng đăng nhập</h2>
         <p>Đăng nhập để xem ví thẻ liệu trình Spa, đơn hàng đã mua và điểm tích lũy thành viên.</p>
         <button onClick={() => onNavigate('login')} className="btn-luxury-primary" style={{ marginTop: '16px' }}>
@@ -117,7 +117,9 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
       case 'PROCESSING': return 'Đang xử lý';
       case 'SHIPPED': return 'Đang giao hàng';
       case 'DELIVERED': return 'Giao hàng thành công';
+      case 'COMPLETED': return 'Hoàn tất';
       case 'CANCELLED': return 'Đã hủy';
+      case 'RETURNED': return 'Đã hoàn trả';
       default: return status || 'Đang xử lý';
     }
   };
@@ -126,15 +128,38 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
     switch (status) {
       case 'PENDING': return 'Chờ xác nhận';
       case 'CONFIRMED': return 'Đã xác nhận';
-      case 'CHECKED_IN': return 'Đang thực hiện';
+      case 'CHECKED_IN':
+      case 'IN_PROGRESS': return 'Đang thực hiện';
       case 'COMPLETED': return 'Hoàn tất';
-      case 'CANCELLED': return 'Đã hủy';
+      case 'CANCELLED': return 'Đã hủy hẹn';
+      case 'NO_SHOW': return 'Vắng mặt';
       default: return status || 'Chờ xác nhận';
     }
   };
 
+  const getTicketStatusText = (status) => {
+    switch (status) {
+      case 'ACTIVE': return 'Còn hiệu lực';
+      case 'EXPIRED': return 'Đã hết hạn';
+      case 'USED': return 'Đã dùng hết';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return status || 'Còn hiệu lực';
+    }
+  };
+
+  const getTierText = (tier) => {
+    switch (tier) {
+      case 'DIAMOND': return 'Hạng Kim Cương';
+      case 'PLATINUM': return 'Hạng Bạch Kim';
+      case 'GOLD': return 'Hạng Vàng';
+      case 'SILVER': return 'Hạng Bạc';
+      case 'BRONZE': return 'Hạng Đồng';
+      default: return 'Hạng Thành Viên';
+    }
+  };
+
   return (
-    <div className="customer-container" style={{ padding: '36px 20px 80px 20px' }}>
+    <div className="customer-container customer-profile-page" style={{ padding: '36px 20px 80px 20px' }}>
       <section style={{ marginBottom: '28px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
           <User size={20} color="var(--c-primary)" />
@@ -144,7 +169,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
           </div>
         </div>
 
-        <div style={{
+        <div className="customer-profile-summary" style={{
           background: 'linear-gradient(135deg, #FFFFFF 0%, var(--c-primary-light, #FFF0F3) 100%)',
           borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--c-border)',
@@ -186,7 +211,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
                 <span className="badge-dermatology gold" style={{ fontSize: '11px' }}>
-                  {membershipTier}
+                  {getTierText(membershipTier)}
                 </span>
                 <span style={{ fontSize: '12px', color: 'var(--c-text-gold)', fontWeight: 700 }}>
                   {loyaltyPoints} Điểm Loyalty
@@ -224,7 +249,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
       </section>
 
       {/* Tabs Bar */}
-      <div style={{
+      <div className="customer-profile-tabs" role="group" aria-label="Thông tin tài khoản" style={{
         display: 'flex',
         gap: '24px',
         borderBottom: '1px solid var(--c-border-subtle)',
@@ -241,7 +266,9 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onNavigate(`profile?tab=${tab.id}`, { scroll: false })}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -272,7 +299,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
       </div>
 
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+        <div className="customer-profile-overview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '28px' }}>
           {[
             { id: 'orders', icon: ShoppingBag, title: 'Đơn hàng của tôi', desc: `${orders.length} đơn đã đặt`, action: 'Theo dõi mua hàng' },
             { id: 'tickets', icon: QrCode, title: 'Ví vé Spa', desc: `${spaTickets.length} vé liệu trình`, action: 'Quản lý vé' },
@@ -284,7 +311,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => onNavigate(`profile?tab=${item.id}`, { scroll: false })}
                 className="luxury-card"
                 style={{ padding: '20px', textAlign: 'left', backgroundColor: '#FFFFFF', border: '1px solid var(--c-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
               >
@@ -324,7 +351,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
               </button>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+            <div className="customer-profile-ticket-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
               {spaTickets.map((tck) => (
                 <div
                   key={tck.id}
@@ -383,7 +410,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                   <div style={{ fontSize: '12px', color: 'var(--c-text-muted)', display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '12px', borderTop: '1px solid var(--c-border-subtle)' }}>
                     <div>• Mã vé: <strong style={{ fontFamily: 'var(--font-mono)' }}>TICKET-{tck.id}</strong></div>
                     <div>• Hạn sử dụng: <strong>{tck.expiryDate ? new Date(tck.expiryDate).toLocaleDateString('vi-VN') : 'Không giới hạn'}</strong></div>
-                    <div>• Trạng thái: <strong>{tck.status || 'ACTIVE'}</strong></div>
+                    <div>• Trạng thái: <strong>{getTicketStatusText(tck.status)}</strong></div>
                   </div>
 
                   <button
@@ -580,13 +607,13 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
           padding: '32px'
         }}>
           <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', fontFamily: 'var(--font-serif)' }}>
-            Hồ Sơ Làn Da Khách Hàng (Dermatology Profile)
+            Hồ sơ làn da của bạn
           </h3>
           <p style={{ fontSize: '13.5px', color: 'var(--c-text-muted)', lineHeight: 1.6 }}>
             Hồ sơ da được chuẩn hóa theo phân loại da Fitzpatrick & Baumann Skin Typing System. Hệ thống AI Skincare Assistant sẽ sử dụng thông số này để sàng lọc và tự động cảnh báo các hoạt chất chống chỉ định khi bạn duyệt sản phẩm.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '24px' }}>
+          <div className="customer-profile-skin-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '24px' }}>
             <div style={{ padding: '16px', backgroundColor: 'var(--c-canvas)', borderRadius: 'var(--radius-sm)' }}>
               <div style={{ fontSize: '11px', color: 'var(--c-text-light)' }}>Phân Loại Da (Baumann)</div>
               <strong style={{ fontSize: '15px', color: 'var(--c-primary)', marginTop: '4px', display: 'block' }}>OSNW (Dầu, Nhạy Cảm)</strong>

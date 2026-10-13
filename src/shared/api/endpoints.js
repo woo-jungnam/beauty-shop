@@ -26,6 +26,7 @@ export const ENDPOINTS = {
     SESSIONS: (id) => `/api/v1/admin/users/${id}/sessions`,
     REVOKE_SESSION: (id, sessionId) => `/api/v1/admin/users/${id}/sessions/${sessionId}`,
     STATUS_HISTORY: (id) => `/api/v1/admin/users/${id}/status-history`,
+    RESET_PASSWORD: (id) => `/api/v1/admin/users/${id}/reset-password`,
   },
 
   // Cart Operations

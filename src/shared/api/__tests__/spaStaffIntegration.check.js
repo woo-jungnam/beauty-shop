@@ -46,7 +46,7 @@ async function runTests() {
   const staffRoles = loginRes.data?.data?.roles || [];
   assert.ok(staffToken, 'Expected accessToken in login response');
   assert.ok(
-    staffRoles.includes('ROLE_STAFF') || staffRoles.includes('ROLE_SPA_RECEPTION'),
+    staffRoles.includes('ROLE_STAFF'),
     `Expected ROLE_STAFF in roles: ${JSON.stringify(staffRoles)}`
   );
   console.log('  -> PASS: Staff logged in successfully. Token acquired. Roles:', staffRoles);
