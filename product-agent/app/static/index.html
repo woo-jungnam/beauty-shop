@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trợ Lý Tư Vấn Mỹ Phẩm & Spa Da Liễu AI</title>
+    <meta name="description" content="Hệ thống trợ lý tư vấn mỹ phẩm và dịch vụ spa làm đẹp thông minh, tra cứu thành phần hoạt chất y khoa và hỗ trợ cá nhân hóa chu trình chăm sóc da.">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- Custom Clean Bright White Theme CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-light">
+
+    <div class="container-xl py-3 d-flex flex-column" style="height: 100vh;">
+        <!-- Card Khung Chat Toàn Hệ Thống -->
+        <div class="card shadow-sm border-0 rounded-4 flex-grow-1 d-flex flex-column overflow-hidden bg-white">
+            
+            <!-- 1. Header Ứng Dụng -->
+            <header class="app-header px-4 py-3 border-bottom bg-white d-flex align-items-center justify-content-between flex-shrink-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="brand-avatar-box position-relative d-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle">
+                        <i class="bi bi-robot fs-4"></i>
+                        <span class="status-indicator position-absolute bg-success rounded-circle border border-2 border-white"></span>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h1 class="h5 mb-0 fw-bold text-dark">Trợ Lý Mỹ Phẩm & Spa</h1>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-medium px-2 py-1">Trực tuyến</span>
+                        </div>
+                        <p class="small text-muted mb-0">Tư vấn khoa học da liễu & Liệu trình làm đẹp chuyên sâu</p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Nút Giỏ Hàng -->
+                    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 px-3 py-1 rounded-pill" id="header-cart" type="button" title="Xem giỏ hàng mua sắm">
+                        <i class="bi bi-bag"></i>
+                        <span class="d-none d-sm-inline">Giỏ hàng</span>
+                        <span class="badge bg-primary text-white rounded-pill ms-1" id="cart-count">0</span>
+                    </button>
+
+                    <!-- Session ID Badge -->
+                    <div class="d-none d-md-flex align-items-center bg-light text-secondary border px-3 py-1 rounded-pill small" title="Mã phiên làm việc">
+                        <span class="text-muted me-1">Phiên:</span>
+                        <span id="session-id-display" class="fw-semibold text-dark font-monospace">...</span>
+                    </div>
+
+                    <!-- Nút Tạo Hội Thoại Mới -->
+                    <button id="btn-new-chat" class="btn btn-light btn-sm border d-flex align-items-center gap-1 px-3 py-1 rounded-pill text-secondary hover-primary" title="Bắt đầu cuộc trò chuyện mới">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span class="d-none d-sm-inline">Cuộc hội thoại mới</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 2. Thanh Gợi Ý Truy Vấn Nhanh (Quick Prompts Bar) -->
+            <div class="quick-prompts-bar px-4 py-2 bg-light border-bottom d-flex align-items-center gap-2 flex-shrink-0">
+                <span class="small text-muted fw-semibold text-nowrap d-flex align-items-center gap-1">
+                    <i class="bi bi-lightbulb text-warning"></i> Gợi ý:
+                </span>
+                <div class="prompts-scroll d-flex gap-2 overflow-x-auto pb-1" id="prompts-container">
+                    <button class="btn btn-sm btn-white border rounded-pill prompt-pill text-nowrap text-secondary bg-white" data-prompt="Tư vấn liệu trình spa trị mụn chuẩn y khoa cho da dầu mụn">
+                        Liệu trình spa trị mụn y khoa
+                    </button>
+                    <button class="btn btn-sm btn-white border rounded-pill prompt-pill text-nowrap text-secondary bg-white" data-prompt="Tôi đang mang thai 5 tháng, có dịch vụ spa hoặc massage nào an toàn cho mẹ bầu không?">
+                        Dịch vụ spa cho Mẹ Bầu
+                    </button>
+                    <button class="btn btn-sm btn-white border rounded-pill prompt-pill text-nowrap text-secondary bg-white" data-prompt="Tư vấn dịch vụ gội đầu dưỡng sinh thảo dược thư giãn cổ vai gáy">
+                        Gội đầu dưỡng sinh thảo dược
+                    </button>
+                    <button class="btn btn-sm btn-white border rounded-pill prompt-pill text-nowrap text-secondary bg-white" data-prompt="Tìm serum cấp ẩm phục hồi cho da dầu mụn nhạy cảm giá dưới 400k không chứa cồn">
+                        Serum phục hồi da dầu mụn dưới 400k
+                    </button>
+                    <button class="btn btn-sm btn-white border rounded-pill prompt-pill text-nowrap text-secondary bg-white" data-prompt="Kem chống nắng nào cho da dầu mụn thấm nhanh không để lại vệt trắng bệch?">
+                        Kem chống nắng kiềm dầu mỏng nhẹ
+                    </button>
+                    <button class="btn btn-sm btn-white border rounded-pill prompt-pill text-nowrap text-secondary bg-white" data-prompt="BHA 2%, Retinol 1% và Vitamin C có dùng chung một buổi tối được không và dùng thế nào?">
+                        Tư vấn kết hợp BHA, Retinol & Vitamin C
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Khu Vực Cuộn Tin Nhắn (Chat Main Container) -->
+            <main class="chat-main flex-grow-1 p-4 overflow-y-auto bg-white" id="chat-container">
+                <!-- Tin Nhắn Chào Mừng Mặc Định -->
+                <div class="message-row bot-row mb-4" id="welcome-message">
+                    <div class="d-flex gap-3 align-items-start">
+                        <div class="message-avatar flex-shrink-0 bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold">
+                            AI
+                        </div>
+                        <div class="message-bubble bot-bubble p-3 rounded-4 bg-light border text-dark" style="max-width: 88%;">
+                            <div class="message-content">
+                                <p class="mb-2"><strong>Xin chào!</strong> Tôi là <strong>Trợ lý tư vấn Mỹ phẩm & Dịch vụ Spa Làm Đẹp</strong> ứng dụng trí tuệ nhân tạo.</p>
+                                <p class="mb-2">Hệ thống có thể hỗ trợ bạn tìm kiếm và lựa chọn các dòng <strong>mỹ phẩm chính hãng (1.022 sản phẩm thật)</strong> cùng các <strong>liệu trình spa chăm sóc da, massage trị liệu y khoa</strong> phù hợp theo:</p>
+                                <div class="row g-2 my-2">
+                                    <div class="col-sm-4">
+                                        <div class="p-2 border rounded-3 bg-white h-100">
+                                            <div class="fw-semibold small text-primary mb-1"><i class="bi bi-droplet-half me-1"></i> Loại làn da</div>
+                                            <div class="small text-muted">Da dầu, da khô, da hỗn hợp, da nhạy cảm mẩn đỏ...</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="p-2 border rounded-3 bg-white h-100">
+                                            <div class="fw-semibold small text-primary mb-1"><i class="bi bi-shield-check me-1"></i> Vấn đề & Dược chất</div>
+                                            <div class="small text-muted">Mụn viêm, thâm sạm, lão hóa, B5, BHA, Retinol, Niacinamide...</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="p-2 border rounded-3 bg-white h-100">
+                                            <div class="fw-semibold small text-primary mb-1"><i class="bi bi-heart-pulse me-1"></i> Dịch vụ & Đối tượng</div>
+                                            <div class="small text-muted">Peel da, điện di lạnh, lấy nhân mụn, an toàn cho mẹ bầu...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="mb-0 text-secondary">Hôm nay bạn cần tìm sản phẩm mỹ phẩm hay đang quan tâm đến liệu trình làm đẹp nào?</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 4. Typing Indicator (Đang Tra Cứu) -->
+            <div class="typing-container hidden px-4 py-2 border-top bg-light-subtle d-flex align-items-center gap-2" id="typing-indicator">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+                <span class="small text-muted fw-medium typing-text">Trợ lý AI đang tra cứu dữ liệu sản phẩm & phân tích thành phần...</span>
+            </div>
+
+            <!-- 5. Footer Khung Nhập Liệu (Input Form) -->
+            <footer class="app-footer p-3 border-top bg-white flex-shrink-0">
+                <form id="chat-form" class="input-form">
+                    <div class="input-group input-group-lg bg-light border rounded-4 p-1 d-flex align-items-center shadow-none focus-within-border">
+                        <textarea
+                            id="user-input"
+                            class="form-control border-0 bg-transparent shadow-none chat-input py-2 px-3 text-dark"
+                            placeholder="Nhập câu hỏi hoặc nhu cầu chăm sóc da... (Nhấn Enter để gửi)"
+                            rows="1"
+                            required
+                        ></textarea>
+                        <button type="submit" id="btn-send" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center ms-2 flex-shrink-0" style="width: 44px; height: 44px;" title="Gửi câu hỏi">
+                            <i class="bi bi-send-fill fs-6"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="d-flex justify-content-between align-items-center mt-2 px-2 text-muted small">
+                    <span><i class="bi bi-check2-circle text-success me-1"></i> Cơ sở dữ liệu 1.022 sản phẩm & dịch vụ thật 100%</span>
+                    <span>Tư vấn hỗ trợ tham khảo khoa học da liễu</span>
+                </div>
+            </footer>
+
+        </div>
+    </div>
+
+    <!-- Toast Thông Báo Góc Màn Hình -->
+    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chatbot Logic App JS -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

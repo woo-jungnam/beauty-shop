@@ -1,0 +1,1674 @@
+[
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_ton_06",
+    "product_name": "Nước Hoa Hồng Cấp Ẩm Ý Dĩ Naturie Hatomugi Skin Conditioner 500ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm toner của Naturie nhẹ mặt ráo thoáng",
+    "positive": "Nước Hoa Hồng Cấp Ẩm Ý Dĩ Naturie Hatomugi Skin Conditioner 500ml (Naturie) giải quyết tình trạng đổ nhờn và làm dịu da all, dry, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cream_01",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ 40ml",
+    "anchor": "Tìm cream dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da sensitive, dry, combination, all đang bị sensitive, hydration",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ 40ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da sensitive, dry, combination, all, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Mặt tui khô khốc, cứ rửa xong là rát mặt, da cứ sần sùi gom cồi nhìn chán òm. Có serum nào cấp nước nhanh mà không bị bí da không?",
+    "positive": "Serum Trà Xanh Innisfree này đỉnh lắm nha, cấp nước liền tù tì trong 10 giây, da hết khô khốc liền. Chất serum nhẹ tênh, thấm cái vèo không lo bí da hay đổ nhớt, còn giúp da sáng bừng rạng rỡ nữa đó.",
+    "negative": "Mấy loại kem dưỡng đặc quánh, bơ sáp thì né gấp nha. Bôi lên mặt cứ nặng mặt, dễ bí da đổ nhớt, còn làm mặt sần sùi gom cồi thêm chứ chả được gì đâu.",
+    "product_id": "prod_innisfree_green_tea_seed_serum",
+    "product_name": "Serum Trà Xanh Cấp Ẩm Dưỡng Sáng Innisfree Green Tea Seed Hyaluronic Serum",
+    "brand": "Innisfree",
+    "category": "serum"
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cln_02",
+    "product_name": "Sữa Rửa Mặt Cho Da Mụn Cosrx Salicylic Acid Daily Gentle Cleanser 150ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của Cosrx finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Rửa Mặt Cho Da Mụn Cosrx Salicylic Acid Daily Gentle Cleanser 150ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_cerave_pm_moisturizing_lotion",
+    "product_name": "Sữa Dưỡng Ẩm Đêm CeraVe PM Facial Moisturizing Lotion Phục Hồi",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cream của CeraVe nhẹ mặt ráo thoáng",
+    "positive": "Sữa Dưỡng Ẩm Đêm CeraVe PM Facial Moisturizing Lotion Phục Hồi (CeraVe) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, normal, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_02",
+    "product_name": "Sữa Dưỡng Thể Ban Đêm Phục Hồi Vaseline Gluta-Glow 10X Overnight Radiance Repair Xanh 300ml",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, body đang bị hydration, dark_spots",
+    "positive": "Sữa Dưỡng Thể Ban Đêm Phục Hồi Vaseline Gluta-Glow 10X Overnight Radiance Repair Xanh 300ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, body, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_06",
+    "product_name": "Bơ Dưỡng Thể Cà Phê Đắk Lắk Cocoon Giúp Da Mềm Mượt 200ml",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da dry, all, body đang bị hydration",
+    "positive": "Bơ Dưỡng Thể Cà Phê Đắk Lắk Cocoon Giúp Da Mềm Mượt 200ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da dry, all, body, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_msk_05",
+    "product_name": "Mặt Nạ Đất Sét Tro Núi Lửa Innisfree Super Volcanic Pore Clay Mask 2X 100ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Mặt nạ của Innisfree nhẹ mặt ráo thoáng",
+    "positive": "Mặt Nạ Đất Sét Tro Núi Lửa Innisfree Super Volcanic Pore Clay Mask 2X 100ml (Innisfree) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_srv_06",
+    "product_name": "Cấy Vi Điểm Căng Bóng Da Mulgwang Hàn Quốc Chuẩn Y Khoa",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Dịch vụ Spa của Beauty Spa & Clinic nhẹ mặt ráo thoáng",
+    "positive": "Cấy Vi Điểm Căng Bóng Da Mulgwang Hàn Quốc Chuẩn Y Khoa (Beauty Spa & Clinic) giải quyết tình trạng đổ nhờn và làm dịu da dry, combination, aging, all, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_ton_05",
+    "product_name": "Nước Cân Bằng Giảm Mụn Mờ Thâm Some By Mi AHA-BHA-PHA 30 Days Miracle Toner 150ml",
+    "anchor": "Tìm toner dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone đang bị acne, excess_oil, dark_spots",
+    "positive": "Nước Cân Bằng Giảm Mụn Mờ Thâm Some By Mi AHA-BHA-PHA 30 Days Miracle Toner 150ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_msk_03",
+    "product_name": "Dung Dịch BHA Giảm Mụn Đầu Đen Obagi Clenziderm MD Pore Therapy 2% Salicylic Acid 148ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Mặt nạ của Obagi nhẹ mặt ráo thoáng",
+    "positive": "Dung Dịch BHA Giảm Mụn Đầu Đen Obagi Clenziderm MD Pore Therapy 2% Salicylic Acid 148ml (Obagi) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_01",
+    "product_name": "Sữa Dưỡng Thể Sáng Da Vaseline Healthy White Gluta-Glow 10X Flawless Glow Vàng 300ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của Vaseline finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Dưỡng Thể Sáng Da Vaseline Healthy White Gluta-Glow 10X Flawless Glow Vàng 300ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "anchor": "Mình muốn tìm toner dạng lỏng, thấm nhanh, không nhờn rít để trị mụn, chứ không thích mấy loại đặc quánh hay có cảm giác nặng mặt.",
+    "positive": "Nước Hoa Hồng Some By Mi AHA-BHA-PHA 30 Days Miracle Toner có kết cấu lỏng như nước, thấm cực nhanh vào da, không gây nhờn rít hay bí bách. Giúp làm sạch sâu, giảm mụn và kiểm soát dầu thừa hiệu quả.",
+    "negative": "Đừng nhầm lẫn với Some By Mi Yuja Niacin 30 Days Blemish Care Serum, dù cùng hãng nhưng serum này có kết cấu hơi sệt, thiên về dưỡng sáng và cấp ẩm, không tập trung trị mụn và kiểm soát dầu như toner AHA-BHA-PHA.",
+    "product_id": "prod_some_by_mi_aha_bha_toner",
+    "product_name": "Nước Hoa Hồng Giảm Mụn Some By Mi AHA-BHA-PHA 30 Days Miracle Toner",
+    "brand": "Some By Mi",
+    "category": "toner"
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_bioderma_sensibio_h2o",
+    "product_name": "Nước Tẩy Trang Dịu Nhẹ Cho Da Nhạy Cảm Bioderma Sensibio H2O Micellar Water",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của Bioderma nhẹ mặt ráo thoáng",
+    "positive": "Nước Tẩy Trang Dịu Nhẹ Cho Da Nhạy Cảm Bioderma Sensibio H2O Micellar Water (Bioderma) giải quyết tình trạng đổ nhờn và làm dịu da sensitive, dry, normal, combination, oily, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cream_02",
+    "product_name": "Gel Dưỡng Phục Hồi Mờ Sẹo La Roche-Posay Cicaplast Gel B5 40ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của La Roche-Posay finish ráo phục hồi barrier không bết dính",
+    "positive": "Gel Dưỡng Phục Hồi Mờ Sẹo La Roche-Posay Cicaplast Gel B5 40ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_msk_07",
+    "product_name": "Mặt Nạ Bí Đao Giảm Dầu Mụn Thải Độc Cocoon 100ml",
+    "anchor": "Tìm Mặt nạ dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone đang bị acne, excess_oil",
+    "positive": "Mặt Nạ Bí Đao Giảm Dầu Mụn Thải Độc Cocoon 100ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Trời ơi mặt tui cứ đổ nhớt khét lẹt, mụn thì cứ châm chích hoài, có serum nào bạt sừng mà không bí da không?",
+    "positive": "Em này đúng là serum quốc dân của The Ordinary, giúp mặt bà hết đổ dầu bóng nhẫy, mấy nốt mụn viêm sưng cũng dịu đi, thâm mụn mờ hẳn. Da nhẹ tênh, không sợ bí bách đâu nha.",
+    "negative": "Đừng xài mấy loại kem đặc bơ sáp nha, nó làm mặt bà nặng trịch, dễ bí da với mụn lên sần sùi gom cồi đó. Thậm chí còn bong vảy rát mặt nữa.",
+    "product_id": "auth_serum_01",
+    "product_name": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% Kiềm Dầu Giảm Mụn 30ml",
+    "brand": "The Ordinary",
+    "category": "serum"
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_msk_02",
+    "product_name": "Tinh Chất Tẩy Tế Bào Chết Hóa Học The Ordinary AHA 30% + BHA 2% Peeling Solution 30ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Mặt nạ của The Ordinary nhẹ mặt ráo thoáng",
+    "positive": "Tinh Chất Tẩy Tế Bào Chết Hóa Học The Ordinary AHA 30% + BHA 2% Peeling Solution 30ml (The Ordinary) giải quyết tình trạng đổ nhờn và làm dịu da all, combination, oily, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_08",
+    "product_name": "Mặt Nạ Ủ Tóc Cao Cấp Tsubaki Premium EX Intensive Repair Mask Vàng 180g",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của Tsubaki finish ráo phục hồi barrier không bết dính",
+    "positive": "Mặt Nạ Ủ Tóc Cao Cấp Tsubaki Premium EX Intensive Repair Mask Vàng 180g tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_05",
+    "product_name": "Tẩy Tế Bào Chết Cơ Thể Cà Phê Đắk Lắk Cocoon 200ml",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, body đang bị dark_spots, hydration",
+    "positive": "Tẩy Tế Bào Chết Cơ Thể Cà Phê Đắk Lắk Cocoon 200ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, body, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_04",
+    "product_name": "Phấn Nước Kiềm Dầu Mịn Lì Laneige Neo Cushion Matte SPF42 PA++ 15g",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination đang bị excess_oil",
+    "positive": "Phấn Nước Kiềm Dầu Mịn Lì Laneige Neo Cushion Matte SPF42 PA++ 15g có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_hair_03",
+    "product_name": "Dầu Gội Phục Hồi Liên Kết Tóc Olaplex No.4 Bond Maintenance Shampoo 250ml",
+    "anchor": "Tìm Chăm sóc tóc dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, colored_hair đang bị hair_loss",
+    "positive": "Dầu Gội Phục Hồi Liên Kết Tóc Olaplex No.4 Bond Maintenance Shampoo 250ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, colored_hair, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_sun_04",
+    "product_name": "Kem Chống Nắng Kiềm Dầu La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ 50ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm sunscreen của La Roche-Posay nhẹ mặt ráo thoáng",
+    "positive": "Kem Chống Nắng Kiềm Dầu La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ 50ml (La Roche-Posay) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_msk_01",
+    "product_name": "Dung Dịch Tẩy Tế Bào Chết Thu Nhỏ Lỗ Chân Lông Paula's Choice Skin Perfecting 2% BHA Liquid 118ml",
+    "anchor": "Tìm Mặt nạ dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, acne_prone đang bị acne, excess_oil, large_pores",
+    "positive": "Dung Dịch Tẩy Tế Bào Chết Thu Nhỏ Lỗ Chân Lông Paula's Choice Skin Perfecting 2% BHA Liquid 118ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_02",
+    "product_name": "Kem Nền Lâu Trôi Che Phủ Cao Maybelline SuperStay 24H Full Coverage 30ml",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination đang bị excess_oil, dark_spots",
+    "positive": "Kem Nền Lâu Trôi Che Phủ Cao Maybelline SuperStay 24H Full Coverage 30ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_srv_03",
+    "product_name": "Liệu Trình Peel Da AHA Glycolic 35% Làm Mờ Thâm Sạm & Trắng Sáng Căng Bóng",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Dịch vụ Spa của Beauty Spa & Clinic nhẹ mặt ráo thoáng",
+    "positive": "Liệu Trình Peel Da AHA Glycolic 35% Làm Mờ Thâm Sạm & Trắng Sáng Căng Bóng (Beauty Spa & Clinic) giải quyết tình trạng đổ nhờn và làm dịu da all, combination, dry, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_cln_02",
+    "product_name": "Sữa Rửa Mặt Cho Da Mụn Cosrx Salicylic Acid Daily Gentle Cleanser 150ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của Cosrx nhẹ mặt ráo thoáng",
+    "positive": "Sữa Rửa Mặt Cho Da Mụn Cosrx Salicylic Acid Daily Gentle Cleanser 150ml (Cosrx) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_srv_05",
+    "product_name": "Điện Di Tinh Chất Vitamin C 20% Tươi Dưỡng Trắng & Mờ Nám Tầng Biểu Bì",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Dịch vụ Spa của Beauty Spa & Clinic nhẹ mặt ráo thoáng",
+    "positive": "Điện Di Tinh Chất Vitamin C 20% Tươi Dưỡng Trắng & Mờ Nám Tầng Biểu Bì (Beauty Spa & Clinic) giải quyết tình trạng đổ nhờn và làm dịu da all, combination, oily, dry, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_04",
+    "product_name": "Kem Dưỡng Thể Sáng Da Chống Lão Hóa Paula's Choice Resist Skin Revealing Body Lotion 10% AHA 210ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của Paula's Choice finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Thể Sáng Da Chống Lão Hóa Paula's Choice Resist Skin Revealing Body Lotion 10% AHA 210ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cream_03",
+    "product_name": "Kem Dưỡng Giảm Mụn Thông Thoáng Lỗ Chân Lông La Roche-Posay Effaclar Duo+M 40ml",
+    "anchor": "Tìm cream dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone đang bị acne, dark_spots, excess_oil",
+    "positive": "Kem Dưỡng Giảm Mụn Thông Thoáng Lỗ Chân Lông La Roche-Posay Effaclar Duo+M 40ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_mu_07",
+    "product_name": "Phấn Nước Căng Mọng Clio Kill Cover Mesh Glow Cushion SPF50+ PA++++ 15g",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Trang điểm của Clio nhẹ mặt ráo thoáng",
+    "positive": "Phấn Nước Căng Mọng Clio Kill Cover Mesh Glow Cushion SPF50+ PA++++ 15g (Clio) giải quyết tình trạng đổ nhờn và làm dịu da dry, combination, normal, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_sun_02",
+    "product_name": "Gel Chống Nắng Dưỡng Ẩm Anessa Perfect UV Sunscreen Skincare Gel SPF50+ PA++++ 90g",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm sunscreen của Anessa finish ráo phục hồi barrier không bết dính",
+    "positive": "Gel Chống Nắng Dưỡng Ẩm Anessa Perfect UV Sunscreen Skincare Gel SPF50+ PA++++ 90g tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_cerave_foaming_cleanser",
+    "product_name": "Sữa Rửa Mặt CeraVe Foaming Facial Cleanser Cho Da Dầu Mụn",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của CeraVe finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Rửa Mặt CeraVe Foaming Facial Cleanser Cho Da Dầu Mụn tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_srv_06",
+    "product_name": "Cấy Vi Điểm Căng Bóng Da Mulgwang Hàn Quốc Chuẩn Y Khoa",
+    "anchor": "Tìm Dịch vụ Spa dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da dry, combination, aging, all đang bị hydration, aging",
+    "positive": "Cấy Vi Điểm Căng Bóng Da Mulgwang Hàn Quốc Chuẩn Y Khoa có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da dry, combination, aging, all, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Da mặt đang yếu xìu, hay bị đỏ ửng với mấy vết thâm mụn nhìn khét lẹt, dùng gì cũng rát mặt, bí da. Có loại nào phục hồi ổn áp không?",
+    "positive": "Em tinh chất ốc sên Cosrx này đúng bài luôn! 96% dịch ốc sên giúp da khỏe lại, mấy vết mụn hay mẩn đỏ cũng dịu đi, da căng mọng nhẹ tênh không sợ bí. Đảm bảo da hết sần sùi gom cồi, lấy lại độ bóng khỏe.",
+    "negative": "Mấy loại kem dưỡng đặc quánh như bơ sáp, đổ nhớt lên mặt là thấy nặng mặt, dễ bí da, dễ lên mụn ẩn lắm. Hoặc mấy cái serum cấp ẩm mà toàn cồn thì châm chích, bạt sừng da yếu thêm, da khô bong vảy còn tệ hơn.",
+    "product_id": "prod_cosrx_snail_96_essence",
+    "product_name": "Tinh Chất Dưỡng Ốc Sên Phục Hồi COSRX Advanced Snail 96 Mucin Power Essence",
+    "brand": "Cosrx",
+    "category": "serum"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_srv_08",
+    "product_name": "Nâng Cơ Trẻ Hóa Săn Chắc Da Sóng Đa Cực RF Face Lifting",
+    "anchor": "Tìm Dịch vụ Spa dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, aging đang bị aging",
+    "positive": "Nâng Cơ Trẻ Hóa Săn Chắc Da Sóng Đa Cực RF Face Lifting có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, aging, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_klairs_midnight_cream",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da Klairs Midnight Blue Calming Cream",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của Klairs finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da Klairs Midnight Blue Calming Cream tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Mặt tui dạo này đổ nhớt khét lẹt, mụn cứ gom cồi sần sùi hoài, có toner nào dùng nhẹ tênh mà không bị châm chích không?",
+    "positive": "Toner Some By Mi AHA-BHA-PHA này đúng bài luôn. Nó bạt sừng dịu êm, không rát mặt, giúp giảm mụn đầu đen, mụn cám hiệu quả. Da sạch bã nhờn mà vẫn nhẹ tênh, không hề bí da đâu nha.",
+    "negative": "Mấy loại toner cấp ẩm dạng sệt hay serum đặc quánh thì dễ làm mặt bạn nặng mặt, bí da thêm, thậm chí còn khiến mụn gom cồi nhiều hơn đó. Tránh xa mấy loại đó nha!",
+    "product_id": "prod_some_by_mi_aha_bha_toner",
+    "product_name": "Nước Hoa Hồng Giảm Mụn Some By Mi AHA-BHA-PHA 30 Days Miracle Toner",
+    "brand": "Some By Mi",
+    "category": "toner"
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_04",
+    "product_name": "Kem Dưỡng Thể Sáng Da Chống Lão Hóa Paula's Choice Resist Skin Revealing Body Lotion 10% AHA 210ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của Paula's Choice nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Thể Sáng Da Chống Lão Hóa Paula's Choice Resist Skin Revealing Body Lotion 10% AHA 210ml (Paula's Choice) giải quyết tình trạng đổ nhờn và làm dịu da all, body, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_obagi_retinol_1_0",
+    "product_name": "Kem Dưỡng Chống Lão Hóa Tái Tạo Da Obagi Clinical Retinol 1.0",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của Obagi finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Chống Lão Hóa Tái Tạo Da Obagi Clinical Retinol 1.0 tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_msk_07",
+    "product_name": "Mặt Nạ Bí Đao Giảm Dầu Mụn Thải Độc Cocoon 100ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Mặt nạ của Cocoon nhẹ mặt ráo thoáng",
+    "positive": "Mặt Nạ Bí Đao Giảm Dầu Mụn Thải Độc Cocoon 100ml (Cocoon) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "anchor": "Sau khi cleansing, da mình thường feel căng rát, dễ breakout. Có serum nào cấp ẩm tức thì, boost barrier và prep da cho treatment không?",
+    "positive": "Innisfree Green Tea Seed Hyaluronic Serum với Nano-HA và Beauty Green Tea extract cấp ẩm instant, restore barrier màng ẩm. Finish dewy, non-comedogenic, không gây breakout, còn boost tone-up sáng hồng, chống oxy hóa, cực tốt để layer skincare.",
+    "negative": "Tránh xa mấy loại treatment peel BHA/AHA nồng độ cao hoặc Retinol mạnh khi da đang dehydrated nhé. Chúng có thể gây purging đẩy mụn, breakout nghiêm trọng, làm tổn thương barrier màng ẩm, khiến da càng khô và rát hơn.",
+    "product_id": "prod_innisfree_green_tea_seed_serum",
+    "product_name": "Serum Trà Xanh Cấp Ẩm Dưỡng Sáng Innisfree Green Tea Seed Hyaluronic Serum",
+    "brand": "Innisfree",
+    "category": "serum"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_srv_01",
+    "product_name": "Liệu Trình Trị Mụn Chuẩn Y Khoa 14 Bước Kết Hợp Ánh Sáng Sinh Học Bio-Light",
+    "anchor": "Tìm Dịch vụ Spa dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone, combination đang bị acne, excess_oil",
+    "positive": "Liệu Trình Trị Mụn Chuẩn Y Khoa 14 Bước Kết Hợp Ánh Sáng Sinh Học Bio-Light có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Da tui nhạy cảm dễ bị châm chích, rửa mặt xong mặt cứ rát với bong vảy. Có cái toner nào dùng xong thấy nhẹ tênh không?",
+    "positive": "Toner Klairs không mùi này chuẩn bài cho da nhạy cảm đó bà. Nó cấp ẩm sâu, làm dịu mấy vụ ửng đỏ, giúp da cân bằng pH tức thì, không sợ bị rát mặt hay bí da, cảm giác nhẹ tênh à.",
+    "negative": "Mấy loại toner có cồn hay tinh dầu khét lẹt thì né gấp nha, nó làm da bà khô rát, dễ đổ nhớt với mặt sần sùi gom cồi thêm đó. Đừng chọn loại nào mà dùng xong thấy mặt nặng mặt hay bí da.",
+    "product_id": "auth_ton_01",
+    "product_name": "Nước Hoa Hồng Không Mùi Klairs Supple Preparation Unscented Toner 180ml",
+    "brand": "Klairs",
+    "category": "toner"
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_ton_05",
+    "product_name": "Nước Cân Bằng Giảm Mụn Mờ Thâm Some By Mi AHA-BHA-PHA 30 Days Miracle Toner 150ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm toner của Some By Mi nhẹ mặt ráo thoáng",
+    "positive": "Nước Cân Bằng Giảm Mụn Mờ Thâm Some By Mi AHA-BHA-PHA 30 Days Miracle Toner 150ml (Some By Mi) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_08",
+    "product_name": "Kem Dưỡng Ẩm Làm Mềm Da Sần Sùi CeraVe SA Smoothing Cream 340g",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của CeraVe finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Ẩm Làm Mềm Da Sần Sùi CeraVe SA Smoothing Cream 340g tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_kiehls_ultra_facial_cream",
+    "product_name": "Kem Dưỡng Ẩm Cấp Nước Sâu Kiehl's Ultra Facial Cream 24-Hour",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của Kiehl's finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Ẩm Cấp Nước Sâu Kiehl's Ultra Facial Cream 24-Hour tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cln_03",
+    "product_name": "Sữa Rửa Mặt Dịu Lành Cho Da Nhạy Cảm Cetaphil Gentle Skin Cleanser 500ml",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da sensitive, dry, all đang bị sensitive, hydration",
+    "positive": "Sữa Rửa Mặt Dịu Lành Cho Da Nhạy Cảm Cetaphil Gentle Skin Cleanser 500ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da sensitive, dry, all, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "anchor": "Mình đang tìm treatment serum oil-free để control oil, giảm breakout và improve dark spots, có Niacinamide hay Zinc PCA không, finish ráo là perfect?",
+    "positive": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% là treatment serum lý tưởng, với Niacinamide và Zinc PCA giúp control oil, minimize pores và reduce dark spots, mang lại finish ráo, non-comedogenic cho da dầu mụn.",
+    "negative": "Tránh xa mấy loại serum chứa nhiều dầu khoáng hay silicones nặng mặt, chúng có thể gây tắc nghẽn nang lông, lead to breakout và làm da mất đi finish ráo, ảnh hưởng đến barrier màng ẩm.",
+    "product_id": "prod_to_niacinamide_10",
+    "product_name": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% Kiềm Dầu Giảm Mụn",
+    "brand": "The Ordinary",
+    "category": "serum"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_hair_05",
+    "product_name": "Dầu Dưỡng Tóc Bóng Mượt L'Oreal Paris Elseve Extraordinary Oil 100ml",
+    "anchor": "Tìm Chăm sóc tóc dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, dry_hair đang bị dry_hair",
+    "positive": "Dầu Dưỡng Tóc Bóng Mượt L'Oreal Paris Elseve Extraordinary Oil 100ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, dry_hair, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_msk_01",
+    "product_name": "Dung Dịch Tẩy Tế Bào Chết Thu Nhỏ Lỗ Chân Lông Paula's Choice Skin Perfecting 2% BHA Liquid 118ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Mặt nạ của Paula's Choice nhẹ mặt ráo thoáng",
+    "positive": "Dung Dịch Tẩy Tế Bào Chết Thu Nhỏ Lỗ Chân Lông Paula's Choice Skin Perfecting 2% BHA Liquid 118ml (Paula's Choice) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_lrp_anthelios_oil_control",
+    "product_name": "Kem Chống Nắng La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm sunscreen của La Roche-Posay finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Chống Nắng La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "anchor": "Da dầu mụn của mình cần một loại serum mỏng nhẹ, thấm nhanh, không gây bết dính để kiềm dầu và giảm thâm, chứ không thích loại đặc đâu.",
+    "positive": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% có kết cấu serum lỏng nhẹ, thấm nhanh, không gây bết dính, giúp kiểm soát bã nhờn hiệu quả và làm mờ các vết thâm mụn, rất phù hợp cho da dầu mụn.",
+    "negative": "Đừng chọn The Ordinary 100% Organic Cold-Pressed Rose Hip Seed Oil, dù cùng thương hiệu nhưng là dầu dưỡng đậm đặc, rất dễ gây bí tắc lỗ chân lông và làm da dầu mụn càng thêm nặng mặt, bết dính.",
+    "product_id": "prod_to_niacinamide_10",
+    "product_name": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% Kiềm Dầu Giảm Mụn",
+    "brand": "The Ordinary",
+    "category": "serum"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_msk_04",
+    "product_name": "Mặt Nạ Đất Sét Hút Dầu Thải Độc Kiehl's Rare Earth Deep Pore Cleansing Masque 125ml",
+    "anchor": "Tìm Mặt nạ dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, large_pores đang bị excess_oil, acne",
+    "positive": "Mặt Nạ Đất Sét Hút Dầu Thải Độc Kiehl's Rare Earth Deep Pore Cleansing Masque 125ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, large_pores, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_sun_02",
+    "product_name": "Gel Chống Nắng Dưỡng Ẩm Anessa Perfect UV Sunscreen Skincare Gel SPF50+ PA++++ 90g",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm sunscreen của Anessa nhẹ mặt ráo thoáng",
+    "positive": "Gel Chống Nắng Dưỡng Ẩm Anessa Perfect UV Sunscreen Skincare Gel SPF50+ PA++++ 90g (Anessa) giải quyết tình trạng đổ nhờn và làm dịu da dry, combination, all, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Mặt em đổ nhớt khét lẹt, lỗ chân lông to đùng với mấy cái thâm mụn mới cứ châm chích hoài, có cái nào xài nhẹ tênh không bị bí da không?",
+    "positive": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% này đúng là serum quốc dân, giúp kiểm soát dầu nhớt cả ngày, làm mờ mấy vết thâm mụn mới và cải thiện da sần sùi gom cồi, cho mặt nhẹ tênh không bí rát.",
+    "negative": "Mấy loại kem dưỡng đặc quánh, bơ sáp thì thôi bỏ đi, xài lên mặt nặng trịch, bí da dễ đổ nhớt với lên mụn ẩn lắm, chỉ tổ làm da thêm khét lẹt thôi.",
+    "product_id": "prod_to_niacinamide_10",
+    "product_name": "Tinh Chất The Ordinary Niacinamide 10% + Zinc 1% Kiềm Dầu Giảm Mụn",
+    "brand": "The Ordinary",
+    "category": "serum"
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Mặt tui dạo này cứ sần sùi gom cồi, đổ nhớt khét lẹt với châm chích hoài, có cái gì bôi vô cho nó dịu lại không?",
+    "positive": "Tinh chất rau má Skin1004 này đúng bài luôn đó. Chất lỏng như nước, bôi lên nhẹ tênh, không bí da mà làm dịu mấy nốt mụn sưng viêm với mẩn đỏ nhanh lắm, mặt hết rát liền à.",
+    "negative": "Mấy cái kem dưỡng đặc quánh như bơ sáp kia thì thôi bỏ đi, bôi lên mặt nặng trịch, dễ bí da với đổ nhớt thêm, có khi còn làm mặt sần sùi gom cồi nhiều hơn đó.",
+    "product_id": "prod_skin1004_centella_ampoule",
+    "product_name": "Tinh Chất Rau Má Làm Dịu Da Skin1004 Madagascar Centella Ampoule",
+    "brand": "Skin1004",
+    "category": "serum"
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_cerave_foaming_cleanser",
+    "product_name": "Sữa Rửa Mặt CeraVe Foaming Facial Cleanser Cho Da Dầu Mụn",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của CeraVe nhẹ mặt ráo thoáng",
+    "positive": "Sữa Rửa Mặt CeraVe Foaming Facial Cleanser Cho Da Dầu Mụn (CeraVe) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, normal, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_msk_01",
+    "product_name": "Dung Dịch Tẩy Tế Bào Chết Thu Nhỏ Lỗ Chân Lông Paula's Choice Skin Perfecting 2% BHA Liquid 118ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Mặt nạ của Paula's Choice finish ráo phục hồi barrier không bết dính",
+    "positive": "Dung Dịch Tẩy Tế Bào Chết Thu Nhỏ Lỗ Chân Lông Paula's Choice Skin Perfecting 2% BHA Liquid 118ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_mu_05",
+    "product_name": "Phấn Nước Căng Bóng Glow Laneige Neo Cushion Glow SPF50+ PA+++ 15g",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Trang điểm của Laneige finish ráo phục hồi barrier không bết dính",
+    "positive": "Phấn Nước Căng Bóng Glow Laneige Neo Cushion Glow SPF50+ PA+++ 15g tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_01",
+    "product_name": "Kem Nền Kiềm Dầu Mịn Lì Maybelline Fit Me Matte + Poreless Foundation 30ml",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination đang bị excess_oil",
+    "positive": "Kem Nền Kiềm Dầu Mịn Lì Maybelline Fit Me Matte + Poreless Foundation 30ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_01",
+    "product_name": "Sữa Dưỡng Thể Sáng Da Vaseline Healthy White Gluta-Glow 10X Flawless Glow Vàng 300ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của Vaseline nhẹ mặt ráo thoáng",
+    "positive": "Sữa Dưỡng Thể Sáng Da Vaseline Healthy White Gluta-Glow 10X Flawless Glow Vàng 300ml (Vaseline) giải quyết tình trạng đổ nhờn và làm dịu da all, body, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_klairs_midnight_cream",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da Klairs Midnight Blue Calming Cream",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cream của Klairs nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da Klairs Midnight Blue Calming Cream (Klairs) giải quyết tình trạng đổ nhờn và làm dịu da sensitive, oily, combination, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_04",
+    "product_name": "Kem Dưỡng Thể Sáng Da Chống Lão Hóa Paula's Choice Resist Skin Revealing Body Lotion 10% AHA 210ml",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, body đang bị dark_spots, aging",
+    "positive": "Kem Dưỡng Thể Sáng Da Chống Lão Hóa Paula's Choice Resist Skin Revealing Body Lotion 10% AHA 210ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, body, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "anchor": "Mình muốn tìm một serum giảm mụn thâm mà texture phải mỏng nhẹ, thấm nhanh, không gây bí bách hay nặng mặt chút nào.",
+    "positive": "Serum Effaclar Ultra Concentrated có kết cấu lỏng nhẹ, thấm nhanh như nước, không hề gây bết dính hay bí da. Nó giúp thông thoáng lỗ chân lông, giảm mụn và mờ thâm hiệu quả, cho cảm giác da nhẹ tênh.",
+    "negative": "Kem dưỡng La Roche-Posay Cicaplast Baume B5 có kết cấu đặc như bơ sáp, tuy phục hồi tốt nhưng dễ gây bí tắc, nặng mặt cho da dầu mụn, không phù hợp để dùng toàn mặt hàng ngày.",
+    "product_id": "prod_lrp_effaclar_serum",
+    "product_name": "Serum La Roche-Posay Effaclar Ultra Concentrated Giảm Mụn Mờ Thâm",
+    "brand": "La Roche-Posay",
+    "category": "serum"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_03",
+    "product_name": "Kem Nền Mỏng Mịn Lâu Trôi L'Oreal Paris Infallible 24H Fresh Wear 30ml",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, combination, dry đang bị hydration",
+    "positive": "Kem Nền Mỏng Mịn Lâu Trôi L'Oreal Paris Infallible 24H Fresh Wear 30ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, combination, dry, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_srv_04",
+    "product_name": "Điện Di Tinh Chất Phục Hồi Vitamin B5 & Hyaluronic Acid Cấp Ẩm Đa Tầng",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Dịch vụ Spa của Beauty Spa & Clinic nhẹ mặt ráo thoáng",
+    "positive": "Điện Di Tinh Chất Phục Hồi Vitamin B5 & Hyaluronic Acid Cấp Ẩm Đa Tầng (Beauty Spa & Clinic) giải quyết tình trạng đổ nhờn và làm dịu da sensitive, dry, all, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_cln_01",
+    "product_name": "Gel Rửa Mặt Tràm Trà Cosrx Low pH Good Morning Gel Cleanser 150ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của Cosrx nhẹ mặt ráo thoáng",
+    "positive": "Gel Rửa Mặt Tràm Trà Cosrx Low pH Good Morning Gel Cleanser 150ml (Cosrx) giải quyết tình trạng đổ nhờn và làm dịu da all, oily, acne_prone, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_lrp_cicaplast_b5",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ Ultra-Repairing",
+    "anchor": "Tìm cream dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da dry, sensitive, normal, combination đang bị barrier_repair, irritation, redness, flaky_skin",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ Ultra-Repairing có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da dry, sensitive, normal, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_mu_02",
+    "product_name": "Kem Nền Lâu Trôi Che Phủ Cao Maybelline SuperStay 24H Full Coverage 30ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Trang điểm của Maybelline finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Nền Lâu Trôi Che Phủ Cao Maybelline SuperStay 24H Full Coverage 30ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_mu_01",
+    "product_name": "Kem Nền Kiềm Dầu Mịn Lì Maybelline Fit Me Matte + Poreless Foundation 30ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Trang điểm của Maybelline finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Nền Kiềm Dầu Mịn Lì Maybelline Fit Me Matte + Poreless Foundation 30ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_ton_06",
+    "product_name": "Nước Hoa Hồng Cấp Ẩm Ý Dĩ Naturie Hatomugi Skin Conditioner 500ml",
+    "anchor": "Tìm toner dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, dry, combination đang bị hydration",
+    "positive": "Nước Hoa Hồng Cấp Ẩm Ý Dĩ Naturie Hatomugi Skin Conditioner 500ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, dry, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cream_01",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ 40ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của La Roche-Posay finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ 40ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_mu_08",
+    "product_name": "Phấn Phủ Bột Kiềm Dầu Quốc Dân Innisfree No-Sebum Mineral Powder 5g",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Trang điểm của Innisfree nhẹ mặt ráo thoáng",
+    "positive": "Phấn Phủ Bột Kiềm Dầu Quốc Dân Innisfree No-Sebum Mineral Powder 5g (Innisfree) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_cosrx_low_ph_cleanser",
+    "product_name": "Gel Rửa Mặt COSRX Low pH Good Morning Gel Cleanser Dịu Nhẹ",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, sensitive, acne_prone đang bị acne, excess_oil, sensitive_skin",
+    "positive": "Gel Rửa Mặt COSRX Low pH Good Morning Gel Cleanser Dịu Nhẹ có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, sensitive, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_ton_03",
+    "product_name": "Nước Hoa Hồng Hoa Cúc Kiehl's Calendula Herbal-Extract Toner 250ml",
+    "anchor": "Tìm toner dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, oily, combination, sensitive đang bị sensitive, excess_oil",
+    "positive": "Nước Hoa Hồng Hoa Cúc Kiehl's Calendula Herbal-Extract Toner 250ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, oily, combination, sensitive, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "anchor": "Da mình đang trong giai đoạn post-treatment, barrier màng ẩm yếu, hay breakout và bị dehydration, cần một essence phục hồi, cấp ẩm sâu mà non-comedogenic.",
+    "positive": "COSRX Advanced Snail 96 Mucin Power Essence là lựa chọn tối ưu. Với 96% Snail Secretion Filtrate, nó repair barrier, cấp ẩm sâu nhờ Sodium Hyaluronate, làm dịu kích ứng với Allantoin & Panthenol, giúp da phục hồi nhanh, finish dewy mà không gây purging.",
+    "negative": "Tránh xa những sản phẩm treatment chứa Retinol nồng độ cao hoặc peel BHA/AHA mạnh khi barrier đang yếu, dễ gây kích ứng, breakout trầm trọng hơn. Hoặc các loại oil-free nhưng lại chứa silicones nặng dễ gây bí tắc.",
+    "product_id": "prod_cosrx_snail_96_essence",
+    "product_name": "Tinh Chất Dưỡng Ốc Sên Phục Hồi COSRX Advanced Snail 96 Mucin Power Essence",
+    "brand": "Cosrx",
+    "category": "serum"
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_bioderma_sensibio_h2o",
+    "product_name": "Nước Tẩy Trang Dịu Nhẹ Cho Da Nhạy Cảm Bioderma Sensibio H2O Micellar Water",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của Bioderma finish ráo phục hồi barrier không bết dính",
+    "positive": "Nước Tẩy Trang Dịu Nhẹ Cho Da Nhạy Cảm Bioderma Sensibio H2O Micellar Water tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_04",
+    "product_name": "Điện Di Tinh Chất Phục Hồi Vitamin B5 & Hyaluronic Acid Cấp Ẩm Đa Tầng",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Điện Di Tinh Chất Phục Hồi Vitamin B5 & Hyaluronic Acid Cấp Ẩm Đa Tầng tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_sun_03",
+    "product_name": "Sữa Chống Nắng Dịu Nhẹ Anessa Perfect UV Sunscreen Mild Milk SPF50+ PA++++ 60ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm sunscreen của Anessa finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Chống Nắng Dịu Nhẹ Anessa Perfect UV Sunscreen Mild Milk SPF50+ PA++++ 60ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_ton_02",
+    "product_name": "Nước Hoa Hồng Làm Dịu Da Chiết Xuất Diếp Cá Anua Heartleaf 77% Soothing Toner 250ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm toner của Anua nhẹ mặt ráo thoáng",
+    "positive": "Nước Hoa Hồng Làm Dịu Da Chiết Xuất Diếp Cá Anua Heartleaf 77% Soothing Toner 250ml (Anua) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "anchor": "Mặt tui cứ đổ nhớt khét lẹt, mụn ẩn li ti sần sùi gom cồi hoài, muốn tìm cái gì đó bạt sừng mà không bị rát mặt.",
+    "positive": "Serum Effaclar Ultra Concentrated này đúng bài luôn! Nó có BHA, AHA giúp bạt sừng nhẹ nhàng, giảm mụn ẩn, mụn đầu đen, lại còn kiềm dầu cho mặt nhẹ tênh, không còn đổ nhớt hay bí da nữa.",
+    "negative": "Kem dưỡng ẩm La Roche-Posay Cicaplast Baume B5 tuy làm dịu da nhưng texture hơi đặc, dễ gây bí da, nặng mặt và làm mụn ẩn lên nhiều hơn cho da dầu mụn.",
+    "product_id": "prod_lrp_effaclar_serum",
+    "product_name": "Serum La Roche-Posay Effaclar Ultra Concentrated Giảm Mụn Mờ Thâm",
+    "brand": "La Roche-Posay",
+    "category": "serum"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_08",
+    "product_name": "Kem Dưỡng Ẩm Làm Mềm Da Sần Sùi CeraVe SA Smoothing Cream 340g",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da rough_skin, dry, body đang bị hydration",
+    "positive": "Kem Dưỡng Ẩm Làm Mềm Da Sần Sùi CeraVe SA Smoothing Cream 340g có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da rough_skin, dry, body, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_03",
+    "product_name": "Kem Dưỡng Thể Trị Mụn & Viêm Nang Lông Paula's Choice Weightless Body Treatment 2% BHA 210ml",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, body, acne_prone đang bị acne, excess_oil",
+    "positive": "Kem Dưỡng Thể Trị Mụn & Viêm Nang Lông Paula's Choice Weightless Body Treatment 2% BHA 210ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, body, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_02",
+    "product_name": "Sữa Dưỡng Thể Ban Đêm Phục Hồi Vaseline Gluta-Glow 10X Overnight Radiance Repair Xanh 300ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của Vaseline finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Dưỡng Thể Ban Đêm Phục Hồi Vaseline Gluta-Glow 10X Overnight Radiance Repair Xanh 300ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_ton_03",
+    "product_name": "Nước Hoa Hồng Hoa Cúc Kiehl's Calendula Herbal-Extract Toner 250ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm toner của Kiehl's finish ráo phục hồi barrier không bết dính",
+    "positive": "Nước Hoa Hồng Hoa Cúc Kiehl's Calendula Herbal-Extract Toner 250ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_06",
+    "product_name": "Phấn Nước Che Phủ Cao Clio Kill Cover The New Founwear Cushion SPF50+ 15g",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, combination, oily đang bị dark_spots, excess_oil",
+    "positive": "Phấn Nước Che Phủ Cao Clio Kill Cover The New Founwear Cushion SPF50+ 15g có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, combination, oily, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_07",
+    "product_name": "Dầu Xả Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của Tsubaki finish ráo phục hồi barrier không bết dính",
+    "positive": "Dầu Xả Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cln_01",
+    "product_name": "Gel Rửa Mặt Tràm Trà Cosrx Low pH Good Morning Gel Cleanser 150ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của Cosrx finish ráo phục hồi barrier không bết dính",
+    "positive": "Gel Rửa Mặt Tràm Trà Cosrx Low pH Good Morning Gel Cleanser 150ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_ton_02",
+    "product_name": "Nước Hoa Hồng Làm Dịu Da Chiết Xuất Diếp Cá Anua Heartleaf 77% Soothing Toner 250ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm toner của Anua finish ráo phục hồi barrier không bết dính",
+    "positive": "Nước Hoa Hồng Làm Dịu Da Chiết Xuất Diếp Cá Anua Heartleaf 77% Soothing Toner 250ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_07",
+    "product_name": "Dầu Tắm Dưỡng Ẩm Làm Dịu Da Bioderma Atoderm Huile de Douche 1000ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của Bioderma nhẹ mặt ráo thoáng",
+    "positive": "Dầu Tắm Dưỡng Ẩm Làm Dịu Da Bioderma Atoderm Huile de Douche 1000ml (Bioderma) giải quyết tình trạng đổ nhờn và làm dịu da dry, very_dry, sensitive, body, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_mu_06",
+    "product_name": "Phấn Nước Che Phủ Cao Clio Kill Cover The New Founwear Cushion SPF50+ 15g",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Trang điểm của Clio nhẹ mặt ráo thoáng",
+    "positive": "Phấn Nước Che Phủ Cao Clio Kill Cover The New Founwear Cushion SPF50+ 15g (Clio) giải quyết tình trạng đổ nhờn và làm dịu da all, combination, oily, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_cream_01",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ 40ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cream của La Roche-Posay nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ 40ml (La Roche-Posay) giải quyết tình trạng đổ nhờn và làm dịu da sensitive, dry, combination, all, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_03",
+    "product_name": "Dầu Gội Phục Hồi Liên Kết Tóc Olaplex No.4 Bond Maintenance Shampoo 250ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của Olaplex finish ráo phục hồi barrier không bết dính",
+    "positive": "Dầu Gội Phục Hồi Liên Kết Tóc Olaplex No.4 Bond Maintenance Shampoo 250ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_cerave_pm_moisturizing_lotion",
+    "product_name": "Sữa Dưỡng Ẩm Đêm CeraVe PM Facial Moisturizing Lotion Phục Hồi",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của CeraVe finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Dưỡng Ẩm Đêm CeraVe PM Facial Moisturizing Lotion Phục Hồi tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_05",
+    "product_name": "Tẩy Tế Bào Chết Cơ Thể Cà Phê Đắk Lắk Cocoon 200ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của Cocoon nhẹ mặt ráo thoáng",
+    "positive": "Tẩy Tế Bào Chết Cơ Thể Cà Phê Đắk Lắk Cocoon 200ml (Cocoon) giải quyết tình trạng đổ nhờn và làm dịu da all, body, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_07",
+    "product_name": "Nâng Cơ Trẻ Hóa Xóa Nhăn Công Nghệ Cao HIFU Ultra Therapy Toàn Mặt",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Nâng Cơ Trẻ Hóa Xóa Nhăn Công Nghệ Cao HIFU Ultra Therapy Toàn Mặt tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "anchor": "Da mình nhạy cảm, cần toner mỏng nhẹ thấm nhanh, không gây bí bách hay nặng mặt, cấp ẩm tốt.",
+    "positive": "Nước hoa hồng Klairs không mùi này có kết cấu lỏng nhẹ, thấm nhanh như nước, không gây bết dính. Nó cấp ẩm sâu, làm dịu da nhạy cảm tức thì mà không hề bí da, mang lại cảm giác dễ chịu.",
+    "negative": "Đừng nhầm với Klairs Rich Moist Soothing Toner nhé, dù cùng hãng nhưng kết cấu đặc hơn, dễ gây cảm giác nặng mặt hoặc bí da cho những ai thích sự mỏng nhẹ, đặc biệt vào mùa nóng.",
+    "product_id": "auth_ton_01",
+    "product_name": "Nước Hoa Hồng Không Mùi Klairs Supple Preparation Unscented Toner 180ml",
+    "brand": "Klairs",
+    "category": "toner"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_msk_05",
+    "product_name": "Mặt Nạ Đất Sét Tro Núi Lửa Innisfree Super Volcanic Pore Clay Mask 2X 100ml",
+    "anchor": "Tìm Mặt nạ dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination đang bị excess_oil, large_pores",
+    "positive": "Mặt Nạ Đất Sét Tro Núi Lửa Innisfree Super Volcanic Pore Clay Mask 2X 100ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_07",
+    "product_name": "Dầu Tắm Dưỡng Ẩm Làm Dịu Da Bioderma Atoderm Huile de Douche 1000ml",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da dry, very_dry, sensitive, body đang bị sensitive, hydration",
+    "positive": "Dầu Tắm Dưỡng Ẩm Làm Dịu Da Bioderma Atoderm Huile de Douche 1000ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da dry, very_dry, sensitive, body, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_kiehls_ultra_facial_cream",
+    "product_name": "Kem Dưỡng Ẩm Cấp Nước Sâu Kiehl's Ultra Facial Cream 24-Hour",
+    "anchor": "Tìm cream dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da dry, normal, sensitive đang bị flaky_skin, dry_patches, barrier_repair, dehydration",
+    "positive": "Kem Dưỡng Ẩm Cấp Nước Sâu Kiehl's Ultra Facial Cream 24-Hour có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da dry, normal, sensitive, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_anessa_perfect_uv_milk",
+    "product_name": "Sữa Chống Nắng Anessa Perfect UV Sunscreen Skincare Milk SPF50+ PA++++",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm sunscreen của Anessa nhẹ mặt ráo thoáng",
+    "positive": "Sữa Chống Nắng Anessa Perfect UV Sunscreen Skincare Milk SPF50+ PA++++ (Anessa) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, normal, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_05",
+    "product_name": "Điện Di Tinh Chất Vitamin C 20% Tươi Dưỡng Trắng & Mờ Nám Tầng Biểu Bì",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Điện Di Tinh Chất Vitamin C 20% Tươi Dưỡng Trắng & Mờ Nám Tầng Biểu Bì tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_hair_03",
+    "product_name": "Dầu Gội Phục Hồi Liên Kết Tóc Olaplex No.4 Bond Maintenance Shampoo 250ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc tóc của Olaplex nhẹ mặt ráo thoáng",
+    "positive": "Dầu Gội Phục Hồi Liên Kết Tóc Olaplex No.4 Bond Maintenance Shampoo 250ml (Olaplex) giải quyết tình trạng đổ nhờn và làm dịu da all, colored_hair, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_cosrx_low_ph_cleanser",
+    "product_name": "Gel Rửa Mặt COSRX Low pH Good Morning Gel Cleanser Dịu Nhẹ",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của Cosrx finish ráo phục hồi barrier không bết dính",
+    "positive": "Gel Rửa Mặt COSRX Low pH Good Morning Gel Cleanser Dịu Nhẹ tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_msk_02",
+    "product_name": "Tinh Chất Tẩy Tế Bào Chết Hóa Học The Ordinary AHA 30% + BHA 2% Peeling Solution 30ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Mặt nạ của The Ordinary finish ráo phục hồi barrier không bết dính",
+    "positive": "Tinh Chất Tẩy Tế Bào Chết Hóa Học The Ordinary AHA 30% + BHA 2% Peeling Solution 30ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_03",
+    "product_name": "Kem Dưỡng Thể Trị Mụn & Viêm Nang Lông Paula's Choice Weightless Body Treatment 2% BHA 210ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của Paula's Choice finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Thể Trị Mụn & Viêm Nang Lông Paula's Choice Weightless Body Treatment 2% BHA 210ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_msk_05",
+    "product_name": "Mặt Nạ Đất Sét Tro Núi Lửa Innisfree Super Volcanic Pore Clay Mask 2X 100ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Mặt nạ của Innisfree finish ráo phục hồi barrier không bết dính",
+    "positive": "Mặt Nạ Đất Sét Tro Núi Lửa Innisfree Super Volcanic Pore Clay Mask 2X 100ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_08",
+    "product_name": "Phấn Phủ Bột Kiềm Dầu Quốc Dân Innisfree No-Sebum Mineral Powder 5g",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination đang bị excess_oil",
+    "positive": "Phấn Phủ Bột Kiềm Dầu Quốc Dân Innisfree No-Sebum Mineral Powder 5g có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_mu_04",
+    "product_name": "Phấn Nước Kiềm Dầu Mịn Lì Laneige Neo Cushion Matte SPF42 PA++ 15g",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Trang điểm của Laneige nhẹ mặt ráo thoáng",
+    "positive": "Phấn Nước Kiềm Dầu Mịn Lì Laneige Neo Cushion Matte SPF42 PA++ 15g (Laneige) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_rohto_melano_cc_essence",
+    "product_name": "Tinh Chất Trắng Da Mờ Thâm Nám Rohto Melano CC Intensive Anti-Spot Essence",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm serum của Rohto finish ráo phục hồi barrier không bết dính",
+    "positive": "Tinh Chất Trắng Da Mờ Thâm Nám Rohto Melano CC Intensive Anti-Spot Essence tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_mu_01",
+    "product_name": "Kem Nền Kiềm Dầu Mịn Lì Maybelline Fit Me Matte + Poreless Foundation 30ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Trang điểm của Maybelline nhẹ mặt ráo thoáng",
+    "positive": "Kem Nền Kiềm Dầu Mịn Lì Maybelline Fit Me Matte + Poreless Foundation 30ml (Maybelline) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_obagi_retinol_1_0",
+    "product_name": "Kem Dưỡng Chống Lão Hóa Tái Tạo Da Obagi Clinical Retinol 1.0",
+    "anchor": "Tìm cream dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da normal, oily, dry, combination đang bị aging, wrinkles, dark_spots, rough_texture",
+    "positive": "Kem Dưỡng Chống Lão Hóa Tái Tạo Da Obagi Clinical Retinol 1.0 có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da normal, oily, dry, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_srv_01",
+    "product_name": "Liệu Trình Trị Mụn Chuẩn Y Khoa 14 Bước Kết Hợp Ánh Sáng Sinh Học Bio-Light",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Dịch vụ Spa của Beauty Spa & Clinic nhẹ mặt ráo thoáng",
+    "positive": "Liệu Trình Trị Mụn Chuẩn Y Khoa 14 Bước Kết Hợp Ánh Sáng Sinh Học Bio-Light (Beauty Spa & Clinic) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_05",
+    "product_name": "Dầu Dưỡng Tóc Bóng Mượt L'Oreal Paris Elseve Extraordinary Oil 100ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của L'Oreal Paris finish ráo phục hồi barrier không bết dính",
+    "positive": "Dầu Dưỡng Tóc Bóng Mượt L'Oreal Paris Elseve Extraordinary Oil 100ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_hair_02",
+    "product_name": "Kem Ủ Phục Hồi Liên Kết Tóc Olaplex No.3 Hair Perfector 100ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc tóc của Olaplex nhẹ mặt ráo thoáng",
+    "positive": "Kem Ủ Phục Hồi Liên Kết Tóc Olaplex No.3 Hair Perfector 100ml (Olaplex) giải quyết tình trạng đổ nhờn và làm dịu da all, damaged_hair, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_msk_03",
+    "product_name": "Dung Dịch BHA Giảm Mụn Đầu Đen Obagi Clenziderm MD Pore Therapy 2% Salicylic Acid 148ml",
+    "anchor": "Tìm Mặt nạ dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone đang bị acne, excess_oil",
+    "positive": "Dung Dịch BHA Giảm Mụn Đầu Đen Obagi Clenziderm MD Pore Therapy 2% Salicylic Acid 148ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_sun_03",
+    "product_name": "Sữa Chống Nắng Dịu Nhẹ Anessa Perfect UV Sunscreen Mild Milk SPF50+ PA++++ 60ml",
+    "anchor": "Tìm sunscreen dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da sensitive, all đang bị sensitive",
+    "positive": "Sữa Chống Nắng Dịu Nhẹ Anessa Perfect UV Sunscreen Mild Milk SPF50+ PA++++ 60ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da sensitive, all, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_02",
+    "product_name": "Kem Ủ Phục Hồi Liên Kết Tóc Olaplex No.3 Hair Perfector 100ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của Olaplex finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Ủ Phục Hồi Liên Kết Tóc Olaplex No.3 Hair Perfector 100ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_08",
+    "product_name": "Nâng Cơ Trẻ Hóa Săn Chắc Da Sóng Đa Cực RF Face Lifting",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Nâng Cơ Trẻ Hóa Săn Chắc Da Sóng Đa Cực RF Face Lifting tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_ton_06",
+    "product_name": "Nước Hoa Hồng Cấp Ẩm Ý Dĩ Naturie Hatomugi Skin Conditioner 500ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm toner của Naturie finish ráo phục hồi barrier không bết dính",
+    "positive": "Nước Hoa Hồng Cấp Ẩm Ý Dĩ Naturie Hatomugi Skin Conditioner 500ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_lrp_anthelios_oil_control",
+    "product_name": "Kem Chống Nắng La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm sunscreen của La Roche-Posay nhẹ mặt ráo thoáng",
+    "positive": "Kem Chống Nắng La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ (La Roche-Posay) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_msk_02",
+    "product_name": "Tinh Chất Tẩy Tế Bào Chết Hóa Học The Ordinary AHA 30% + BHA 2% Peeling Solution 30ml",
+    "anchor": "Tìm Mặt nạ dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, combination, oily đang bị dark_spots, acne",
+    "positive": "Tinh Chất Tẩy Tế Bào Chết Hóa Học The Ordinary AHA 30% + BHA 2% Peeling Solution 30ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, combination, oily, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_06",
+    "product_name": "Bơ Dưỡng Thể Cà Phê Đắk Lắk Cocoon Giúp Da Mềm Mượt 200ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của Cocoon nhẹ mặt ráo thoáng",
+    "positive": "Bơ Dưỡng Thể Cà Phê Đắk Lắk Cocoon Giúp Da Mềm Mượt 200ml (Cocoon) giải quyết tình trạng đổ nhờn và làm dịu da dry, all, body, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_msk_06",
+    "product_name": "Tẩy Tế Bào Chết Cà Phê Đắk Lắk Làm Sạch Da Mặt Cocoon 150ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Mặt nạ của Cocoon nhẹ mặt ráo thoáng",
+    "positive": "Tẩy Tế Bào Chết Cà Phê Đắk Lắk Làm Sạch Da Mặt Cocoon 150ml (Cocoon) giải quyết tình trạng đổ nhờn và làm dịu da all, combination, dry, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_hair_01",
+    "product_name": "Tinh Dầu Dưỡng Tóc Argan Moroccanoil Treatment Original 100ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc tóc của Moroccanoil nhẹ mặt ráo thoáng",
+    "positive": "Tinh Dầu Dưỡng Tóc Argan Moroccanoil Treatment Original 100ml (Moroccanoil) giải quyết tình trạng đổ nhờn và làm dịu da all, damaged_hair, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cln_05",
+    "product_name": "Gel Rửa Mặt Không Chứa Xà Phòng SVR Sebiaclear Gel Moussant 400ml",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone, sensitive đang bị excess_oil, acne",
+    "positive": "Gel Rửa Mặt Không Chứa Xà Phòng SVR Sebiaclear Gel Moussant 400ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, sensitive, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_msk_04",
+    "product_name": "Mặt Nạ Đất Sét Hút Dầu Thải Độc Kiehl's Rare Earth Deep Pore Cleansing Masque 125ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Mặt nạ của Kiehl's finish ráo phục hồi barrier không bết dính",
+    "positive": "Mặt Nạ Đất Sét Hút Dầu Thải Độc Kiehl's Rare Earth Deep Pore Cleansing Masque 125ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_sun_03",
+    "product_name": "Sữa Chống Nắng Dịu Nhẹ Anessa Perfect UV Sunscreen Mild Milk SPF50+ PA++++ 60ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm sunscreen của Anessa nhẹ mặt ráo thoáng",
+    "positive": "Sữa Chống Nắng Dịu Nhẹ Anessa Perfect UV Sunscreen Mild Milk SPF50+ PA++++ 60ml (Anessa) giải quyết tình trạng đổ nhờn và làm dịu da sensitive, all, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_06",
+    "product_name": "Cấy Vi Điểm Căng Bóng Da Mulgwang Hàn Quốc Chuẩn Y Khoa",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Cấy Vi Điểm Căng Bóng Da Mulgwang Hàn Quốc Chuẩn Y Khoa tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_hair_07",
+    "product_name": "Dầu Xả Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc tóc của Tsubaki nhẹ mặt ráo thoáng",
+    "positive": "Dầu Xả Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml (Tsubaki) giải quyết tình trạng đổ nhờn và làm dịu da all, damaged_hair, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_ton_03",
+    "product_name": "Nước Hoa Hồng Hoa Cúc Kiehl's Calendula Herbal-Extract Toner 250ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm toner của Kiehl's nhẹ mặt ráo thoáng",
+    "positive": "Nước Hoa Hồng Hoa Cúc Kiehl's Calendula Herbal-Extract Toner 250ml (Kiehl's) giải quyết tình trạng đổ nhờn và làm dịu da all, oily, combination, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_06",
+    "product_name": "Dầu Gội Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của Tsubaki finish ráo phục hồi barrier không bết dính",
+    "positive": "Dầu Gội Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_klairs_midnight_cream",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da Klairs Midnight Blue Calming Cream",
+    "anchor": "Tìm cream dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da sensitive, oily, combination, acne_prone đang bị redness, acne, irritation, barrier_repair",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da Klairs Midnight Blue Calming Cream có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da sensitive, oily, combination, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_msk_03",
+    "product_name": "Dung Dịch BHA Giảm Mụn Đầu Đen Obagi Clenziderm MD Pore Therapy 2% Salicylic Acid 148ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Mặt nạ của Obagi finish ráo phục hồi barrier không bết dính",
+    "positive": "Dung Dịch BHA Giảm Mụn Đầu Đen Obagi Clenziderm MD Pore Therapy 2% Salicylic Acid 148ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_08",
+    "product_name": "Kem Dưỡng Ẩm Làm Mềm Da Sần Sùi CeraVe SA Smoothing Cream 340g",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của CeraVe nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Ẩm Làm Mềm Da Sần Sùi CeraVe SA Smoothing Cream 340g (CeraVe) giải quyết tình trạng đổ nhờn và làm dịu da rough_skin, dry, body, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_07",
+    "product_name": "Dầu Tắm Dưỡng Ẩm Làm Dịu Da Bioderma Atoderm Huile de Douche 1000ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của Bioderma finish ráo phục hồi barrier không bết dính",
+    "positive": "Dầu Tắm Dưỡng Ẩm Làm Dịu Da Bioderma Atoderm Huile de Douche 1000ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_eucerin_sun_oil_control",
+    "product_name": "Kem Chống Nắng Kiểm Soát Nhờn Eucerin Sun Gel-Cream Dry Touch SPF50+",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm sunscreen của Eucerin nhẹ mặt ráo thoáng",
+    "positive": "Kem Chống Nắng Kiểm Soát Nhờn Eucerin Sun Gel-Cream Dry Touch SPF50+ (Eucerin) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "anchor": "Da em đang breakout dữ dội, barrier màng ẩm yếu xìu, cần một treatment serum oil-free để calm down và phục hồi nhanh ạ.",
+    "positive": "Skin1004 Centella Ampoule là lựa chọn chuẩn chỉnh. Với 100% Centella Asiatica, nó giúp làm dịu tức thì các irritation, kháng viêm hiệu quả, củng cố barrier màng ẩm và có finish ráo, non-comedogenic, rất lý tưởng để layer skincare.",
+    "negative": "Mấy loại serum chứa Retinol nồng độ cao hoặc peel BHA/AHA mạnh thì không nên dùng lúc này đâu, dễ gây purging đẩy mụn thêm và làm barrier da yếu hơn, không phù hợp cho da đang breakout.",
+    "product_id": "prod_skin1004_centella_ampoule",
+    "product_name": "Tinh Chất Rau Má Làm Dịu Da Skin1004 Madagascar Centella Ampoule",
+    "brand": "Skin1004",
+    "category": "serum"
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_mu_05",
+    "product_name": "Phấn Nước Căng Bóng Glow Laneige Neo Cushion Glow SPF50+ PA+++ 15g",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Trang điểm của Laneige nhẹ mặt ráo thoáng",
+    "positive": "Phấn Nước Căng Bóng Glow Laneige Neo Cushion Glow SPF50+ PA+++ 15g (Laneige) giải quyết tình trạng đổ nhờn và làm dịu da dry, combination, normal, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_kiehls_ultra_facial_cream",
+    "product_name": "Kem Dưỡng Ẩm Cấp Nước Sâu Kiehl's Ultra Facial Cream 24-Hour",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cream của Kiehl's nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Ẩm Cấp Nước Sâu Kiehl's Ultra Facial Cream 24-Hour (Kiehl's) giải quyết tình trạng đổ nhờn và làm dịu da dry, normal, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_bioderma_sensibio_h2o",
+    "product_name": "Nước Tẩy Trang Dịu Nhẹ Cho Da Nhạy Cảm Bioderma Sensibio H2O Micellar Water",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da sensitive, dry, normal, combination, oily đang bị sensitive_skin, redness, clogged_pores",
+    "positive": "Nước Tẩy Trang Dịu Nhẹ Cho Da Nhạy Cảm Bioderma Sensibio H2O Micellar Water có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da sensitive, dry, normal, combination, oily, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_03",
+    "product_name": "Liệu Trình Peel Da AHA Glycolic 35% Làm Mờ Thâm Sạm & Trắng Sáng Căng Bóng",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Liệu Trình Peel Da AHA Glycolic 35% Làm Mờ Thâm Sạm & Trắng Sáng Căng Bóng tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_hair_01",
+    "product_name": "Tinh Dầu Dưỡng Tóc Argan Moroccanoil Treatment Original 100ml",
+    "anchor": "Tìm Chăm sóc tóc dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, damaged_hair đang bị dry_hair",
+    "positive": "Tinh Dầu Dưỡng Tóc Argan Moroccanoil Treatment Original 100ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, damaged_hair, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "anchor": "Mình muốn tìm tinh chất phục hồi da yếu, cấp ẩm sâu nhưng phải mỏng nhẹ, thấm nhanh, không gây bết dính hay nặng mặt, cho cảm giác da thông thoáng.",
+    "positive": "Tinh chất ốc sên COSRX Advanced Snail 96 Mucin Power Essence có kết cấu lỏng nhẹ, trong suốt, thấm nhanh như nước, không hề gây bết dính hay bí da. Cấp ẩm sâu, phục hồi da tổn thương mà vẫn giữ da thông thoáng, dễ chịu.",
+    "negative": "Đừng nhầm lẫn với các loại kem dưỡng đặc bơ sáp của Cosrx như COSRX Balancium Comfort Ceramide Cream. Dù tốt nhưng kết cấu dày, dễ gây nặng mặt, bí tắc cho da dầu hoặc da đang tổn thương cần sự thông thoáng.",
+    "product_id": "prod_cosrx_snail_96_essence",
+    "product_name": "Tinh Chất Dưỡng Ốc Sên Phục Hồi COSRX Advanced Snail 96 Mucin Power Essence",
+    "brand": "Cosrx",
+    "category": "serum"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cln_01",
+    "product_name": "Gel Rửa Mặt Tràm Trà Cosrx Low pH Good Morning Gel Cleanser 150ml",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, oily, acne_prone, sensitive đang bị acne, excess_oil",
+    "positive": "Gel Rửa Mặt Tràm Trà Cosrx Low pH Good Morning Gel Cleanser 150ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, oily, acne_prone, sensitive, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_06",
+    "product_name": "Bơ Dưỡng Thể Cà Phê Đắk Lắk Cocoon Giúp Da Mềm Mượt 200ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của Cocoon finish ráo phục hồi barrier không bết dính",
+    "positive": "Bơ Dưỡng Thể Cà Phê Đắk Lắk Cocoon Giúp Da Mềm Mượt 200ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_msk_08",
+    "product_name": "Mặt Nạ Giấy Tràm Trà Trị Mụn Mediheal Tea Tree Care Solution Essential Mask 24ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Mặt nạ của Mediheal finish ráo phục hồi barrier không bết dính",
+    "positive": "Mặt Nạ Giấy Tràm Trà Trị Mụn Mediheal Tea Tree Care Solution Essential Mask 24ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_sun_05",
+    "product_name": "Sữa Chống Nắng Phổ Rộng La Roche-Posay Anthelios UVMune 400 Invisible Fluid SPF50+ 50ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm sunscreen của La Roche-Posay nhẹ mặt ráo thoáng",
+    "positive": "Sữa Chống Nắng Phổ Rộng La Roche-Posay Anthelios UVMune 400 Invisible Fluid SPF50+ 50ml (La Roche-Posay) giải quyết tình trạng đổ nhờn và làm dịu da all, dry, combination, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_07",
+    "product_name": "Phấn Nước Căng Mọng Clio Kill Cover Mesh Glow Cushion SPF50+ PA++++ 15g",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da dry, combination, normal đang bị hydration",
+    "positive": "Phấn Nước Căng Mọng Clio Kill Cover Mesh Glow Cushion SPF50+ PA++++ 15g có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da dry, combination, normal, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cream_03",
+    "product_name": "Kem Dưỡng Giảm Mụn Thông Thoáng Lỗ Chân Lông La Roche-Posay Effaclar Duo+M 40ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của La Roche-Posay finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Giảm Mụn Thông Thoáng Lỗ Chân Lông La Roche-Posay Effaclar Duo+M 40ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_hair_04",
+    "product_name": "Dầu Xả Phục Hồi Tóc Hư Tổn Olaplex No.5 Bond Maintenance Conditioner 250ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc tóc của Olaplex nhẹ mặt ráo thoáng",
+    "positive": "Dầu Xả Phục Hồi Tóc Hư Tổn Olaplex No.5 Bond Maintenance Conditioner 250ml (Olaplex) giải quyết tình trạng đổ nhờn và làm dịu da all, damaged_hair, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_srv_07",
+    "product_name": "Nâng Cơ Trẻ Hóa Xóa Nhăn Công Nghệ Cao HIFU Ultra Therapy Toàn Mặt",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Dịch vụ Spa của Beauty Spa & Clinic nhẹ mặt ráo thoáng",
+    "positive": "Nâng Cơ Trẻ Hóa Xóa Nhăn Công Nghệ Cao HIFU Ultra Therapy Toàn Mặt (Beauty Spa & Clinic) giải quyết tình trạng đổ nhờn và làm dịu da aging, all, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_msk_06",
+    "product_name": "Tẩy Tế Bào Chết Cà Phê Đắk Lắk Làm Sạch Da Mặt Cocoon 150ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Mặt nạ của Cocoon finish ráo phục hồi barrier không bết dính",
+    "positive": "Tẩy Tế Bào Chết Cà Phê Đắk Lắk Làm Sạch Da Mặt Cocoon 150ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_ton_05",
+    "product_name": "Nước Cân Bằng Giảm Mụn Mờ Thâm Some By Mi AHA-BHA-PHA 30 Days Miracle Toner 150ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm toner của Some By Mi finish ráo phục hồi barrier không bết dính",
+    "positive": "Nước Cân Bằng Giảm Mụn Mờ Thâm Some By Mi AHA-BHA-PHA 30 Days Miracle Toner 150ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_rohto_melano_cc_essence",
+    "product_name": "Tinh Chất Trắng Da Mờ Thâm Nám Rohto Melano CC Intensive Anti-Spot Essence",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm serum của Rohto nhẹ mặt ráo thoáng",
+    "positive": "Tinh Chất Trắng Da Mờ Thâm Nám Rohto Melano CC Intensive Anti-Spot Essence (Rohto) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, normal, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_sun_04",
+    "product_name": "Kem Chống Nắng Kiềm Dầu La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ 50ml",
+    "anchor": "Tìm sunscreen dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, acne_prone đang bị excess_oil, aging, dark_spots",
+    "positive": "Kem Chống Nắng Kiềm Dầu La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ 50ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_lrp_anthelios_oil_control",
+    "product_name": "Kem Chống Nắng La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+",
+    "anchor": "Tìm sunscreen dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, acne_prone đang bị sun_protection, excess_oil, acne",
+    "positive": "Kem Chống Nắng La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_cln_04",
+    "product_name": "Sữa Rửa Mặt Cho Da Dầu Mụn Cetaphil Oily Skin Cleanser 500ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của Cetaphil nhẹ mặt ráo thoáng",
+    "positive": "Sữa Rửa Mặt Cho Da Dầu Mụn Cetaphil Oily Skin Cleanser 500ml (Cetaphil) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cln_05",
+    "product_name": "Gel Rửa Mặt Không Chứa Xà Phòng SVR Sebiaclear Gel Moussant 400ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của SVR finish ráo phục hồi barrier không bết dính",
+    "positive": "Gel Rửa Mặt Không Chứa Xà Phòng SVR Sebiaclear Gel Moussant 400ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_ton_04",
+    "product_name": "Nước Cân Bằng Trắng Da Dưỡng Ẩm I'm From Rice Toner 150ml",
+    "anchor": "Tìm toner dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, dry, combination đang bị dark_spots, hydration",
+    "positive": "Nước Cân Bằng Trắng Da Dưỡng Ẩm I'm From Rice Toner 150ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, dry, combination, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_cln_05",
+    "product_name": "Gel Rửa Mặt Không Chứa Xà Phòng SVR Sebiaclear Gel Moussant 400ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của SVR nhẹ mặt ráo thoáng",
+    "positive": "Gel Rửa Mặt Không Chứa Xà Phòng SVR Sebiaclear Gel Moussant 400ml (SVR) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cream_02",
+    "product_name": "Gel Dưỡng Phục Hồi Mờ Sẹo La Roche-Posay Cicaplast Gel B5 40ml",
+    "anchor": "Tìm cream dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone, sensitive đang bị sensitive, hydration",
+    "positive": "Gel Dưỡng Phục Hồi Mờ Sẹo La Roche-Posay Cicaplast Gel B5 40ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, sensitive, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_03",
+    "product_name": "Kem Dưỡng Thể Trị Mụn & Viêm Nang Lông Paula's Choice Weightless Body Treatment 2% BHA 210ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của Paula's Choice nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Thể Trị Mụn & Viêm Nang Lông Paula's Choice Weightless Body Treatment 2% BHA 210ml (Paula's Choice) giải quyết tình trạng đổ nhờn và làm dịu da all, body, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_hair_08",
+    "product_name": "Mặt Nạ Ủ Tóc Cao Cấp Tsubaki Premium EX Intensive Repair Mask Vàng 180g",
+    "anchor": "Tìm Chăm sóc tóc dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, damaged_hair đang bị dry_hair",
+    "positive": "Mặt Nạ Ủ Tóc Cao Cấp Tsubaki Premium EX Intensive Repair Mask Vàng 180g có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, damaged_hair, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_paulas_choice_bha_2",
+    "product_name": "Dung Dịch Tẩy Tế Bào Chết Paula's Choice Skin Perfecting 2% BHA Liquid Exfoliant",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm toner của Paula's Choice finish ráo phục hồi barrier không bết dính",
+    "positive": "Dung Dịch Tẩy Tế Bào Chết Paula's Choice Skin Perfecting 2% BHA Liquid Exfoliant tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_srv_02",
+    "product_name": "Liệu Trình Peel Da Sinh Học BHA 20% Gom Cồi Mụn & Giảm Tiết Bã Nhờn",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Dịch vụ Spa của Beauty Spa & Clinic nhẹ mặt ráo thoáng",
+    "positive": "Liệu Trình Peel Da Sinh Học BHA 20% Gom Cồi Mụn & Giảm Tiết Bã Nhờn (Beauty Spa & Clinic) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_hair_05",
+    "product_name": "Dầu Dưỡng Tóc Bóng Mượt L'Oreal Paris Elseve Extraordinary Oil 100ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc tóc của L'Oreal Paris nhẹ mặt ráo thoáng",
+    "positive": "Dầu Dưỡng Tóc Bóng Mượt L'Oreal Paris Elseve Extraordinary Oil 100ml (L'Oreal Paris) giải quyết tình trạng đổ nhờn và làm dịu da all, dry_hair, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_cerave_foaming_cleanser",
+    "product_name": "Sữa Rửa Mặt CeraVe Foaming Facial Cleanser Cho Da Dầu Mụn",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, normal đang bị excess_oil, clogged_pores, barrier_repair",
+    "positive": "Sữa Rửa Mặt CeraVe Foaming Facial Cleanser Cho Da Dầu Mụn có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, normal, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_sun_01",
+    "product_name": "Sữa Chống Nắng Anessa Perfect UV Sunscreen Skincare Milk SPF50+ PA++++ 60ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm sunscreen của Anessa finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Chống Nắng Anessa Perfect UV Sunscreen Skincare Milk SPF50+ PA++++ 60ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_01",
+    "product_name": "Tinh Dầu Dưỡng Tóc Argan Moroccanoil Treatment Original 100ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của Moroccanoil finish ráo phục hồi barrier không bết dính",
+    "positive": "Tinh Dầu Dưỡng Tóc Argan Moroccanoil Treatment Original 100ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_hair_06",
+    "product_name": "Dầu Gội Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml",
+    "anchor": "Tìm Chăm sóc tóc dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, damaged_hair đang bị hair_breakage",
+    "positive": "Dầu Gội Phục Hồi Tóc Hư Tổn Tsubaki Premium EX Intensive Repair Vàng 490ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, damaged_hair, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "anchor": "Em muốn tìm serum cấp ẩm, làm dịu da nhạy cảm nhưng phải thấm nhanh, không gây bết dính hay bí tắc lỗ chân lông.",
+    "positive": "Tinh chất rau má Skin1004 này có kết cấu lỏng như nước, thẩm thấu ngay lập tức vào da, mang lại cảm giác nhẹ tênh. Nó làm dịu da mẩn đỏ, giảm kích ứng mà không hề gây bết dính hay bí tắc.",
+    "negative": "Đừng chọn kem dưỡng Centella Cream của Skin1004 nếu bạn sợ bí da. Dù cùng dòng, kết cấu kem đặc hơn nhiều, dễ gây nặng mặt và bết dính, không phù hợp cho da dầu mụn cần sự mỏng nhẹ.",
+    "product_id": "prod_skin1004_centella_ampoule",
+    "product_name": "Tinh Chất Rau Má Làm Dịu Da Skin1004 Madagascar Centella Ampoule",
+    "brand": "Skin1004",
+    "category": "serum"
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_anessa_perfect_uv_milk",
+    "product_name": "Sữa Chống Nắng Anessa Perfect UV Sunscreen Skincare Milk SPF50+ PA++++",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm sunscreen của Anessa finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Chống Nắng Anessa Perfect UV Sunscreen Skincare Milk SPF50+ PA++++ tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_mu_02",
+    "product_name": "Kem Nền Lâu Trôi Che Phủ Cao Maybelline SuperStay 24H Full Coverage 30ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Trang điểm của Maybelline nhẹ mặt ráo thoáng",
+    "positive": "Kem Nền Lâu Trôi Che Phủ Cao Maybelline SuperStay 24H Full Coverage 30ml (Maybelline) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cln_04",
+    "product_name": "Sữa Rửa Mặt Cho Da Dầu Mụn Cetaphil Oily Skin Cleanser 500ml",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, acne_prone đang bị excess_oil, acne",
+    "positive": "Sữa Rửa Mặt Cho Da Dầu Mụn Cetaphil Oily Skin Cleanser 500ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_mu_05",
+    "product_name": "Phấn Nước Căng Bóng Glow Laneige Neo Cushion Glow SPF50+ PA+++ 15g",
+    "anchor": "Tìm Trang điểm dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da dry, combination, normal đang bị hydration",
+    "positive": "Phấn Nước Căng Bóng Glow Laneige Neo Cushion Glow SPF50+ PA+++ 15g có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da dry, combination, normal, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_mu_06",
+    "product_name": "Phấn Nước Che Phủ Cao Clio Kill Cover The New Founwear Cushion SPF50+ 15g",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Trang điểm của Clio finish ráo phục hồi barrier không bết dính",
+    "positive": "Phấn Nước Che Phủ Cao Clio Kill Cover The New Founwear Cushion SPF50+ 15g tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_cosrx_low_ph_cleanser",
+    "product_name": "Gel Rửa Mặt COSRX Low pH Good Morning Gel Cleanser Dịu Nhẹ",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của Cosrx nhẹ mặt ráo thoáng",
+    "positive": "Gel Rửa Mặt COSRX Low pH Good Morning Gel Cleanser Dịu Nhẹ (Cosrx) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, sensitive, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_msk_08",
+    "product_name": "Mặt Nạ Giấy Tràm Trà Trị Mụn Mediheal Tea Tree Care Solution Essential Mask 24ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Mặt nạ của Mediheal nhẹ mặt ráo thoáng",
+    "positive": "Mặt Nạ Giấy Tràm Trà Trị Mụn Mediheal Tea Tree Care Solution Essential Mask 24ml (Mediheal) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, sensitive, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "prod_rohto_melano_cc_essence",
+    "product_name": "Tinh Chất Trắng Da Mờ Thâm Nám Rohto Melano CC Intensive Anti-Spot Essence",
+    "anchor": "Tìm serum dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, combination, normal đang bị dark_spots, dullness, uneven_skin_tone",
+    "positive": "Tinh Chất Trắng Da Mờ Thâm Nám Rohto Melano CC Intensive Anti-Spot Essence có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, combination, normal, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_lrp_cicaplast_b5",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ Ultra-Repairing",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cream của La Roche-Posay nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ Ultra-Repairing (La Roche-Posay) giải quyết tình trạng đổ nhờn và làm dịu da dry, sensitive, normal, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "anchor": "Sau khi peel BHA/AHA, barrier da mình yếu đi, cần một toner cấp ẩm sâu và làm dịu để tránh breakout.",
+    "positive": "Klairs Unscented Toner là lựa chọn lý tưởng để layer skincare. Với Centella Asiatica và Sodium Hyaluronate, nó cấp ẩm sâu, phục hồi barrier màng ẩm, làm dịu da nhạy cảm tức thì, giúp hạn chế breakout hiệu quả.",
+    "negative": "Tránh xa mấy loại toner chứa Retinol hay peel BHA/AHA nồng độ cao sau treatment nhé, chúng có thể gây purging đẩy mụn mạnh hơn và làm da kích ứng, phá vỡ barrier màng ẩm nghiêm trọng.",
+    "product_id": "auth_ton_01",
+    "product_name": "Nước Hoa Hồng Không Mùi Klairs Supple Preparation Unscented Toner 180ml",
+    "brand": "Klairs",
+    "category": "toner"
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_msk_06",
+    "product_name": "Tẩy Tế Bào Chết Cà Phê Đắk Lắk Làm Sạch Da Mặt Cocoon 150ml",
+    "anchor": "Tìm Mặt nạ dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, combination, dry đang bị dark_spots, hydration",
+    "positive": "Tẩy Tế Bào Chết Cà Phê Đắk Lắk Làm Sạch Da Mặt Cocoon 150ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, combination, dry, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_cream_03",
+    "product_name": "Kem Dưỡng Giảm Mụn Thông Thoáng Lỗ Chân Lông La Roche-Posay Effaclar Duo+M 40ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cream của La Roche-Posay nhẹ mặt ráo thoáng",
+    "positive": "Kem Dưỡng Giảm Mụn Thông Thoáng Lỗ Chân Lông La Roche-Posay Effaclar Duo+M 40ml (La Roche-Posay) giải quyết tình trạng đổ nhờn và làm dịu da oily, acne_prone, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "anchor": "Tôi muốn tìm serum cấp ẩm mà chất phải mỏng nhẹ, thấm nhanh, không bết dính hay nặng mặt, dùng mùa hè không khó chịu.",
+    "positive": "Serum Trà Xanh Innisfree có kết cấu dạng lỏng, trong veo, thấm nhanh như nước chỉ trong 10 giây, không hề gây bết dính hay bí da. Cấp ẩm sâu mà vẫn nhẹ tênh, rất lý tưởng cho mọi loại da, đặc biệt là mùa nóng.",
+    "negative": "Đừng nhầm lẫn với các loại kem dưỡng ẩm Innisfree dạng đặc như Green Tea Seed Cream. Kết cấu kem đặc bơ sáp dễ gây bí da, nặng mặt và khó thấm hơn, không phù hợp nếu bạn thích sự mỏng nhẹ, thấm nhanh.",
+    "product_id": "prod_innisfree_green_tea_seed_serum",
+    "product_name": "Serum Trà Xanh Cấp Ẩm Dưỡng Sáng Innisfree Green Tea Seed Hyaluronic Serum",
+    "brand": "Innisfree",
+    "category": "serum"
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_sun_04",
+    "product_name": "Kem Chống Nắng Kiềm Dầu La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ 50ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm sunscreen của La Roche-Posay finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Chống Nắng Kiềm Dầu La Roche-Posay Anthelios UVMune 400 Oil Control Gel-Cream SPF50+ 50ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_01",
+    "product_name": "Liệu Trình Trị Mụn Chuẩn Y Khoa 14 Bước Kết Hợp Ánh Sáng Sinh Học Bio-Light",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Liệu Trình Trị Mụn Chuẩn Y Khoa 14 Bước Kết Hợp Ánh Sáng Sinh Học Bio-Light tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cln_03",
+    "product_name": "Sữa Rửa Mặt Dịu Lành Cho Da Nhạy Cảm Cetaphil Gentle Skin Cleanser 500ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của Cetaphil finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Rửa Mặt Dịu Lành Cho Da Nhạy Cảm Cetaphil Gentle Skin Cleanser 500ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_cln_04",
+    "product_name": "Sữa Rửa Mặt Cho Da Dầu Mụn Cetaphil Oily Skin Cleanser 500ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cleanser của Cetaphil finish ráo phục hồi barrier không bết dính",
+    "positive": "Sữa Rửa Mặt Cho Da Dầu Mụn Cetaphil Oily Skin Cleanser 500ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "prod_paulas_choice_bha_2",
+    "product_name": "Dung Dịch Tẩy Tế Bào Chết Paula's Choice Skin Perfecting 2% BHA Liquid Exfoliant",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm toner của Paula's Choice nhẹ mặt ráo thoáng",
+    "positive": "Dung Dịch Tẩy Tế Bào Chết Paula's Choice Skin Perfecting 2% BHA Liquid Exfoliant (Paula's Choice) giải quyết tình trạng đổ nhờn và làm dịu da oily, combination, normal, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "prod_lrp_cicaplast_b5",
+    "product_name": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ Ultra-Repairing",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm cream của La Roche-Posay finish ráo phục hồi barrier không bết dính",
+    "positive": "Kem Dưỡng Phục Hồi Làm Dịu Da La Roche-Posay Cicaplast Baume B5+ Ultra-Repairing tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_srv_02",
+    "product_name": "Liệu Trình Peel Da Sinh Học BHA 20% Gom Cồi Mụn & Giảm Tiết Bã Nhờn",
+    "anchor": "Tìm Dịch vụ Spa dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone đang bị acne, excess_oil, large_pores",
+    "positive": "Liệu Trình Peel Da Sinh Học BHA 20% Gom Cồi Mụn & Giảm Tiết Bã Nhờn có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_srv_05",
+    "product_name": "Điện Di Tinh Chất Vitamin C 20% Tươi Dưỡng Trắng & Mờ Nám Tầng Biểu Bì",
+    "anchor": "Tìm Dịch vụ Spa dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, combination, oily, dry đang bị dark_spots, aging",
+    "positive": "Điện Di Tinh Chất Vitamin C 20% Tươi Dưỡng Trắng & Mờ Nám Tầng Biểu Bì có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, combination, oily, dry, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_cln_02",
+    "product_name": "Sữa Rửa Mặt Cho Da Mụn Cosrx Salicylic Acid Daily Gentle Cleanser 150ml",
+    "anchor": "Tìm cleanser dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da oily, acne_prone đang bị acne, excess_oil",
+    "positive": "Sữa Rửa Mặt Cho Da Mụn Cosrx Salicylic Acid Daily Gentle Cleanser 150ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da oily, acne_prone, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_body_02",
+    "product_name": "Sữa Dưỡng Thể Ban Đêm Phục Hồi Vaseline Gluta-Glow 10X Overnight Radiance Repair Xanh 300ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm Chăm sóc cơ thể của Vaseline nhẹ mặt ráo thoáng",
+    "positive": "Sữa Dưỡng Thể Ban Đêm Phục Hồi Vaseline Gluta-Glow 10X Overnight Radiance Repair Xanh 300ml (Vaseline) giải quyết tình trạng đổ nhờn và làm dịu da all, body, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_srv_02",
+    "product_name": "Liệu Trình Peel Da Sinh Học BHA 20% Gom Cồi Mụn & Giảm Tiết Bã Nhờn",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Dịch vụ Spa của Beauty Spa & Clinic finish ráo phục hồi barrier không bết dính",
+    "positive": "Liệu Trình Peel Da Sinh Học BHA 20% Gom Cồi Mụn & Giảm Tiết Bã Nhờn tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_ton_04",
+    "product_name": "Nước Cân Bằng Trắng Da Dưỡng Ẩm I'm From Rice Toner 150ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm toner của I'm From nhẹ mặt ráo thoáng",
+    "positive": "Nước Cân Bằng Trắng Da Dưỡng Ẩm I'm From Rice Toner 150ml (I'm From) giải quyết tình trạng đổ nhờn và làm dịu da all, dry, combination, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_body_05",
+    "product_name": "Tẩy Tế Bào Chết Cơ Thể Cà Phê Đắk Lắk Cocoon 200ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc cơ thể của Cocoon finish ráo phục hồi barrier không bết dính",
+    "positive": "Tẩy Tế Bào Chết Cơ Thể Cà Phê Đắk Lắk Cocoon 200ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "SLANG_COLLOQUIAL",
+    "product_id": "auth_cln_03",
+    "product_name": "Sữa Rửa Mặt Dịu Lành Cho Da Nhạy Cảm Cetaphil Gentle Skin Cleanser 500ml",
+    "anchor": "Mặt dạo này đổ nhớt chán chê, đi ngoài đường nắng khét lẹt châm chích cần tìm cleanser của Cetaphil nhẹ mặt ráo thoáng",
+    "positive": "Sữa Rửa Mặt Dịu Lành Cho Da Nhạy Cảm Cetaphil Gentle Skin Cleanser 500ml (Cetaphil) giải quyết tình trạng đổ nhờn và làm dịu da sensitive, dry, all, mỏng nhẹ thông thoáng, bảo vệ màng ẩm không gây nặng mặt.",
+    "negative": "Kem dưỡng dạng sáp dầu đậm đặc chuyên cấp ẩm sâu cho da khô bong tróc, chứa nhiều gốc dầu dễ gây dính dớp bí tắc cho da mụn."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_srv_03",
+    "product_name": "Liệu Trình Peel Da AHA Glycolic 35% Làm Mờ Thâm Sạm & Trắng Sáng Căng Bóng",
+    "anchor": "Tìm Dịch vụ Spa dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, combination, dry đang bị dark_spots, aging",
+    "positive": "Liệu Trình Peel Da AHA Glycolic 35% Làm Mờ Thâm Sạm & Trắng Sáng Căng Bóng có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, combination, dry, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_hair_04",
+    "product_name": "Dầu Xả Phục Hồi Tóc Hư Tổn Olaplex No.5 Bond Maintenance Conditioner 250ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm Chăm sóc tóc của Olaplex finish ráo phục hồi barrier không bết dính",
+    "positive": "Dầu Xả Phục Hồi Tóc Hư Tổn Olaplex No.5 Bond Maintenance Conditioner 250ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "CODE_SWITCHING_TREATMENT",
+    "product_id": "auth_ton_04",
+    "product_name": "Nước Cân Bằng Trắng Da Dưỡng Ẩm I'm From Rice Toner 150ml",
+    "anchor": "Da đang treatment BHA bị breakout và đỏ rát, tìm toner của I'm From finish ráo phục hồi barrier không bết dính",
+    "positive": "Nước Cân Bằng Trắng Da Dưỡng Ẩm I'm From Rice Toner 150ml tối ưu hóa quá trình phục hồi màng ẩm barrier cho da nhạy cảm sau treatment, kết cấu lỏng nhẹ finish ráo mịn không gây bết rít.",
+    "negative": "Serum tẩy tế bào chết nồng độ cao AHA 30% có thể gây phỏng rát và tăng kích ứng dữ dội cho làn da đang tổn thương."
+  },
+  {
+    "strategy": "TEXTURE_CONTRAST_HARD_NEGATIVE",
+    "product_id": "auth_body_01",
+    "product_name": "Sữa Dưỡng Thể Sáng Da Vaseline Healthy White Gluta-Glow 10X Flawless Glow Vàng 300ml",
+    "anchor": "Tìm Chăm sóc cơ thể dạng gel mỏng nhẹ thấm nhanh không nhờn dính phù hợp da all, body đang bị dark_spots, hydration",
+    "positive": "Sữa Dưỡng Thể Sáng Da Vaseline Healthy White Gluta-Glow 10X Flawless Glow Vàng 300ml có kết cấu dạng gel lỏng nhẹ, thông thoáng lỗ chân lông, kiềm dầu tối ưu cho da all, body, không để lại màng trắng hay cảm giác bết dính.",
+    "negative": "Kem dưỡng ẩm dạng balm bơ sáp đặc quánh giàu dưỡng chất chuyên dụng phục hồi sâu cho làn da khô nứt nẻ mùa đông."
+  }
+]
