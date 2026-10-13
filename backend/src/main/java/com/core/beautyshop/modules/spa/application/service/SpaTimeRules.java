@@ -16,11 +16,11 @@ public final class SpaTimeRules {
         Integer duration = service.getDurationMinutes();
         int preparation = service.getPreparationTimeMinutes() == null ? 0 : service.getPreparationTimeMinutes();
         if (duration == null || duration <= 0 || preparation < 0) {
-            throw new BusinessException("Invalid Spa service duration or preparation time");
+            throw new BusinessException("Thời lượng dịch vụ Spa hoặc thời gian chuẩn bị không hợp lệ");
         }
         long total = (long) duration + preparation;
         if (total > Duration.between(OPEN, CLOSE).toMinutes()) {
-            throw new BusinessException("Service duration exceeds opening hours");
+            throw new BusinessException("Thời lượng dịch vụ vượt quá khung giờ mở cửa");
         }
         return total;
     }
@@ -29,14 +29,14 @@ public final class SpaTimeRules {
         long duration = durationMinutes(service);
         if (start == null || start.isBefore(OPEN) || !start.isBefore(CLOSE)
                 || duration > Duration.between(start, CLOSE).toMinutes()) {
-            throw new BusinessException("Service must finish within opening hours");
+            throw new BusinessException("Dịch vụ phải kết thúc trong khung giờ mở cửa");
         }
         return start.plusMinutes(duration);
     }
 
     public static void requireFuture(LocalDate date, LocalTime start) {
         if (date == null || start == null || date.atTime(start).isBefore(LocalDateTime.now(ZONE).minusMinutes(5))) {
-            throw new BusinessException("Appointment date and time must be in the future");
+            throw new BusinessException("Ngày và giờ hẹn phải ở trong tương lai");
         }
     }
 }

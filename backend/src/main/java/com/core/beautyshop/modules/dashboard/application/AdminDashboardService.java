@@ -67,7 +67,7 @@ public class AdminDashboardService {
         String format = switch (period == null ? "day" : period.toLowerCase(Locale.ROOT)) {
             case "day" -> "%Y-%m-%d";
             case "month" -> "%Y-%m";
-            default -> throw new BusinessException("Period must be day or month");
+            default -> throw new BusinessException("Chu kỳ thống kê phải là theo ngày (day) hoặc theo tháng (month)");
         };
         SortedMap<String, RevenueBucket> buckets = new TreeMap<>();
         for (var receipt : rows("""
@@ -119,7 +119,7 @@ public class AdminDashboardService {
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
         LocalDate start = from == null ? today.withDayOfMonth(1) : from;
         LocalDate last = to == null ? today.plusMonths(1).withDayOfMonth(1).minusDays(1) : to;
-        if (last.isBefore(start) || last.equals(LocalDate.MAX)) throw new BusinessException("Invalid Spa dashboard date range");
+        if (last.isBefore(start) || last.equals(LocalDate.MAX)) throw new BusinessException("Khoảng thời gian thống kê Spa không hợp lệ");
         LocalDate end = last.plusDays(1);
         long scheduled = number(first(row("""
                 SELECT COALESCE(SUM(GREATEST(TIMESTAMPDIFF(MINUTE,start_time,end_time),0)),0) scheduled_minutes
@@ -189,7 +189,7 @@ public class AdminDashboardService {
     private TimeRange range(Instant from, Instant to) {
         Instant end = to == null ? Instant.now() : to;
         Instant start = from == null ? end.minus(Duration.ofDays(30)) : from;
-        if (!end.isAfter(start)) throw new BusinessException("Invalid dashboard time range");
+        if (!end.isAfter(start)) throw new BusinessException("Khoảng thời gian thống kê không hợp lệ");
         return new TimeRange(start, end);
     }
 

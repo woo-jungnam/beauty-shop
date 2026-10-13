@@ -127,11 +127,31 @@ apiClient.interceptors.response.use(
       }
     }
 
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.errorCode ||
-      error.message ||
-      'Lỗi kết nối máy chủ';
+    let message = error.response?.data?.message;
+
+    if (!message) {
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        message = 'Yêu cầu quá thời gian chờ (timeout). Vui lòng thử lại.';
+      } else if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        message = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.';
+      } else if (error.response?.status === 401) {
+        message = 'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!';
+      } else if (error.response?.status === 403) {
+        message = 'Bạn không có quyền thực hiện thao tác này.';
+      } else if (error.response?.status === 404) {
+        message = 'Không tìm thấy tài nguyên yêu cầu.';
+      } else if (error.response?.status === 409) {
+        message = 'Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc dữ liệu.';
+      } else if (error.response?.status === 413) {
+        message = 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 10MB).';
+      } else if (error.response?.status === 500) {
+        message = 'Đã xảy ra lỗi hệ thống trên máy chủ. Vui lòng thử lại sau!';
+      } else if (error.response?.status >= 502 && error.response?.status <= 504) {
+        message = 'Dịch vụ máy chủ tạm thời không khả dụng. Vui lòng thử lại sau!';
+      } else {
+        message = error.response?.data?.errorCode || error.message || 'Lỗi kết nối máy chủ';
+      }
+    }
 
     return Promise.reject(Object.assign(new Error(message), { status: error.response?.status }));
   }
@@ -154,7 +174,18 @@ export const uploadFile = async (endpoint, file) => {
   });
   if (!response.ok) {
     const errorJson = await response.json().catch(() => null);
-    const message = errorJson?.message || errorJson?.error || `Lỗi tải tệp: HTTP ${response.status}`;
+    let message = errorJson?.message;
+    if (!message) {
+      if (response.status === 413) {
+        message = 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 10MB).';
+      } else if (response.status === 401) {
+        message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (response.status === 403) {
+        message = 'Bạn không có quyền tải lên tệp tin.';
+      } else {
+        message = errorJson?.error || `Lỗi tải tệp: HTTP ${response.status}`;
+      }
+    }
     throw new Error(message);
   }
   const result = await response.json();

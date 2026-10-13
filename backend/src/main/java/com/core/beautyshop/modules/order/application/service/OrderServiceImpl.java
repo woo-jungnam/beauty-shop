@@ -70,7 +70,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse checkout(Long userId, CheckoutRequest request) {
         if (request.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.CASH)
-            throw new BusinessException("CASH is only supported by Spa visit checkout");
+            throw new BusinessException("Thanh toán tiền mặt (CASH) chỉ áp dụng khi thanh toán tại quầy Spa");
         String key = checkoutKey(userId, request);
         String hash = requestHash(request);
         // The cart row survives clearing. Lock it before reading items or replaying a request.
@@ -79,20 +79,20 @@ public class OrderServiceImpl implements OrderService {
             var previous = orderRepository.findByCheckoutKey(key);
             if (previous.isPresent()) {
                 if (!hash.equals(previous.get().getCheckoutHash())) {
-                    throw new BusinessException("Idempotency-Key was already used with a different request");
+                    throw new BusinessException("Khóa Idempotency-Key đã được sử dụng với yêu cầu khác");
                 }
                 return buildOrderResponse(previous.get());
             }
         }
         if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {
-            throw new BusinessException("Cart is empty");
+            throw new BusinessException("Giỏ hàng hiện đang trống");
         }
         List<Long> unavailableVariantIds = cart.getItems().stream()
                 .filter(item -> Boolean.FALSE.equals(item.getAvailable()))
                 .map(CartItemResponse::getVariantId)
                 .toList();
         if (!unavailableVariantIds.isEmpty()) {
-            throw new BusinessException("Cart contains unavailable products; remove variants: " + unavailableVariantIds);
+            throw new BusinessException("Giỏ hàng chứa sản phẩm không khả dụng; vui lòng loại bỏ các biến thể: " + unavailableVariantIds);
         }
 
         if (userId != null && !identityFacade.existsById(userId)) {
@@ -177,6 +177,7 @@ public class OrderServiceImpl implements OrderService {
                     .orderNumber(savedOrder.getOrderNumber()).previousStatus(OrderStatus.PENDING).newStatus(OrderStatus.PROCESSING).build());
             eventPublisher.publishEvent(OrderEvents.OrderPaidEvent.builder().orderId(savedOrder.getId())
                     .orderNumber(savedOrder.getOrderNumber())
+                    .sessionId(savedOrder.getGuestSessionId())
                     .totalAmount(savedOrder.getTotalAmount())
                     .userId(savedOrder.getUserId()).servicePackageId(savedOrder.getServicePackageId())
                     .items(itemSummaries)
@@ -292,9 +293,9 @@ public class OrderServiceImpl implements OrderService {
         OrderStatus newStatus = request.getStatus();
 
         if (order.getAppointmentId() != null)
-            throw new BusinessException("A completed Spa visit invoice has no shipping or order-status workflow");
+            throw new BusinessException("Hóa đơn dịch vụ Spa tại quầy không có quy trình giao hàng hay vận chuyển");
         if (order.getServicePackageId() != null && (newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.RETURNED))
-            throw new BusinessException("Spa package orders cannot be shipped or returned as physical goods");
+            throw new BusinessException("Đơn hàng gói Spa không áp dụng giao nhận hay hoàn trả như hàng vật lý");
 
         validateStatusTransition(previousStatus, newStatus);
         if (previousStatus == newStatus) return orderMapper.toOrderResponse(order);
@@ -303,7 +304,7 @@ public class OrderServiceImpl implements OrderService {
             boolean hasCarrier = request.getCarrierName() != null && !request.getCarrierName().isBlank();
             boolean hasTracking = request.getTrackingCode() != null && !request.getTrackingCode().isBlank();
             if (hasCarrier != hasTracking) {
-                throw new BusinessException("Carrier and tracking code are required when shipping");
+                throw new BusinessException("Đơn vị vận chuyển và mã vận đơn là bắt buộc khi giao hàng");
             }
             if (hasCarrier) {
                 order.setCarrierName(request.getCarrierName().trim());
@@ -311,7 +312,7 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         if (newStatus == OrderStatus.CANCELLED) {
-            if (request.getNotes() == null || request.getNotes().isBlank()) throw new BusinessException("Cancellation reason is required");
+            if (request.getNotes() == null || request.getNotes().isBlank()) throw new BusinessException("Lý do hủy đơn hàng là bắt buộc");
             order.setCancelReason(request.getNotes().trim());
             order.setCancelledBy(SecurityUtils.getCurrentUserIdOptional().orElse(null));
         }
@@ -319,7 +320,7 @@ public class OrderServiceImpl implements OrderService {
         if ((newStatus == OrderStatus.PROCESSING || newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED)
                 && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK
                 && order.getPaymentStatus() != com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID) {
-            throw new BusinessException("Bank payment must be settled before shipping");
+            throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán trước khi giao hàng");
         }
         if (newStatus == OrderStatus.DELIVERED
                 && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.COD) {
@@ -412,9 +413,9 @@ public class OrderServiceImpl implements OrderService {
     private String checkoutKey(Long userId, CheckoutRequest request) {
         String key = request.getIdempotencyKey();
         if (key == null) return null;
-        if (key.isBlank() || key.length() > 128) throw new BusinessException("Invalid Idempotency-Key");
+        if (key.isBlank() || key.length() > 128) throw new BusinessException("Khóa Idempotency-Key không hợp lệ");
         if (userId == null && (request.getSessionId() == null || request.getSessionId().isBlank())) {
-            throw new BusinessException("Guest session is required");
+            throw new BusinessException("Mã phiên của khách vãng lai là bắt buộc");
         }
         String scope = userId == null ? "guest:" + request.getSessionId() : "user:" + userId;
         return sha256(scope.length() + ":" + scope + key);
@@ -556,6 +557,7 @@ public class OrderServiceImpl implements OrderService {
 
             eventPublisher.publishEvent(OrderEvents.OrderDeliveredEvent.builder()
                     .orderId(order.getId())
+                    .sessionId(order.getGuestSessionId())
                     .orderNumber(order.getOrderNumber())
                     .userId(order.getUserId())
                     .totalAmount(order.getTotalAmount())

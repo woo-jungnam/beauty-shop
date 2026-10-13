@@ -9,14 +9,14 @@
      ========================================================================== */
 
   /* Primary Blush Pink Undertones */
-  --c-primary: #D45D79;
-  --c-primary-hover: #B84365;
+  --c-primary: #AD3F61;
+  --c-primary-hover: #8C2A47;
   --c-primary-dark: #8C2A47;
   --c-primary-light: #FFF0F3;
 
   /* Brand Highlights & Secondary Rose Accents */
-  --c-gold: #D45D79;
-  --c-gold-hover: #B84365;
+  --c-gold: #AD3F61;
+  --c-gold-hover: #8C2A47;
   --c-gold-light: #FFF5F7;
   --c-gold-border: rgba(212, 93, 121, 0.25);
   --c-gold-glow: rgba(212, 93, 121, 0.20);
@@ -38,13 +38,13 @@
   --c-surface: #FFFFFF;
   --c-surface-translucent: rgba(255, 255, 255, 0.96);
   --c-border: #F0DEE3;
-  --c-border-subtle: #FAF0F3;
+  --c-border-subtle: #F1E5E9;
 
   /* Typography Colors — Clean & High Contrast */
   --c-text-main: #1F2937;
   --c-text-muted: #4B5563;
   --c-text-light: #6B7280;
-  --c-text-gold: #D45D79;
+  --c-text-gold: #AD3F61;
 
   /* Dark Section Typography (Header, Footer) */
   --c-text-on-dark: #FFFFFF;
@@ -69,13 +69,13 @@
   --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 
   /* Spatial & Elevation — Modern E-Commerce Standard */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
   --radius-pill: 9999px;
 
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-hover: 0 10px 25px -3px rgba(212, 93, 121, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 2px 8px rgba(63, 31, 42, 0.04);
+  --shadow-hover: 0 12px 28px rgba(63, 31, 42, 0.09);
   --shadow-gold: 0 4px 14px rgba(212, 93, 121, 0.25);
 
   /* Foundation Base */
@@ -225,512 +225,6 @@
     padding-right: 32px;
   }
 }
-
-/* ==========================================================================
-   E-COMMERCE NAVIGATION HEADER STYLES (HASAKI FOREST GREEN #326E51)
-   ========================================================================== */
-.customer-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--c-primary);
-  border-bottom: 1px solid var(--c-primary-hover);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-  transition: all 0.25s ease;
-}
-
-/* Dedicated Expanded Container for Navigation Header (92% - 94% on desktop) */
-.customer-header-container {
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-@media (min-width: 768px) {
-  .customer-header-container {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-}
-
-@media (min-width: 1200px) {
-  .customer-header-container {
-    width: 94%;
-    max-width: 2200px;
-    padding-left: 36px;
-    padding-right: 36px;
-  }
-}
-
-@media (min-width: 1800px) {
-  .customer-header-container {
-    width: 92%;
-    max-width: 2560px;
-    padding-left: 48px;
-    padding-right: 48px;
-  }
-}
-
-/* Top utility announcement - Hasaki Dark Green Strip (#26523C) */
-.customer-header-top {
-  background: var(--c-primary-hover);
-  color: #FFFFFF;
-  font-size: 12px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.customer-header-top a,
-.customer-header-top span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: rgba(255, 255, 255, 0.92);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.customer-header-top a:hover,
-.customer-header-top span:hover {
-  color: #A7F3D0;
-}
-
-/* Main Header Row - Hasaki Green (#326E51) */
-.customer-header-main {
-  padding: 12px 0 10px 0;
-  background: var(--c-primary);
-}
-
-.customer-header-main-grid {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.mobile-nav-toggle {
-  display: none !important;
-}
-
-/* Category Button - Hasaki Dark Green Button (#26523C) */
-.category-dropdown-btn {
-  display: none;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 18px;
-  background: var(--c-primary-hover);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 700;
-  color: #FFFFFF;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-@media (min-width: 1024px) {
-  .category-dropdown-btn {
-    display: inline-flex;
-  }
-}
-
-.category-dropdown-btn:hover,
-.category-dropdown-btn.active {
-  background: var(--c-primary-dark);
-  border-color: rgba(255, 255, 255, 0.45);
-  color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Mega Category Dropdown Menu - Hasaki 3-Panel Hierarchical Navigation */
-.category-mega-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 0;
-  width: 980px;
-  background: #FFFFFF;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
-  padding: 0;
-  z-index: 120;
-  display: flex;
-  overflow: hidden;
-  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Level 1 Sidebar */
-.category-mega-sidebar {
-  width: 230px;
-  background: var(--c-canvas, #FAF7F8);
-  border-right: 1px solid var(--c-border);
-  padding: 8px 0;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-
-.category-mega-sidebar-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
-}
-
-.category-mega-sidebar-item:hover,
-.category-mega-sidebar-item.active {
-  background: #FFFFFF;
-  color: var(--c-primary, #D45D79);
-  font-weight: 700;
-}
-
-.category-mega-sidebar-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3.5px;
-  background: var(--c-primary, #D45D79);
-}
-
-/* Level 2 & 3 Content Panels */
-.category-mega-content {
-  flex: 1;
-  padding: 20px 24px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  background: #FFFFFF;
-  max-height: 420px;
-  overflow-y: auto;
-}
-
-.category-mega-col-title {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--c-primary, #D45D79);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding-bottom: 6px;
-  margin-bottom: 10px;
-  border-bottom: 2px solid var(--c-primary-light, #FFF0F3);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.category-mega-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
-  border-radius: 4px;
-  font-size: 12.5px;
-  color: var(--c-text-main, #1F2937);
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.category-mega-link:hover {
-  background: var(--c-primary-light, #FFF0F3);
-  color: var(--c-primary, #D45D79);
-  transform: translateX(3px);
-}
-
-/* Level 4 / Featured Brands Right Panel */
-.category-mega-banner-panel {
-  width: 210px;
-  background: #FFFFFF;
-  border-left: 1px solid var(--c-border);
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-
-/* E-Commerce Search Bar - Hasaki Style with Clean White Box & Solid Search CTA */
-.ecommerce-search-hub {
-  flex: 1;
-  max-width: 820px;
-  position: relative;
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .ecommerce-search-hub {
-    display: block;
-  }
-}
-
-@media (min-width: 1600px) {
-  .ecommerce-search-hub {
-    max-width: 920px;
-  }
-}
-
-.ecommerce-search-input-wrap {
-  display: flex;
-  align-items: center;
-  position: relative;
-  background: #FFFFFF;
-  border: 2px solid #FFFFFF;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-}
-
-.ecommerce-search-input-wrap:focus-within {
-  border-color: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35), 0 4px 14px rgba(0, 0, 0, 0.12);
-}
-
-.ecommerce-search-input {
-  width: 100%;
-  padding: 11px 110px 11px 44px;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 13.5px;
-  color: #1F2937;
-  font-family: var(--font-sans);
-}
-
-.ecommerce-search-submit {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--c-primary-hover);
-  color: #FFFFFF;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 3px;
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ecommerce-search-submit:hover {
-  background: var(--c-primary-dark);
-}
-
-.ecommerce-trending-tags {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 6px;
-  padding-left: 4px;
-  font-size: 11.5px;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.ecommerce-trending-tag {
-  color: rgba(255, 255, 255, 0.88);
-  cursor: pointer;
-  transition: color 0.18s ease;
-}
-
-.ecommerce-trending-tag:hover {
-  color: #FFFFFF;
-  text-decoration: underline;
-}
-
-/* Action Buttons - Hasaki Header Icons */
-.nav-action-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #FFFFFF;
-  cursor: pointer;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.nav-action-item:hover {
-  border-color: #FFFFFF;
-  color: var(--c-primary);
-  background: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.nav-badge-pill {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: var(--c-deal-red);
-  color: #FFFFFF;
-  font-size: 10px;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  padding: 2px 6px;
-  border-radius: 9999px;
-  box-shadow: 0 2px 6px rgba(227, 24, 55, 0.45);
-}
-
-/* Sub-nav horizontal menu bar - Hasaki Clean White with Green Indicators */
-.customer-subnav-bar {
-  display: none;
-  border-top: none;
-  border-bottom: 1px solid var(--c-border);
-  padding: 0;
-  background: #FFFFFF;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-@media (min-width: 900px) {
-  .customer-subnav-bar {
-    display: block;
-  }
-}
-
-.customer-subnav-links {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
-  overflow-x: auto;
-}
-
-.customer-subnav-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  text-decoration: none;
-  cursor: pointer;
-  padding: 10px 14px;
-  border-radius: 0;
-  position: relative;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-}
-
-.customer-subnav-item:hover {
-  color: var(--c-primary);
-  background: var(--c-primary-light);
-}
-
-.customer-subnav-item.active {
-  color: var(--c-primary);
-  font-weight: 700;
-  border-bottom: 2px solid var(--c-primary);
-  background: transparent;
-}
-
-.customer-subnav-item.active::after {
-  display: none;
-}
-
-/* Dynamic Category Dropdown on Subnav */
-.customer-subnav-dropdown-wrapper {
-  position: relative;
-  display: inline-flex;
-}
-
-.customer-subnav-dropdown {
-  position: absolute;
-  top: calc(100% + 12px);
-  left: 0;
-  min-width: 230px;
-  background-color: #FFFFFF;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--c-border);
-  box-shadow: 0 16px 36px rgba(45, 34, 30, 0.12);
-  padding: 8px 0;
-  z-index: 130;
-  animation: fadeInDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.customer-subnav-dropdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--c-primary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.customer-subnav-dropdown-item:hover {
-  background-color: var(--c-gold-light);
-  color: var(--c-gold-hover);
-  padding-left: 20px;
-}
-
-/* Nav Target Pulse Highlight on Anchor Scroll */
-@keyframes navSectionPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(196, 139, 113, 0.8);
-  }
-  50% {
-    box-shadow: 0 0 35px 8px rgba(196, 139, 113, 0.45);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(196, 139, 113, 0);
-  }
-}
-
-.nav-highlight-target {
-  animation: navSectionPulse 2s ease-out;
-  scroll-margin-top: 90px;
-  border-radius: var(--radius-lg);
-}
-
-.btn-header-booking {
-  display: none !important;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 22px;
-  font-size: 13.5px;
-  white-space: nowrap;
-}
-
-@media (min-width: 1200px) {
-  .btn-header-booking {
-    display: inline-flex !important;
-  }
-}
-
 
 /* Buttons - Hasaki Standard */
 .btn-luxury-primary {
@@ -1059,13 +553,13 @@
   font-weight: 800;
   font-family: var(--font-mono);
   line-height: 1;
-  color: var(--c-gold);
+  color: #FFFFFF;
 }
 
 .countdown-digit-label {
   font-size: 9px;
   text-transform: uppercase;
-  color: #94A3B8;
+  color: #FDE8ED;
   letter-spacing: 0.05em;
   margin-top: 2px;
 }
@@ -1500,36 +994,36 @@
   }
 }
 
-/* 4. Flash Sale Grid (4 Items: 1x4 Desktop, 2x2 Tablet & Mobile) */
-.flash-sale-grid-4 {
+/* 4. Flash Sale Grid */
+.flash-sale-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
 @media (min-width: 1024px) {
-  .flash-sale-grid-4 {
+  .flash-sale-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 18px;
   }
 }
 
-/* 5. Spa Services Grid (6 Items: 2x3 Desktop, 3x2 Tablet, 6x1 Mobile) */
-.spa-grid-6 {
+/* 5. Spa Services Grid */
+.spa-services-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 18px;
 }
 
 @media (min-width: 640px) {
-  .spa-grid-6 {
+  .spa-services-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
   }
 }
 
 @media (min-width: 1024px) {
-  .spa-grid-6 {
+  .spa-services-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 22px;
   }
@@ -2074,62 +1568,6 @@
   display: none;
 }
 
-@media (max-width: 1599px) {
-  .btn-header-booking,
-  .nav-item-routine,
-  .nav-item-voucher {
-    display: none !important;
-  }
-
-  .ecommerce-search-hub {
-    max-width: none;
-    min-width: 260px;
-  }
-}
-
-@media (max-width: 1399px) {
-  .btn-header-booking {
-    display: none !important;
-  }
-
-  .customer-header-container {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-
-  .customer-subnav-links {
-    justify-content: flex-start;
-    scrollbar-width: none;
-  }
-
-  .customer-subnav-links::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@media (max-width: 1199px) {
-  .mobile-nav-toggle {
-    display: inline-flex !important;
-  }
-
-  .category-dropdown-btn {
-    display: none !important;
-  }
-
-  .header-utilities {
-    display: none !important;
-  }
-
-  .nav-item-spa-services,
-  .nav-item-inci {
-    display: none !important;
-  }
-
-  .customer-header-main-grid {
-    gap: 18px;
-  }
-}
-
 @media (max-width: 767px) {
   .customer-app {
     overflow-x: hidden;
@@ -2145,70 +1583,6 @@
   .hero-content-grid > div {
     min-width: 0;
     max-width: 100%;
-  }
-
-  .customer-header {
-    position: sticky;
-  }
-
-  .customer-header-top,
-  .customer-subnav-bar,
-  .header-account-area {
-    display: none !important;
-  }
-
-  .customer-header-main {
-    padding: 12px 0;
-  }
-
-  .customer-header-container {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .customer-header-main-grid {
-    width: 100%;
-    min-width: 0;
-    gap: 10px;
-  }
-
-  .customer-brand-logo {
-    min-width: 0;
-    max-width: calc(100% - 96px);
-  }
-
-  .customer-brand-logo > span:first-child {
-    font-size: 22px !important;
-  }
-
-  .customer-brand-logo > span:last-child {
-    font-size: 8px !important;
-    letter-spacing: 0.12em !important;
-  }
-
-  .header-action-hub {
-    margin-left: auto;
-    gap: 6px !important;
-  }
-
-  .header-cart-button {
-    width: 42px;
-    height: 42px;
-    padding: 0 !important;
-    justify-content: center;
-    border-radius: 12px;
-  }
-
-  .nav-cart-copy {
-    display: none !important;
-  }
-
-  .mobile-nav-toggle {
-    width: 42px;
-    height: 42px;
-    padding: 0 !important;
-    border: 1px solid var(--c-border) !important;
-    border-radius: 12px;
   }
 
   .customer-container {
@@ -2889,55 +2263,6 @@
 .chatbot-content ol.chatbot-list:last-child {
   margin-bottom: 0;
 }
-
-/* ==========================================================================
-   SPA BOOKING 80% WIDE LAYERED LAYOUT - FLAT ARCHITECTURAL
-   ========================================================================== */
-.spa-booking-wide-layout {
-  width: 80%;
-  max-width: 1800px;
-  margin: 0 auto;
-  padding: 32px 0 80px 0;
-}
-
-.spa-booking-grid-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(360px, 1.05fr);
-  gap: 24px;
-  align-items: start;
-}
-
-.spa-service-selectable-card {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.spa-service-selectable-card:hover {
-  transform: none;
-  box-shadow: none !important;
-}
-
-.spa-staff-selectable-card {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.spa-staff-selectable-card:hover {
-  transform: none;
-  box-shadow: none !important;
-}
-
-@media (max-width: 1100px) {
-  .spa-booking-wide-layout {
-    width: 92%;
-  }
-  .spa-booking-grid-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
 
 .chatbot-content .chatbot-list li {
   margin-bottom: 5px;

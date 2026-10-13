@@ -24,12 +24,12 @@ public class AdminFacilityService {
     public FacilityView save(Long id, FacilityCommand command) {
         if (command == null || command.name() == null || command.name().isBlank() || command.name().trim().length() > 100
                 || (command.description() != null && command.description().length() > 250)) {
-            throw new BusinessException("Facility name and description are invalid");
+            throw new BusinessException("Tên và mô tả cơ sở vật chất không hợp lệ");
         }
         Facility facility = id == null ? new Facility() : lock(id);
         String type = command.type() == null ? (id == null ? "GENERAL" : facility.getType()) : normalizeType(command.type());
         int capacity = command.capacity() == null ? (id == null ? 1 : facility.getCapacity()) : command.capacity();
-        if (capacity <= 0) throw new BusinessException("Facility capacity must be positive");
+        if (capacity <= 0) throw new BusinessException("Sức chứa của phòng/giường spa phải lớn hơn 0");
         boolean active = command.active() == null ? (id == null || Boolean.TRUE.equals(facility.getIsActive())) : command.active();
         if (id != null && (!active || !Objects.equals(type, facility.getType()) || capacity < facility.getCapacity())) {
             requireNoOutstanding(id);
@@ -54,18 +54,21 @@ public class AdminFacilityService {
     public BlockView saveBlock(Long facilityId, Long blockId, BlockCommand command) {
         if (command == null || command.startAt() == null || command.endAt() == null || !command.endAt().isAfter(command.startAt())
                 || command.reason() == null || command.reason().isBlank() || command.reason().trim().length() > 500) {
-            throw new BusinessException("Facility block needs an ordered interval and a reason");
+            throw new BusinessException("Khoảng thời gian bảo trì và lý do là bắt buộc");
         }
         Facility facility = lock(facilityId);
         LocalDateTime now = LocalDateTime.now(SpaTimeRules.ZONE);
+        if (blockId == null && !command.endAt().isAfter(now)) {
+            throw new BusinessException("Thời gian kết thúc bảo trì phải ở trong tương lai");
+        }
         boolean blocksCurrentExecution = !command.startAt().isAfter(now) && command.endAt().isAfter(now)
                 && occupancy.executingUnits(facilityId, null) > 0;
         if (blocksCurrentExecution || occupancy.hasOutstandingDuring(facilityId, command.startAt(), command.endAt())) {
-            throw new BusinessException("Reassign or cancel appointments before blocking this facility");
+            throw new BusinessException("Vui lòng chuyển hoặc hủy các lịch hẹn trước khi khóa cơ sở vật chất này");
         }
         FacilityBlock block = blockId == null ? new FacilityBlock() : blocks.findById(blockId)
                 .filter(b -> !Boolean.TRUE.equals(b.getIsDeleted()) && facilityId.equals(b.getFacility().getId()))
-                .orElseThrow(() -> new ResourceNotFoundException("Facility block not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khoảng bảo trì cơ sở vật chất"));
         block.setFacility(facility); block.setStartAt(command.startAt()); block.setEndAt(command.endAt()); block.setReason(command.reason().trim());
         return BlockView.from(blocks.save(block));
     }
@@ -75,20 +78,20 @@ public class AdminFacilityService {
         lock(facilityId);
         FacilityBlock block = blocks.findById(blockId)
                 .filter(b -> !Boolean.TRUE.equals(b.getIsDeleted()) && facilityId.equals(b.getFacility().getId()))
-                .orElseThrow(() -> new ResourceNotFoundException("Facility block not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khoảng bảo trì cơ sở vật chất"));
         block.setIsDeleted(true);
     }
 
     private Facility find(Long id) { return facilities.findById(id).filter(f -> !Boolean.TRUE.equals(f.getIsDeleted()))
-            .orElseThrow(() -> new ResourceNotFoundException("Facility not found: " + id)); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cơ sở vật chất: " + id)); }
     private Facility lock(Long id) { return facilities.findForUpdate(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Facility not found: " + id)); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cơ sở vật chất: " + id)); }
     private void requireNoOutstanding(Long id) {
-        if (occupancy.hasOutstanding(id)) throw new BusinessException("Reassign or cancel outstanding facility reservations first");
+        if (occupancy.hasOutstanding(id)) throw new BusinessException("Vui lòng chuyển hoặc hủy các lịch hẹn đang dùng cơ sở vật chất này trước");
     }
     public static String normalizeType(String type) {
         String normalized = type == null ? "" : type.trim().toUpperCase(Locale.ROOT);
-        if (!normalized.matches("[A-Z][A-Z0-9_]{0,39}")) throw new BusinessException("Resource type must be a code of at most 40 characters");
+        if (!normalized.matches("[A-Z][A-Z0-9_]{0,39}")) throw new BusinessException("Mã loại tài nguyên chỉ được tối đa 40 ký tự viết hoa và số");
         return normalized;
     }
     @Schema(name = "SpaFacilityCommand", description = "Tạo/sửa resource; khi sửa bỏ type/capacity/active giữ hiện tại, name vẫn bắt buộc")

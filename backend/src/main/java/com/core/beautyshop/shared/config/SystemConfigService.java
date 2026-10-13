@@ -32,11 +32,11 @@ public class SystemConfigService {
 
     @Transactional
     public SystemConfig create(String key, String value, String description, String valueType) {
-        if (key == null || key.isBlank() || key.trim().length() > 100) throw new BusinessException("Config key is required and must not exceed 100 characters");
-        if (description != null && description.length() > 500) throw new BusinessException("Config description must not exceed 500 characters");
+        if (key == null || key.isBlank() || key.trim().length() > 100) throw new BusinessException("Khóa cấu hình là bắt buộc và không quá 100 ký tự");
+        if (description != null && description.length() > 500) throw new BusinessException("Mô tả cấu hình không được vượt quá 500 ký tự");
         String normalizedKey = key.trim();
         SystemConfig config = repository.findByConfigKeyForUpdate(normalizedKey).orElse(null);
-        if (config != null && !Boolean.TRUE.equals(config.getIsDeleted())) throw new BusinessException("Config key already exists: " + normalizedKey);
+        if (config != null && !Boolean.TRUE.equals(config.getIsDeleted())) throw new BusinessException("Khóa cấu hình đã tồn tại: " + normalizedKey);
         String type = normalizeType(normalizedKey, valueType == null && config != null ? config.getValueType() : valueType);
         String normalizedValue = validate(normalizedKey, value, type);
         if (config == null) config = SystemConfig.builder().configKey(normalizedKey).build();
@@ -120,20 +120,28 @@ public class SystemConfigService {
 
     private SystemConfig activeForUpdate(String key) {
         return repository.findByConfigKeyForUpdate(key).filter(config -> !Boolean.TRUE.equals(config.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("System config not found: " + key));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cấu hình hệ thống: " + key));
     }
 
     private String normalizeType(String key, String suppliedType) {
-        String known = KNOWN_TYPES.get(key);
+        String known = key.startsWith("recommendation.")
+                ? java.util.Optional.ofNullable(RecommendationSettings.SPECS.get(key.substring(15)))
+                    .orElseThrow(() -> new BusinessException("Khóa cấu hình gợi ý không được hỗ trợ")).type()
+                : KNOWN_TYPES.get(key);
         String type = suppliedType == null || suppliedType.isBlank() ? (known == null ? "STRING" : known) : suppliedType.toUpperCase(Locale.ROOT);
-        if (!VALUE_TYPES.contains(type)) throw new BusinessException("Unsupported config value type");
-        if (known != null && !known.equals(type)) throw new BusinessException("Config requires value type " + known);
+        if (!VALUE_TYPES.contains(type)) throw new BusinessException("Kiểu giá trị cấu hình không được hỗ trợ");
+        if (known != null && !known.equals(type)) throw new BusinessException("Cấu hình yêu cầu kiểu dữ liệu là " + known);
         return type;
     }
 
     private String validate(String key, String rawValue, String type) {
-        if (rawValue == null || rawValue.isBlank()) throw new BusinessException("Config value is required");
+        if (rawValue == null || rawValue.isBlank()) throw new BusinessException("Giá trị cấu hình là bắt buộc");
         String value = rawValue.trim();
+        if (key.startsWith("recommendation.")) {
+            var values = getRecommendationConfig();
+            values.put(key.substring(15), RecommendationSettings.value(key.substring(15), value));
+            RecommendationSettings.requireSignal(values);
+        }
         try {
             switch (type) {
                 case "INTEGER" -> Long.parseLong(value);
@@ -152,8 +160,36 @@ public class SystemConfigService {
             if ("spa.ticket.expiry_check_mode".equals(key) && !Set.of("BOOKING_TIME","SERVICE_START").contains(value)) throw new IllegalArgumentException();
             if ("spa.booking.policy_version".equals(key) && value.length() > 100) throw new IllegalArgumentException();
         } catch (Exception invalid) {
-            throw new BusinessException("Invalid value for config " + key + " (" + type + ")");
+            throw new BusinessException("Giá trị không hợp lệ cho cấu hình " + key + " (kiểu " + type + ")");
         }
         return value;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getRecommendationConfig() {
+        Map<String, Object> values = RecommendationSettings.defaults();
+        RecommendationSettings.SPECS.forEach((key, spec) -> repository
+                .findByConfigKeyAndIsDeletedFalse("recommendation." + key)
+                .ifPresent(config -> values.put(key, RecommendationSettings.value(key, config.getConfigValue()))));
+        return values;
+    }
+
+    @Transactional
+    public Map<String, Object> saveRecommendationConfig(Map<String, Object> updates) {
+        if (updates == null || updates.isEmpty()) throw new BusinessException("Vui lòng nhập cấu hình gợi ý");
+        Map<String, Object> values = getRecommendationConfig();
+        updates.forEach((key, raw) -> values.put(key, RecommendationSettings.value(key, raw)));
+        RecommendationSettings.requireSignal(values);
+        values.forEach((key, value) -> {
+            String fullKey = "recommendation." + key;
+            SystemConfig config = repository.findByConfigKeyForUpdate(fullKey)
+                    .orElseGet(() -> SystemConfig.builder().configKey(fullKey).isPublic(false).build());
+            config.setIsDeleted(false);
+            config.setConfigValue(String.valueOf(value));
+            config.setValueType(RecommendationSettings.SPECS.get(key).type());
+            config.setDescription("Điều khiển thuật toán gợi ý Content-Based");
+            repository.save(config);
+        });
+        return values;
     }
 }

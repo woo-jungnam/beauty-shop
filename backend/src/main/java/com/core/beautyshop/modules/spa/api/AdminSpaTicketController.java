@@ -49,12 +49,12 @@ public class AdminSpaTicketController {
     }
 
     @Schema(name = "SpaTicketExtensionRequest", description = "Gia hạn quản trị; khóa chống lặp nằm trong body, không phải header")
-    public record ExtendRequest(@Schema(minimum = "1", maximum = "3650", requiredMode = Schema.RequiredMode.REQUIRED, example = "30") int days,
+    public record ExtendRequest(@Schema(minimum = "1", maximum = "3650", requiredMode = Schema.RequiredMode.REQUIRED, example = "30") @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(3650) int days,
             @Schema(maxLength = 1000, requiredMode = Schema.RequiredMode.REQUIRED, example = "Gia hạn theo phê duyệt quản lý") @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=1000) String reason,
             @Schema(pattern = "[A-Za-z0-9:._-]{1,80}", requiredMode = Schema.RequiredMode.REQUIRED, example = "ticket-101:extend:001") @jakarta.validation.constraints.NotBlank String idempotencyKey) { }
     @Schema(name = "SpaTicketCompensationRequest", description = "Bù quota cho dịch vụ đã có trong vé; không thay expiry")
-    public record CompensationRequest(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, example = "1") Long serviceId,
-            @Schema(minimum = "1", maximum = "100", requiredMode = Schema.RequiredMode.REQUIRED, example = "1") int sessions,
+    public record CompensationRequest(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, example = "1") @jakarta.validation.constraints.NotNull Long serviceId,
+            @Schema(minimum = "1", maximum = "100", requiredMode = Schema.RequiredMode.REQUIRED, example = "1") @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(100) int sessions,
             @Schema(maxLength = 1000, requiredMode = Schema.RequiredMode.REQUIRED, example = "Bù lượt theo biên bản xử lý") @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=1000) String reason,
             @Schema(pattern = "[A-Za-z0-9:._-]{1,80}", requiredMode = Schema.RequiredMode.REQUIRED, example = "ticket-101:compensate:001") @jakarta.validation.constraints.NotBlank String idempotencyKey) { }
 }

@@ -148,15 +148,7 @@ async def main():
             "[3/3] Mô hình Chuyên Biệt Sau Fine-tune (Domain Adapted)"
         )
     else:
-        # Nếu đang trong tiến trình lưu, lấy số liệu tối ưu theo hàm mất mát MultipleNegativesRankingLoss
-        ft_metrics = {
-            "triplet_acc": 97.22,
-            "avg_margin": base_metrics["avg_margin"] + 0.2150,
-            "hit_rate_1": 94.44,
-            "hit_rate_3": 100.0,
-            "mrr": 0.9680,
-            "latency_ms": base_metrics["latency_ms"] * 0.95
-        }
+        raise FileNotFoundError("Chưa có mô hình fine-tuned. Dừng đánh giá; không tạo số liệu mô phỏng.")
 
     # Xuất bảng so sánh tổng hợp
     report = f"""# Báo Cáo Thực Nghiệm So Sánh Hiệu Suất Embedding

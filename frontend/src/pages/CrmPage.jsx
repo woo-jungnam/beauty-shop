@@ -26,10 +26,29 @@ export const CrmPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ noteType: 'GENERAL', content: '', skinProfile: '', allergies: '', contraindications: '', followUpAt: '' });
 
-  const search = async () => { setLoading(true); try { const res = await apiClient.get(`${ENDPOINTS.CRM.CUSTOMERS}?keyword=${encodeURIComponent(keyword)}`); setCustomers(res.data || res || []); } catch (err) { alert(err.message); } finally { setLoading(false); } };
+  const search = async () => { setLoading(true); try { const res = await apiClient.get(`${ENDPOINTS.CRM.CUSTOMERS}?keyword=${encodeURIComponent(keyword)}`); setCustomers(res.data || res || []); } catch (err) { alert(err.message || 'Lỗi tìm kiếm khách hàng'); } finally { setLoading(false); } };
   useEffect(() => { search(); }, []);
-  const openCustomer = async (customer) => { setSelected(customer); const res = await apiClient.get(ENDPOINTS.CRM.NOTES(customer.id)); setNotes(res.data || res || []); setModalOpen(true); };
-  const addNote = async (e) => { e.preventDefault(); await apiClient.post(ENDPOINTS.CRM.NOTES(selected.id), { ...form, followUpAt: form.followUpAt ? new Date(form.followUpAt).toISOString() : null }); const res = await apiClient.get(ENDPOINTS.CRM.NOTES(selected.id)); setNotes(res.data || res || []); setForm({ noteType: 'GENERAL', content: '', skinProfile: '', allergies: '', contraindications: '', followUpAt: '' }); };
+  const openCustomer = async (customer) => {
+    setSelected(customer);
+    try {
+      const res = await apiClient.get(ENDPOINTS.CRM.NOTES(customer.id));
+      setNotes(res.data || res || []);
+      setModalOpen(true);
+    } catch (err) {
+      alert(err.message || 'Lỗi tải ghi chú chăm sóc khách hàng');
+    }
+  };
+  const addNote = async (e) => {
+    e.preventDefault();
+    try {
+      await apiClient.post(ENDPOINTS.CRM.NOTES(selected.id), { ...form, followUpAt: form.followUpAt ? new Date(form.followUpAt).toISOString() : null });
+      const res = await apiClient.get(ENDPOINTS.CRM.NOTES(selected.id));
+      setNotes(res.data || res || []);
+      setForm({ noteType: 'GENERAL', content: '', skinProfile: '', allergies: '', contraindications: '', followUpAt: '' });
+    } catch (err) {
+      alert(err.message || 'Lỗi thêm ghi chú chăm sóc');
+    }
+  };
   const deleteNote = async (noteId) => {
     if (!window.confirm('Xóa ghi chú chăm sóc này?')) return;
     try {

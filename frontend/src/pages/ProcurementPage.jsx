@@ -95,23 +95,39 @@ export const ProcurementPage = () => {
 
   const saveSupplier = async (e) => {
     e.preventDefault();
-    if (editingSupplier) {
-      await apiClient.put(ENDPOINTS.PROCUREMENT.SUPPLIER(editingSupplier.id), supplierForm);
-    } else {
-      await apiClient.post(ENDPOINTS.PROCUREMENT.SUPPLIERS, supplierForm);
+    try {
+      if (editingSupplier) {
+        await apiClient.put(ENDPOINTS.PROCUREMENT.SUPPLIER(editingSupplier.id), supplierForm);
+      } else {
+        await apiClient.post(ENDPOINTS.PROCUREMENT.SUPPLIERS, supplierForm);
+      }
+      setSupplierOpen(false);
+      setEditingSupplier(null);
+      setSupplierForm({ code: '', name: '', contactName: '', email: '', phone: '', address: '', taxCode: '', active: true });
+      load();
+    } catch (err) {
+      alert(err.message || 'Lỗi lưu nhà cung cấp');
     }
-    setSupplierOpen(false);
-    setEditingSupplier(null);
-    setSupplierForm({ code: '', name: '', contactName: '', email: '', phone: '', address: '', taxCode: '', active: true });
-    load();
   };
   const createOrder = async (e) => {
     e.preventDefault();
-    const payload = { ...orderForm, expectedDate: orderForm.expectedDate || null, supplierId: Number(orderForm.supplierId), warehouseId: Number(orderForm.warehouseId), items: orderForm.items.map((item) => ({ ...item, variantId: Number(item.variantId), quantity: Number(item.quantity), unitCost: Number(item.unitCost), expirationDate: item.expirationDate || null })) };
-    await apiClient.post(ENDPOINTS.PROCUREMENT.ORDERS, payload);
-    setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] }); load();
+    try {
+      const payload = { ...orderForm, expectedDate: orderForm.expectedDate || null, supplierId: Number(orderForm.supplierId), warehouseId: Number(orderForm.warehouseId), items: orderForm.items.map((item) => ({ ...item, variantId: Number(item.variantId), quantity: Number(item.quantity), unitCost: Number(item.unitCost), expirationDate: item.expirationDate || null })) };
+      await apiClient.post(ENDPOINTS.PROCUREMENT.ORDERS, payload);
+      setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] }); load();
+    } catch (err) {
+      alert(err.message || 'Lỗi tạo phiếu mua hàng');
+    }
   };
-  const transition = async (endpoint, prompt) => { if (!window.confirm(prompt)) return; await apiClient.put(endpoint); load(); };
+  const transition = async (endpoint, prompt) => {
+    if (!window.confirm(prompt)) return;
+    try {
+      await apiClient.put(endpoint);
+      load();
+    } catch (err) {
+      alert(err.message || 'Lỗi xử lý phiếu mua hàng');
+    }
+  };
 
   const ORDER_STATUS_MAP = {
     DRAFT: { label: 'Bản nháp', variant: 'warning' },

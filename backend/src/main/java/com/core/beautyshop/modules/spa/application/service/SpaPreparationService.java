@@ -64,7 +64,7 @@ public class SpaPreparationService {
         validateForm(command);
         List<Integer> versions = jdbc.query("SELECT current_version FROM spa_form_templates WHERE id=? FOR UPDATE",
                 (rs, row) -> rs.getInt(1), templateId);
-        if (versions.isEmpty()) throw new ResourceNotFoundException("Form template not found");
+        if (versions.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy mẫu biểu mẫu khảo sát");
         int version = versions.get(0) + 1;
         Instant createdAt = Instant.now();
         update("INSERT INTO spa_form_versions(template_id,version_number,title,questions_json,created_at) VALUES (?,?,?,?,?)",
@@ -100,16 +100,16 @@ public class SpaPreparationService {
     @Transactional
     public ServicePolicy configureService(Long serviceId, ServicePolicyCommand command) {
         requireManager();
-        services.findByIdForUpdate(serviceId).orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+        services.findByIdForUpdate(serviceId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
         if (command == null || command.requiredFormVersionIds() == null || command.requiredFormVersionIds().size() > 20
                 || command.requiredFormVersionIds().stream().anyMatch(Objects::isNull)
                 || new HashSet<>(command.requiredFormVersionIds()).size() != command.requiredFormVersionIds().size()) {
-            throw new BusinessException("Select up to 20 distinct form versions");
+            throw new BusinessException("Chỉ có thể chọn tối đa 20 phiên bản biểu mẫu khác nhau");
         }
         Set<Long> templateIds = new HashSet<>();
         for (Long versionId : command.requiredFormVersionIds()) {
             FormVersion version = version(versionId);
-            if (!templateIds.add(version.templateId())) throw new BusinessException("Only one version of each template may be required");
+            if (!templateIds.add(version.templateId())) throw new BusinessException("Mỗi mẫu biểu mẫu chỉ được yêu cầu một phiên bản duy nhất");
         }
         int changed = update("UPDATE spa_service_preparation_policies SET warnings_required=?,updated_at=? WHERE service_id=?",
                 command.warningsRequired(), Timestamp.from(Instant.now()), serviceId);
@@ -135,11 +135,11 @@ public class SpaPreparationService {
     public void snapshotRequirements(Appointment appointment) {
         for (AppointmentItem item : appointment.getItems()) {
             if (Boolean.TRUE.equals(item.getIsDeleted())) continue;
-            if (item.getId() == null) throw new BusinessException("Persist appointment items before snapshotting forms");
+            if (item.getId() == null) throw new BusinessException("Cần lưu các mục dịch vụ lịch hẹn trước khi lưu biểu mẫu");
             if (!snapshotIds(item.getId()).isEmpty()) continue;
             // Serialize policy changes with booking; the core also locks service rows when booking.
             services.findByIdForUpdate(item.getService().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
             update("INSERT INTO spa_preparation_snapshots(appointment_item_id,warnings_required,snapshot_at) VALUES (?,?,?)",
                     item.getId(), warningPolicy(item.getService().getId()), Timestamp.from(Instant.now()));
             Long snapshotId = snapshotIds(item.getId()).get(0);
@@ -170,12 +170,12 @@ public class SpaPreparationService {
         Appointment appointment = appointment(appointmentId, true);
         if ((!access.hasRole("CUSTOMER") && !access.hasRole("USER"))
                 || !Objects.equals(appointment.getUserId(), SecurityUtils.getCurrentUserId())) {
-            throw new AccessDeniedException("Only the appointment customer may submit their consent");
+            throw new AccessDeniedException("Chỉ khách hàng của lịch hẹn mới có quyền gửi biểu mẫu khảo sát");
         }
         requirePreparationOpen(appointment);
         Requirement requirement = requirementForAppointment(appointment, requirementId);
         requireItemPreparationOpen(item(appointment, requirement.appointmentItemId()));
-        if (command == null || !command.acknowledged()) throw new BusinessException("Customer acknowledgment is required");
+        if (command == null || !command.acknowledged()) throw new BusinessException("Khách hàng cần xác nhận biểu mẫu khảo sát");
         validateAnswers(requirement.form(), command.answers());
         Instant now = Instant.now();
         Long actor = SecurityUtils.getCurrentUserId();
@@ -194,7 +194,7 @@ public class SpaPreparationService {
         Long snapshotId = requireSnapshot(itemId);
         CareSummary current = summary(appointment);
         if (command == null || !Objects.equals(current.versionHash(), command.versionHash())) {
-            throw new BusinessException("Care summary has changed; review the current summary before acknowledging");
+            throw new BusinessException("Tóm tắt lưu ý chăm sóc đã thay đổi; vui lòng xem lại trước khi xác nhận");
         }
         Instant now = Instant.now();
         Long actor = SecurityUtils.getCurrentUserId();
@@ -211,7 +211,7 @@ public class SpaPreparationService {
         requireItemPreparationOpen(item(appointment, itemId));
         Long snapshotId = requireSnapshot(itemId);
         if (command == null || command.reason() == null || command.reason().isBlank() || command.reason().length() > 1000) {
-            throw new BusinessException("A manager override reason of up to 1000 characters is required");
+            throw new BusinessException("Cần nhập lý do quản lý phê duyệt miễn trừ (tối đa 1000 ký tự)");
         }
         String reason = command.reason().trim();
         Long actor = SecurityUtils.getCurrentUserId();
@@ -234,7 +234,7 @@ public class SpaPreparationService {
             if (response == null || !response.acknowledged()
                     || !Objects.equals(response.customerId(), item.getAppointment().getUserId())
                     || !Objects.equals(response.actorId(), response.customerId())) {
-                throw new BusinessException("The customer must complete and acknowledge every required form before service starts");
+                throw new BusinessException("Khách hàng phải hoàn thành và xác nhận tất cả biểu mẫu yêu cầu trước khi bắt đầu dịch vụ");
             }
         }
         Boolean warnings = jdbc.queryForObject("SELECT warnings_required FROM spa_preparation_snapshots WHERE id=?", Boolean.class, snapshotId);
@@ -243,7 +243,7 @@ public class SpaPreparationService {
             Long actor = SecurityUtils.getCurrentUserId();
             Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM spa_warning_acknowledgments WHERE preparation_id=? AND actor_id=? AND summary_hash=?",
                     Integer.class, snapshotId, actor, hash);
-            if (count == null || count == 0) throw new BusinessException("Review and acknowledge current care warnings before starting this service");
+            if (count == null || count == 0) throw new BusinessException("Cần kiểm tra và xác nhận các cảnh báo chăm sóc trước khi bắt đầu dịch vụ");
         }
     }
 
@@ -278,7 +278,7 @@ public class SpaPreparationService {
                 for (Requirement requirement : requirements(snapshotId)) if (Objects.equals(requirement.id(), requirementId)) return requirement;
             }
         }
-        throw new ResourceNotFoundException("This form requirement does not belong to the appointment");
+        throw new ResourceNotFoundException("Yêu cầu biểu mẫu này không thuộc về lịch hẹn");
     }
 
     private FormResponse latestResponse(Long requirementId) {
@@ -319,13 +319,13 @@ public class SpaPreparationService {
     private void requirePreparationOpen(Appointment appointment) {
         if (appointment.getStatus() != AppointmentStatus.PENDING && appointment.getStatus() != AppointmentStatus.CONFIRMED
                 && appointment.getStatus() != AppointmentStatus.IN_PROGRESS) {
-            throw new BusinessException("Preparation evidence may only be recorded before service starts");
+            throw new BusinessException("Bằng chứng chuẩn bị chỉ được ghi nhận trước khi dịch vụ bắt đầu");
         }
     }
 
     private void requireItemPreparationOpen(AppointmentItem item) {
         if (item.getActualStartedAt() != null || item.getExecutionStatus() != AppointmentItemExecutionStatus.PLANNED) {
-            throw new BusinessException("Preparation evidence is immutable once this service item has started or finished");
+            throw new BusinessException("Bằng chứng chuẩn bị không thể chỉnh sửa khi dịch vụ đã bắt đầu hoặc kết thúc");
         }
     }
 
@@ -335,7 +335,7 @@ public class SpaPreparationService {
 
     private Long requireSnapshot(Long itemId) {
         List<Long> ids = snapshotIds(itemId);
-        if (ids.isEmpty()) throw new BusinessException("This legacy booking has no preparation requirements");
+        if (ids.isEmpty()) throw new BusinessException("Lịch đặt này không có yêu cầu chuẩn bị");
         return ids.get(0);
     }
 
@@ -348,7 +348,7 @@ public class SpaPreparationService {
         List<FormVersion> versions = jdbc.query("SELECT * FROM spa_form_versions WHERE id=?",
                 (rs, row) -> formVersion(id, rs.getLong("template_id"), rs.getInt("version_number"), rs.getString("title"),
                         rs.getString("questions_json"), SpaJdbcSupport.instant(rs, "created_at")), id);
-        if (versions.isEmpty()) throw new ResourceNotFoundException("Form version not found: " + id);
+        if (versions.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy phiên bản biểu mẫu: " + id);
         return versions.get(0);
     }
 
@@ -358,44 +358,44 @@ public class SpaPreparationService {
     }
 
     private void requireManager() {
-        if (!access.hasRole("ADMIN") && !access.hasRole("STAFF")) throw new AccessDeniedException("Only administrators and staff may manage preparation policies or override consent");
+        if (!access.hasRole("ADMIN") && !access.hasRole("STAFF")) throw new AccessDeniedException("Chỉ quản trị viên hoặc nhân viên mới có quyền quản lý chính sách chuẩn bị");
     }
 
     private void validateForm(FormCommand command) {
         if (command == null || command.title() == null || command.title().isBlank() || command.title().length() > 150
                 || command.questions() == null || command.questions().isEmpty() || command.questions().size() > 50) {
-            throw new BusinessException("A title of up to 150 characters and 1 to 50 questions are required");
+            throw new BusinessException("Tiêu đề tối đa 150 ký tự và biểu mẫu cần từ 1 đến 50 câu hỏi");
         }
         Set<String> keys = new HashSet<>();
         for (FormQuestion question : command.questions()) {
             if (question == null || question.key() == null || !question.key().matches("[A-Za-z][A-Za-z0-9_]{0,49}")
                     || !keys.add(question.key()) || question.label() == null || question.label().isBlank()
                     || question.label().length() > 500 || question.type() == null) {
-                throw new BusinessException("Each question requires a unique key, label and supported answer type");
+                throw new BusinessException("Mỗi câu hỏi cần có mã định danh duy nhất, tiêu đề và kiểu câu trả lời hợp lệ");
             }
         }
     }
 
     private void validateAnswers(FormVersion form, Map<String, Object> answers) {
-        if (answers == null || answers.size() > 50 || encode(answers).length() > 30000) throw new BusinessException("Invalid questionnaire answers");
+        if (answers == null || answers.size() > 50 || encode(answers).length() > 30000) throw new BusinessException("Câu trả lời bảng câu hỏi không hợp lệ");
         Set<String> keys = new HashSet<>();
         for (FormQuestion question : form.questions()) {
             keys.add(question.key());
             Object answer = answers.get(question.key());
             boolean empty = answer == null || (answer instanceof String text && text.isBlank());
-            if (question.required() && empty) throw new BusinessException("Required answer missing: " + question.key());
+            if (question.required() && empty) throw new BusinessException("Thiếu câu trả lời bắt buộc: " + question.key());
             if (empty) continue;
             if ((question.type() == QuestionType.BOOLEAN && !(answer instanceof Boolean))
                     || (question.type() == QuestionType.TEXT && (!(answer instanceof String) || ((String) answer).length() > 4000))) {
-                throw new BusinessException("Invalid answer type or length: " + question.key());
+                throw new BusinessException("Kiểu dữ liệu hoặc độ dài câu trả lời không hợp lệ: " + question.key());
             }
         }
-        if (!keys.containsAll(answers.keySet())) throw new BusinessException("Answers must match the booked form version");
+        if (!keys.containsAll(answers.keySet())) throw new BusinessException("Câu trả lời phải khớp với phiên bản biểu mẫu đã đặt");
     }
 
     private String encode(Object object) {
         try { return json.writeValueAsString(object); }
-        catch (JsonProcessingException exception) { throw new BusinessException("Invalid questionnaire data"); }
+        catch (JsonProcessingException exception) { throw new BusinessException("Dữ liệu bảng câu hỏi không hợp lệ"); }
     }
 
     private int update(String sql, Object... parameters) { return SpaJdbcSupport.update(jdbc, sql, parameters); }

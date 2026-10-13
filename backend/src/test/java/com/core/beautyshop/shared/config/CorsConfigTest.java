@@ -13,6 +13,7 @@ class CorsConfigTest {
         assertNotNull(configuration);
         assertEquals("https://dermascan.world", configuration.checkOrigin("https://dermascan.world"));
         assertEquals("https://www.dermascan.world", configuration.checkOrigin("https://www.dermascan.world"));
+        assertEquals("http://localhost:8080", configuration.checkOrigin("http://localhost:8080"));
         assertNull(configuration.checkOrigin("https://untrusted.example"));
         assertNull(configuration.checkOrigin("https://dermascan.world.untrusted.example"));
         assertNull(configuration.checkOrigin("http://dermascan.world"));

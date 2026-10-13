@@ -19,6 +19,10 @@ public class ProductSearchRequest {
     @Schema(description = "Từ khóa không phân biệt hoa thường, trim khoảng trắng; tên, slug, mô tả, thương hiệu, thành phần/hoạt chất, nhãn hoặc SKU/barcode/tên biến thể active. %, _ được tìm như ký tự thường. Bỏ trống để chỉ lọc.", example = "chống nắng")
     private String keyword;
 
+    @Size(max = 10)
+    @Schema(description = "Tên hoạt chất cần tìm (OR trong nhóm), kết hợp AND với keyword và các bộ lọc khác; đối chiếu tên sản phẩm, mô tả ngắn, công thức/thành phần và tên/INCI/slug thành phần chưa xóa.")
+    private List<@NotBlank @Size(max = 100) String> activeIngredients;
+
     @Positive
     @Schema(description = "Một ID thương hiệu; hợp với brandIds nếu gửi cả hai", example = "1")
     private Long brandId;

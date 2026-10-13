@@ -49,7 +49,7 @@ public class ChatbotServiceImpl implements ChatbotService {
     ) {
         this.chatbotBaseUrl = chatbotBaseUrl.endsWith("/") ? chatbotBaseUrl.substring(0, chatbotBaseUrl.length() - 1) : chatbotBaseUrl;
         this.objectMapper = objectMapper;
-        if (timeoutSeconds <= 0 || maxStreams <= 0) throw new IllegalArgumentException("Invalid chatbot limits");
+        if (timeoutSeconds <= 0 || maxStreams <= 0) throw new IllegalArgumentException("Giới hạn cấu hình chatbot không hợp lệ");
         this.requestTimeout = Duration.ofSeconds(timeoutSeconds);
         this.streams = new java.util.concurrent.Semaphore(maxStreams);
         this.httpClient = HttpClient.newBuilder()

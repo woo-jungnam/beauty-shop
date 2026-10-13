@@ -44,17 +44,17 @@ public class PaidSpaTicketIssuer {
             throw new BusinessException("Không thể cấp vé vì đơn hàng chưa được thanh toán hợp lệ");
         }
         var snapshot = snapshots.findById(event.orderId())
-                .orElseThrow(() -> new BusinessException("Purchase snapshot missing; reconcile legacy Spa order"));
+                .orElseThrow(() -> new BusinessException("Thiếu dữ liệu mua gói Spa; cần đối soát đơn hàng"));
         if (!snapshot.getPackageId().equals(event.packageId()) || snapshot.getEntitlements().isEmpty()) {
-            throw new BusinessException("Invalid Spa purchase snapshot");
+            throw new BusinessException("Dữ liệu mua gói Spa không hợp lệ");
         }
         if (snapshot.getValidityDays() != null && snapshot.getValidityDays() <= 0) {
-            throw new BusinessException("Purchase snapshot has invalid validity days; reconciliation required");
+            throw new BusinessException("Thời hạn sử dụng trong gói dịch vụ không hợp lệ; cần đối soát");
         }
         ServicePackage servicePackage = packageRepository.getReferenceById(snapshot.getPackageId());
         int totalSessions = snapshot.getEntitlements().values().stream().reduce(0, Math::addExact);
         Instant paidAt = orderFacade.findPaidAtForUser(event.orderId(), event.userId())
-                .orElseThrow(() -> new BusinessException("Payment timestamp missing; reconcile legacy Spa order"));
+                .orElseThrow(() -> new BusinessException("Thiếu thời gian thanh toán; cần đối soát đơn hàng"));
         Instant expiryDate = snapshot.getValidityDays() != null && snapshot.getValidityDays() > 0
                 ? paidAt.plus(snapshot.getValidityDays(), ChronoUnit.DAYS) : null;
 

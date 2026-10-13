@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handleConcurrentUpdate(org.springframework.dao.OptimisticLockingFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(
-                ErrorCode.DATA_INTEGRITY_VIOLATION, "Resource changed concurrently; reload and retry"));
+                ErrorCode.DATA_INTEGRITY_VIOLATION, "Dữ liệu đã bị thay đổi đồng thời bởi thao tác khác; vui lòng tải lại trang và thử lại"));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

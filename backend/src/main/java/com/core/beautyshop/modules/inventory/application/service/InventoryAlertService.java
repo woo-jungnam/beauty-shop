@@ -21,7 +21,7 @@ public class InventoryAlertService {
     public List<StockAlert> lowStock() { return map(repository.findLowStock()); }
     @Transactional(readOnly = true)
     public List<StockAlert> expiringSoon(int days) {
-        if (days < 0 || days > 365) throw new IllegalArgumentException("Days must be between 0 and 365");
+        if (days < 0 || days > 365) throw new IllegalArgumentException("Số ngày cảnh báo phải từ 0 đến 365 ngày");
         LocalDate today = LocalDate.now();
         return map(repository.findExpiringSoon(today, today.plusDays(days)));
     }

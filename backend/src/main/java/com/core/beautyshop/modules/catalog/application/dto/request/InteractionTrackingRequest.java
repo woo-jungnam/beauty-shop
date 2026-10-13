@@ -18,7 +18,7 @@ public class InteractionTrackingRequest {
     private Long productId;
 
     @NotBlank(message = "Loại hành vi không được để trống")
-    @Schema(description = "Loại hành vi: VIEW, ADD_TO_CART, PURCHASE, SEARCH_CLICK", example = "VIEW")
+    @Schema(description = "Loại hành vi do client gửi: VIEW hoặc SEARCH_CLICK. Thêm giỏ và mua hàng do backend tự ghi nhận.", allowableValues = {"VIEW", "SEARCH_CLICK"}, example = "VIEW")
     private String actionType;
 
     @Schema(description = "Mã phiên làm việc ẩn danh của khách (nếu chưa đăng nhập)", example = "guest_abc123")

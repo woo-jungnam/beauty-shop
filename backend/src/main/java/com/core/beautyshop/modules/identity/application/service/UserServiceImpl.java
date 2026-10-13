@@ -78,7 +78,13 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UnauthorizedException("Phiên làm việc không hợp lệ (người dùng không tồn tại). Vui lòng đăng nhập lại!"));
 
         if (request.getFullName() != null) user.setFullName(request.getFullName());
-        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getPhone() != null) {
+            if (!request.getPhone().isBlank()
+                    && userRepository.existsByPhoneAndNotDeletedExcluding(request.getPhone(), user.getId())) {
+                throw new BusinessException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+            }
+            user.setPhone(request.getPhone());
+        }
         if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
         if (request.getBio() != null) user.setBio(request.getBio());
         if (request.getGender() != null) user.setGender(request.getGender());
@@ -130,10 +136,10 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void reverseLoyaltyPoints(Long userId, Long orderId) {
         User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         loyaltyPointAwardRepository.findByOrderId(orderId).ifPresent(award -> {
             if (award.isReversed()) return;
-            if (!userId.equals(award.getUserId())) throw new BusinessException("Loyalty award owner mismatch");
+            if (!userId.equals(award.getUserId())) throw new BusinessException("Chủ sở hữu phần thưởng khách hàng thân thiết không khớp");
             int points = Math.max(0, user.getLoyaltyPoints() - award.getPoints());
             user.setLoyaltyPoints(points);
             user.setMembershipTier(java.util.Arrays.stream(com.core.beautyshop.modules.identity.domain.enums.MembershipTier.values())
@@ -192,10 +198,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason) {
-        if (status == null) throw new BusinessException("Account status is required");
-        if (reason != null && reason.length() > 500) throw new BusinessException("Status reason must not exceed 500 characters");
+        if (status == null) throw new BusinessException("Trạng thái tài khoản là bắt buộc");
+        if (reason != null && reason.length() > 500) throw new BusinessException("Lý do trạng thái không được vượt quá 500 ký tự");
         administrationGuard.lockAdministration();
-        User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
         var previous = user.getStatus() == null ? com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE : user.getStatus();
         if (previous == status) return authMapper.toUserProfileResponse(user);
         if (status != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) administrationGuard.requireAnotherActiveAdmin(user);
@@ -209,14 +215,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserProfileResponse updateRoles(Long userId, java.util.List<Long> roleIds) {
-        if (roleIds == null || roleIds.isEmpty()) throw new BusinessException("At least one role is required");
-        if (roleIds.stream().anyMatch(java.util.Objects::isNull)) throw new BusinessException("Role ids are required");
+        if (roleIds == null || roleIds.isEmpty()) throw new BusinessException("Cần chọn ít nhất một vai trò");
+        if (roleIds.stream().anyMatch(java.util.Objects::isNull)) throw new BusinessException("Danh sách mã vai trò là bắt buộc");
         administrationGuard.lockAdministration();
         User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
         var roles = roleRepository.findAllById(roleIds);
-        if (roles.size() != roleIds.stream().distinct().count()) throw new BusinessException("One or more roles do not exist");
-        if (roles.stream().anyMatch(role -> Boolean.TRUE.equals(role.getIsDeleted()))) throw new BusinessException("Deleted roles cannot be assigned");
+        if (roles.size() != roleIds.stream().distinct().count()) throw new BusinessException("Một hoặc nhiều vai trò không tồn tại trong hệ thống");
+        if (roles.stream().anyMatch(role -> Boolean.TRUE.equals(role.getIsDeleted()))) throw new BusinessException("Không thể gán vai trò đã bị xóa");
         if (roles.stream().noneMatch(role -> "ROLE_ADMIN".equals(role.getName()))) administrationGuard.requireAnotherActiveAdmin(user);
         user.setRoles(new java.util.ArrayList<>(roles));
         userRepository.save(user);
@@ -229,9 +235,9 @@ public class UserServiceImpl implements UserService {
     public com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse resetPassword(Long userId) {
         administrationGuard.lockAdministration();
         User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
         if (Boolean.TRUE.equals(user.getIsDeleted())) {
-            throw new BusinessException("Cannot reset password for deleted user");
+            throw new BusinessException("Không thể đặt lại mật khẩu cho tài khoản đã bị xóa");
         }
         String tempPassword = generateSecurePassword();
         user.setPasswordHash(passwordEncoder.encode(tempPassword));

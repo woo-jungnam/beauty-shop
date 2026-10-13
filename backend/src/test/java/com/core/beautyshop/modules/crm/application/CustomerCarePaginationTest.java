@@ -26,7 +26,7 @@ class CustomerCarePaginationTest {
         }
         jdbc.update("UPDATE users SET username='literal%name' WHERE id=1");
         jdbc.update("INSERT INTO users VALUES (999,'removed','Removed','removed@example.test','000','BRONZE',0,'ACTIVE',true)");
-        service = new CustomerCareService(jdbc, mock(CustomerCareNoteRepository.class));
+        service = new CustomerCareService(jdbc, mock(CustomerCareNoteRepository.class), mock(com.core.beautyshop.modules.identity.api.IdentityFacade.class));
     }
 
     @Test

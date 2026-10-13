@@ -57,18 +57,18 @@ public class FacilitySchedulingService {
                 .filter(allocation -> !Boolean.TRUE.equals(allocation.getIsDeleted()))
                 .forEach(allocation -> {
                     if (allocation.getQuantity() == null || allocation.getQuantity() <= 0) {
-                        throw new BusinessException("Invalid facility allocation quantity");
+                        throw new BusinessException("Số lượng phân bổ cơ sở vật chất không hợp lệ");
                     }
                     unitsByFacility.merge(allocation.getFacility().getId(), allocation.getQuantity(), Math::addExact);
                 });
         if (unitsByFacility.isEmpty() && item.getFacility() != null) unitsByFacility.put(item.getFacility().getId(), 1);
         if (unitsByFacility.isEmpty()) {
-            if (!demand(item).isEmpty()) throw new BusinessException("Allocate all required facilities before starting this service");
+            if (!demand(item).isEmpty()) throw new BusinessException("Cần phân bổ đủ phòng/thiết bị yêu cầu trước khi bắt đầu dịch vụ");
             return;
         }
         List<Facility> locked = new ArrayList<>();
         for (Long id : unitsByFacility.keySet()) locked.add(facilities.findForUpdate(id)
-                .orElseThrow(() -> new BusinessException("Allocated facility is no longer available")));
+                .orElseThrow(() -> new BusinessException("Cơ sở vật chất được phân bổ không còn khả dụng")));
         locked.forEach(entityManager::refresh);
         LocalDateTime now = LocalDateTime.now(SpaTimeRules.ZONE);
         for (Facility facility : locked) {
@@ -76,7 +76,7 @@ public class FacilitySchedulingService {
                     || facility.getCapacity() == null || facility.getCapacity() <= 0
                     || blocks.overlaps(facility.getId(), now, now.plusNanos(1))
                     || occupancy.executingUnits(facility.getId(), item.getId()) + unitsByFacility.get(facility.getId()) > facility.getCapacity()) {
-                throw new BusinessException("Allocated facility is still occupied or unavailable: " + facility.getId());
+                throw new BusinessException("Cơ sở vật chất đang có người sử dụng hoặc không khả dụng: " + facility.getId());
             }
         }
     }
@@ -106,7 +106,7 @@ public class FacilitySchedulingService {
                 Facility manual = byId.get(item.getFacility().getId());
                 if (manual == null || !demand.containsKey(manual.getType())
                         || available(manual, date, item.getStartTime(), item.getEndTime(), windows.get(manual.getId())) <= 0) {
-                    throw new BusinessException("Requested facility is unavailable or does not match this service");
+                    throw new BusinessException("Cơ sở vật chất yêu cầu không khả dụng hoặc không phù hợp với dịch vụ này");
                 }
             }
             Map<Long, Integer> chosen = new LinkedHashMap<>();
@@ -125,7 +125,7 @@ public class FacilitySchedulingService {
                     remaining -= quantity;
                     if (remaining == 0) break;
                 }
-                if (remaining != 0) throw new BusinessException("Insufficient available facility capacity for type: " + requirement.getKey());
+                if (remaining != 0) throw new BusinessException("Không đủ phòng/thiết bị khả dụng cho loại: " + requirement.getKey());
             }
             updateAllocations(item, chosen, byId);
         }
@@ -163,7 +163,7 @@ public class FacilitySchedulingService {
         Map<String, Integer> result = new TreeMap<>();
         if (item.getResourceRequirements() != null) item.getResourceRequirements().stream()
                 .filter(r -> !Boolean.TRUE.equals(r.getIsDeleted())).forEach(r -> {
-                    if (r.getUnits() == null || r.getUnits() <= 0) throw new BusinessException("Invalid resource requirement snapshot");
+                    if (r.getUnits() == null || r.getUnits() <= 0) throw new BusinessException("Thông tin yêu cầu tài nguyên không hợp lệ");
                     result.merge(r.getResourceType(), r.getUnits(), Math::addExact);
                 });
         // Existing legacy single-facility reservations stay constrained without consulting live catalog rules.
@@ -192,6 +192,6 @@ public class FacilitySchedulingService {
     }
 
     private void requireInterval(LocalDate date, LocalTime start, LocalTime end) {
-        if (date == null || start == null || end == null || !end.isAfter(start)) throw new BusinessException("Invalid facility reservation interval");
+        if (date == null || start == null || end == null || !end.isAfter(start)) throw new BusinessException("Khoảng thời gian đặt trước cơ sở vật chất không hợp lệ");
     }
 }

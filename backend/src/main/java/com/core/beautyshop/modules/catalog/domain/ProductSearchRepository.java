@@ -112,6 +112,12 @@ public class ProductSearchRepository {
                     builder.exists(matchingIngredient), builder.exists(matchingTag)));
         }
 
+        if (present(request.getActiveIngredients())) {
+            conditions.add(builder.or(request.getActiveIngredients().stream()
+                    .map(value -> activeIngredient(builder, query, product, value))
+                    .toArray(Predicate[]::new)));
+        }
+
         Set<Long> brands = ids(request.getBrandId(), request.getBrandIds());
         if (!brands.isEmpty()) conditions.add(brand.get("id").in(brands));
         Set<Long> categories = ids(request.getCategoryId(), request.getCategoryIds());
@@ -249,6 +255,23 @@ public class ProductSearchRepository {
         if (orders.isEmpty()) orders.add(builder.desc(product.get("createdAt")));
         if (!hasId) orders.add(builder.desc(product.get("id")));
         return orders;
+    }
+
+    private Predicate activeIngredient(CriteriaBuilder builder, CommonAbstractCriteria query,
+                                       Root<Product> product, String value) {
+        String pattern = "%" + value.trim().toLowerCase(Locale.ROOT)
+                .replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+        Subquery<Integer> ingredientQuery = query.subquery(Integer.class);
+        Root<ProductIngredient> ingredient = ingredientQuery.from(ProductIngredient.class);
+        ingredientQuery.select(builder.literal(1)).where(builder.equal(ingredient.get("product"), product),
+                builder.isFalse(ingredient.get("ingredient").get("isDeleted")), builder.or(
+                        like(builder, ingredient.get("ingredient").get("name"), pattern),
+                        like(builder, ingredient.get("ingredient").get("inciName"), pattern),
+                        like(builder, ingredient.get("ingredient").get("slug"), pattern)));
+        return builder.or(like(builder, product.get("name"), pattern),
+                like(builder, product.get("shortDescription"), pattern),
+                like(builder, product.get("ingredients"), pattern),
+                like(builder, product.get("keyActivesSummary"), pattern), builder.exists(ingredientQuery));
     }
 
     private Predicate like(CriteriaBuilder builder, Expression<String> field, String pattern) {

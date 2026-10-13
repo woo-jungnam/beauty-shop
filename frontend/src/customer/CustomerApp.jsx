@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './styles/customer-theme.css';
+import './styles/customer-experience.css';
 import { CustomerHeader } from './components/layout/CustomerHeader';
 import { CustomerFooter } from './components/layout/CustomerFooter';
 import { MiniCartDrawer } from './components/cart/MiniCartDrawer';
@@ -19,6 +20,15 @@ export const CustomerApp = () => {
   };
 
   const [route, setRoute] = useState(getHashRoute);
+  const mainRef = useRef(null);
+  const previousRoute = useRef(route);
+
+  useEffect(() => {
+    if (previousRoute.current.split('?')[0] !== route.split('?')[0]) {
+      mainRef.current?.focus({ preventScroll: true });
+    }
+    previousRoute.current = route;
+  }, [route]);
 
   useEffect(() => {
     const updateTitle = (current) => {
@@ -36,9 +46,10 @@ export const CustomerApp = () => {
       const nextRoute = getHashRoute();
       const isCatalogTransition = (route.startsWith('products') || route === 'catalog') &&
                                  (nextRoute.startsWith('products') || nextRoute === 'catalog');
+      const isProfileTransition = route.startsWith('profile') && nextRoute.startsWith('profile');
       setRoute(nextRoute);
       updateTitle(nextRoute);
-      if (!isCatalogTransition) {
+      if (!isCatalogTransition && !isProfileTransition) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     };
@@ -66,29 +77,11 @@ export const CustomerApp = () => {
     if (route.startsWith('products') || route === 'catalog') {
       const qIndex = route.indexOf('?');
       const queryString = qIndex !== -1 ? route.substring(qIndex + 1) : '';
-      const params = new URLSearchParams(queryString);
-      const search = params.get('search') || '';
-      const categoryId = params.get('categoryId') || '';
-      const categorySlug = params.get('category') || '';
-      const categoryName = params.get('name') || '';
-      const brandId = params.get('brandId') || '';
-      const brandSlug = params.get('brand') || '';
-      const brandName = params.get('brandName') || '';
-      const sort = params.get('sort') || '';
-      const filter = params.get('filter') || '';
       return (
         <CatalogPage
           key="catalog-view"
           onNavigate={navigate}
-          initialSearch={search}
-          initialCategoryId={categoryId}
-          initialCategorySlug={categorySlug}
-          initialCategoryName={categoryName}
-          initialBrandId={brandId}
-          initialBrandSlug={brandSlug}
-          initialBrandName={brandName}
-          initialSort={sort}
-          initialFilter={filter}
+          initialQuery={queryString}
         />
       );
     }
@@ -125,7 +118,7 @@ export const CustomerApp = () => {
     // 6. Profile / Digital Spa Tickets
     if (route.startsWith('profile')) {
       const tabMatch = route.match(/tab=([^&]+)/);
-      const tab = tabMatch ? tabMatch[1] : 'tickets';
+      const tab = tabMatch ? tabMatch[1] : 'overview';
       return <CustomerProfilePage onNavigate={navigate} initialTab={tab} />;
     }
 
@@ -135,11 +128,12 @@ export const CustomerApp = () => {
 
   return (
     <div className="customer-app">
+      <a className="customer-skip-link" href="#customer-main" onClick={(event) => { event.preventDefault(); mainRef.current?.focus(); mainRef.current?.scrollIntoView({ block: 'start' }); }}>Bỏ qua điều hướng, đến nội dung</a>
       {/* 1. Global Luxury Navigation */}
       <CustomerHeader onNavigate={navigate} currentRoute={route} />
 
       {/* 2. Main Page Container */}
-      <main style={{ flex: 1 }}>
+      <main id="customer-main" ref={mainRef} tabIndex={-1} style={{ flex: 1 }}>
         {renderCurrentPage()}
       </main>
 

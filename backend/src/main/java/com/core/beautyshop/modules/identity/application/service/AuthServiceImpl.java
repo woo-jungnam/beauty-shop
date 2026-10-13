@@ -95,8 +95,12 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Lỗi: Email đã được sử dụng!");
         }
+        if (request.getPhone() != null && !request.getPhone().isBlank()
+                && userRepository.existsByPhoneAndNotDeleted(request.getPhone())) {
+            throw new BusinessException("Lỗi: Số điện thoại đã được sử dụng!");
+        }
         if (userRepository.existsByEmail(request.getUsername()) || userRepository.existsByUsername(request.getEmail())) {
-            throw new BusinessException("Username and email must identify a single account");
+            throw new BusinessException("Tên đăng nhập và email phải thuộc cùng một tài khoản");
         }
 
         List<Role> roles = new ArrayList<>();
@@ -187,15 +191,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void revokeSession(Long userId, Long sessionId) {
-        userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
         var session = refreshTokenSessionRepository.findByIdAndUserIdAndIsDeletedFalse(sessionId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Session not found for this user"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiên làm việc của người dùng này"));
         refreshTokenSessionRepository.revokeFamily(session.getFamilyId(), Instant.now());
     }
 
     private void requireActiveUser(User user) {
         if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getStatus() != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) {
-            throw new BusinessException("Account is not active");
+            throw new BusinessException("Tài khoản hiện đang bị khóa hoặc ngưng hoạt động");
         }
     }
 

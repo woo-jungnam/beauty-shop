@@ -11,10 +11,10 @@ public class StockInspectionService {
     @com.core.beautyshop.shared.audit.api.annotation.AuditAction(action = "INSPECT_RETURN", resourceType = "WAREHOUSE_STOCK")
     @Transactional
     public void inspect(Long id, int quantity, boolean restock) {
-        var stock = stocks.findByIdForUpdate(id).orElseThrow(() -> new BusinessException("Batch not found"));
-        if (quantity <= 0 || quantity > stock.getQuarantinedQuantity()) throw new BusinessException("Invalid inspection quantity");
+        var stock = stocks.findByIdForUpdate(id).orElseThrow(() -> new BusinessException("Không tìm thấy lô hàng"));
+        if (quantity <= 0 || quantity > stock.getQuarantinedQuantity()) throw new BusinessException("Số lượng hàng kiểm định không hợp lệ");
         if (restock && (Boolean.TRUE.equals(stock.getIsDeleted()) || stock.getExpirationDate() != null
-                && !stock.getExpirationDate().isAfter(java.time.LocalDate.now()))) throw new BusinessException("Expired/deleted stock cannot be resold");
+                && !stock.getExpirationDate().isAfter(java.time.LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE)))) throw new BusinessException("Lô hàng đã hết hạn hoặc bị xóa không thể bán lại");
         stock.setQuarantinedQuantity(stock.getQuarantinedQuantity() - quantity);
         if (restock) {
             int before = stock.getQuantity();

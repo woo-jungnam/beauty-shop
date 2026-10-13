@@ -14,7 +14,7 @@ public class SpaOrderCancellationListener {
     public void cancel(OrderEvents.OrderCancelledEvent event) {
         tickets.findByOrderIdForUpdate(event.getOrderId()).ifPresent(ticket -> {
             if (ticket.getUsedSessions() > 0 || ticket.getReservedSessions() > 0) {
-                throw new BusinessException("Cancel pending appointments and reconcile consumed Spa sessions before refunding this package");
+                throw new BusinessException("Vui lòng hủy các lịch hẹn đang chờ và đối soát các buổi đã sử dụng trước khi hoàn tiền gói Spa này");
             }
             ticket.setStatus(TicketStatus.REVOKED);
             tickets.save(ticket);

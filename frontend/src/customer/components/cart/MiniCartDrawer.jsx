@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Trash2, ShoppingBag, ArrowRight, Tag, Check, Sparkles } from 'lucide-react';
 import { useCustomerCart } from '../../stores/customerCartStore';
+import { useCustomerDialog } from '../ui/useCustomerDialog';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -23,13 +24,52 @@ export const MiniCartDrawer = ({ onNavigate }) => {
     updateQuantity, 
     removeItem, 
     applyVoucher, 
-    removeVoucher 
+    removeVoucher,
+    cartError,
+    clearCartError,
+    fetchCart,
+    isLoading
   } = useCustomerCart();
 
   const [inputVoucher, setInputVoucher] = useState('');
   const [voucherError, setVoucherError] = useState('');
+  const drawerRef = useRef(null);
+  useCustomerDialog(isCartOpen, drawerRef, () => setCartOpen(false));
 
-  if (!isCartOpen) return null;
+  const cartErrorNotice = cartError ? (
+    <div
+      className="customer-cart-error"
+      role="alert"
+      aria-live="assertive"
+      style={{
+        ...(isCartOpen ? { margin: '12px 20px 0' } : {
+          position: 'fixed', top: '136px', right: '16px', zIndex: 1300,
+          width: 'min(420px, calc(100vw - 32px))', boxShadow: '0 8px 28px rgba(90, 28, 45, 0.18)',
+        }),
+        display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '14px',
+        border: '1px solid #EDBBC8', borderRadius: '10px', background: '#FFF2F5',
+        color: '#9A2347', fontSize: '13px', lineHeight: 1.5, boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <span>{cartError}</span>
+        <button
+          type="button"
+          onClick={() => fetchCart()}
+          disabled={isLoading}
+          style={{ display: 'block', marginTop: '8px', border: '1px solid #EDBBC8', borderRadius: '6px', padding: '5px 9px', background: 'white', color: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+        >{isLoading ? 'Đang kiểm tra…' : 'Kiểm tra giỏ'}</button>
+      </div>
+      <button
+        type="button"
+        aria-label="Đóng thông báo giỏ hàng"
+        onClick={clearCartError}
+        style={{ border: 0, background: 'transparent', color: 'inherit', padding: '2px', display: 'flex', cursor: 'pointer' }}
+      ><X size={16} /></button>
+    </div>
+  ) : null;
+
+  if (!isCartOpen) return cartErrorNotice;
 
   const handleApplyVoucher = (e) => {
     e.preventDefault();
@@ -54,7 +94,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
       />
 
       {/* Slide Drawer Panel */}
-      <div className="drawer-panel">
+      <div ref={drawerRef} className="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="customer-cart-title" tabIndex={-1}>
         {/* 1. Header */}
         <div style={{
           display: 'flex',
@@ -66,11 +106,13 @@ export const MiniCartDrawer = ({ onNavigate }) => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ShoppingBag size={20} color="var(--c-gold)" />
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
+            <h3 id="customer-cart-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>
               Giỏ Hàng Của Bạn ({totalItems})
             </h3>
           </div>
           <button 
+            type="button"
+            aria-label="Đóng giỏ hàng"
             onClick={() => setCartOpen(false)}
             style={{
               background: 'transparent',
@@ -85,6 +127,8 @@ export const MiniCartDrawer = ({ onNavigate }) => {
             <X size={20} />
           </button>
         </div>
+
+        {cartErrorNotice}
 
         {/* 2. Free Shipping Progress Bar */}
         <div style={{
@@ -244,6 +288,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                       height: '26px'
                     }}>
                       <button 
+                        disabled={isLoading}
                         onClick={() => updateQuantity(item.itemId, item.quantity - 1)}
                         style={{
                           width: '26px',
@@ -269,6 +314,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                         {item.quantity}
                       </span>
                       <button 
+                        disabled={isLoading}
                         onClick={() => updateQuantity(item.itemId, item.quantity + 1)}
                         style={{
                           width: '26px',
@@ -298,6 +344,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                         {formatCurrency(item.price * item.quantity)}
                       </span>
                       <button 
+                        disabled={isLoading}
                         onClick={() => removeItem(item.itemId)}
                         style={{
                           background: 'transparent',
@@ -436,6 +483,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
 
             {/* Checkout Action Button */}
             <button 
+              disabled={isLoading}
               onClick={() => {
                 setCartOpen(false);
                 onNavigate('checkout');

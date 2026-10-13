@@ -19,12 +19,12 @@ public class OrderRefundService {
         if (request == null || request.reference() == null || request.reference().isBlank() || request.reference().length() > 100
                 || request.amount() == null || request.amount().signum() <= 0 || request.amount().scale() > 2
                 || (request.approvalReason() != null && request.approvalReason().length() > 250))
-            throw new BusinessException("Invalid refund confirmation");
-        Order order = orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+            throw new BusinessException("Thông tin xác nhận hoàn tiền không hợp lệ");
+        Order order = orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng"));
         var previous = confirmations.findByReference(request.reference());
         if (previous.isPresent()) {
             if (!id.equals(previous.get().getOrderId()) || request.amount().compareTo(previous.get().getAmount()) != 0) {
-                throw new BusinessException("Refund reference was already used for another confirmation");
+                throw new BusinessException("Mã tham chiếu hoàn tiền đã được sử dụng cho một xác nhận khác");
             }
             return;
         }
@@ -33,14 +33,14 @@ public class OrderRefundService {
                 || order.getPaymentStatus() == PaymentStatus.PENDING || order.getPaymentStatus() == PaymentStatus.REFUND_PENDING);
         if (explicitVisitRefund && (!com.core.beautyshop.shared.security.utils.SecurityUtils.isAdmin()
                 || request.approvalReason() == null || request.approvalReason().isBlank()))
-            throw new BusinessException("A Spa visit refund requires an administrator and an explicit approval reason");
+            throw new BusinessException("Hoàn tiền dịch vụ Spa yêu cầu người phê duyệt là quản trị viên và phải có lý do cụ thể");
         if (!explicitVisitRefund && (order.getPaymentStatus() != PaymentStatus.REFUND_PENDING
                 || (order.getStatus() != OrderStatus.CANCELLED && order.getStatus() != OrderStatus.RETURNED))) {
-            throw new BusinessException("Order is not awaiting a refund");
+            throw new BusinessException("Đơn hàng không ở trạng thái chờ hoàn tiền");
         }
         java.math.BigDecimal outstanding = order.getPaidAmount().subtract(order.getRefundedAmount());
         if (request.amount().compareTo(outstanding) != 0) {
-            throw new BusinessException("Confirm the exact outstanding refund amount");
+            throw new BusinessException("Số tiền xác nhận hoàn trả phải khớp chính xác với số tiền cần hoàn");
         }
         var confirmation = new RefundConfirmation();
         confirmation.setOrderId(id); confirmation.setReference(request.reference()); confirmation.setAmount(request.amount());

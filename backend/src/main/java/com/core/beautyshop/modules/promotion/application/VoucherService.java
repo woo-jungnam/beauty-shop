@@ -32,8 +32,11 @@ public class VoucherService implements PromotionFacade {
     @Transactional
     public VoucherView create(VoucherCommand command) {
         validateCommand(command);
+        if (command.endsAt().isBefore(Instant.now())) {
+            throw new BusinessException("Thời gian kết thúc khuyến mãi phải ở trong tương lai");
+        }
         String code = normalize(command.code());
-        if (voucherRepository.existsByCodeIgnoreCase(code)) throw new BusinessException("Voucher code already exists");
+        if (voucherRepository.existsByCodeIgnoreCase(code)) throw new BusinessException("Mã khuyến mãi đã tồn tại");
         Voucher voucher = new Voucher();
         apply(voucher, command, code);
         return VoucherView.from(voucherRepository.save(voucher));
@@ -43,13 +46,13 @@ public class VoucherService implements PromotionFacade {
     public VoucherView update(Long id, VoucherCommand command) {
         validateCommand(command);
         Voucher voucher = voucherRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mã khuyến mãi: " + id));
         if (command.usageLimit() != null && command.usageLimit() < voucher.getUsedCount()) {
-            throw new BusinessException("Usage limit cannot be lower than the number already used");
+            throw new BusinessException("Giới hạn sử dụng không thể nhỏ hơn số lượt đã dùng");
         }
         String code = normalize(command.code());
         if (!voucher.getCode().equalsIgnoreCase(code) && voucherRepository.existsByCodeIgnoreCase(code)) {
-            throw new BusinessException("Voucher code already exists");
+            throw new BusinessException("Mã khuyến mãi đã tồn tại");
         }
         apply(voucher, command, code);
         return VoucherView.from(voucher);
@@ -58,7 +61,7 @@ public class VoucherService implements PromotionFacade {
     @Transactional
     public void delete(Long id) {
         Voucher voucher = voucherRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mã khuyến mãi: " + id));
         voucher.setIsDeleted(true);
         voucher.setIsActive(false);
     }
@@ -67,21 +70,21 @@ public class VoucherService implements PromotionFacade {
     @Transactional
     public AppliedVoucher validate(String code, Long userId, BigDecimal orderAmount) {
         if (code == null || code.isBlank()) return null;
-        if (userId == null) throw new BusinessException("Sign in to use a voucher");
+        if (userId == null) throw new BusinessException("Vui lòng đăng nhập để sử dụng mã khuyến mãi");
         Voucher voucher = voucherRepository.findByCodeForUpdate(normalize(code))
-                .orElseThrow(() -> new BusinessException("Voucher is invalid"));
+                .orElseThrow(() -> new BusinessException("Mã khuyến mãi không hợp lệ"));
         Instant now = Instant.now();
         if (!Boolean.TRUE.equals(voucher.getIsActive()) || now.isBefore(voucher.getStartsAt()) || !now.isBefore(voucher.getEndsAt())) {
-            throw new BusinessException("Voucher is inactive or expired");
+            throw new BusinessException("Mã khuyến mãi chưa kích hoạt hoặc đã hết hạn");
         }
         if (voucher.getUsageLimit() != null && voucher.getUsedCount() >= voucher.getUsageLimit()) {
-            throw new BusinessException("Voucher usage limit has been reached");
+            throw new BusinessException("Mã khuyến mãi đã hết lượt sử dụng");
         }
         if (usageRepository.countByVoucherIdAndUserIdAndIsDeletedFalse(voucher.getId(), userId) >= voucher.getPerUserLimit()) {
-            throw new BusinessException("You have reached the usage limit for this voucher");
+            throw new BusinessException("Bạn đã dùng hết số lượt cho phép của mã khuyến mãi này");
         }
         if (orderAmount.compareTo(voucher.getMinOrderAmount()) < 0) {
-            throw new BusinessException("Order does not meet the voucher minimum amount");
+            throw new BusinessException("Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã khuyến mãi");
         }
         BigDecimal discount = voucher.getDiscountType() == DiscountType.PERCENTAGE
                 ? orderAmount.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 2, RoundingMode.DOWN)
@@ -96,9 +99,9 @@ public class VoucherService implements PromotionFacade {
         if (applied == null) return;
         if (usageRepository.existsByOrderIdAndIsDeletedFalse(orderId)) return;
         Voucher voucher = voucherRepository.findByCodeForUpdate(applied.code())
-                .orElseThrow(() -> new BusinessException("Voucher no longer exists"));
+                .orElseThrow(() -> new BusinessException("Mã khuyến mãi không còn tồn tại"));
         if (voucher.getUsageLimit() != null && voucher.getUsedCount() >= voucher.getUsageLimit()) {
-            throw new BusinessException("Voucher usage limit has been reached");
+            throw new BusinessException("Mã khuyến mãi đã hết lượt sử dụng");
         }
         voucher.setUsedCount(Math.addExact(voucher.getUsedCount(), 1));
         usageRepository.save(VoucherUsage.builder().voucherId(voucher.getId()).userId(userId).orderId(orderId)
@@ -123,7 +126,7 @@ public class VoucherService implements PromotionFacade {
 
     private Voucher find(Long id) {
         return voucherRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Voucher not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mã khuyến mãi: " + id));
     }
 
     private void apply(Voucher voucher, VoucherCommand command, String code) {
@@ -144,25 +147,25 @@ public class VoucherService implements PromotionFacade {
     private void validateCommand(VoucherCommand command) {
         if (command == null || command.code() == null || command.code().isBlank() || command.name() == null
                 || command.name().isBlank() || command.discountType() == null) {
-            throw new BusinessException("Voucher code, name and discount type are required");
+            throw new BusinessException("Mã voucher, tên và loại giảm giá là bắt buộc");
         }
         if (command.endsAt() == null || command.startsAt() == null || !command.endsAt().isAfter(command.startsAt())) {
-            throw new BusinessException("Voucher end time must be after start time");
+            throw new BusinessException("Thời gian kết thúc khuyến mãi phải sau thời gian bắt đầu");
         }
         if (command.code().trim().length() > 50 || command.name().trim().length() > 150
                 || command.description() != null && command.description().length() > 500) {
-            throw new BusinessException("Voucher text exceeds its maximum length");
+            throw new BusinessException("Văn bản mô tả voucher vượt quá độ dài tối đa");
         }
         if (command.minOrderAmount() != null && command.minOrderAmount().signum() < 0
                 || command.maxDiscountAmount() != null && command.maxDiscountAmount().signum() < 0) {
-            throw new BusinessException("Minimum order and maximum discount amounts must be nonnegative");
+            throw new BusinessException("Giá trị đơn tối thiểu và mức giảm tối đa không được âm");
         }
-        if (command.discountValue() == null || command.discountValue().signum() <= 0) throw new BusinessException("Discount value must be positive");
+        if (command.discountValue() == null || command.discountValue().signum() <= 0) throw new BusinessException("Mức giảm giá phải lớn hơn 0");
         if (command.discountType() == DiscountType.PERCENTAGE && command.discountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
-            throw new BusinessException("Percentage discount cannot exceed 100");
+            throw new BusinessException("Tỷ lệ phần trăm giảm giá không được vượt quá 100%");
         }
         if (command.usageLimit() != null && command.usageLimit() <= 0 || command.perUserLimit() != null && command.perUserLimit() <= 0) {
-            throw new BusinessException("Voucher limits must be positive");
+            throw new BusinessException("Giới hạn lượt dùng voucher phải lớn hơn 0");
         }
     }
 

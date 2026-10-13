@@ -227,6 +227,52 @@ class ProductSearchIntegrationTest {
                 .param("tagIds", t1.getId().toString(), t2.getId().toString()).param("ingredientIds", idList(i1.getId(), i2.getId()))
                 .param("skinConcernIds", idList(sc1.getId(), sc2.getId()))), first, second);
     }
+    @Test void catalogCheckboxFiltersPreserveKeywordPriceAndSkinAcrossRepeatedAndCommaSeparatedIds() throws Exception {
+        Brand b1 = brand(), b2 = brand(), otherBrand = brand();
+        Category c1 = category(), c2 = category(), otherCategory = category();
+        Product first = product("Serum first"); first.setBrand(b1); first.setCategories(new ArrayList<>(List.of(c1, c2))); variant(first, "100", null);
+        Product second = product("Serum second"); second.setBrand(b2); second.setCategories(new ArrayList<>(List.of(c2))); variant(second, "150", null);
+        Product noKeyword = product("Cleanser"); noKeyword.setBrand(b1); noKeyword.setCategories(new ArrayList<>(List.of(c1))); variant(noKeyword, "100", null);
+        Product noBrand = product("Serum other brand"); noBrand.setBrand(otherBrand); noBrand.setCategories(new ArrayList<>(List.of(c1))); variant(noBrand, "100", null);
+        Product noCategory = product("Serum other category"); noCategory.setBrand(b1); noCategory.setCategories(new ArrayList<>(List.of(otherCategory))); variant(noCategory, "100", null);
+        Product tooExpensive = product("Serum expensive"); tooExpensive.setBrand(b2); tooExpensive.setCategories(new ArrayList<>(List.of(c2))); variant(tooExpensive, "300", null);
+        Product wrongSkin = product("Serum dry"); wrongSkin.setBrand(b2); wrongSkin.setCategories(new ArrayList<>(List.of(c2))); wrongSkin.setSkinType(SkinType.DRY); variant(wrongSkin, "100", null);
+        exactly(page(get("/api/v1/products/search").param("keyword", prefix + " Serum")
+                .param("brandIds", b1.getId().toString(), b2.getId().toString(), b1.getId().toString())
+                .param("categoryIds", idList(c1.getId(), c2.getId(), c2.getId()))
+                .param("minPrice", "100").param("maxPrice", "200").param("skinType", "OILY")), first, second);
+    }
+
+    @Test void activeIngredientChoicesUseOrAndPreserveIndependentKeywordAndCatalogFilters() throws Exception {
+        Brand selectedBrand = brand(); Category selectedCategory = category();
+        Product first = product("Serum one"); first.setIngredients("Water, Niacinamide");
+        Product second = product("Serum two"); second.setKeyActivesSummary("Ceramide NP");
+        Ingredient mapped = ingredient(); mapped.setInciName("NIACINAMIDE");
+        Product structured = product("Serum three"); attachIngredient(structured, mapped);
+        Product both = product("Serum four"); both.setIngredients("Niacinamide, Ceramide");
+        Product cleanser = product("Cleanser"); cleanser.setIngredients("Niacinamide");
+        Product wrongBrand = product("Serum excluded brand"); wrongBrand.setIngredients("Niacinamide");
+        wrongBrand.setBrand(brand()); wrongBrand.setCategories(new ArrayList<>(List.of(selectedCategory))); variant(wrongBrand, "100", null);
+        Product deletedIngredient = product("Serum deleted ingredient"); Ingredient deleted = ingredient(); deleted.setName("Niacinamide"); deleted.setIsDeleted(true); attachIngredient(deletedIngredient, deleted);
+        for (Product product : List.of(first, second, structured, both, cleanser, deletedIngredient)) {
+            product.setBrand(selectedBrand); product.setCategories(new ArrayList<>(List.of(selectedCategory))); variant(product, "100", null);
+        }
+        JsonNode matches = page(get("/api/v1/products/search").param("keyword", prefix + " Serum")
+                .param("brandIds", selectedBrand.getId().toString()).param("categoryIds", selectedCategory.getId().toString())
+                .param("activeIngredients", " niacinamide ", "ceramide").param("maxPrice", "100"));
+        exactly(matches, first, second, structured, both);
+        exactly(page(search().param("activeIngredients", "niacinamide,ceramide")), first, second, structured, both, cleanser, wrongBrand);
+    }
+
+    @Test void activeIngredientParametersRejectBlankOversizedAndExcessiveListsAndTreatWildcardsLiterally() throws Exception {
+        for (String value : List.of(" ", "x".repeat(101), String.join(",", Collections.nCopies(11, "ceramide")))) {
+            mvc.perform(get("/api/v1/products/search").param("activeIngredients", value)).andExpect(status().isBadRequest());
+        }
+        Product literal = product("Literal ingredient"); literal.setIngredients("active_%");
+        product("Decoy ingredient").setIngredients("activeXX");
+        exactly(page(search().param("activeIngredients", "active_%")), literal);
+    }
+
     MockHttpServletRequestBuilder dimensionRequest(Brand b1, Brand b2, Category c1, Category c2, ProductTag t1, ProductTag t2, Ingredient i1, Ingredient i2, SkinConcern sc1, SkinConcern sc2) {
         return search().param("brandIds", idList(b1.getId(), b2.getId())).param("categoryIds", idList(c1.getId(), c2.getId()))
                 .param("tagIds", idList(t1.getId(), t2.getId())).param("ingredientIds", idList(i1.getId(), i2.getId())).param("skinConcernIds", idList(sc1.getId(), sc2.getId()));
@@ -345,7 +391,7 @@ class ProductSearchIntegrationTest {
     }
 
     @Test void invalidEnumsBooleansAndSortFieldsAreClientErrorsAndStatusQueryCannotExposePrivateProducts() throws Exception {
-        for (String[] invalid : List.of(new String[]{"productType", "PHYSICAL"}, new String[]{"skinType", "ALL"}, new String[]{"targetGender", "UNKNOWN"},
+        for (String[] invalid : List.of(new String[]{"productType", "PHYSICAL"}, new String[]{"skinType", "UNKNOWN"}, new String[]{"targetGender", "UNKNOWN"},
                 new String[]{"inStock", "sometimes"}, new String[]{"onSale", "sometimes"}, new String[]{"isFeatured", "sometimes"},
                 new String[]{"sort", "unknownField,asc"}, new String[]{"sort", "brand.name,asc"}, new String[]{"sort", "price;select,asc"}, new String[]{"sort", "id,banana"})) {
             mvc.perform(get("/api/v1/products/search").param(invalid[0], invalid[1])).andExpect(status().isBadRequest());

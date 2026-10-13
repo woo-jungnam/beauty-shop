@@ -23,11 +23,11 @@ public class PaymentWebhookProcessor {
 
     public String reference(SePayWebhookRequest request) {
         if (request.getReferenceCode() != null && !request.getReferenceCode().isBlank()) {
-            if (request.getReferenceCode().length() > 100) throw new BusinessException("Invalid payment reference");
+            if (request.getReferenceCode().length() > 100) throw new BusinessException("Mã tham chiếu thanh toán không hợp lệ");
             return request.getReferenceCode().trim();
         }
         if (request.getId() != null && request.getId() > 0) return "SEPAY-ID-" + request.getId();
-        throw new BusinessException("A stable provider transaction identifier is required");
+        throw new BusinessException("Mã giao dịch từ cổng thanh toán là bắt buộc");
     }
 
     @Transactional

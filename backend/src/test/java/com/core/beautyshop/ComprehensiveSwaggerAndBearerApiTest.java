@@ -73,7 +73,7 @@ public class ComprehensiveSwaggerAndBearerApiTest {
         if (!userRepository.existsByUsername("swagger_admin")) {
             userRepository.save(User.builder()
                     .username("swagger_admin")
-                    .email("namnt4560@gmail.com")
+                    .email("namtc2172004@gmail.com")
                     .fullName("Swagger Admin")
                     .passwordHash(passwordEncoder.encode("Admin@123"))
                     .roles(List.of(adminRole))

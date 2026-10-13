@@ -24,6 +24,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public class CustomerCareService {
     private final JdbcTemplate jdbc;
     private final CustomerCareNoteRepository notes;
+    private final com.core.beautyshop.modules.identity.api.IdentityFacade identity;
+
+    @Transactional
+    public CustomerView createCustomer(String fullName, String phone) {
+        return getCustomer(identity.createReceptionCustomer(fullName, phone).getId());
+    }
     private static final String CUSTOMER_COLUMNS = """
         SELECT u.id,u.username,u.full_name,u.email,u.phone,u.membership_tier,u.loyalty_points,u.status,
           (SELECT COUNT(*) FROM orders o WHERE o.user_id=u.id AND o.is_deleted=false) order_count,
@@ -49,7 +55,7 @@ public class CustomerCareService {
     public PageResponse<CustomerView> searchPage(String keyword, int page, int size) {
         PageRequest paging = paging(page, size);
         String term = keyword == null ? "" : keyword.trim();
-        if (term.length() > 100) throw new BusinessException("Search keyword must not exceed 100 characters");
+        if (term.length() > 100) throw new BusinessException("Từ khóa tìm kiếm không được vượt quá 100 ký tự");
         String pattern = "%" + term.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM users u " + SEARCH_FILTER, Long.class, pattern, pattern, pattern, pattern);
         List<CustomerView> content = jdbc.query(CUSTOMER_COLUMNS + SEARCH_FILTER
@@ -61,7 +67,7 @@ public class CustomerCareService {
     @Transactional(readOnly = true)
     public CustomerView getCustomer(Long userId) {
         List<CustomerView> found = jdbc.query(CUSTOMER_COLUMNS + " WHERE u.is_deleted=false AND u.id=?", CUSTOMER_MAPPER, userId);
-        if (found.isEmpty()) throw new ResourceNotFoundException("Customer not found: " + userId);
+        if (found.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy khách hàng: " + userId);
         return found.get(0);
     }
 
@@ -79,7 +85,7 @@ public class CustomerCareService {
     @Transactional
     public void deleteNote(Long noteId) {
         CustomerCareNote note = notes.findById(noteId).filter(n -> !Boolean.TRUE.equals(n.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Care note not found: " + noteId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ghi chú chăm sóc: " + noteId));
         note.setIsDeleted(true);
     }
 
@@ -87,10 +93,10 @@ public class CustomerCareService {
     public NoteView add(Long userId, NoteCommand command) {
         requireCustomer(userId);
         if (command == null || command.content() == null || command.content().isBlank() || command.content().length() > 10000) {
-            throw new BusinessException("Care note content must contain 1 to 10000 characters");
+            throw new BusinessException("Nội dung ghi chú chăm sóc phải từ 1 đến 10.000 ký tự");
         }
         String type = command.noteType() == null ? "GENERAL" : command.noteType().trim();
-        if (type.isBlank() || type.length() > 30) throw new BusinessException("Note type must contain 1 to 30 characters");
+        if (type.isBlank() || type.length() > 30) throw new BusinessException("Loại ghi chú phải từ 1 đến 30 ký tự");
         validateProfile(command.skinProfile()); validateProfile(command.allergies()); validateProfile(command.contraindications());
         CustomerCareNote note = CustomerCareNote.builder().userId(userId).noteType(type)
                 .content(command.content().trim()).skinProfile(command.skinProfile()).allergies(command.allergies())
@@ -100,18 +106,18 @@ public class CustomerCareService {
 
     private PageRequest paging(int page, int size) {
         if (page < 0 || size < 1 || size > 100 || (long) page * size > Integer.MAX_VALUE) {
-            throw new BusinessException("Page must be nonnegative and size must be between 1 and 100");
+            throw new BusinessException("Số trang không được âm và kích thước trang phải từ 1 đến 100");
         }
         return PageRequest.of(page, size);
     }
 
     private void requireCustomer(Long userId) {
         Integer exists = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE id=? AND is_deleted=false", Integer.class, userId);
-        if (exists == null || exists == 0) throw new ResourceNotFoundException("Customer not found");
+        if (exists == null || exists == 0) throw new ResourceNotFoundException("Không tìm thấy khách hàng");
     }
 
     private void validateProfile(String value) {
-        if (value != null && value.length() > 1000) throw new BusinessException("Care profile fields must not exceed 1000 characters");
+        if (value != null && value.length() > 1000) throw new BusinessException("Các trường thông tin hồ sơ chăm sóc không được vượt quá 1000 ký tự");
     }
 
     private NoteView view(CustomerCareNote note) {

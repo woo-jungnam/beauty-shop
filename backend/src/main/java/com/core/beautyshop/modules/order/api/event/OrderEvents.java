@@ -52,6 +52,7 @@ public class OrderEvents {
         private Long orderId;
         private String orderNumber;
         private Long userId;
+        private String sessionId;
         private Long servicePackageId;
         private BigDecimal totalAmount;
         private List<OrderItemSummary> items;
@@ -85,6 +86,7 @@ public class OrderEvents {
         private Long orderId;
         private String orderNumber;
         private Long userId;
+        private String sessionId;
         private BigDecimal totalAmount;
         private List<OrderItemSummary> items;
     }

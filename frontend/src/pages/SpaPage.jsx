@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   CalendarCheck,
   UserCheck,
@@ -13,19 +13,13 @@ import {
   Trash2,
   Building,
   Receipt,
-  DollarSign,
-  AlertCircle,
   FolderTree,
-  Wrench,
-  ShieldCheck,
   Award,
   FileText,
-  Check,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
 import {
-  formatCurrency,
   formatDate,
   getVietnamDateString,
   getAppointmentStatusBadge,
@@ -37,8 +31,9 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { SpaCatalogTab } from './spa-catalog/SpaCatalogTab';
 import { SpaVisitCheckout } from '../shared/ui/SpaVisitCheckout';
-import { useAuth } from '../app/providers/AuthProvider';
+import { spaErrorMessage } from '../shared/utils/spaMessages';
 
 const slugify = (value) =>
   value
@@ -52,7 +47,6 @@ const slugify = (value) =>
     .replace(/^-|-$/g, '');
 
 export const SpaPage = () => {
-  const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('appointments');
   const [loading, setLoading] = useState(false);
 
@@ -77,35 +71,7 @@ export const SpaPage = () => {
   // TAB 2: SPA SERVICES & PACKAGES
   // ==========================================
   const [services, setServices] = useState([]);
-  const [packages, setPackages] = useState([]);
   const [spaCategories, setSpaCategories] = useState([]);
-
-  // Create / Edit Package Modal
-  const [packageModalOpen, setPackageModalOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState(null);
-  const [packageForm, setPackageForm] = useState({
-    name: '', description: '', price: '', validityDays: 90, items: [{ serviceId: '', quantity: 1 }], active: true,
-  });
-  const [packageSubmitting, setPackageSubmitting] = useState(false);
-
-  // Create / Edit Service Modal
-  const [serviceModalOpen, setServiceModalOpen] = useState(false);
-  const [editingService, setEditingService] = useState(null);
-  const [srvName, setSrvName] = useState('');
-  const [srvSlug, setSrvSlug] = useState('');
-  const [srvPrice, setSrvPrice] = useState('500000');
-  const [srvDuration, setSrvDuration] = useState('60');
-  const [srvPrepMinutes, setSrvPrepMinutes] = useState('15');
-  const [srvDesc, setSrvDesc] = useState('');
-  const [srvCatId, setSrvCatId] = useState('');
-  const [srvActive, setSrvActive] = useState(true);
-  const [srvSubmitting, setSrvSubmitting] = useState(false);
-
-  // Resource Requirements Modal for Service
-  const [resourceModalOpen, setResourceModalOpen] = useState(false);
-  const [selectedServiceForResource, setSelectedServiceForResource] = useState(null);
-  const [resourceRequirements, setResourceRequirements] = useState([]);
-  const [resourceSubmitting, setResourceSubmitting] = useState(false);
 
   // Safety Policy & Preparation Modal for Service
   const [policyModalOpen, setPolicyModalOpen] = useState(false);
@@ -114,6 +80,9 @@ export const SpaPage = () => {
   const [policySelectedFormVersions, setPolicySelectedFormVersions] = useState([]);
   const [formTemplates, setFormTemplates] = useState([]);
   const [policySubmitting, setPolicySubmitting] = useState(false);
+  const [policyLoaded, setPolicyLoaded] = useState(false);
+  const [policyFeedback, setPolicyFeedback] = useState(null);
+  const policyRequest = useRef(0);
 
   // ==========================================
   // TAB: SPA CATEGORIES
@@ -228,10 +197,9 @@ export const SpaPage = () => {
 
   const fetchSpaCatalog = async () => {
     try {
-      const [srvRes, catRes, pkgRes] = await Promise.allSettled([
+      const [srvRes, catRes] = await Promise.allSettled([
         apiClient.get(ENDPOINTS.SPA.SERVICES),
         apiClient.get(ENDPOINTS.SPA.CATEGORIES),
-        apiClient.get(ENDPOINTS.SPA.PACKAGES),
       ]);
       if (srvRes.status === 'fulfilled') {
         const d = srvRes.value.data || srvRes.value;
@@ -240,10 +208,6 @@ export const SpaPage = () => {
       if (catRes.status === 'fulfilled') {
         const d = catRes.value.data || catRes.value;
         setSpaCategories(d.content || d || []);
-      }
-      if (pkgRes.status === 'fulfilled') {
-        const d = pkgRes.value.data || pkgRes.value;
-        setPackages(d.content || d || []);
       }
     } catch (e) {
       console.error(e);
@@ -260,7 +224,7 @@ export const SpaPage = () => {
           const publicRes = await apiClient.get(ENDPOINTS.SPA.PUBLIC_STAFF || '/api/v1/spa/services/staff');
           const pData = publicRes?.data || publicRes || [];
           list = Array.isArray(pData) ? pData : (pData?.content || []);
-        } catch (_) {}
+        } catch { /* The admin list remains the authoritative source. */ }
       }
       setStaffList(list || []);
     } catch (e) {
@@ -313,8 +277,6 @@ export const SpaPage = () => {
     if (activeTab === 'appointments') {
       fetchAppointments(0);
       fetchStaff();
-    } else if (activeTab === 'services') {
-      fetchSpaCatalog();
     } else if (activeTab === 'categories') {
       fetchCategories();
     } else if (activeTab === 'staff') {
@@ -430,172 +392,11 @@ export const SpaPage = () => {
     }
   };
 
-  // Spa Service Handlers (Create & Edit)
-  const handleOpenCreateService = () => {
-    setEditingService(null);
-    setSrvName('');
-    setSrvSlug('');
-    setSrvPrice('500000');
-    setSrvDuration('60');
-    setSrvPrepMinutes('15');
-    setSrvDesc('');
-    setSrvCatId(spaCategories[0]?.id ? String(spaCategories[0].id) : '');
-    setSrvActive(true);
-    setServiceModalOpen(true);
-  };
-
-  const handleOpenEditService = (srv) => {
-    setEditingService(srv);
-    setSrvName(srv.name || '');
-    setSrvSlug(srv.slug || '');
-    setSrvPrice(String(srv.basePrice ?? '500000'));
-    setSrvDuration(String(srv.durationMinutes ?? '60'));
-    setSrvPrepMinutes(String(srv.preparationTimeMinutes ?? '15'));
-    setSrvDesc(srv.description || srv.shortDescription || '');
-    setSrvCatId(srv.categoryId ? String(srv.categoryId) : '');
-    setSrvActive(srv.isActive ?? true);
-    setServiceModalOpen(true);
-  };
-
-  const handleSubmitService = async (e) => {
-    e.preventDefault();
-    setSrvSubmitting(true);
-    try {
-      const payload = {
-        name: srvName.trim(),
-        slug: srvSlug.trim() || slugify(srvName),
-        shortDescription: srvDesc.trim(),
-        description: srvDesc.trim(),
-        basePrice: parseFloat(srvPrice),
-        durationMinutes: parseInt(srvDuration, 10),
-        preparationTimeMinutes: parseInt(srvPrepMinutes, 10) || 15,
-        categoryId: srvCatId ? parseInt(srvCatId, 10) : undefined,
-        active: srvActive,
-      };
-      if (editingService) {
-        await apiClient.put(ENDPOINTS.SPA.SERVICE_DETAIL(editingService.id), payload);
-      } else {
-        await apiClient.post(ENDPOINTS.SPA.SERVICES, payload);
-      }
-      setServiceModalOpen(false);
-      fetchSpaCatalog();
-    } catch (err) {
-      alert(err.message || 'L\u1ed7i l\u01b0u d\u1ecbch v\u1ee5 spa');
-    } finally {
-      setSrvSubmitting(false);
-    }
-  };
-
-  const handleDeleteService = async (id) => {
-    if (!window.confirm(`Xóa dịch vụ spa #${id}?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.SPA.SERVICE_DETAIL(id));
-      fetchSpaCatalog();
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa dịch vụ');
-    }
-  };
-
-  // Spa Package Handlers (Create & Edit)
-  const handleOpenCreatePackage = () => {
-    setEditingPackage(null);
-    setPackageForm({
-      name: '',
-      description: '',
-      price: '',
-      validityDays: 90,
-      items: [{ serviceId: services[0]?.id ? String(services[0].id) : '', quantity: 1 }],
-      active: true,
-    });
-    setPackageModalOpen(true);
-  };
-
-  const handleOpenEditPackage = (pkg) => {
-    setEditingPackage(pkg);
-    setPackageForm({
-      name: pkg.name || '',
-      description: pkg.description || '',
-      price: String(pkg.price ?? ''),
-      validityDays: pkg.validityDays ?? 90,
-      items: (pkg.items || []).map((it) => ({ serviceId: String(it.serviceId || ''), quantity: it.quantity || 1 })),
-      active: pkg.isActive ?? true,
-    });
-    setPackageModalOpen(true);
-  };
-
-  const handleSubmitPackage = async (event) => {
-    event.preventDefault();
-    setPackageSubmitting(true);
-    try {
-      const payload = {
-        name: packageForm.name.trim(),
-        description: packageForm.description.trim(),
-        price: Number(packageForm.price),
-        validityDays: Number(packageForm.validityDays),
-        active: packageForm.active ?? true,
-        items: packageForm.items.map((item) => ({
-          serviceId: Number(item.serviceId),
-          quantity: Number(item.quantity),
-        })),
-      };
-      if (editingPackage) {
-        await apiClient.put(ENDPOINTS.SPA.PACKAGE_DETAIL(editingPackage.id), payload);
-      } else {
-        await apiClient.post(ENDPOINTS.SPA.PACKAGES, payload);
-      }
-      setPackageModalOpen(false);
-      fetchSpaCatalog();
-    } catch (err) {
-      alert(err.message || 'Không thể lưu gói liệu trình');
-    } finally {
-      setPackageSubmitting(false);
-    }
-  };
-
-  const handleDeletePackage = async (id) => {
-    if (!window.confirm(`Xóa gói liệu trình #${id}?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.SPA.PACKAGE_DETAIL(id));
-      fetchSpaCatalog();
-    } catch (err) {
-      alert(err.message || 'Không thể xóa gói liệu trình');
-    }
-  };
-
-  // Service Resource Requirements Handlers
-  const handleOpenResourceModal = async (srv) => {
-    setSelectedServiceForResource(srv);
-    setResourceRequirements([]);
-    setResourceModalOpen(true);
-    try {
-      const res = await apiClient.get(ENDPOINTS.SPA.SERVICE_RESOURCES(srv.id));
-      const list = res.data || res;
-      setResourceRequirements(Array.isArray(list) ? list : []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleSaveResourceRequirements = async (e) => {
-    e.preventDefault();
-    if (!selectedServiceForResource) return;
-    setResourceSubmitting(true);
-    try {
-      await apiClient.put(
-        ENDPOINTS.SPA.SERVICE_RESOURCES(selectedServiceForResource.id),
-        resourceRequirements.map((r) => ({ type: r.type, units: Number(r.units) }))
-      );
-      setResourceModalOpen(false);
-      alert('Đã cập nhật định mức tài nguyên dịch vụ thành công!');
-    } catch (err) {
-      alert(err.message || 'Lỗi lưu định mức tài nguyên');
-    } finally {
-      setResourceSubmitting(false);
-    }
-  };
-
   // Service Policy & Preparation Handlers
   const handleOpenPolicyModal = async (srv) => {
+    const requestVersion = ++policyRequest.current;
+    setPolicyLoaded(false);
+    setPolicyFeedback(null);
     setSelectedServiceForPolicy(srv);
     setPolicyWarningsRequired(false);
     setPolicySelectedFormVersions([]);
@@ -605,6 +406,7 @@ export const SpaPage = () => {
         apiClient.get(ENDPOINTS.SPA.SERVICE_POLICY(srv.id)),
         apiClient.get(`${ENDPOINTS.SPA.PREPARATION_TEMPLATES}?page=0&size=50`),
       ]);
+      if (requestVersion !== policyRequest.current) return;
       if (policyRes.status === 'fulfilled') {
         const p = policyRes.value.data || policyRes.value;
         setPolicyWarningsRequired(Boolean(p.warningsRequired));
@@ -614,14 +416,25 @@ export const SpaPage = () => {
         const t = tplRes.value.data || tplRes.value;
         setFormTemplates(t.content || (Array.isArray(t) ? t : []));
       }
+      setPolicyLoaded(policyRes.status === 'fulfilled' && tplRes.status === 'fulfilled');
+      if (policyRes.status === 'rejected' || tplRes.status === 'rejected') {
+        setPolicyFeedback({ tone: 'error', message: spaErrorMessage(policyRes.reason || tplRes.reason, 'Chưa tải đủ chính sách và biểu mẫu hiện tại. Vui lòng mở lại cửa sổ trước khi lưu.') });
+      }
     } catch (err) {
-      console.error(err);
+      if (requestVersion !== policyRequest.current) return;
+      setPolicyFeedback({ tone: 'error', message: spaErrorMessage(err, 'Chưa tải được chính sách an toàn. Vui lòng thử lại.') });
     }
+  };
+
+  const handleClosePolicy = () => {
+    if (policySubmitting) return;
+    policyRequest.current += 1;
+    setPolicyModalOpen(false);
   };
 
   const handleSavePolicy = async (e) => {
     e.preventDefault();
-    if (!selectedServiceForPolicy) return;
+    if (!selectedServiceForPolicy || !policyLoaded || policySubmitting) return;
     setPolicySubmitting(true);
     try {
       await apiClient.put(ENDPOINTS.SPA.SERVICE_POLICY(selectedServiceForPolicy.id), {
@@ -629,9 +442,9 @@ export const SpaPage = () => {
         requiredFormVersionIds: policySelectedFormVersions.map(Number),
       });
       setPolicyModalOpen(false);
-      alert('Đã cập nhật chính sách an toàn & biểu mẫu cho dịch vụ!');
+      setPolicyFeedback({ tone: 'success', message: 'Đã cập nhật chính sách an toàn và biểu mẫu cho dịch vụ.' });
     } catch (err) {
-      alert(err.message || 'Lỗi lưu chính sách an toàn');
+      setPolicyFeedback({ tone: 'error', message: spaErrorMessage(err, 'Chưa lưu được chính sách an toàn. Vui lòng kiểm tra và thử lại.') });
     } finally {
       setPolicySubmitting(false);
     }
@@ -993,39 +806,6 @@ export const SpaPage = () => {
     },
   ];
 
-  const serviceColumns = [
-    { header: 'ID', accessor: 'id', width: '60px' },
-    { header: 'Tên dịch vụ Spa', accessor: (row) => <strong>{row.name}</strong> },
-    {
-      header: 'Thời lượng',
-      accessor: (row) => `${row.durationMinutes} phút (+${row.preparationTimeMinutes ?? 15}p chuẩn bị)`,
-      width: '160px',
-    },
-    { header: 'Giá dịch vụ', accessor: (row) => <strong>{formatCurrency(row.basePrice)}</strong>, align: 'right' },
-    {
-      header: 'Trạng thái',
-      accessor: (row) => <Badge variant={row.isActive ? 'success' : 'default'}>{row.isActive ? 'ACTIVE' : 'OFF'}</Badge>,
-      width: '90px',
-    },
-    {
-      header: 'Thao tác',
-      accessor: (row) => (
-        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-          <Button variant="outline" size="sm" onClick={() => handleOpenResourceModal(row)} icon={Wrench} title="Cấu hình tài nguyên buồng/phòng/máy">
-            Tài nguyên
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleOpenPolicyModal(row)} icon={ShieldCheck} title="Chính sách an toàn & khảo sát">
-            An toàn
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleOpenEditService(row)} icon={Edit} title="Sửa dịch vụ" />
-          <Button variant="outline" size="sm" onClick={() => handleDeleteService(row.id)} icon={Trash2} title="Xóa dịch vụ" />
-        </div>
-      ),
-      align: 'right',
-      width: '280px',
-    },
-  ];
-
   const categoryColumns = [
     { header: 'ID', accessor: 'id', width: '60px' },
     { header: 'Tên danh mục', accessor: (row) => <strong>{row.name}</strong> },
@@ -1042,33 +822,6 @@ export const SpaPage = () => {
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
           <Button variant="outline" size="sm" onClick={() => handleOpenEditCategory(row)} icon={Edit} title="Sửa danh mục" />
           <Button variant="outline" size="sm" onClick={() => handleDeleteCategory(row.id)} icon={Trash2} title="Xóa danh mục" />
-        </div>
-      ),
-      align: 'right',
-      width: '120px',
-    },
-  ];
-
-  const packageColumns = [
-    { header: 'Gói liệu trình', accessor: (row) => <strong>{row.name}</strong> },
-    {
-      header: 'Dịch vụ bao gồm',
-      accessor: (row) => (row.items || [])
-        .map((item) => `${item.serviceName || ('Dịch vụ #' + (item.serviceId || ''))} × ${item.quantity}`)
-        .join(', ') || 'Chưa cấu hình dịch vụ',
-    },
-    { header: 'Hiệu lực', accessor: (row) => `${row.validityDays || 0} ngày`, width: '100px' },
-    { header: 'Giá gói', accessor: (row) => <strong>{formatCurrency(row.price)}</strong>, align: 'right' },
-    {
-      header: 'Trạng thái',
-      accessor: (row) => <Badge variant={row.isActive ? 'success' : 'default'}>{row.isActive ? 'ACTIVE' : 'OFF'}</Badge>,
-    },
-    {
-      header: 'Thao tác',
-      accessor: (row) => (
-        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-          <Button variant="outline" size="sm" onClick={() => handleOpenEditPackage(row)} icon={Edit} title="Sửa gói liệu trình" />
-          <Button variant="outline" size="sm" onClick={() => handleDeletePackage(row.id)} icon={Trash2} title="Xóa gói" />
         </div>
       ),
       align: 'right',
@@ -1189,7 +942,7 @@ export const SpaPage = () => {
   ];
 
   return (
-    <div className="content-container">
+    <div className={`content-container ${activeTab === 'services' ? 'spa-management-catalog' : ''}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Quản trị Spa, Gói Liệu trình & Ca trực Chuyên viên</h1>
@@ -1198,16 +951,6 @@ export const SpaPage = () => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {activeTab === 'services' && (
-            <>
-              <Button variant="outline" size="sm" onClick={handleOpenCreatePackage} icon={Plus}>
-                Thêm gói liệu trình
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleOpenCreateService} icon={Plus}>
-                Thêm dịch vụ Spa
-              </Button>
-            </>
-          )}
           {activeTab === 'categories' && (
             <Button variant="primary" size="sm" onClick={handleOpenCreateCategory} icon={Plus}>
               Thêm danh mục Spa
@@ -1228,12 +971,12 @@ export const SpaPage = () => {
               Tạo mẫu khảo sát mới
             </Button>
           )}
+          {activeTab !== 'services' && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
               if (activeTab === 'appointments') fetchAppointments(aptPage);
-              else if (activeTab === 'services') fetchSpaCatalog();
               else if (activeTab === 'categories') fetchCategories();
               else if (activeTab === 'staff') { fetchStaff(); fetchSpaCatalog(); }
               else if (activeTab === 'tickets') fetchTickets();
@@ -1245,8 +988,11 @@ export const SpaPage = () => {
           >
             Làm mới
           </Button>
+          )}
         </div>
       </div>
+
+      {policyFeedback && !policyModalOpen && <div className={`spa-catalog-notice ${policyFeedback.tone}`} role={policyFeedback.tone === 'error' ? 'alert' : 'status'}>{policyFeedback.message}<button type="button" aria-label="Đóng thông báo" onClick={() => setPolicyFeedback(null)}>×</button></div>}
 
       {/* Tabs */}
       <div className="tabs-header">
@@ -1262,7 +1008,7 @@ export const SpaPage = () => {
           onClick={() => setActiveTab('services')}
         >
           <Sparkles size={15} />
-          Dịch vụ & Gói Liệu trình ({services.length})
+          Dịch vụ & Gói Liệu trình
         </button>
         <button
           className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
@@ -1338,18 +1084,7 @@ export const SpaPage = () => {
       )}
 
       {/* Tab: Services */}
-      {activeTab === 'services' && (
-        <>
-          <div className="card">
-            <h3>Dịch vụ Spa đơn lẻ</h3>
-            <DataTable columns={serviceColumns} data={services} loading={false} emptyMessage="Chưa có dịch vụ spa." />
-          </div>
-          <div className="card" style={{ marginTop: 16 }}>
-            <h3>Gói liệu trình nhiều buổi</h3>
-            <DataTable columns={packageColumns} data={packages} loading={false} emptyMessage="Chưa có gói liệu trình." />
-          </div>
-        </>
-      )}
+      {activeTab === 'services' && <SpaCatalogTab onOpenPolicy={handleOpenPolicyModal} />}
 
       {/* Tab: Categories */}
       {activeTab === 'categories' && (
@@ -1474,110 +1209,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: CREATE / EDIT SPA SERVICE */}
-      <Modal
-        isOpen={serviceModalOpen}
-        onClose={() => setServiceModalOpen(false)}
-        title={editingService ? `Cập nhật Dịch Vụ Spa: ${editingService.name}` : 'Thêm Dịch Vụ Spa Mới'}
-        maxWidth="540px"
-      >
-        <form onSubmit={handleSubmitService}>
-          <Input label="Tên dịch vụ Spa *" value={srvName} onChange={(e) => setSrvName(e.target.value)} required placeholder="Massage Mặt Chuyên Sâu Cấp Ẩm" />
-          <div style={{ marginTop: '12px' }}>
-            <Input label="Đường dẫn Slug (tự tạo nếu để trống)" value={srvSlug} onChange={(e) => setSrvSlug(e.target.value)} placeholder="massage-mat-chuyen-sau" />
-          </div>
-          <div className="grid-3" style={{ marginTop: '12px' }}>
-            <Input label="Giá dịch vụ (VNĐ) *" type="number" value={srvPrice} onChange={(e) => setSrvPrice(e.target.value)} required />
-            <Input label="Thời lượng (Phút) *" type="number" value={srvDuration} onChange={(e) => setSrvDuration(e.target.value)} required />
-            <Input label="Thời gian chuẩn bị (Phút)" type="number" value={srvPrepMinutes} onChange={(e) => setSrvPrepMinutes(e.target.value)} />
-          </div>
-          <div style={{ marginTop: '12px' }}>
-            <Select
-              label="Danh mục Spa"
-              value={srvCatId}
-              onChange={(e) => setSrvCatId(e.target.value)}
-              options={[{ label: '-- Chưa chọn danh mục --', value: '' }, ...spaCategories.map((c) => ({ label: c.name, value: String(c.id) }))]}
-            />
-          </div>
-          <div style={{ marginTop: '12px' }}>
-            <label className="form-label">Mô tả quy trình dịch vụ</label>
-            <textarea className="form-textarea" rows={3} value={srvDesc} onChange={(e) => setSrvDesc(e.target.value)} placeholder="Chi tiết các bước thực hiện..." />
-          </div>
-          {editingService && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px' }}>
-              <input type="checkbox" id="srvActiveCheck" checked={srvActive} onChange={(e) => setSrvActive(e.target.checked)} />
-              <label htmlFor="srvActiveCheck" style={{ fontSize: '13px', fontWeight: 600 }}>Dịch vụ đang hoạt động (Active)</label>
-            </div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
-            <Button variant="outline" type="button" onClick={() => setServiceModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={srvSubmitting}>Lưu dịch vụ</Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* MODAL: CREATE / EDIT SERVICE PACKAGE */}
-      <Modal
-        isOpen={packageModalOpen}
-        onClose={() => setPackageModalOpen(false)}
-        title={editingPackage ? `Cập nhật gói liệu trình: ${editingPackage.name}` : 'Tạo gói liệu trình mới'}
-        maxWidth="680px"
-      >
-        <form onSubmit={handleSubmitPackage}>
-          <Input label="Tên gói *" required value={packageForm.name} onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })} placeholder="Combo 5 buổi Peel da sinh học" />
-          <div className="grid-2" style={{ marginTop: 12 }}>
-            <Input label="Giá gói (VNĐ) *" type="number" min="0" required value={packageForm.price} onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })} />
-            <Input label="Hiệu lực (ngày) *" type="number" min="1" required value={packageForm.validityDays} onChange={(e) => setPackageForm({ ...packageForm, validityDays: e.target.value })} />
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <label className="form-label">Mô tả</label>
-            <textarea className="form-textarea" rows={2} value={packageForm.description} onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })} />
-          </div>
-          <h4 style={{ marginTop: 14, marginBottom: 8, fontSize: 13, textTransform: 'uppercase' }}>Dịch vụ trong gói</h4>
-          {packageForm.items.map((item, index) => (
-            <div key={index} className="grid-2" style={{ marginBottom: 10 }}>
-              <Select
-                label="Dịch vụ *"
-                required
-                value={item.serviceId}
-                onChange={(e) => setPackageForm({
-                  ...packageForm,
-                  items: packageForm.items.map((current, itemIndex) => (
-                    itemIndex === index ? { ...current, serviceId: e.target.value } : current
-                  )),
-                })}
-                options={services.map((service) => ({ label: service.name, value: String(service.id) }))}
-              />
-              <Input
-                label="Số buổi *"
-                type="number"
-                min="1"
-                required
-                value={item.quantity}
-                onChange={(e) => setPackageForm({
-                  ...packageForm,
-                  items: packageForm.items.map((current, itemIndex) => (
-                    itemIndex === index ? { ...current, quantity: e.target.value } : current
-                  )),
-                })}
-              />
-              {packageForm.items.length > 1 && (
-                <Button type="button" variant="danger" size="sm" onClick={() => setPackageForm({ ...packageForm, items: packageForm.items.filter((_, itemIndex) => itemIndex !== index) })}>
-                  Xóa dòng
-                </Button>
-              )}
-            </div>
-          ))}
-          <Button type="button" variant="outline" size="sm" onClick={() => setPackageForm({ ...packageForm, items: [...packageForm.items, { serviceId: services[0]?.id ? String(services[0].id) : '', quantity: 1 }] })}>
-            + Thêm dịch vụ vào gói
-          </Button>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-            <Button type="button" variant="outline" onClick={() => setPackageModalOpen(false)}>Hủy</Button>
-            <Button type="submit" loading={packageSubmitting}>Lưu gói liệu trình</Button>
-          </div>
-        </form>
-      </Modal>
-
       {/* MODAL: CREATE / EDIT SPA CATEGORY */}
       <Modal
         isOpen={categoryModalOpen}
@@ -1605,96 +1236,23 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: SERVICE RESOURCE REQUIREMENTS */}
-      <Modal
-        isOpen={resourceModalOpen}
-        onClose={() => setResourceModalOpen(false)}
-        title={`Định mức Tài nguyên: ${selectedServiceForResource?.name || ''}`}
-        maxWidth="580px"
-      >
-        <form onSubmit={handleSaveResourceRequirements}>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-            Cấu hình số giường, phòng hoặc máy móc bắt buộc để hệ thống tự động giữ chỗ khi khách đặt lịch dịch vụ này.
-          </div>
-          {resourceRequirements.length === 0 ? (
-            <div style={{ padding: '16px', backgroundColor: 'var(--color-primary-50)', textAlign: 'center', color: 'var(--text-muted)', marginBottom: '14px' }}>
-              Chưa cấu hình ràng buộc tài nguyên. Dịch vụ không bị kiểm tra xung đột buồng/máy.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-              {resourceRequirements.map((req, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
-                  <div style={{ flex: 1 }}>
-                    <Select
-                      label="Loại tài nguyên"
-                      value={req.type}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setResourceRequirements((prev) => prev.map((item, i) => i === idx ? { ...item, type: val } : item));
-                      }}
-                      options={[
-                        { label: 'Giường chăm sóc (BED)', value: 'BED' },
-                        { label: 'Phòng trị liệu (ROOM)', value: 'ROOM' },
-                        { label: 'Máy móc công nghệ cao (MACHINE)', value: 'MACHINE' },
-                        { label: 'Khu vực chung (GENERAL)', value: 'GENERAL' },
-                      ]}
-                    />
-                  </div>
-                  <div style={{ width: '110px' }}>
-                    <Input
-                      label="Số lượng"
-                      type="number"
-                      min={1}
-                      value={req.units}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setResourceRequirements((prev) => prev.map((item, i) => i === idx ? { ...item, units: val } : item));
-                      }}
-                      required
-                    />
-                  </div>
-                  <div style={{ alignSelf: 'flex-end', marginBottom: 2 }}>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setResourceRequirements((prev) => prev.filter((_, i) => i !== idx))}
-                    >
-                      Xóa
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setResourceRequirements((prev) => [...prev, { type: 'BED', units: 1 }])}
-          >
-            + Thêm ràng buộc tài nguyên
-          </Button>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
-            <Button variant="outline" type="button" onClick={() => setResourceModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={resourceSubmitting}>Lưu định mức tài nguyên</Button>
-          </div>
-        </form>
-      </Modal>
-
       {/* MODAL: SERVICE SAFETY POLICY & PREPARATION */}
       <Modal
         isOpen={policyModalOpen}
-        onClose={() => setPolicyModalOpen(false)}
+        onClose={handleClosePolicy}
         title={`Chính sách An toàn & Khảo sát: ${selectedServiceForPolicy?.name || ''}`}
         maxWidth="620px"
+        className="spa-catalog-dialog"
       >
         <form onSubmit={handleSavePolicy}>
+          {policyFeedback && <div className={`spa-catalog-notice ${policyFeedback.tone}`} role={policyFeedback.tone === 'error' ? 'alert' : 'status'}>{policyFeedback.message}</div>}
+          {!policyLoaded && !policyFeedback && <p role="status" className="spa-catalog-muted">Đang tải chính sách và biểu mẫu hiện tại…</p>}
           <div style={{ padding: '12px 14px', backgroundColor: 'var(--color-primary-50)', border: '1px solid var(--border-subtle)', borderRadius: '6px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="checkbox"
                 id="chkWarningsReq"
+                disabled={!policyLoaded || policySubmitting}
                 checked={policyWarningsRequired}
                 onChange={(e) => setPolicyWarningsRequired(e.target.checked)}
                 style={{ width: '16px', height: '16px' }}
@@ -1740,6 +1298,8 @@ export const SpaPage = () => {
                       <input
                         type="checkbox"
                         checked={isChecked}
+                        aria-label={tpl.title}
+                        disabled={!policyLoaded || policySubmitting}
                         onChange={(e) => {
                           if (e.target.checked) {
                             setPolicySelectedFormVersions((prev) => [...prev, tpl.id]);
@@ -1757,8 +1317,8 @@ export const SpaPage = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
-            <Button variant="outline" type="button" onClick={() => setPolicyModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={policySubmitting}>Lưu chính sách an toàn</Button>
+            <Button variant="outline" type="button" disabled={policySubmitting} onClick={handleClosePolicy}>Hủy</Button>
+            <Button variant="primary" type="submit" disabled={!policyLoaded} loading={policySubmitting}>Lưu chính sách an toàn</Button>
           </div>
         </form>
       </Modal>

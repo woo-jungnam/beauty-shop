@@ -8,6 +8,7 @@ import { Modal } from '../shared/ui/Modal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { formatCurrency, formatDateTime } from '../shared/utils/formatters';
+import { RecommendationAdminPanel } from './RecommendationAdminPanel';
 
 const exportCsv = (name, rows) => {
   if (!rows.length) return;
@@ -108,6 +109,8 @@ export const OperationsPage = () => {
         setRows((res.data || res).content || []);
       } else if (tab === 'chatbot') {
         checkChatbotHealth();
+      } else if (tab === 'recommendations') {
+        // The panel owns its independent loading and retry state.
       } else {
         const res = await apiClient.get(ENDPOINTS.SYSTEM.CONFIGS);
         setConfigs(res.data || res || []);
@@ -190,8 +193,8 @@ export const OperationsPage = () => {
       <div><h1 className="page-title">Tài chính, Kiểm toán & Cấu hình</h1><p className="page-subtitle">Đối soát giao dịch, truy vết thao tác và quản lý chỉ tiêu vận hành</p></div>
       <div style={{ display: 'flex', gap: 8 }}>
         {tab === 'config' && <Button icon={Plus} onClick={() => setConfigModalOpen(true)}>Thêm cấu hình</Button>}
-        <Button variant="outline" icon={Download} onClick={() => exportCsv(tab, tab === 'config' ? configs : rows)}>Xuất CSV</Button>
-        <Button variant="outline" icon={RefreshCw} loading={loading} onClick={load}>Làm mới</Button>
+        {tab !== 'recommendations' && <><Button variant="outline" icon={Download} onClick={() => exportCsv(tab, tab === 'config' ? configs : rows)}>Xuất CSV</Button>
+        <Button variant="outline" icon={RefreshCw} loading={loading} onClick={load}>Làm mới</Button></>}
       </div>
     </div>
     <div className="tabs-header">
@@ -200,6 +203,7 @@ export const OperationsPage = () => {
         ['audit', 'Nhật ký kiểm toán'],
         ['config', 'Cấu hình KPI'],
         ['chatbot', 'Trợ lý AI & RAG'],
+        ['recommendations', 'Gợi ý Content-Based'],
       ].map(([id, label]) => (
         <button
           key={id}
@@ -210,6 +214,7 @@ export const OperationsPage = () => {
         </button>
       ))}
     </div>
+    {tab === 'recommendations' && <RecommendationAdminPanel />}
     {tab === 'chatbot' && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Card 1: Chatbot Service Health */}
@@ -350,7 +355,7 @@ export const OperationsPage = () => {
         </div>
       </div>
     )}
-    {tab !== 'config' && tab !== 'chatbot' && <div className="card">
+    {(tab === 'payments' || tab === 'audit') && <div className="card">
       <form onSubmit={(e) => { e.preventDefault(); load(); }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}><Input aria-label="Tìm kiếm" icon={Search} value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Mã đơn, mã giao dịch, tài khoản..." /><Button type="submit">Tìm</Button></form>
       {tab === 'payments' && summary && <div className="grid-3" style={{ marginBottom: 16 }}><div className="stat-card">Giao dịch: <strong>{summary.totalTransactions}</strong></div><div className="stat-card">Thực nhận: <strong>{formatCurrency(summary.receivedAmount)}</strong></div><div className="stat-card">Lỗi: <strong>{summary.failedTransactions}</strong></div></div>}
       <DataTable columns={tab === 'payments' ? paymentColumns : auditColumns} data={rows} loading={loading} />

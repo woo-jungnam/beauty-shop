@@ -35,31 +35,31 @@ public class MediaStorageService {
 
     @Transactional
     public MediaView upload(MultipartFile file) {
-        if (file == null || file.isEmpty()) throw new BusinessException("Image file is required");
-        if (file.getSize() > 10L * 1024 * 1024) throw new BusinessException("Image exceeds the 10 MB limit");
+        if (file == null || file.isEmpty()) throw new BusinessException("Tệp hình ảnh là bắt buộc");
+        if (file.getSize() > 10L * 1024 * 1024) throw new BusinessException("Kích thước tệp hình ảnh vượt quá giới hạn 10 MB (Image exceeds the 10 MB limit)");
         String contentType = Optional.ofNullable(file.getContentType()).orElse("").trim().toLowerCase(Locale.ROOT);
         String original = Paths.get(Optional.ofNullable(file.getOriginalFilename()).orElse("image")).getFileName().toString();
         if (contentType.equals("image/svg+xml") || original.toLowerCase(Locale.ROOT).endsWith(".svg")) {
-            throw new BusinessException("SVG uploads are not supported; upload a raster image");
+            throw new BusinessException("Không hỗ trợ định dạng SVG; vui lòng tải ảnh JPG, PNG, WEBP, GIF, AVIF");
         }
-        if (!isAllowed(contentType, original)) throw new BusinessException("Unsupported image type. Allowed: JPG, PNG, WEBP, GIF, AVIF, BMP (Max 10MB)");
+        if (!isAllowed(contentType, original)) throw new BusinessException("Định dạng hình ảnh không được hỗ trợ (Unsupported image type). Cho phép: JPG, PNG, WEBP, GIF, AVIF, BMP (Tối đa 10MB)");
         byte[] bytes;
-        try { bytes = file.getBytes(); } catch (IOException exception) { throw new BusinessException("Unable to read image"); }
+        try { bytes = file.getBytes(); } catch (IOException exception) { throw new BusinessException("Không thể đọc tệp hình ảnh"); }
         ImageFormat format = detectFormat(bytes);
-        if (format == null) throw new BusinessException("Unsupported image type or invalid image content");
+        if (format == null) throw new BusinessException("Định dạng hình ảnh không được hỗ trợ (Unsupported image type) hoặc nội dung tệp không hợp lệ");
         contentType = format.contentType();
         String stored = UUID.randomUUID() + format.extension();
 
         Path root = resolveUploadRoot();
         Path target = root.resolve(stored).normalize();
-        if (!target.startsWith(root)) throw new BusinessException("Invalid file name");
+        if (!target.startsWith(root)) throw new BusinessException("Tên tệp tin không hợp lệ");
 
         try {
             Files.createDirectories(root);
             Files.write(target, bytes, StandardOpenOption.CREATE_NEW);
         } catch (Exception exception) {
             log.error("Unable to store image file to {}: {}", target, exception.getMessage(), exception);
-            throw new BusinessException("Unable to store image: " + exception.getMessage());
+            throw new BusinessException("Không thể lưu tệp hình ảnh: " + exception.getMessage());
         }
 
         if (TransactionSynchronizationManager.isSynchronizationActive()) {

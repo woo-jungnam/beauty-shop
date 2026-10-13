@@ -1,296 +1,129 @@
-import math
-from typing import Any, List, Optional, Set
-import pymysql
-import pymysql.cursors
+import time
+from datetime import datetime, timezone
+from threading import RLock
 
-from app.core.config import getSettings
 from app.core.logging import getLogger
-from app.repositories.vector_repository import vectorRepository
 from app.services.ingestion.extractor import DatabaseExtractor
-from app.services.retrieval.search import embeddingService
+from app.services.content_based import ContentIndex
+from app.services.recommendation_config import RecommendationConfig
 
-logger = getLogger("recommendationService")
-settings = getSettings()
-
-ACTION_WEIGHTS = {
-    "PURCHASE": 5.0,
-    "BUY": 5.0,
-    "ADD_TO_CART": 3.0,
-    "CART": 3.0,
-    "VIEW": 1.0,
-    "SEARCH_CLICK": 1.5,
-}
+logger = getLogger('recommendationService')
+ACTION_WEIGHTS = {'VIEW': 1.0, 'SEARCH_CLICK': 1.5, 'ADD_TO_CART': 3.0, 'PURCHASE': 5.0}
 
 
 class RecommendationService:
+    def __init__(self, extractor=None):
+        self.dbExtractor = extractor or DatabaseExtractor()
+        self.config = RecommendationConfig(self.dbExtractor)
+        self.index = None
+        self.expires = 0
+        self.built_at = None
+        self.build_ms = None
+        self.error = None
+        self.lock = RLock()
+        self.requests = {'CONTENT_BASED': 0, 'COLD_START': 0, 'MIXED': 0, 'UNAVAILABLE': 0}
 
-    def __init__(self):
-        self.vectorRepo = vectorRepository
-        self.embeddingSvc = embeddingService
-        self.dbExtractor = DatabaseExtractor()
-
-    def getProductVector(self, productId: int) -> Optional[List[float]]:
-        """Lấy vector biểu diễn của sản phẩm từ Qdrant hoặc tính toán từ DB nếu chưa có."""
-        prodStrId = str(productId)
-        # 1. Thử lấy point mô tả tổng quan (hỗ trợ cả prefix mysql_ và không prefix)
-        for chunk_key in [f"mysql_{prodStrId}_desc", f"{prodStrId}_desc"]:
+    def refresh(self, force=False):
+        with self.lock:
+            config = self.config.get(force=force)
+            fields = {name:config['field.' + name] for name in ContentIndex.FIELD_NAMES}
+            if not force and self.index is not None and time.monotonic() < self.expires and self.index.field_weights == fields:
+                return self.index, config
+            watch = time.perf_counter()
             try:
-                pointUuid = self.vectorRepo.chunkIdToUuid(chunk_key)
-                points = self.vectorRepo.client.retrieve(
-                    collection_name=self.vectorRepo.collectionName,
-                    ids=[pointUuid],
-                    with_vectors=True,
-                )
-                if points and points[0].vector:
-                    return list(points[0].vector)
-            except Exception as e:
-                logger.debug("Không tìm thấy point UUID chuẩn cho %s: %s", chunk_key, e)
-
-        # 2. Thử cuộn tìm bất kỳ chunk nào của sản phẩm trong Qdrant
-        try:
-            from qdrant_client.models import FieldCondition, Filter, MatchValue
-            for pid_val in [f"mysql_{prodStrId}", prodStrId]:
-                records, _ = self.vectorRepo.client.scroll(
-                    collection_name=self.vectorRepo.collectionName,
-                    scroll_filter=Filter(
-                        must=[FieldCondition(key="product_id", match=MatchValue(value=pid_val))]
-                    ),
-                    limit=1,
-                    with_vectors=True,
-                )
-                if records and records[0].vector:
-                    return list(records[0].vector)
-        except Exception as e:
-            logger.debug("Lỗi scroll vector cho sản phẩm %s: %s", productId, e)
-
-        # 3. Fallback: Lấy text từ MySQL và sinh vector trực tiếp
-        try:
-            conn = self.dbExtractor.getConnection()
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT p.id, p.name, COALESCE(b.name, '') as brand,
-                           COALESCE(p.short_description, '') as short_desc,
-                           COALESCE(p.description, '') as description,
-                           COALESCE(p.ingredients, '') as ingredients
-                    FROM products p
-                    LEFT JOIN brands b ON p.brand_id = b.id
-                    WHERE p.id = %s AND p.is_deleted = 0
-                    """,
-                    (productId,),
-                )
-                row = cur.fetchone()
-            conn.close()
-
-            if row:
-                textToEmbed = f"{row.get('name', '')} {row.get('brand', '')} {row.get('short_desc', '')} {row.get('description', '')[:300]} {row.get('ingredients', '')[:200]}"
-                vector = self.embeddingSvc.getEmbedding(textToEmbed)
-                return vector
-        except Exception as e:
-            logger.error("Lỗi sinh vector từ MySQL cho sản phẩm %s: %s", productId, e)
-
-        return None
-
-    def getSimilarProducts(self, productId: int, limit: int = 8) -> List[int]:
-        """Gợi ý Item-to-Item Content-Based: Tìm các sản phẩm có độ tương đồng Cosine cao nhất."""
-        targetVector = self.getProductVector(productId)
-        if not targetVector:
-            logger.warning("Không tìm thấy vector cho sản phẩm %s", productId)
-            return []
-
-        try:
-            from qdrant_client.models import FieldCondition, Filter, MatchValue
-
-            filterProduct = Filter(
-                must=[
-                    FieldCondition(key="target_type", match=MatchValue(value="PRODUCT"))
-                ]
-            )
-
-            # Lấy top kết quả dư để lọc trùng product_id (do 1 sản phẩm có nhiều chunk)
-            candidatePoints = self.vectorRepo.searchVectors(
-                queryVector=targetVector,
-                limit=max(30, limit * 4),
-            )
-
-            similarIds: List[int] = []
-            seenIds: Set[int] = {productId}
-
-            for pt in candidatePoints:
-                pIdRaw = pt.payload.get("product_id") if pt.payload else None
-                if pIdRaw is not None:
-                    try:
-                        pIdStr = str(pIdRaw).replace("mysql_", "").strip()
-                        pId = int(pIdStr)
-                        if pId not in seenIds:
-                            seenIds.add(pId)
-                            similarIds.append(pId)
-                            if len(similarIds) >= limit:
-                                break
-                    except (ValueError, TypeError):
-                        continue
-
-            return similarIds
-        except Exception as e:
-            logger.error("Lỗi tính toán similar products cho sản phẩm %s: %s", productId, e)
-            return []
-
-    def getPopularProductsFallback(self, limit: int = 8) -> List[int]:
-        """Fallback Cold-Start: Lấy danh sách sản phẩm bán chạy/nổi bật nhất từ MySQL."""
-        try:
-            conn = self.dbExtractor.getConnection()
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id
-                    FROM products
-                    WHERE is_deleted = 0 AND status = 'ACTIVE'
-                    ORDER BY is_featured DESC, (total_sold * 0.7 + average_rating * 0.3) DESC, id ASC
-                    LIMIT %s
-                    """,
-                    (limit,),
-                )
-                rows = cur.fetchall()
-            conn.close()
-            return [int(r["id"]) for r in rows if "id" in r]
-        except Exception as e:
-            logger.error("Lỗi lấy danh sách sản phẩm phổ biến fallback: %s", e)
-            return []
-
-    def getRecommendationsForUser(
-        self,
-        userId: Optional[int] = None,
-        sessionId: Optional[str] = None,
-        limit: int = 8,
-    ) -> List[int]:
-        """Gợi ý User-to-Item Content-Based:
-        Tổng hợp User Profile Vector từ lịch sử tương tác có trọng số,
-        sau đó truy vấn Qdrant để tìm sản phẩm tương đồng nhất.
-        """
-        if not userId and not sessionId:
-            return self.getPopularProductsFallback(limit)
-
-        # 1. Truy vấn lịch sử tương tác gần nhất từ MySQL (hỗ trợ cả userId và sessionId)
-        interactions: List[dict] = []
-        try:
-            conn = self.dbExtractor.getConnection()
-            with conn.cursor() as cur:
-                if userId and sessionId:
-                    cur.execute(
-                        """
-                        SELECT product_id, action_type
-                        FROM user_product_interactions
-                        WHERE user_id = %s OR session_id = %s
-                        ORDER BY created_at DESC
-                        LIMIT 20
-                        """,
-                        (userId, sessionId),
-                    )
-                elif userId:
-                    cur.execute(
-                        """
-                        SELECT product_id, action_type
-                        FROM user_product_interactions
-                        WHERE user_id = %s
-                        ORDER BY created_at DESC
-                        LIMIT 20
-                        """,
-                        (userId,),
-                    )
-                else:
-                    cur.execute(
-                        """
-                        SELECT product_id, action_type
-                        FROM user_product_interactions
-                        WHERE session_id = %s
-                        ORDER BY created_at DESC
-                        LIMIT 20
-                        """,
-                        (sessionId,),
-                    )
-                interactions = cur.fetchall()
-            conn.close()
-        except Exception as e:
-            logger.warning("Bảng user_product_interactions chưa sẵn sàng hoặc lỗi: %s", e)
-            return self.getPopularProductsFallback(limit)
-
-        if not interactions:
-            return self.getPopularProductsFallback(limit)
-
-        # 2. Tính User Profile Vector theo trọng số hành vi
-        weightedVectors: List[tuple[List[float], float]] = []
-        interactedProductIds: Set[int] = set()
-
-        for inter in interactions:
-            try:
-                pId = int(inter["product_id"])
-                interactedProductIds.add(pId)
-                action = str(inter.get("action_type", "VIEW")).upper()
-                weight = ACTION_WEIGHTS.get(action, 1.0)
-                pVector = self.getProductVector(pId)
-                if pVector:
-                    weightedVectors.append((pVector, weight))
+                index = ContentIndex(self.dbExtractor.extractProducts(), fields)
+                self.index = index
+                self.built_at = datetime.now(timezone.utc).isoformat()
+                self.build_ms = round((time.perf_counter() - watch) * 1000, 2)
+                self.error = None
+                self.expires = time.monotonic() + config['catalog_refresh_seconds']
+                return index, config
             except Exception:
-                continue
+                logger.exception('Không thể làm mới dữ liệu Content-Based')
+                self.error = 'Chưa làm mới được dữ liệu sản phẩm. Vui lòng kiểm tra kết nối cơ sở dữ liệu.'
+                # Do not use expired candidate eligibility when the catalog cannot be verified.
+                return None, config
 
-        if not weightedVectors:
-            return self.getPopularProductsFallback(limit)
+    def status(self):
+        index, config = self.refresh()
+        return {'status': 'ok' if index is not None and not self.config.error else 'degraded',
+                'algorithm': 'FIELD_TFIDF_WEIGHTED_CENTROID_COSINE', 'embedding_space': 'TFIDF_ADMIN_CATALOG_V1',
+                'index_version': index.version if index else None,
+                'indexed_products': len(index.products) if index else 0,
+                'features': len(index.idf) if index else 0, 'last_refresh': self.built_at,
+                'build_ms': self.build_ms, 'config': config, 'config_error': self.config.error,
+                'error': self.error, 'request_counts': dict(self.requests)}
 
-        # Tổng hợp vector người dùng
-        dimension = len(weightedVectors[0][0])
-        userVector = [0.0] * dimension
-        totalWeight = sum(w for _, w in weightedVectors)
+    def _result(self, items, source, index, matched_products=0):
+        with self.lock:
+            self.requests[source] = self.requests.get(source, 0) + 1
+        return {'status': 'success' if index is not None else 'unavailable',
+                'algorithm': 'FIELD_TFIDF_WEIGHTED_CENTROID_COSINE' if source in ('CONTENT_BASED', 'MIXED') else 'POPULAR_FALLBACK',
+                'source': source, 'recommended_product_ids': [r['id'] for r in items],
+                'items': items, 'total': len(items), 'matched_history_products': matched_products,
+                'index_version': index.version if index else None, 'detail': self.error}
 
-        for vec, w in weightedVectors:
-            for d in range(dimension):
-                userVector[d] += vec[d] * w
+    def similar(self, product_id, limit=8):
+        index, config = self.refresh()
+        if index is None:
+            return self._result([], 'UNAVAILABLE', None)
+        vector = index.vectors.get(product_id)
+        items = index.rank(vector, limit, {product_id}, config['min_similarity'], config['in_stock_only'])
+        result = self._result(items, 'CONTENT_BASED', index)
+        result['product_id'] = product_id
+        return result
 
-        if totalWeight > 0:
-            userVector = [val / totalWeight for val in userVector]
-
-        # Chuẩn hóa L2 norm cho user vector
-        norm = math.sqrt(sum(v * v for v in userVector))
-        if norm > 0:
-            userVector = [v / norm for v in userVector]
-
-        # 3. Tìm sản phẩm gần nhất trong Qdrant
+    def history(self, user_id, session_id, window):
+        conn = self.dbExtractor.getConnection()
         try:
-            candidatePoints = self.vectorRepo.searchVectors(
-                queryVector=userVector,
-                limit=max(30, limit * 4),
-            )
+            with conn.cursor() as cur:
+                if user_id:
+                    where = 'user_id=%s'
+                    params = [user_id]
+                    if session_id:
+                        where += ' OR (user_id IS NULL AND session_id=%s)'
+                        params.append(session_id)
+                else:
+                    where = 'user_id IS NULL AND session_id=%s'
+                    params = [session_id]
+                cur.execute('SELECT product_id,action_type,created_at FROM user_product_interactions WHERE '
+                            + where + ' ORDER BY created_at DESC,id DESC LIMIT %s', tuple(params + [window]))
+                return cur.fetchall()
+        finally:
+            conn.close()
 
-            recommendedIds: List[int] = []
-            seenIds: Set[int] = set(interactedProductIds)
+    def for_user(self, user_id=None, session_id=None, limit=8):
+        index, config = self.refresh()
+        if index is None:
+            return self._result([], 'UNAVAILABLE', None)
+        history = []
+        if user_id or session_id:
+            try:
+                history = self.history(user_id, session_id, config['history_window'])
+            except Exception:
+                logger.exception('Chưa đọc được lịch sử tương tác')
+                result = self._result(index.popular(limit, in_stock_only=config['in_stock_only']), 'COLD_START', index)
+                result['history_error'] = 'Chưa xác minh được lịch sử; đang dùng sản phẩm phổ biến.'
+                return result
+        weights = {'VIEW': config['weight.view'], 'SEARCH_CLICK': config['weight.search_click'],
+                   'ADD_TO_CART': config['weight.add_to_cart'], 'PURCHASE': config['weight.purchase']}
+        profile, seen, matched = index.profile(history, weights, config['half_life_days'], config['max_product_weight'])
+        excluded = seen if config['exclude_seen'] else set()
+        items = index.rank(profile, limit, excluded, config['min_similarity'], config['in_stock_only'])
+        source = 'CONTENT_BASED' if items else 'COLD_START'
+        if len(items) < limit:
+            popular = index.popular(limit - len(items), excluded | {r['id'] for r in items}, config['in_stock_only'])
+            if items and popular:
+                source = 'MIXED'
+            items += popular
+        return self._result(items, source, index, matched)
 
-            for pt in candidatePoints:
-                pIdRaw = pt.payload.get("product_id") if pt.payload else None
-                if pIdRaw is not None:
-                    try:
-                        pIdStr = str(pIdRaw).replace("mysql_", "").strip()
-                        pId = int(pIdStr)
-                        if pId not in seenIds:
-                            seenIds.add(pId)
-                            recommendedIds.append(pId)
-                            if len(recommendedIds) >= limit:
-                                break
-                    except (ValueError, TypeError):
-                        continue
+    # Compatibility for scripts/consumers that need only IDs.
+    def getSimilarProducts(self, productId, limit=8):
+        return self.similar(productId, limit)['recommended_product_ids']
 
-            # Nếu danh sách lọc còn thiếu, bổ sung thêm từ popular
-            if len(recommendedIds) < limit:
-                fallbacks = self.getPopularProductsFallback(limit)
-                for fId in fallbacks:
-                    if fId not in seenIds:
-                        seenIds.add(fId)
-                        recommendedIds.append(fId)
-                        if len(recommendedIds) >= limit:
-                            break
-
-            return recommendedIds
-        except Exception as e:
-            logger.error("Lỗi tìm kiếm gợi ý User-to-Item: %s", e)
-            return self.getPopularProductsFallback(limit)
+    def getRecommendationsForUser(self, userId=None, sessionId=None, limit=8):
+        return self.for_user(userId, sessionId, limit)['recommended_product_ids']
 
 
 recommendationService = RecommendationService()

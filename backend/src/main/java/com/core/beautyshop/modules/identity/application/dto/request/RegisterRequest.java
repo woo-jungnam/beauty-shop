@@ -41,11 +41,13 @@ public class RegisterRequest {
 
     @Schema(description = "Số điện thoại liên hệ", example = "0912345678")
     @Size(max = 20)
+    @jakarta.validation.constraints.Pattern(regexp = "^$|^0[35789]\\d{8}$", message = "Số điện thoại di động Việt Nam không hợp lệ")
     private String phone;
 
     @Schema(description = "Giới tính (MALE, FEMALE, OTHER)", example = "FEMALE")
     private Gender gender;
 
+    @jakarta.validation.constraints.Past(message = "Ngày sinh phải ở trong quá khứ")
     @Schema(description = "Ngày tháng năm sinh (YYYY-MM-DD)", example = "1998-05-20")
     private LocalDate dateOfBirth;
 

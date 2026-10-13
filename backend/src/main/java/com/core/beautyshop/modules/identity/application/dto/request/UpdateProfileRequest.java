@@ -22,6 +22,7 @@ public class UpdateProfileRequest {
     private String fullName;
 
     @Size(max = 20)
+    @jakarta.validation.constraints.Pattern(regexp = "^$|^0[35789]\\d{8}$", message = "Số điện thoại di động Việt Nam không hợp lệ")
     @Schema(description = "Số điện thoại", maxLength = 20)
     private String phone;
 
@@ -36,6 +37,7 @@ public class UpdateProfileRequest {
     @Schema(description = "Giới tính", example = "FEMALE")
     private Gender gender;
 
+    @jakarta.validation.constraints.Past(message = "Ngày sinh phải ở trong quá khứ")
     @Schema(description = "Ngày sinh", type = "string", format = "date", example = "1998-05-20")
     private LocalDate dateOfBirth;
 }

@@ -96,7 +96,7 @@ public class WarehouseServiceImpl implements WarehouseService {
         for (var stock : stocks.findAllByWarehouseIdForUpdate(id)) {
             entities.refresh(stock, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
             if (hasBalance(stock.getQuantity()) || hasBalance(stock.getReservedQuantity()) || hasBalance(stock.getQuarantinedQuantity()))
-                throw new BusinessException("Warehouse still contains stock, order reservations or quarantined goods; reconcile before deleting");
+                throw new BusinessException("Kho bãi vẫn còn tồn kho, hàng giữ chỗ cho đơn hoặc hàng cách ly; vui lòng giải phóng trước khi xóa kho");
         }
         warehouse.setIsDeleted(true);
         warehouseRepository.save(warehouse);

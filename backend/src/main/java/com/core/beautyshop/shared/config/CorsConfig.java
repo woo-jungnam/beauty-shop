@@ -14,7 +14,13 @@ public class CorsConfig {
 
     public static final List<String> ALLOWED_ORIGINS = List.of(
             "https://dermascan.world",
-            "https://www.dermascan.world"
+            "https://www.dermascan.world",
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000"
     );
 
     @Bean

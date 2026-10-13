@@ -28,15 +28,15 @@ public class SpaAppointmentCheckoutService {
     public SpaVisitInvoiceResult create(Long appointmentId, CreateSpaVisitInvoiceRequest request, String key) {
         Appointment appointment = lock(appointmentId);
         if (appointment.getStatus() != AppointmentStatus.COMPLETED)
-            throw new BusinessException("Only a completed Spa appointment can be invoiced");
+            throw new BusinessException("Chỉ có thể xuất hóa đơn cho buổi hẹn đã hoàn thành");
         if (appointment.getItems() == null || appointment.getItems().isEmpty())
-            throw new BusinessException("Appointment has no service execution evidence; reconciliation is required");
+            throw new BusinessException("Buổi hẹn chưa có thông tin thực hiện dịch vụ; cần đối soát");
         List<SpaVisitCharge> charges = new ArrayList<>();
         for (AppointmentItem item : appointment.getItems()) {
             if (Boolean.TRUE.equals(item.getIsDeleted())) continue;
             if (item.getExecutionStatus() != AppointmentItemExecutionStatus.PERFORMED
                     && item.getExecutionStatus() != AppointmentItemExecutionStatus.SKIPPED)
-                throw new BusinessException("Every service must have a performed or skipped outcome; reconcile legacy visits before checkout");
+                throw new BusinessException("Mọi dịch vụ phải được ghi nhận hoàn thành hoặc bỏ qua trước khi thanh toán");
             if (item.getExecutionStatus() != AppointmentItemExecutionStatus.PERFORMED || item.getTicket() != null) continue;
             String name = item.getServiceNameSnapshot();
             if (name == null || name.isBlank()) name = item.getService().getName();
@@ -60,13 +60,13 @@ public class SpaAppointmentCheckoutService {
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public SpaVisitInvoiceResult collectCash(Long appointmentId, SpaCashReceiptRequest request, String receiptKey) {
         Appointment appointment = lock(appointmentId);
-        if (appointment.getStatus() != AppointmentStatus.COMPLETED) throw new BusinessException("Spa appointment is not completed");
+        if (appointment.getStatus() != AppointmentStatus.COMPLETED) throw new BusinessException("Buổi hẹn Spa chưa hoàn thành");
         return orders.collectSpaVisitCash(appointmentId, request.amount(), receiptKey);
     }
 
     private Appointment lock(Long id) {
         Appointment appointment = id == null ? null : entities.find(Appointment.class, id, LockModeType.PESSIMISTIC_WRITE);
-        if (appointment == null || Boolean.TRUE.equals(appointment.getIsDeleted())) throw new ResourceNotFoundException("Appointment not found");
+        if (appointment == null || Boolean.TRUE.equals(appointment.getIsDeleted())) throw new ResourceNotFoundException("Không tìm thấy buổi hẹn Spa");
         entities.refresh(appointment, LockModeType.PESSIMISTIC_WRITE);
         return appointment;
     }

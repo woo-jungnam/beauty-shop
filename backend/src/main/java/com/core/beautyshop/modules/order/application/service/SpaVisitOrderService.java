@@ -39,13 +39,13 @@ public class SpaVisitOrderService {
             Order invoice = previous.get();
             if (!command.userId().equals(invoice.getUserId()) || invoice.getPaymentMethod() != command.paymentMethod()
                     || (key.equals(invoice.getCheckoutKey()) && !hash.equals(invoice.getCheckoutHash()))) {
-                throw new BusinessException("The completed visit already has a different immutable invoice");
+                throw new BusinessException("Buổi hẹn hoàn thành đã có hóa đơn thanh toán khác không thể thay đổi");
             }
             return result(invoice);
         }
         BigDecimal subtotal = command.items().stream().map(SpaVisitCharge::unitPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal total = subtotal.setScale(0, RoundingMode.HALF_UP);
-        if (total.compareTo(new BigDecimal("9999999999")) > 0) throw new BusinessException("Invoice amount exceeds the supported limit");
+        if (total.compareTo(new BigDecimal("9999999999")) > 0) throw new BusinessException("Số tiền trên hóa đơn vượt quá giới hạn cho phép");
         Order invoice = Order.builder().orderNumber("ORD-" + UUID.randomUUID().toString().replace("-", "").toUpperCase())
                 .appointmentId(command.appointmentId()).userId(command.userId()).checkoutKey(key).checkoutHash(hash)
                 .customerName(text(command.customerName(), "Spa customer")).customerPhone(text(command.customerPhone(), "N/A"))
@@ -67,7 +67,7 @@ public class SpaVisitOrderService {
     @Transactional(readOnly = true)
     public SpaVisitInvoiceResult forUser(Long appointmentId, Long userId) {
         Order invoice = find(appointmentId);
-        if (userId == null || !userId.equals(invoice.getUserId())) throw new AccessDeniedException("You cannot read this Spa invoice");
+        if (userId == null || !userId.equals(invoice.getUserId())) throw new AccessDeniedException("Bạn không có quyền xem hóa đơn Spa này");
         return result(invoice);
     }
 
@@ -79,16 +79,16 @@ public class SpaVisitOrderService {
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     @com.core.beautyshop.shared.audit.api.annotation.AuditAction(action = "COLLECT_SPA_VISIT_CASH", resourceType = "APPOINTMENT")
     public SpaVisitInvoiceResult collectCash(Long appointmentId, BigDecimal amount, String receiptKey) {
-        Long id = orders.findIdByAppointmentId(appointmentId).orElseThrow(() -> new ResourceNotFoundException("Spa invoice not found"));
-        Order invoice = orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Spa invoice not found"));
+        Long id = orders.findIdByAppointmentId(appointmentId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hóa đơn Spa"));
+        Order invoice = orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hóa đơn Spa"));
         entities.refresh(invoice, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if (Boolean.TRUE.equals(invoice.getIsDeleted()) || invoice.getAppointmentId() == null || invoice.getStatus() != OrderStatus.COMPLETED)
-            throw new BusinessException("Only a completed Spa visit invoice can receive cash");
+            throw new BusinessException("Chỉ hóa đơn buổi hẹn Spa đã hoàn thành mới có thể thu tiền mặt");
         boolean created = payments.recordCashCollection(invoice.getOrderNumber(), amount, receiptKey, SecurityUtils.getCurrentUserId());
         if (!created) return result(invoice);
         if (invoice.getRefundedAmount().signum() > 0 || invoice.getPaymentStatus() == PaymentStatus.REFUNDED
                 || amount.compareTo(invoice.getTotalAmount().subtract(invoice.getPaidAmount()).max(BigDecimal.ZERO)) > 0) {
-            throw new BusinessException("Cash collection exceeds the outstanding invoice balance or the invoice was refunded");
+            throw new BusinessException("Số tiền mặt thu vượt quá số dư cần thanh toán hoặc hóa đơn đã được hoàn tiền");
         }
         invoice.setPaidAmount(invoice.getPaidAmount().add(amount));
         if (invoice.getPaidAmount().compareTo(invoice.getTotalAmount()) >= 0) {
@@ -103,7 +103,7 @@ public class SpaVisitOrderService {
 
     private Order find(Long appointmentId) {
         return orders.findByAppointmentId(appointmentId).filter(order -> !Boolean.TRUE.equals(order.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("This appointment has no invoice"));
+                .orElseThrow(() -> new ResourceNotFoundException("Buổi hẹn này chưa có hóa đơn"));
     }
 
     private SpaVisitInvoiceResult result(Order invoice) {
@@ -126,13 +126,13 @@ public class SpaVisitOrderService {
         if (command == null || command.appointmentId() == null || command.userId() == null || command.items() == null
                 || (command.paymentMethod() != PaymentMethod.BANK && command.paymentMethod() != PaymentMethod.CASH)
                 || command.idempotencyKey() == null || command.idempotencyKey().isBlank() || command.idempotencyKey().length() > 128
-                || (command.notes() != null && command.notes().length() > 500)) throw new BusinessException("Invalid Spa visit checkout");
+                || (command.notes() != null && command.notes().length() > 500)) throw new BusinessException("Thông tin thanh toán buổi hẹn Spa không hợp lệ");
         Set<Long> ids = new HashSet<>();
         for (SpaVisitCharge item : command.items()) {
             if (item == null || item.appointmentItemId() == null || item.serviceId() == null || !ids.add(item.appointmentItemId())
-                    || item.serviceName() == null || item.serviceName().isBlank() || item.serviceName().length() > 255
-                    || item.unitPrice() == null || item.unitPrice().signum() < 0 || item.unitPrice().scale() > 2)
-                throw new BusinessException("Invalid performed-service snapshot");
+                || item.serviceName() == null || item.serviceName().isBlank() || item.serviceName().length() > 255
+                || item.unitPrice() == null || item.unitPrice().signum() < 0 || item.unitPrice().scale() > 2)
+                throw new BusinessException("Dữ liệu dịch vụ đã thực hiện không hợp lệ");
         }
     }
     private String text(String value, String fallback) { return value == null || value.isBlank() ? fallback : value; }

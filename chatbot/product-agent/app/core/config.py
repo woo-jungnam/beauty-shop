@@ -54,6 +54,7 @@ class Settings(BaseSettings):
 
     enable_cache: bool = True
     cache_ttl_seconds: int = 3600
+    recommendation_internal_token: str = ""
 
     model_config = SettingsConfigDict(
         env_file=(

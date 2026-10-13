@@ -18,6 +18,18 @@ import java.util.List;
 public class AdminCrmController {
     private final CustomerCareService service;
 
+    public record ReceptionCustomerCommand(
+            @jakarta.validation.constraints.NotBlank(message = "Vui lòng nhập họ tên khách.")
+            @jakarta.validation.constraints.Size(max = 100, message = "Họ tên không được vượt quá 100 ký tự.") String fullName,
+            @jakarta.validation.constraints.NotBlank(message = "Vui lòng nhập số điện thoại khách.")
+            @jakarta.validation.constraints.Size(max = 20, message = "Số điện thoại không được vượt quá 20 ký tự.") String phone) {}
+
+    @Operation(summary = "Tạo hồ sơ khách vãng lai tại quầy", description = "ADMIN/STAFF; chỉ tạo vai trò CUSTOMER. SĐT chuẩn hóa về 0xxxxxxxxx; hồ sơ khách đang hoạt động có cùng SĐT được dùng lại, không thay đổi thông tin cũ.")
+    @PostMapping("/customers")
+    public ApiResponse<CustomerCareService.CustomerView> createCustomer(@jakarta.validation.Valid @RequestBody ReceptionCustomerCommand command) {
+        return ApiResponse.success(service.createCustomer(command.fullName(), command.phone()), "Hồ sơ khách đã sẵn sàng.");
+    }
+
     @Operation(summary = "Tìm khách hàng, tối đa 100 kết quả", description = "ADMIN/CS_STAFF. API list tương thích trả trang đầu tối đa 100; dùng /customers/page để xem các bản ghi tiếp theo. Tìm theo tên/username/email/phone, keyword tối đa 100; %/_ là ký tự thường.")
     @GetMapping("/customers")
     public ApiResponse<List<CustomerCareService.CustomerView>> customers(@Parameter(description = "Tên, username, email hoặc số điện thoại; tối đa 100 ký tự", schema = @Schema(maxLength = 100)) @RequestParam(required=false) String keyword) {

@@ -79,7 +79,7 @@ public class OrderFacadeImpl implements OrderFacade {
             throw new IllegalArgumentException("Thông tin đơn mua gói Spa không hợp lệ");
         }
         BigDecimal amount = command.getAmount().setScale(0, java.math.RoundingMode.HALF_UP);
-        if (amount.signum() == 0) throw new BusinessException("Spa package price must be at least one VND after rounding");
+        if (amount.signum() == 0) throw new BusinessException("Giá gói dịch vụ Spa sau làm tròn phải từ 1 VNĐ trở lên");
 
         String checkoutKey = spaCheckoutKey(command);
         String checkoutHash = spaCheckoutHash(command);
@@ -87,7 +87,7 @@ public class OrderFacadeImpl implements OrderFacade {
             Optional<Order> previous = orderRepository.findByCheckoutKey(checkoutKey);
             if (previous.isPresent()) {
                 if (!checkoutHash.equals(previous.get().getCheckoutHash())) {
-                    throw new BusinessException("Idempotency-Key was already used with a different Spa purchase");
+                    throw new BusinessException("Khóa Idempotency-Key đã được sử dụng cho giao dịch mua gói Spa khác");
                 }
                 return toSpaPackageOrderResult(previous.get());
             }
@@ -235,6 +235,7 @@ public class OrderFacadeImpl implements OrderFacade {
 
             eventPublisher.publishEvent(OrderEvents.OrderPaidEvent.builder()
                     .orderId(order.getId())
+                    .sessionId(order.getGuestSessionId())
                     .orderNumber(order.getOrderNumber())
                     .userId(order.getUserId())
                     .totalAmount(order.getTotalAmount())
@@ -309,7 +310,7 @@ public class OrderFacadeImpl implements OrderFacade {
         String key = command.getIdempotencyKey();
         if (key == null) return null;
         if (key.isBlank() || key.length() > 128) {
-            throw new BusinessException("Invalid Idempotency-Key");
+            throw new BusinessException("Khóa Idempotency-Key không hợp lệ");
         }
         return sha256("spa:" + command.getUserId() + ":" + key);
     }

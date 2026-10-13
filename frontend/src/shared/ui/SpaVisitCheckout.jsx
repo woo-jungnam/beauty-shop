@@ -5,6 +5,8 @@ import { formatCurrency, getPaymentStatusBadge } from '../utils/formatters';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
+import { spaErrorMessage } from '../utils/spaMessages';
+import './spa-visit-checkout.css';
 
 export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
   const [invoice, setInvoice] = useState(null);
@@ -38,7 +40,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
       .catch((err) => {
         if (!controller.signal.aborted && err.status !== 404) {
           setLoadFailed(true);
-          setError(err.message);
+          setError(spaErrorMessage(err, 'Chưa tải được hóa đơn. Vui lòng thử lại.'));
         }
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -50,7 +52,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
     if (!pendingBank || busy) return;
     const controller = new AbortController();
     let timer;
-    // ponytail: poll while this checkout is mounted; use server events if traffic warrants it.
+    // Refresh from the server until payment is confirmed.
     const poll = async () => {
       let keepPolling = true;
       try {
@@ -62,7 +64,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
         keepPolling = data.paymentStatus === 'PENDING' && Number(data.amountDue) > 0;
         if (!keepPolling) updated.current?.();
       } catch (err) {
-        if (!controller.signal.aborted) setError(`Chưa kiểm tra được thanh toán: ${err.message}`);
+        if (!controller.signal.aborted) setError(spaErrorMessage(err, 'Chưa kiểm tra được thanh toán. Hệ thống sẽ thử lại.'));
       } finally {
         if (!controller.signal.aborted && keepPolling) timer = setTimeout(poll, 5000);
       }
@@ -81,7 +83,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
       const res = await apiClient.post(route, { paymentMethod: method, notes: 'Thanh toán dịch vụ tại quầy Spa' },
         { headers: { 'Idempotency-Key': invoiceKey.current } });
       accept(res.data || res);
-    } catch (err) { setError(err.message); }
+    } catch (err) { setError(spaErrorMessage(err, 'Chưa lập được hóa đơn. Vui lòng kiểm tra và thử lại.')); }
     finally { updating.current = false; setBusy(false); }
   };
 
@@ -107,7 +109,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
       receipt.current = null;
       accept(res.data || res);
       setMessage('Đã ghi nhận phiếu thu tiền mặt.');
-    } catch (err) { setError(err.message); }
+    } catch (err) { setError(spaErrorMessage(err, 'Chưa xác nhận được phiếu thu. Giữ nguyên số tiền và kiểm tra hóa đơn trước khi thử lại.')); }
     finally { updating.current = false; setBusy(false); }
   };
 
@@ -118,7 +120,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
     try { const res = await apiClient.get(route); accept(res.data || res); }
     catch (err) {
       if (err.status === 404 && !invoice) { setLoadFailed(false); setError(''); }
-      else setError(err.message);
+      else setError(spaErrorMessage(err, 'Chưa kiểm tra được hóa đơn. Vui lòng thử lại.'));
     }
     finally { updating.current = false; setBusy(false); }
   };
@@ -132,13 +134,14 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
   const paid = invoice?.paymentStatus === 'PAID';
   const canCollect = invoice?.paymentStatus === 'PENDING' && Number(invoice?.amountDue) > 0 && Number(invoice?.refundedAmount) === 0;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflowWrap: 'anywhere' }}>
-      <div>Khách hàng: <strong>{appointment.customerName || 'Khách vãng lai'}</strong></div>
-      {error && <p role="alert">{error}</p>}
-      {message && <p role="status">{message}</p>}
+    <div className="spa-visit-checkout">
+      <div className="checkout-customer"><span>ĐỐI SOÁT BUỔI CHĂM SÓC</span><strong>{appointment.customerName || 'Khách hàng'}</strong><small>{appointment.customerPhone} · SPA-{String(appointment.id).padStart(5, '0')}</small></div>
+      {(appointment.items || []).some(item => item.ticketId || item.isTicketUsed) && <div className="checkout-tickets"><h4>Vé liệu trình sử dụng trong buổi</h4>{(appointment.items || []).filter(item => item.ticketId || item.isTicketUsed).map(item => <div key={item.id}><span><strong>{item.serviceName}</strong><small>Vé #{item.ticketId}</small></span><span>{item.ticketUsageState === 'REDEEMED' ? 'Đã trừ lượt' : item.ticketUsageState === 'RELEASED' ? 'Đã hoàn lượt giữ' : item.ticketUsageState === 'FORFEITED' ? 'Đã ghi nhận mất lượt' : item.ticketUsageState === 'RESERVED' ? 'Đang giữ lượt' : 'Xem đối soát từ hệ thống'}</span></div>)}<p>Lượt vé được đối soát theo kết quả dịch vụ; chỉ dịch vụ ngoài vé đã thực hiện được tính vào hóa đơn.</p></div>}
+      {error && <p role="alert" className="checkout-feedback error">{error}</p>}
+      {message && <p role="status" className="checkout-feedback success">{message}</p>}
       {loading ? <p>Đang tra cứu hóa đơn...</p> : !invoice ? (
         loadFailed ? <Button type="button" onClick={refresh} loading={busy}>Thử tải lại hóa đơn</Button> : <>
-          <p>Hóa đơn chỉ tính dịch vụ đã thực hiện ngoài vé liệu trình.</p>
+          <p className="checkout-explainer">Hóa đơn tính các dịch vụ đã thực hiện ngoài vé liệu trình, gồm dịch vụ phát sinh được ghi nhận trong ca.</p>
           <Select label="Phương thức thanh toán" value={method} disabled={busy} onChange={(e) => setMethod(e.target.value)} options={[
             { value: 'BANK', label: 'Chuyển khoản VietQR / SePay' },
             { value: 'CASH', label: 'Tiền mặt tại quầy' },
@@ -146,13 +149,11 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
           <Button type="button" onClick={createInvoice} loading={busy}>Lập hóa đơn{method === 'BANK' ? ' & tạo QR' : ''}</Button>
         </>
       ) : <>
-        <div>Mã hóa đơn: <strong>{invoice.orderNumber}</strong></div>
-        <div>Tổng tiền: <strong>{formatCurrency(invoice.totalAmount)}</strong></div>
-        <div>Đã thu: <strong>{formatCurrency(invoice.paidAmount)}</strong></div>
-        <div>Còn thiếu: <strong>{formatCurrency(invoice.amountDue)}</strong></div>
-        <ul>{invoice.items.map((item) => <li key={item.appointmentItemId}>{item.serviceName}: {formatCurrency(item.unitPrice)}</li>)}</ul>
-        <p role="status">{paid ? 'Thanh toán hoàn tất' : `Trạng thái: ${getPaymentStatusBadge(invoice.paymentStatus).text}`}</p>
-        {pendingBank && instruction && <div style={{ textAlign: 'center' }}>
+        <div className="checkout-invoice-heading"><span>Hóa đơn <strong>{invoice.orderNumber}</strong></span><span role="status" className={`checkout-payment-state ${paid ? 'paid' : ''}`}>{paid ? 'Thanh toán hoàn tất' : `Trạng thái: ${getPaymentStatusBadge(invoice.paymentStatus).text}`}</span></div>
+        <ul className="checkout-service-lines">{(invoice.items || []).map(item => <li key={item.appointmentItemId}><span>{item.serviceName}</span><strong>{formatCurrency(item.unitPrice)}</strong></li>)}</ul>
+        <div className="checkout-totals"><div><span>Tổng tiền</span><strong>{formatCurrency(invoice.totalAmount)}</strong></div><div><span>Đã thu</span><strong>{formatCurrency(invoice.paidAmount)}</strong></div><div className="amount-due"><span>Còn cần thu</span><strong>{formatCurrency(invoice.amountDue)}</strong></div></div>
+        {pendingBank && instruction && <div className="checkout-bank">
+          <h4>Quét VietQR để thanh toán</h4>
           {instruction.qrCodeUrl && !qrFailed && <img src={instruction.qrCodeUrl} alt="Mã VietQR thanh toán hóa đơn Spa" onError={() => setQrFailed(true)} style={{ width: 280, maxWidth: '100%', height: 'auto' }} />}
           {qrFailed && <p role="alert">Không tải được QR. Chuyển khoản theo thông tin dưới đây.</p>}
           <p>Ngân hàng: <strong>{instruction.bankName}</strong></p>
@@ -162,7 +163,8 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
           <p>Chuyển đúng nội dung. Hệ thống tự kiểm tra mỗi 5 giây; chỉ hoàn tất khi nhận xác nhận thanh toán.</p>
         </div>}
         <Button type="button" variant="outline" onClick={refresh} loading={busy}>Kiểm tra thanh toán</Button>
-        {canCollect && <form onSubmit={collectCash} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {canCollect && <form onSubmit={collectCash} className="checkout-cash-form">
+          <h4>Thu tiền mặt tại quầy</h4><p>Nhập đúng số tiền đã nhận từ khách. Có thể thu từng phần.</p>
           <Input label="Số tiền thực thu tiền mặt (VND)" type="number" required min={1} max={invoice.amountDue} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} />
           <Button type="submit" loading={busy}>Xác nhận đã nhận tiền mặt</Button>
         </form>}

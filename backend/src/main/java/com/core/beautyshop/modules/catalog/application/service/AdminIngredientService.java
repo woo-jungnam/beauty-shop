@@ -24,17 +24,17 @@ public class AdminIngredientService {
     public IngredientView get(Long id) {
         return ingredientRepository.findByIdAndIsDeletedFalse(id)
                 .map(IngredientView::from)
-                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hoạt chất: " + id));
     }
     @Transactional
     public IngredientView save(Long id, IngredientCommand command) {
         if (command.name() == null || command.name().isBlank() || command.inciName() == null || command.inciName().isBlank()
-                || command.slug() == null || command.slug().isBlank()) throw new BusinessException("Name, INCI name and slug are required");
-        if (command.ewgScore() != null && (command.ewgScore() < 1 || command.ewgScore() > 10)) throw new BusinessException("EWG score must be from 1 to 10");
+                || command.slug() == null || command.slug().isBlank()) throw new BusinessException("Tên, tên danh pháp INCI và đường dẫn slug là bắt buộc");
+        if (command.ewgScore() != null && (command.ewgScore() < 1 || command.ewgScore() > 10)) throw new BusinessException("Điểm an toàn EWG phải từ 1 đến 10");
         Ingredient entity = id == null ? new Ingredient() : ingredientRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hoạt chất: " + id));
         ingredientRepository.findBySlugAndIsDeletedFalse(command.slug()).filter(found -> !Objects.equals(found.getId(), id))
-                .ifPresent(found -> { throw new BusinessException("Ingredient slug already exists"); });
+                .ifPresent(found -> { throw new BusinessException("Đường dẫn slug của hoạt chất đã tồn tại"); });
         entity.setName(command.name().trim()); entity.setInciName(command.inciName().trim()); entity.setSlug(command.slug().trim());
         entity.setDescription(command.description()); entity.setFunctions(copy(command.functions())); entity.setBenefits(copy(command.benefits()));
         entity.setPotentialConcerns(copy(command.potentialConcerns())); entity.setEwgScore(command.ewgScore() == null ? 1 : command.ewgScore());
@@ -43,22 +43,22 @@ public class AdminIngredientService {
     }
     @Transactional
     public void delete(Long id) { Ingredient entity = ingredientRepository.findByIdAndIsDeletedFalse(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found")); entity.setIsDeleted(true); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hoạt chất")); entity.setIsDeleted(true); }
     @Transactional(readOnly = true)
     public List<ProductIngredientView> productIngredients(Long productId) {
         return mappingRepository.findByProductIdOrderByDisplayOrderAsc(productId).stream().map(ProductIngredientView::from).toList();
     }
     @Transactional
     public List<ProductIngredientView> replaceProductIngredients(Long productId, List<ProductIngredientCommand> commands) {
-        Product product = productRepository.findByIdAndIsDeletedFalse(productId).orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        Product product = productRepository.findByIdAndIsDeletedFalse(productId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm"));
         Set<Long> ids = new HashSet<>();
         List<ProductIngredient> mappings = new ArrayList<>();
         int order = 0;
         for (ProductIngredientCommand command : commands == null ? List.<ProductIngredientCommand>of() : commands) {
-            if (!ids.add(command.ingredientId())) throw new BusinessException("Duplicate ingredient mapping");
+            if (!ids.add(command.ingredientId())) throw new BusinessException("Hoạt chất đã được liên kết với sản phẩm này");
             Ingredient ingredient = ingredientRepository.findByIdAndIsDeletedFalse(command.ingredientId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + command.ingredientId()));
-            if (command.concentration() != null && command.concentration().signum() < 0) throw new BusinessException("Concentration cannot be negative");
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hoạt chất: " + command.ingredientId()));
+            if (command.concentration() != null && command.concentration().signum() < 0) throw new BusinessException("Nồng độ hoạt chất không được là số âm");
             mappings.add(ProductIngredient.builder().product(product).ingredient(ingredient).concentration(command.concentration())
                     .concentrationUnit(command.concentrationUnit() == null ? "%" : command.concentrationUnit())
                     .isKeyActive(Boolean.TRUE.equals(command.keyActive())).displayOrder(command.displayOrder() == null ? order++ : command.displayOrder()).build());

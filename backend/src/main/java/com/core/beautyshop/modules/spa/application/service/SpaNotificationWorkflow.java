@@ -40,17 +40,17 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
         Appointment appointment = load(appointmentId, true);
         AppointmentItem item = appointment.getItems().stream().filter(found -> Objects.equals(found.getId(), itemId)
                 && !Boolean.TRUE.equals(found.getIsDeleted())).findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ trong lịch hẹn"));
         access.requireCanPerformItem(item);
         if (item.getExecutionStatus() != AppointmentItemExecutionStatus.PERFORMED
                 && item.getExecutionStatus() != AppointmentItemExecutionStatus.LEGACY_FINALIZED) {
-            throw new BusinessException("Follow-up instructions require a performed service item");
+            throw new BusinessException("Hướng dẫn chăm sóc sau liệu trình cần gắn với dịch vụ đã thực hiện");
         }
         Instant now = Instant.now();
         if (command == null || command.content() == null || command.content().isBlank() || command.content().length() > 4000
                 || command.dueAt() == null || command.dueAt().isBefore(now.minus(1, ChronoUnit.MINUTES))
                 || command.dueAt().isAfter(now.plus(365, ChronoUnit.DAYS))) {
-            throw new BusinessException("Staff instructions require 1 to 4000 characters and a delivery date within the next year");
+            throw new BusinessException("Hướng dẫn chăm sóc của chuyên viên cần từ 1 đến 4000 ký tự và ngày gửi trong vòng 1 năm");
         }
         GeneratedKeyHolder key = new GeneratedKeyHolder();
         Long actor = SecurityUtils.getCurrentUserId();
@@ -142,7 +142,7 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
 
     private Instruction instruction(Long id) {
         List<Instruction> found = jdbc.query("SELECT * FROM spa_follow_up_instructions WHERE id=?", this::instructionRow, id);
-        if (found.isEmpty()) throw new ResourceNotFoundException("Follow-up instruction not found");
+        if (found.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy hướng dẫn chăm sóc sau liệu trình");
         return found.get(0);
     }
 

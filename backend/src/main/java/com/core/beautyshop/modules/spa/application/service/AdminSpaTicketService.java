@@ -45,15 +45,15 @@ public class AdminSpaTicketService {
 
     @Transactional
     public UserServiceTicketResponse extend(Long id, int days, String reason, String key) {
-        if (days <= 0 || days > 3650) throw new BusinessException("Extension days must be between 1 and 3650");
+        if (days <= 0 || days > 3650) throw new BusinessException("Số ngày gia hạn phải từ 1 đến 3650 ngày");
         UserServiceTicket ticket = lock(id);
         String fingerprint = fingerprint("EXTEND:" + days + ":" + reason);
         if (replayed(ticket, "EXTEND", reason, key, fingerprint)) return UserServiceTicketResponse.of(ticket);
         requirePaidTicket(ticket);
         Instant oldExpiry = ticket.getExpiryDate();
-        if (ticket.getExpiryDate() == null) throw new BusinessException("Unlimited tickets do not require an expiry extension");
+        if (ticket.getExpiryDate() == null) throw new BusinessException("Vé không giới hạn thời gian không cần gia hạn hạn dùng");
         if (ticket.getUsedSessions() < ticket.getTotalSessions()) {
-            if (ticket.getEntitlements().isEmpty()) throw new BusinessException("Ticket entitlements missing; reconciliation required");
+            if (ticket.getEntitlements().isEmpty()) throw new BusinessException("Thiếu quyền lợi trong vé; cần đối soát lại vé");
             ticket.getEntitlements().entrySet().stream().filter(entry -> entry.getValue().getTotal() > entry.getValue().getUsed())
                     .map(java.util.Map.Entry::getKey).sorted().forEach(this::requireAvailableService);
         }
@@ -71,13 +71,13 @@ public class AdminSpaTicketService {
 
     @Transactional
     public UserServiceTicketResponse compensate(Long id, Long serviceId, int sessions, String reason, String key) {
-        if (serviceId == null || sessions <= 0 || sessions > 100) throw new BusinessException("Invalid compensation sessions");
+        if (serviceId == null || sessions <= 0 || sessions > 100) throw new BusinessException("Số buổi đền bù/cộng thêm không hợp lệ (phải từ 1 đến 100)");
         UserServiceTicket ticket = lock(id);
         String fingerprint = fingerprint("COMPENSATE:" + serviceId + ":" + sessions + ":" + reason);
         if (replayed(ticket, "COMPENSATE", reason, key, fingerprint)) return UserServiceTicketResponse.of(ticket);
         requirePaidTicket(ticket);
         TicketEntitlement entitlement = ticket.getEntitlements().get(serviceId);
-        if (entitlement == null) throw new BusinessException("Service is not included in this ticket");
+        if (entitlement == null) throw new BusinessException("Dịch vụ không nằm trong gói vé liệu trình này");
         requireAvailableService(serviceId);
         entitlement.setTotal(Math.addExact(entitlement.getTotal(), sessions));
         ticket.setTotalSessions(Math.addExact(ticket.getTotalSessions(), sessions));
@@ -94,12 +94,12 @@ public class AdminSpaTicketService {
     }
     private boolean replayed(UserServiceTicket ticket, String operation, String reason, String key, String fingerprint) {
         if (reason == null || reason.isBlank() || reason.length() > 1000 || key == null || !key.matches("[A-Za-z0-9:._-]{1,80}"))
-            throw new BusinessException("Adjustment requires a reason and a stable idempotency key");
+            throw new BusinessException("Điều chỉnh vé cần có lý do và mã idempotency hợp lệ");
         var prior = movements.findByIdempotencyKey("ADMIN:" + key);
         if (prior.isEmpty()) return false;
         var m = prior.get();
         if (!ticket.getId().equals(m.getTicketId()) || !operation.equals(m.getOperation()) || !fingerprint.equals(m.getCommandFingerprint()))
-            throw new BusinessException("Idempotency key was used for a different adjustment");
+            throw new BusinessException("Mã idempotency đã được dùng cho một điều chỉnh khác");
         return true;
     }
     private void record(UserServiceTicket ticket, Long serviceId, String operation, String reason, String key, String fingerprint, Integer adjustment, Instant oldExpiry) {
@@ -113,17 +113,17 @@ public class AdminSpaTicketService {
 
     private void requireAvailableService(Long id) {
         services.findAvailableByIdForUpdate(id)
-                .orElseThrow(() -> new BusinessException("Cannot grant ticket rights for a retired service; reconciliation required"));
+                .orElseThrow(() -> new BusinessException("Không thể cấp quyền lợi cho dịch vụ đã ngưng hoạt động; cần đối soát"));
     }
 
     private UserServiceTicket lock(Long id) { return repository.findByIdForUpdate(id)
             .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-            .orElseThrow(() -> new ResourceNotFoundException("Spa ticket not found: " + id)); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vé Spa: " + id)); }
 
     private void requirePaidTicket(UserServiceTicket ticket) {
         if (ticket.getStatus() == TicketStatus.REVOKED || ticket.getOrderId() == null
                 || !orderFacade.isPaidOrderForUser(ticket.getOrderId(), ticket.getUserId())) {
-            throw new BusinessException("Cannot modify a revoked or unpaid Spa ticket");
+            throw new BusinessException("Không thể điều chỉnh vé đã bị thu hồi hoặc chưa thanh toán");
         }
     }
 }

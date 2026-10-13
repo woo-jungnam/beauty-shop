@@ -39,6 +39,9 @@ public class UserProductInteraction {
     @Column(name = "action_type", nullable = false, length = 30)
     private String actionType;
 
+    @Column(name = "source_key", unique = true, length = 120)
+    private String sourceKey;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

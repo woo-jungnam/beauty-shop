@@ -40,13 +40,13 @@ public class ProcurementService {
     @Transactional
     public SupplierView saveSupplier(Long id, SupplierCommand command) {
         if (command.code() == null || command.code().isBlank() || command.name() == null || command.name().isBlank())
-            throw new BusinessException("Supplier code and name are required");
-        Supplier supplier = id == null ? new Supplier() : suppliers.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
+            throw new BusinessException("Mã và tên nhà cung cấp là bắt buộc");
+        Supplier supplier = id == null ? new Supplier() : suppliers.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
         String normalizedCode = command.code().trim().toUpperCase(Locale.ROOT);
         boolean duplicatedCode = id == null
                 ? suppliers.existsByCodeIgnoreCase(normalizedCode)
                 : suppliers.existsByCodeIgnoreCaseAndIdNot(normalizedCode, id);
-        if (duplicatedCode) throw new BusinessException("Supplier code already exists");
+        if (duplicatedCode) throw new BusinessException("Mã nhà cung cấp đã tồn tại");
         supplier.setCode(normalizedCode); supplier.setName(command.name().trim());
         supplier.setContactName(command.contactName()); supplier.setEmail(command.email()); supplier.setPhone(command.phone());
         supplier.setAddress(command.address()); supplier.setTaxCode(command.taxCode()); supplier.setActive(command.active() == null || command.active());
@@ -62,7 +62,7 @@ public class ProcurementService {
     @Transactional(readOnly = true)
     public PurchaseOrderView order(Long id) {
         return orders.findById(id).map(this::orderView)
-                .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mua hàng: " + id));
     }
 
     @Transactional
@@ -77,7 +77,7 @@ public class ProcurementService {
     @Transactional
     public PurchaseOrderView update(Long id, OrderCommand command) {
         PurchaseOrder order = locked(id);
-        if (order.getStatus() != PurchaseOrder.Status.DRAFT) throw new BusinessException("Only draft purchase orders can be edited");
+        if (order.getStatus() != PurchaseOrder.Status.DRAFT) throw new BusinessException("Chỉ phiếu mua hàng ở trạng thái bản nháp mới có thể chỉnh sửa");
         applyCommand(order, command);
         return orderView(order);
     }
@@ -85,9 +85,12 @@ public class ProcurementService {
     private void applyCommand(PurchaseOrder order, OrderCommand command) {
         if (command == null || command.supplierId() == null || command.warehouseId() == null
                 || command.items() == null || command.items().isEmpty())
-            throw new BusinessException("Supplier, warehouse and items are required");
-        if (command.note() != null && command.note().length() > 500) throw new BusinessException("Note is too long");
-        Supplier supplier = suppliers.findById(command.supplierId()).orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
+            throw new BusinessException("Nhà cung cấp, kho nhận và danh sách hàng hóa là bắt buộc");
+        if (command.note() != null && command.note().length() > 500) throw new BusinessException("Ghi chú không được vượt quá 500 ký tự");
+        if (command.expectedDate() != null && command.expectedDate().isBefore(LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE))) {
+            throw new BusinessException("Ngày dự kiến giao hàng phải từ hôm nay trở đi");
+        }
+        Supplier supplier = suppliers.findById(command.supplierId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
         validateSupplier(supplier);
         inventory.validateWarehouse(command.warehouseId());
         BigDecimal total = BigDecimal.ZERO;
@@ -95,11 +98,11 @@ public class ProcurementService {
         for (ItemCommand item : command.items()) {
             if (item == null || item.variantId() == null || item.variantId() <= 0 || item.quantity() == null || item.quantity() <= 0
                     || item.unitCost() == null || item.unitCost().signum() < 0 || item.unitCost().scale() > 2)
-                throw new BusinessException("Each purchase item requires a valid variant, quantity and cost");
+                throw new BusinessException("Mỗi mặt hàng nhập kho phải có biến thể hợp lệ, số lượng và giá vốn lớn hơn 0");
             catalog.getVariantSummaryForInventory(item.variantId());
-            if (item.batchCode() != null && item.batchCode().trim().length() > 100) throw new BusinessException("Batch code is too long");
-            if (item.expirationDate() != null && !item.expirationDate().isAfter(LocalDate.now()))
-                throw new BusinessException("Purchase item expiration date must be in the future");
+            if (item.batchCode() != null && item.batchCode().trim().length() > 100) throw new BusinessException("Mã số lô hàng không được vượt quá 100 ký tự");
+            if (item.expirationDate() != null && !item.expirationDate().isAfter(LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE)))
+                throw new BusinessException("Hạn sử dụng của hàng nhập kho phải ở trong tương lai");
             PurchaseOrderItem entity = PurchaseOrderItem.builder().purchaseOrder(order).productVariantId(item.variantId())
                     .quantity(item.quantity()).receivedQuantity(0).unitCost(item.unitCost()).batchCode(item.batchCode() == null ? "" : item.batchCode().trim())
                     .expirationDate(item.expirationDate()).build();
@@ -113,7 +116,7 @@ public class ProcurementService {
 
     private void validateSupplier(Supplier supplier) {
         if (Boolean.TRUE.equals(supplier.getIsDeleted()) || !Boolean.TRUE.equals(supplier.getActive()))
-            throw new BusinessException("Supplier is deleted or inactive");
+            throw new BusinessException("Nhà cung cấp đã bị xóa hoặc ngưng hoạt động");
     }
 
     private void validateReferences(PurchaseOrder order) {
@@ -125,7 +128,7 @@ public class ProcurementService {
     @Transactional
     public PurchaseOrderView approve(Long id) {
         PurchaseOrder order = locked(id);
-        if (order.getStatus() != PurchaseOrder.Status.DRAFT) throw new BusinessException("Only draft purchase orders can be approved");
+        if (order.getStatus() != PurchaseOrder.Status.DRAFT) throw new BusinessException("Chỉ đơn nhập hàng ở trạng thái bản nháp mới có thể duyệt");
         validateReferences(order);
         order.setStatus(PurchaseOrder.Status.APPROVED); order.setApprovedAt(Instant.now());
         return orderView(order);
@@ -134,7 +137,7 @@ public class ProcurementService {
     @Transactional
     public PurchaseOrderView receive(Long id) {
         PurchaseOrder order = locked(id);
-        if (order.getStatus() != PurchaseOrder.Status.APPROVED) throw new BusinessException("Only approved purchase orders can be received");
+        if (order.getStatus() != PurchaseOrder.Status.APPROVED) throw new BusinessException("Chỉ đơn nhập hàng đã duyệt mới có thể nhập kho");
         validateReferences(order);
         for (PurchaseOrderItem item : order.getItems()) {
             int remaining = item.getQuantity() - item.getReceivedQuantity();
@@ -150,11 +153,11 @@ public class ProcurementService {
     @Transactional
     public PurchaseOrderView cancel(Long id) {
         PurchaseOrder order = locked(id);
-        if (order.getStatus() == PurchaseOrder.Status.RECEIVED) throw new BusinessException("Received purchase orders cannot be cancelled");
+        if (order.getStatus() == PurchaseOrder.Status.RECEIVED) throw new BusinessException("Không thể hủy đơn nhập hàng đã hoàn tất nhập kho");
         order.setStatus(PurchaseOrder.Status.CANCELLED); return orderView(order);
     }
 
-    private PurchaseOrder locked(Long id) { return orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Purchase order not found")); }
+    private PurchaseOrder locked(Long id) { return orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mua hàng")); }
     private SupplierView supplierView(Supplier s) { return new SupplierView(s.getId(), s.getCode(), s.getName(), s.getContactName(), s.getEmail(), s.getPhone(), s.getAddress(), s.getTaxCode(), s.getActive()); }
     private PurchaseOrderView orderView(PurchaseOrder o) { return new PurchaseOrderView(o.getId(), o.getOrderNumber(), o.getSupplier().getId(), o.getSupplier().getName(), o.getWarehouseId(), o.getStatus(), o.getExpectedDate(), o.getTotalAmount(), o.getNote(), o.getApprovedAt(), o.getReceivedAt(), o.getCreatedAt(), o.getItems().stream().map(i -> new ItemView(i.getId(), i.getProductVariantId(), i.getQuantity(), i.getReceivedQuantity(), i.getUnitCost(), i.getBatchCode(), i.getExpirationDate())).toList()); }
 

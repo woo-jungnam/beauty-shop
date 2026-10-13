@@ -286,6 +286,7 @@ export const App = () => {
     isOperator;
 
   if (shouldShowReceptionPortal) {
+    const ReceptionPage = ADMIN_PAGES['spa-reception'];
     return (
       <Suspense
         fallback={
@@ -306,11 +307,11 @@ export const App = () => {
           </div>
         }
       >
-        <SpaStaffApp
+        {currentHash === 'reception' || currentHash === 'admin/spa-reception' ? <ReceptionPage /> : <SpaStaffApp
           onSwitchToAdmin={() => {
             window.location.hash = "/admin/spa";
           }}
-        />
+        />}
       </Suspense>
     );
   }

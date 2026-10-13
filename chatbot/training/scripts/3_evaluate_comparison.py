@@ -128,14 +128,7 @@ def main():
         ft_metrics = evaluate_model(finetuned_model, test_data)
     else:
         print(f"\n[!] Chưa tìm thấy mô hình fine-tune tại: {finetuned_path}.")
-        print("Tạo dữ liệu mô phỏng mức cải thiện giả định để hiển thị bảng mẫu...")
-        ft_metrics = {
-            "triplet_acc": min(98.5, base_metrics["triplet_acc"] + 8.4),
-            "avg_margin": base_metrics["avg_margin"] + 0.18,
-            "hit_rate_1": min(95.0, base_metrics["hit_rate_1"] + 9.2),
-            "hit_rate_3": min(98.0, base_metrics["hit_rate_3"] + 6.5),
-            "mrr": min(0.96, base_metrics["mrr"] + 0.08)
-        }
+        raise FileNotFoundError("Chưa có mô hình fine-tuned. Dừng đánh giá; không tạo số liệu mô phỏng.")
 
     # 3. Xuất bảng so sánh chuẩn Markdown
     diff_acc = ft_metrics["triplet_acc"] - base_metrics["triplet_acc"]

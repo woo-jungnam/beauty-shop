@@ -33,6 +33,7 @@ public class CartServiceImpl implements CartService {
     private final CartItemRepository cartItemRepository;
     private final CatalogFacade catalogFacade;
     private final InventoryFacade inventoryFacade;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -80,7 +81,7 @@ public class CartServiceImpl implements CartService {
         }
 
         if (userId == null && (request.getSessionId() == null || request.getSessionId().isBlank())) {
-            throw new BusinessException("Session ID is required for a guest cart");
+            throw new BusinessException("Mã phiên làm việc là bắt buộc đối với khách chưa đăng nhập");
         }
 
         ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryById(request.getVariantId());
@@ -121,6 +122,8 @@ public class CartServiceImpl implements CartService {
         }
 
         Cart updatedCart = cartRepository.findById(cart.getId()).orElse(cart);
+        eventPublisher.publishEvent(new com.core.beautyshop.modules.catalog.api.event.ProductInteractionEvent(userId,
+                request.getSessionId(), variant.getProductId(), "ADD_TO_CART", null));
         return mapToCartResponse(updatedCart);
     }
 

@@ -93,16 +93,16 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
     @Override
     public List<String> getAvailableSlots(Long serviceId, java.time.LocalDate date, Long staffId) {
         var service = beautyServiceRepository.findWithCategoryById(serviceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
         if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
-            throw new BusinessException("Service is not available");
+            throw new BusinessException("Dịch vụ spa hiện không khả dụng");
         }
         if (date == null || date.isBefore(java.time.LocalDate.now(SpaTimeRules.ZONE))) {
-            throw new BusinessException("Appointment date cannot be in the past");
+            throw new BusinessException("Ngày hẹn không thể ở trong quá khứ");
         }
         var qualifiedStaff = staffRepository.findQualifiedActiveStaff(serviceId);
         if (staffId != null && qualifiedStaff.stream().noneMatch(staff -> staff.getId().equals(staffId))) {
-            throw new BusinessException("Staff is not qualified for this service");
+            throw new BusinessException("Chuyên viên không có kỹ năng phù hợp cho dịch vụ này");
         }
         long duration = SpaTimeRules.durationMinutes(service);
         var result = new java.util.ArrayList<String>();

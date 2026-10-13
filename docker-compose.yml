@@ -95,6 +95,7 @@ services:
       QDRANT_URL: /app/data/qdrant_storage
       EMBEDDING_PROVIDER: gemini
       EMBEDDING_CACHE_DIR: /app/data/embedding_cache
+      RECOMMENDATION_INTERNAL_TOKEN: ${JWT_SECRET:?JWT_SECRET is required}
     ports:
       - "127.0.0.1:${CHATBOT_PORT:-18000}:8000"
     volumes:
@@ -160,6 +161,7 @@ services:
       SEPAY_BANK_BIN: ${SEPAY_BANK_BIN:-970422}
       MEDIA_UPLOAD_DIR: /app/uploads
       CHATBOT_SERVICE_URL: http://chatbot:8000
+      RECOMMENDATION_INTERNAL_TOKEN: ${JWT_SECRET:?JWT_SECRET is required}
       MAIL_ENABLED: ${MAIL_ENABLED:-false}
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}

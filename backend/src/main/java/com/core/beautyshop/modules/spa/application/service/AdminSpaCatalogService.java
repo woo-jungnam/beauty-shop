@@ -36,9 +36,9 @@ public class AdminSpaCatalogService {
         validateService(command);
         BeautyService entity = id == null ? new BeautyService() : serviceRepository.findByIdForUpdate(id)
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Spa service not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa: " + id));
         serviceRepository.findBySlug(command.slug()).filter(found -> !Objects.equals(found.getId(), id))
-                .ifPresent(found -> { throw new BusinessException("Spa service slug already exists"); });
+                .ifPresent(found -> { throw new BusinessException("Đường dẫn slug dịch vụ spa đã tồn tại"); });
         if (id != null && Boolean.FALSE.equals(command.active())) requireNoServiceObligations(id);
         entity.setName(command.name().trim()); entity.setSlug(command.slug().trim());
         entity.setShortDescription(command.shortDescription()); entity.setDescription(command.description());
@@ -47,14 +47,14 @@ public class AdminSpaCatalogService {
         entity.setThumbnailUrl(command.thumbnailUrl()); entity.setIsActive(command.active() == null || command.active());
         entity.setCategory(command.categoryId() == null ? null : categoryRepository.findById(command.categoryId())
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Spa category not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục spa")));
         return BeautyServiceResponse.fromEntity(serviceRepository.save(entity));
     }
     @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     @CacheEvict(value = "spa_services", allEntries = true)
     public void deleteService(Long id) {
         BeautyService entity = serviceRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Spa service not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa: " + id));
         requireNoServiceObligations(id);
         entity.setIsDeleted(true); entity.setIsActive(false);
     }
@@ -65,19 +65,19 @@ public class AdminSpaCatalogService {
     public CategoryView category(Long id) {
         return categoryRepository.findById(id).filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
                 .map(CategoryView::from)
-                .orElseThrow(() -> new ResourceNotFoundException("Spa category not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục spa: " + id));
     }
     @Transactional
     @CacheEvict(value = "spa_services", allEntries = true)
     public CategoryView saveCategory(Long id, CategoryCommand command) {
         if (command == null || command.name() == null || command.name().isBlank() || command.slug() == null || command.slug().isBlank()) {
-            throw new BusinessException("Category name and slug are required");
+            throw new BusinessException("Tên danh mục và đường dẫn slug là bắt buộc");
         }
         ServiceCategory entity = id == null ? new ServiceCategory() : categoryRepository.findById(id)
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Spa category not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục spa: " + id));
         categoryRepository.findBySlug(command.slug()).filter(found -> !Objects.equals(found.getId(), id))
-                .ifPresent(found -> { throw new BusinessException("Spa category slug already exists"); });
+                .ifPresent(found -> { throw new BusinessException("Đường dẫn slug danh mục spa đã tồn tại"); });
         entity.setName(command.name().trim()); entity.setSlug(command.slug().trim()); entity.setDescription(command.description());
         entity.setThumbnailUrl(command.thumbnailUrl()); entity.setIsActive(command.active() == null || command.active());
         return CategoryView.from(categoryRepository.save(entity));
@@ -85,7 +85,7 @@ public class AdminSpaCatalogService {
     @Transactional
     @CacheEvict(value = "spa_services", allEntries = true)
     public void deleteCategory(Long id) {
-        ServiceCategory entity = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Spa category not found"));
+        ServiceCategory entity = categoryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục spa"));
         entity.setIsDeleted(true); entity.setIsActive(false);
     }
 
@@ -95,53 +95,53 @@ public class AdminSpaCatalogService {
     public ServicePackageResponse packageDetail(Long id) {
         return packageRepository.findDetailByIdAndIsDeletedFalse(id)
                 .map(ServicePackageResponse::fromEntity)
-                .orElseThrow(() -> new ResourceNotFoundException("Spa package not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gói dịch vụ spa: " + id));
     }
     @Transactional
     public ServicePackageResponse savePackage(Long id, PackageCommand command) {
         if (command == null || command.name() == null || command.name().isBlank() || command.price() == null
                 || command.price().compareTo(BigDecimal.ONE) < 0 || command.items() == null || command.items().isEmpty()) {
-            throw new BusinessException("Package price and service items are required");
+            throw new BusinessException("Giá gói dịch vụ và danh sách dịch vụ là bắt buộc");
         }
         if (command.validityDays() != null && command.validityDays() <= 0) {
-            throw new BusinessException("Package validity days must be positive or null for no expiry");
+            throw new BusinessException("Thời hạn gói dịch vụ (ngày) phải là số dương hoặc để trống nếu vô thời hạn");
         }
         ServicePackage entity = id == null ? new ServicePackage() : packageRepository.findByIdForUpdateAndIsDeletedFalse(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Spa package not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gói dịch vụ spa: " + id));
         entity.setName(command.name().trim()); entity.setDescription(command.description()); entity.setPrice(command.price());
         entity.setValidityDays(command.validityDays()); entity.setThumbnailUrl(command.thumbnailUrl());
         entity.setIsActive(command.active() == null || command.active());
         if (entity.getItems() == null) entity.setItems(new ArrayList<>()); else entity.getItems().clear();
         Set<Long> seen = new HashSet<>();
         for (PackageItemCommand item : command.items()) {
-            if (item.quantity() == null || item.quantity() <= 0 || !seen.add(item.serviceId())) throw new BusinessException("Invalid or duplicate package item");
+            if (item.quantity() == null || item.quantity() <= 0 || !seen.add(item.serviceId())) throw new BusinessException("Dịch vụ trong gói không hợp lệ hoặc bị trùng lặp");
             BeautyService service = getService(item.serviceId());
-            if (!Boolean.TRUE.equals(service.getIsActive())) throw new BusinessException("Package service is inactive");
+            if (!Boolean.TRUE.equals(service.getIsActive())) throw new BusinessException("Dịch vụ trong gói liệu trình hiện đang tạm ngưng hoạt động");
             entity.getItems().add(ServicePackageItem.builder().servicePackage(entity).service(service).quantity(item.quantity()).build());
         }
         return ServicePackageResponse.fromEntity(packageRepository.save(entity));
     }
     @Transactional
     public void deletePackage(Long id) { ServicePackage entity = packageRepository.findByIdForUpdateAndIsDeletedFalse(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Spa package not found")); entity.setIsDeleted(true); entity.setIsActive(false); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gói dịch vụ spa")); entity.setIsDeleted(true); entity.setIsActive(false); }
 
     private BeautyService getService(Long id) { return serviceRepository.findById(id).filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-            .orElseThrow(() -> new ResourceNotFoundException("Spa service not found: " + id)); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa: " + id)); }
     private void requireNoServiceObligations(Long id) {
         if (appointments.hasOutstandingServiceAppointments(id)
                 || snapshots.countServiceOrderObligations(id, java.time.Instant.now()) > 0) {
-            throw new BusinessException("Resolve outstanding appointments, paid ticket rights and pending package orders before retiring this service");
+            throw new BusinessException("Vui lòng xử lý các lịch hẹn, vé đã mua và đơn hàng đang chờ trước khi ngưng dịch vụ này");
         }
     }
     private void validateService(ServiceCommand command) {
-        if (command == null || command.name() == null || command.name().isBlank() || command.slug() == null || command.slug().isBlank()) throw new BusinessException("Name and slug are required");
-        if (command.basePrice() == null || command.basePrice().signum() < 0 || command.durationMinutes() == null || command.durationMinutes() <= 0) throw new BusinessException("Price and duration are invalid");
+        if (command == null || command.name() == null || command.name().isBlank() || command.slug() == null || command.slug().isBlank()) throw new BusinessException("Tên và đường dẫn slug là bắt buộc");
+        if (command.basePrice() == null || command.basePrice().signum() < 0 || command.durationMinutes() == null || command.durationMinutes() <= 0) throw new BusinessException("Giá và thời lượng dịch vụ không hợp lệ");
         int preparation = command.preparationTimeMinutes() == null ? 15 : command.preparationTimeMinutes();
         if (preparation < 0 || (long) command.durationMinutes() + preparation > 720) {
-            throw new BusinessException("Preparation must be nonnegative and the service must fit opening hours");
+            throw new BusinessException("Thời gian chuẩn bị không được âm và dịch vụ phải nằm trong khung giờ mở cửa");
         }
         if (command.name().trim().length() > 150 || command.slug().trim().length() > 150) {
-            throw new BusinessException("Service name and slug must be at most 150 characters");
+            throw new BusinessException("Tên dịch vụ và đường dẫn slug không được quá 150 ký tự");
         }
     }
 

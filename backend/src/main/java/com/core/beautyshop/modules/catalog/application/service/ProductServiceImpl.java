@@ -51,6 +51,7 @@ public class ProductServiceImpl implements ProductService {
     private final InventoryFacade inventoryFacade;
     private final RecommendationClient recommendationClient;
     private final UserProductInteractionRepository userProductInteractionRepository;
+    private final ProductInteractionRecorder interactionRecorder;
 
     @Override
     @Transactional(readOnly = true)
@@ -559,19 +560,24 @@ public class ProductServiceImpl implements ProductService {
         }
 
         // 1. Thử lấy danh sách ID từ FastAPI Content-Based Engine
-        List<Long> similarIds = recommendationClient.getSimilarProductIds(productId, safeLimit);
+        var recResult = recommendationClient.similar(productId, Math.min(50, safeLimit * 3));
+        List<Long> similarIds = recResult.ids();
         if (similarIds != null && !similarIds.isEmpty()) {
             List<ProductListResponse> products = productRepository.findProductListByIds(similarIds);
             Map<Long, ProductListResponse> map = products.stream()
                     .collect(Collectors.toMap(ProductListResponse::getId, p -> p, (a, b) -> a));
             List<ProductListResponse> ordered = similarIds.stream()
+                    .filter(id -> !id.equals(productId))
                     .map(map::get)
                     .filter(Objects::nonNull)
+                    .limit(safeLimit)
                     .collect(Collectors.toList());
             if (!ordered.isEmpty()) {
                 return ordered;
             }
         }
+
+        if (recResult.available()) return List.of();
 
         // 2. Fallback dựa trên Category hoặc Brand cùng loại trong MySQL
         List<Long> categoryIds = currentProduct.getCategories() != null
@@ -593,7 +599,8 @@ public class ProductServiceImpl implements ProductService {
         int safeLimit = (limit <= 0 || limit > 50) ? 8 : limit;
 
         // 1. Thử lấy danh sách ID từ FastAPI RecSys (User-to-Item Centroid Vector)
-        List<Long> recommendedIds = recommendationClient.getRecommendedProductIdsForUser(userId, sessionId, safeLimit);
+        var recResult = recommendationClient.forUser(userId, sessionId, Math.min(50, safeLimit * 3));
+        List<Long> recommendedIds = recResult.ids();
         if (recommendedIds != null && !recommendedIds.isEmpty()) {
             List<ProductListResponse> products = productRepository.findProductListByIds(recommendedIds);
             Map<Long, ProductListResponse> map = products.stream()
@@ -601,11 +608,14 @@ public class ProductServiceImpl implements ProductService {
             List<ProductListResponse> ordered = recommendedIds.stream()
                     .map(map::get)
                     .filter(Objects::nonNull)
+                    .limit(safeLimit)
                     .collect(Collectors.toList());
             if (!ordered.isEmpty()) {
                 return ordered;
             }
         }
+
+        if (recResult.available()) return List.of();
 
         // 2. Fallback Cold-Start: Lấy danh sách sản phẩm phổ biến / bán chạy nhất
         return productRepository.findPopularProducts(org.springframework.data.domain.PageRequest.of(0, safeLimit));
@@ -652,7 +662,7 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE);
         List<ProductListResponse> result = new ArrayList<>();
 
         for (Map.Entry<Long, ProductVariant> entry : earliestVariantByProduct.entrySet()) {
@@ -669,7 +679,7 @@ public class ProductServiceImpl implements ProductService {
                     ? variant.getOriginalPrice()
                     : (variant.getPrice() != null ? variant.getPrice() : salePrice);
 
-            int daysRemaining = (int) ChronoUnit.DAYS.between(today, stock.getEarliestExpirationDate());
+            int daysRemaining = Math.max(0, (int) ChronoUnit.DAYS.between(today, stock.getEarliestExpirationDate()));
 
             ProductListResponse response = ProductListResponse.builder()
                     .id(product.getId())
@@ -703,18 +713,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void recordInteraction(Long userId, String sessionId, Long productId, String actionType) {
-        if (productId == null || actionType == null || actionType.isBlank()) {
-            return;
-        }
-        try {
-            UserProductInteraction interaction = UserProductInteraction.builder()
-                    .userId(userId)
-                    .sessionId(sessionId)
-                    .productId(productId)
-                    .actionType(actionType.toUpperCase().trim())
-                    .build();
-            userProductInteractionRepository.save(interaction);
-        } catch (Exception ignored) {
-        }
+        if (productId == null || productId <= 0 || actionType == null
+                || !Set.of("VIEW", "SEARCH_CLICK").contains(actionType)
+                || (sessionId != null && sessionId.length() > 100)
+                || (userId == null && (sessionId == null || sessionId.isBlank())))
+            throw new BusinessException("Thông tin tương tác chưa hợp lệ; thêm giỏ và mua hàng được hệ thống ghi nhận tự động");
+        if (!productRepository.existsByIdAndIsDeletedFalse(productId))
+            throw new BusinessException("Sản phẩm không còn hiển thị");
+        interactionRecorder.record(new com.core.beautyshop.modules.catalog.api.event.ProductInteractionEvent(
+                userId, sessionId, productId, actionType, null));
     }
 }

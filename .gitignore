@@ -30,3 +30,4 @@ customer-test-results/
 artifacts/
 target-spa-validation/
 run_cloudflared.*
+!backend/src/main/resources/db/migration/V48__content_based_recommendation_controls.sql

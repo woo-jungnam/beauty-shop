@@ -22,10 +22,11 @@ export const ProductCardSkeleton = () => {
     >
       {/* 1. Image Media Container - Tỉ lệ 1:1 chuẩn xác với ProductCard */}
       <div
+        className="product-card-media"
         style={{
           position: 'relative',
           width: '100%',
-          paddingTop: '100%',
+          paddingTop: 'var(--product-card-media-padding, 100%)',
           overflow: 'hidden',
         }}
       >
@@ -72,8 +73,9 @@ export const ProductCardSkeleton = () => {
 
       {/* 2. Content Body - Đồng bộ padding và khoảng cách dòng */}
       <div
+        className="product-card-body"
         style={{
-          padding: '12px 14px',
+          padding: 'var(--product-card-body-padding, 12px 14px)',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,

@@ -16,7 +16,7 @@ public class ServiceResourceRequirementService {
     @Transactional(readOnly = true)
     public List<RequirementCommand> get(Long serviceId) {
         services.findById(serviceId).filter(s -> !Boolean.TRUE.equals(s.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Spa service not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
         return requirements.findByServiceIdAndIsDeletedFalseOrderByResourceTypeAsc(serviceId).stream()
                 .map(r -> new RequirementCommand(r.getResourceType(), r.getUnits())).toList();
     }
@@ -24,13 +24,13 @@ public class ServiceResourceRequirementService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<RequirementCommand> replace(Long serviceId, List<RequirementCommand> commands) {
         BeautyService service = services.findByIdForUpdate(serviceId).filter(s -> !Boolean.TRUE.equals(s.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Spa service not found"));
-        if (commands == null) throw new BusinessException("Resource requirements are required; use an empty array to remove constraints");
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
+        if (commands == null) throw new BusinessException("Yêu cầu tài nguyên là bắt buộc (truyền mảng rỗng nếu không có yêu cầu)");
         Map<String, Integer> validated = new TreeMap<>();
         for (RequirementCommand command : commands) {
-            if (command == null || command.units() == null || command.units() <= 0) throw new BusinessException("Resource units must be positive");
+            if (command == null || command.units() == null || command.units() <= 0) throw new BusinessException("Số lượng đơn vị tài nguyên phải lớn hơn 0");
             String type = AdminFacilityService.normalizeType(command.type());
-            if (validated.putIfAbsent(type, command.units()) != null) throw new BusinessException("Duplicate resource type: " + type);
+            if (validated.putIfAbsent(type, command.units()) != null) throw new BusinessException("Trùng lặp loại tài nguyên: " + type);
         }
         requirements.deleteAll(requirements.findByServiceIdAndIsDeletedFalseOrderByResourceTypeAsc(serviceId));
         requirements.flush();

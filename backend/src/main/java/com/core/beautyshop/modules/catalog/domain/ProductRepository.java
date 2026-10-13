@@ -153,4 +153,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<ProductListResponse> findPopularProducts(Pageable pageable);
 
     boolean existsBySlug(String slug);
+    boolean existsByIdAndIsDeletedFalse(Long id);
 }

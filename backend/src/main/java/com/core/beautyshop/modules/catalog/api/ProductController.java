@@ -102,7 +102,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
-    @Operation(summary = "Gợi ý sản phẩm tương tự (Content-Based Item-to-Item)", description = "API công khai. Sử dụng thuật toán vector ngữ nghĩa và thuộc tính da liễu để tìm các sản phẩm tương đồng nhất.")
+    @Operation(summary = "Gợi ý sản phẩm tương tự (Content-Based Item-to-Item)", description = "API công khai. Biểu diễn nội dung và thuộc tính sản phẩm bằng TF-IDF nhiều nhóm, chuẩn hóa L2 và xếp hạng cosine; điều kiện ứng viên do admin cấu hình.")
     @GetMapping("/{id}/similar")
     public ResponseEntity<ApiResponse<List<ProductListResponse>>> getSimilarProducts(
             @Parameter(description = "ID sản phẩm hiện tại", example = "101") @PathVariable Long id,
@@ -130,7 +130,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(products));
     }
 
-    @Operation(summary = "Ghi nhận hành vi tương tác sản phẩm", description = "API công khai. Thu thập các hành vi: VIEW, ADD_TO_CART, PURCHASE, SEARCH_CLICK phục vụ huấn luyện và cập nhật hồ sơ sở thích gợi ý.")
+    @Operation(summary = "Ghi nhận hành vi xem và chọn kết quả tìm kiếm", description = "API công khai nhận VIEW hoặc SEARCH_CLICK để cập nhật hồ sơ sở thích Content-Based. ADD_TO_CART và PURCHASE được backend ghi sau khi giao dịch thành công, không nhận từ client.")
     @PostMapping("/tracking/interaction")
     public ResponseEntity<ApiResponse<Void>> trackInteraction(
             @Valid @RequestBody InteractionTrackingRequest request) {

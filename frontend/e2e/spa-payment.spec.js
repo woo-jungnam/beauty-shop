@@ -28,8 +28,7 @@ async function checkout(page, existing = false) {
     await route.fulfill({ json: { data } });
   });
   await page.goto('/#/reception');
-  await page.getByRole('button', { name: /Thu Ngân & Hoá Đơn POS/ }).click();
-  await page.getByText('Test Guest', { exact: true }).click();
+  await page.getByRole('button', { name: 'Mở thu ngân' }).click();
   return {
     receipts,
     partial() { invoice = { ...invoice, paidAmount: 100, amountDue: 201, paymentInstruction: { ...invoice.paymentInstruction, qrCodeUrl: invoice.paymentInstruction.qrCodeUrl.replace('amount=301', 'amount=201') } }; },
@@ -49,7 +48,7 @@ function makeInvoice() {
 test('Spa BANK waits for payment; partial transfers update QR; PAID hides QR', async ({ page }) => {
   const flow = await checkout(page);
   await page.getByRole('button', { name: 'Lập hóa đơn & tạo QR' }).click();
-  await expect(page.getByText('Chờ thanh toán', { exact: true })).toBeVisible();
+  await expect(page.getByText('Trạng thái: Chờ thanh toán', { exact: true })).toBeVisible();
   await expect(page.getByText('0902588750', { exact: true })).toBeVisible();
   await expect(page.getByText('Thanh toán hoàn tất', { exact: true })).toHaveCount(0);
   flow.partial();

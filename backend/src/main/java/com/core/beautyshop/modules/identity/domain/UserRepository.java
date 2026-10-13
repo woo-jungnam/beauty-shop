@@ -15,11 +15,19 @@ public interface UserRepository extends JpaRepository<User, Long>, org.springfra
 
     Optional<User> findByEmail(String email);
 
+    java.util.List<User> findByPhoneIn(java.util.Collection<String> phones);
+
     Optional<User> findByUsernameOrEmail(String username, String email);
 
     Boolean existsByUsername(String username);
 
     Boolean existsByEmail(String email);
+
+    @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM User u WHERE u.phone = :phone AND u.isDeleted = false")
+    boolean existsByPhoneAndNotDeleted(@Param("phone") String phone);
+
+    @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM User u WHERE u.phone = :phone AND u.isDeleted = false AND u.id <> :excludeId")
+    boolean existsByPhoneAndNotDeletedExcluding(@Param("phone") String phone, @Param("excludeId") Long excludeId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT user FROM User user WHERE user.id = :id AND user.isDeleted = false")

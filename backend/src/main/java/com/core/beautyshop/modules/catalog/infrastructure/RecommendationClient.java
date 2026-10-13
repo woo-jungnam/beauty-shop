@@ -12,6 +12,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import com.core.beautyshop.shared.exception.BusinessException;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @Component
 @Slf4j
@@ -21,6 +24,72 @@ public class RecommendationClient {
     private final RestClient alternativeClient;
     private final ObjectMapper objectMapper;
     private final String baseUrl;
+    @Value("${recommendation.internal-token:${RECOMMENDATION_INTERNAL_TOKEN:}}")
+    private String internalToken;
+
+    public record RecommendationResult(List<Long> ids, boolean available) {}
+
+    private RecommendationResult result(String path, Long userId, String sessionId, int limit) {
+        try {
+            String json = executeGet(client -> client.get().uri(builder -> {
+                var uri = builder.path(path).queryParam("limit", limit);
+                if (userId != null) uri.queryParam("user_id", userId);
+                if (sessionId != null && !sessionId.isBlank()) uri.queryParam("session_id", sessionId);
+                return uri.build();
+            }).header("X-Recommendation-Token", internalToken == null ? "" : internalToken).retrieve().body(String.class));
+            if (json == null) return new RecommendationResult(List.of(), false);
+            JsonNode root = objectMapper.readTree(json);
+            if (!"success".equals(root.path("status").asText()) || !root.path("recommended_product_ids").isArray())
+                return new RecommendationResult(List.of(), false);
+            List<Long> ids = new ArrayList<>();
+            for (JsonNode id : root.get("recommended_product_ids")) {
+                if (!id.isIntegralNumber() || !id.canConvertToLong() || id.asLong() <= 0)
+                    return new RecommendationResult(List.of(), false);
+                if (!ids.contains(id.asLong())) ids.add(id.asLong());
+            }
+            return new RecommendationResult(ids, true);
+        } catch (Exception error) {
+            log.warn("Chưa đọc được phản hồi hệ thống gợi ý");
+            return new RecommendationResult(List.of(), false);
+        }
+    }
+
+    public RecommendationResult similar(Long productId, int limit) {
+        return result("/recommend/similar/" + productId, null, null, limit);
+    }
+
+    public RecommendationResult forUser(Long userId, String sessionId, int limit) {
+        return result("/recommend/for-you", userId, sessionId, limit);
+    }
+
+    private Map<String, Object> readMap(String json) {
+        try {
+            if (json == null) throw new IllegalArgumentException();
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception error) {
+            throw new BusinessException("Chưa kết nối được hệ thống gợi ý. Vui lòng thử lại");
+        }
+    }
+
+    public Map<String, Object> status() {
+        return readMap(executeGet(client -> client.get().uri("/recommend/admin/status")
+                .header("X-Recommendation-Token", internalToken == null ? "" : internalToken).retrieve().body(String.class)));
+    }
+
+    public Map<String, Object> refresh() {
+        return readMap(executeGet(client -> client.post().uri("/recommend/admin/refresh")
+                .header("X-Recommendation-Token", internalToken == null ? "" : internalToken).retrieve().body(String.class)));
+    }
+
+    public Map<String, Object> preview(Long productId, Long userId, String sessionId, int limit) {
+        String path = productId == null ? "/recommend/for-you" : "/recommend/similar/" + productId;
+        return readMap(executeGet(client -> client.get().uri(builder -> {
+            var uri = builder.path(path).queryParam("limit", limit);
+            if (userId != null) uri.queryParam("user_id", userId);
+            if (sessionId != null && !sessionId.isBlank()) uri.queryParam("session_id", sessionId);
+            return uri.build();
+        }).header("X-Recommendation-Token", internalToken == null ? "" : internalToken).retrieve().body(String.class)));
+    }
 
     public RecommendationClient(
             @Value("${chatbot.service.url:http://localhost:8000}") String chatbotBaseUrl,
@@ -72,71 +141,10 @@ public class RecommendationClient {
     }
 
     public List<Long> getSimilarProductIds(Long productId, int limit) {
-        if (productId == null || productId <= 0) {
-            return Collections.emptyList();
-        }
-        try {
-            log.debug("Gọi FastAPI RecSys lấy similar products cho product_id={}, limit={}", productId, limit);
-            String responseStr = executeGet(client -> client.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/recommend/similar/{productId}")
-                            .queryParam("limit", limit)
-                            .build(productId))
-                    .retrieve()
-                    .body(String.class));
-
-            if (responseStr == null || responseStr.isBlank()) {
-                return Collections.emptyList();
-            }
-
-            JsonNode root = objectMapper.readTree(responseStr);
-            JsonNode idsNode = root.get("recommended_product_ids");
-            if (idsNode != null && idsNode.isArray()) {
-                List<Long> result = new ArrayList<>();
-                for (JsonNode item : idsNode) {
-                    result.add(item.asLong());
-                }
-                return result;
-            }
-        } catch (Exception e) {
-            log.warn("Lỗi phân tích JSON từ FastAPI RecSys /recommend/similar: {}. Sẽ sử dụng fallback.", e.getMessage());
-        }
-        return Collections.emptyList();
+        return similar(productId, limit).ids();
     }
 
     public List<Long> getRecommendedProductIdsForUser(Long userId, String sessionId, int limit) {
-        try {
-            log.debug("Gọi FastAPI RecSys lấy recommendations cho userId={}, sessionId={}, limit={}", userId, sessionId, limit);
-            String responseStr = executeGet(client -> client.get()
-                    .uri(uriBuilder -> {
-                        var builder = uriBuilder.path("/recommend/for-you").queryParam("limit", limit);
-                        if (userId != null) {
-                            builder.queryParam("user_id", userId);
-                        }
-                        if (sessionId != null && !sessionId.isBlank()) {
-                            builder.queryParam("session_id", sessionId);
-                        }
-                        return builder.build();
-                    })
-                    .retrieve()
-                    .body(String.class));
-
-            if (responseStr == null || responseStr.isBlank()) {
-                return Collections.emptyList();
-            }
-
-            JsonNode root = objectMapper.readTree(responseStr);
-            JsonNode idsNode = root.get("recommended_product_ids");
-            if (idsNode != null && idsNode.isArray()) {
-                List<Long> result = new ArrayList<>();
-                for (JsonNode item : idsNode) {
-                    result.add(item.asLong());
-                }
-                return result;
-            }
-        } catch (Exception e) {
-            log.warn("Lỗi phân tích JSON từ FastAPI RecSys /recommend/for-you: {}. Sẽ sử dụng fallback.", e.getMessage());
-        }
-        return Collections.emptyList();
+        return forUser(userId, sessionId, limit).ids();
     }
 }

@@ -10,6 +10,10 @@ import java.util.List;
 
 @Repository
 public interface UserProductInteractionRepository extends JpaRepository<UserProductInteraction, Long> {
+    boolean existsBySourceKey(String sourceKey);
+    void deleteBySourceKeyStartingWith(String prefix);
+    boolean existsByUserIdAndSessionIdAndProductIdAndActionTypeAndCreatedAtAfter(Long userId, String sessionId,
+            Long productId, String actionType, java.time.LocalDateTime since);
 
     @Query("SELECT upi.productId FROM UserProductInteraction upi " +
            "WHERE upi.userId = :userId " +

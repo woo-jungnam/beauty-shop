@@ -92,20 +92,20 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         }
 
         if (servicePackage.getValidityDays() != null && servicePackage.getValidityDays() <= 0) {
-            throw new BusinessException("Package validity days are invalid");
+            throw new BusinessException("Thời hạn gói dịch vụ không hợp lệ");
         }
         if (servicePackage.getItems() == null || servicePackage.getItems().isEmpty()
                 || servicePackage.getItems().stream().anyMatch(item -> Boolean.TRUE.equals(item.getIsDeleted())
                     || item.getQuantity() == null || item.getQuantity() <= 0 || item.getService() == null
                     || Boolean.TRUE.equals(item.getService().getIsDeleted())
                     || !Boolean.TRUE.equals(item.getService().getIsActive()))) {
-            throw new BusinessException("Package contains unavailable services");
+            throw new BusinessException("Gói liệu trình chứa dịch vụ không khả dụng");
         }
         servicePackage.getItems().stream().map(item -> item.getService().getId()).distinct().sorted().forEach(id -> {
             var service = services.findAvailableByIdForUpdate(id)
-                    .orElseThrow(() -> new BusinessException("Package contains an unavailable service"));
+                    .orElseThrow(() -> new BusinessException("Gói liệu trình chứa dịch vụ đã tạm ngưng phục vụ"));
             if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
-                throw new BusinessException("Package contains an unavailable service");
+                throw new BusinessException("Gói liệu trình chứa dịch vụ đã tạm ngưng phục vụ");
             }
         });
 
@@ -128,11 +128,11 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         snapshot.setValidityDays(servicePackage.getValidityDays());
         snapshot.setExpiryCheckMode(policies.expiryCheckMode());
         if (servicePackage.getItems() == null || servicePackage.getItems().isEmpty()) {
-            throw new BusinessException("Package contains no services");
+            throw new BusinessException("Gói liệu trình chưa có dịch vụ nào");
         }
         for (var item : servicePackage.getItems()) {
             int quantity = item.getQuantity() == null ? 1 : item.getQuantity();
-            if (quantity <= 0 || item.getService() == null) throw new BusinessException("Invalid package entitlement");
+            if (quantity <= 0 || item.getService() == null) throw new BusinessException("Quyền lợi dịch vụ trong gói không hợp lệ");
             snapshot.getEntitlements().merge(item.getService().getId(), quantity, Math::addExact);
         }
         snapshots.save(snapshot);

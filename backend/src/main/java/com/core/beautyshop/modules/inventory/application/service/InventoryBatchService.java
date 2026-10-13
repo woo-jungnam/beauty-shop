@@ -15,32 +15,32 @@ public class InventoryBatchService {
     private final jakarta.persistence.EntityManager entities;
 
     public Warehouse lockWarehouse(Long id) {
-        if (id == null) throw new BusinessException("Warehouse is required");
+        if (id == null) throw new BusinessException("Kho hàng là bắt buộc");
         Warehouse warehouse = warehouses.findByIdForUpdate(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho hàng: " + id));
         // Procurement validation may have loaded this warehouse before the lock was acquired.
         entities.refresh(warehouse, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if (Boolean.TRUE.equals(warehouse.getIsDeleted()) || !Boolean.TRUE.equals(warehouse.getIsActive()))
-            throw new BusinessException("Warehouse is deleted or inactive");
+            throw new BusinessException("Kho hàng đã bị xóa hoặc ngưng hoạt động");
         return warehouse;
     }
 
     public Optional<WarehouseStock> lockBatch(Long warehouseId, Long variantId, String batchCode) {
         var rows = stocks.lockBatch(warehouseId, variantId, normalizeBatchCode(batchCode));
-        if (rows.size() > 1) throw new BusinessException("Duplicate legacy batch records require reconciliation");
+        if (rows.size() > 1) throw new BusinessException("Dữ liệu lô hàng cũ bị trùng lặp, cần đối soát kho");
         return rows.stream().findFirst();
     }
 
     public void restoreEmptyBatch(WarehouseStock stock) {
         if (!Boolean.TRUE.equals(stock.getIsDeleted())) return;
         if (stock.getQuantity() != 0 || stock.getReservedQuantity() != 0 || stock.getQuarantinedQuantity() != 0)
-            throw new BusinessException("Deleted batch still contains stock; reconcile before restoring");
+            throw new BusinessException("Lô hàng đã xóa vẫn còn tồn kho; cần đối soát trước khi khôi phục");
         stock.setIsDeleted(false);
     }
 
     public static String normalizeBatchCode(String batchCode) {
         String normalized = batchCode == null ? "" : batchCode.trim();
-        if (normalized.length() > 100) throw new BusinessException("Batch code must not exceed 100 characters");
+        if (normalized.length() > 100) throw new BusinessException("Mã lô hàng không được vượt quá 100 ký tự");
         return normalized;
     }
 }

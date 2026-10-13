@@ -21,7 +21,7 @@ public class IdentityAdministrationGuard {
     /** All changes to admin membership/status serialize on the same existing role row. */
     public void lockAdministration() {
         roles.findByNameForUpdate("ROLE_ADMIN")
-                .orElseThrow(() -> new BusinessException("The administrator role is unavailable"));
+                .orElseThrow(() -> new BusinessException("Vai trò quản trị viên không khả dụng"));
     }
 
     public boolean isSystemRole(String name) { return SYSTEM_ROLES.contains(name); }
@@ -30,7 +30,7 @@ public class IdentityAdministrationGuard {
         boolean activeAdmin = user.getStatus() == AccountStatus.ACTIVE && user.getRoles().stream()
                 .anyMatch(role -> "ROLE_ADMIN".equals(role.getName()) && !Boolean.TRUE.equals(role.getIsDeleted()));
         if (activeAdmin && users.countActiveAdminsExcluding(user.getId()) == 0) {
-            throw new BusinessException("At least one active administrator must remain");
+            throw new BusinessException("Phải duy trì ít nhất một tài khoản quản trị viên đang hoạt động");
         }
     }
 }

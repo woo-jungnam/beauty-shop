@@ -60,7 +60,7 @@ public class RoleServiceImpl implements RoleService {
         
         boolean renamed = !role.getRoleName().equals(request.getRoleName());
         if (renamed && administrationGuard.isSystemRole(role.getName())) {
-            throw new BusinessException("System role codes cannot be changed");
+            throw new BusinessException("Không được phép sửa mã vai trò hệ thống mặc định");
         }
         if (renamed &&
             roleRepository.findByRoleName(request.getRoleName()).isPresent()) {
@@ -80,7 +80,7 @@ public class RoleServiceImpl implements RoleService {
         administrationGuard.lockAdministration();
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò với id: " + id));
-        if (administrationGuard.isSystemRole(role.getName())) throw new BusinessException("System roles cannot be deleted");
+        if (administrationGuard.isSystemRole(role.getName())) throw new BusinessException("Không được phép xóa vai trò hệ thống mặc định");
         // Remove mappings explicitly; Hibernate-generated test schemas need not have ON DELETE CASCADE.
         for (var user : userRepository.findByRoleIdForUpdate(id)) {
             user.getRoles().removeIf(assigned -> id.equals(assigned.getId()));

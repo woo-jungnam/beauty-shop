@@ -37,13 +37,13 @@ public class AdminStaffService {
     }
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public StaffView save(Long id, StaffCommand command) {
-        if (!identityFacade.existsById(command.userId())) throw new ResourceNotFoundException("User not found");
+        if (!identityFacade.existsById(command.userId())) throw new ResourceNotFoundException("Không tìm thấy người dùng");
         Staff staff = id == null ? new Staff() : lockStaff(id);
         if (id != null && (Boolean.FALSE.equals(command.active()) || !Objects.equals(command.userId(), staff.getUserId()))) {
             requireNoFutureAppointments(id, null);
         }
         staffRepository.findByUserId(command.userId()).filter(found -> !Objects.equals(found.getId(), id))
-                .ifPresent(found -> { throw new BusinessException("User already has a staff profile"); });
+                .ifPresent(found -> { throw new BusinessException("Người dùng này đã có hồ sơ chuyên viên spa"); });
         staff.setUserId(command.userId()); staff.setSpecialty(command.specialty()); staff.setBio(command.bio());
         staff.setIsActive(command.active() == null || command.active());
         Staff saved = staffRepository.save(staff);
@@ -60,7 +60,7 @@ public class AdminStaffService {
         Staff staff = lockStaff(staffId);
         BeautyService service = beautyServiceRepository.findById(command.serviceId())
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Spa service not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
         StaffServiceSkill skill = skillRepository.findByStaffIdAndServiceIdAndIsDeletedFalse(staffId, command.serviceId()).orElseGet(StaffServiceSkill::new);
         skill.setStaff(staff); skill.setService(service); skill.setIsCertified(Boolean.TRUE.equals(command.certified()));
         skillRepository.save(skill);
@@ -73,7 +73,7 @@ public class AdminStaffService {
         lockStaff(staffId);
         requireNoFutureAppointments(staffId, serviceId);
         StaffServiceSkill skill = skillRepository.findByStaffIdAndServiceIdAndIsDeletedFalse(staffId, serviceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Staff skill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kỹ năng của chuyên viên"));
         skill.setIsDeleted(true);
     }
     @Transactional(readOnly = true)
@@ -81,21 +81,24 @@ public class AdminStaffService {
         findStaff(staffId);
         LocalDate start = from == null ? LocalDate.now(SpaTimeRules.ZONE).minusMonths(1) : from;
         LocalDate end = to == null ? LocalDate.now(SpaTimeRules.ZONE).plusMonths(3) : to;
-        if (end.isBefore(start)) throw new BusinessException("Shift end date must not precede start date");
+        if (end.isBefore(start)) throw new BusinessException("Ngày kết thúc ca trực không thể trước ngày bắt đầu");
         return scheduleRepository.findByStaffIdAndWorkDateBetweenAndIsDeletedFalse(staffId, start, end, pageable).map(ScheduleView::from);
     }
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ScheduleView saveSchedule(Long staffId, Long scheduleId, ScheduleCommand command) {
         if (command == null || command.workDate() == null || command.startTime() == null || command.endTime() == null
-                || !command.endTime().isAfter(command.startTime())) throw new BusinessException("Invalid shift date or time");
+                || !command.endTime().isAfter(command.startTime())) throw new BusinessException("Ngày hoặc giờ ca trực không hợp lệ");
+        if (scheduleId == null && command.workDate().isBefore(LocalDate.now(SpaTimeRules.ZONE))) {
+            throw new BusinessException("Không thể tạo ca trực trong quá khứ");
+        }
         Staff staff = lockStaff(staffId);
         boolean overlap = scheduleId == null
                 ? scheduleRepository.existsOverlap(staffId, command.workDate(), command.startTime(), command.endTime())
                 : scheduleRepository.existsOverlapExcluding(staffId, scheduleId, command.workDate(), command.startTime(), command.endTime());
-        if (overlap) throw new BusinessException("Staff schedule overlaps an existing shift");
+        if (overlap) throw new BusinessException("Lịch trực bị trùng với ca trực đã có của chuyên viên");
         StaffSchedule schedule = scheduleId == null ? new StaffSchedule() : scheduleRepository.findById(scheduleId)
                 .filter(value -> Objects.equals(value.getStaff().getId(), staffId) && !Boolean.TRUE.equals(value.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lịch trực"));
         schedule.setStaff(staff); schedule.setWorkDate(command.workDate()); schedule.setStartTime(command.startTime()); schedule.setEndTime(command.endTime());
         schedule.setStatus(command.status() == null ? StaffScheduleStatus.SCHEDULED : command.status()); schedule.setNote(command.note());
         StaffSchedule saved = scheduleRepository.saveAndFlush(schedule);
@@ -106,22 +109,22 @@ public class AdminStaffService {
     public void deleteSchedule(Long staffId, Long id) {
         lockStaff(staffId);
         StaffSchedule schedule = scheduleRepository.findById(id).filter(value -> Objects.equals(value.getStaff().getId(), staffId))
-                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lịch trực"));
         schedule.setIsDeleted(true); schedule.setStatus(StaffScheduleStatus.CANCELLED);
         scheduleRepository.flush();
         requireAppointmentsCovered(staffId);
     }
     private Staff findStaff(Long id) { return staffRepository.findById(id).filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-            .orElseThrow(() -> new ResourceNotFoundException("Staff not found: " + id)); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chuyên viên: " + id)); }
 
     private Staff lockStaff(Long id) { return staffRepository.findByIdWithLock(id)
             .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-            .orElseThrow(() -> new ResourceNotFoundException("Staff not found: " + id)); }
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chuyên viên: " + id)); }
 
     private void requireNoFutureAppointments(Long staffId, Long serviceId) {
         if (appointments.findFutureAssignedItems(staffId, LocalDate.now(SpaTimeRules.ZONE)).stream()
                 .anyMatch(item -> serviceId == null || item.getService().getId().equals(serviceId))) {
-            throw new BusinessException("Reassign or cancel outstanding appointments before changing this staff member");
+            throw new BusinessException("Vui lòng chuyển hoặc hủy các lịch hẹn hiện có trước khi thay đổi chuyên viên này");
         }
     }
 
@@ -130,11 +133,11 @@ public class AdminStaffService {
             LocalDate date = item.getAppointment().getAppointmentDate();
             if (scheduleRepository.hasScheduleOnDate(staffId, date)) {
                 if (!scheduleRepository.coversWorkingInterval(staffId, date, item.getStartTime(), item.getEndTime())) {
-                    throw new BusinessException("Shift change would leave an outstanding appointment outside working hours");
+                    throw new BusinessException("Thay đổi ca trực sẽ khiến lịch hẹn của khách nằm ngoài giờ làm việc");
                 }
             } else {
                 if (item.getStartTime().isBefore(SpaTimeRules.OPEN) || item.getEndTime().isAfter(SpaTimeRules.CLOSE)) {
-                    throw new BusinessException("Shift change would leave an outstanding appointment outside working hours");
+                    throw new BusinessException("Thay đổi ca trực sẽ khiến lịch hẹn của khách nằm ngoài giờ làm việc");
                 }
             }
         }

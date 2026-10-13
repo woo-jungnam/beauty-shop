@@ -1,4 +1,6 @@
 import os
+import json
+from collections import defaultdict
 from typing import Any, List, Optional
 import pymysql
 import pymysql.cursors
@@ -98,11 +100,12 @@ class DatabaseExtractor:
                 CAST(prices.price AS DOUBLE) as price,
                 p.status,
                 p.skin_type,
+                p.is_featured, p.has_fragrance, p.has_alcohol,
                 COALESCE(p.ingredients, '') as ingredients,
                 COALESCE(p.how_to_use, '') as how_to_use,
                 COALESCE(p.short_description, '') as short_description,
                 COALESCE(p.description, '') as description,
-                COALESCE(p.average_rating, 5.0) as rating,
+                COALESCE(p.average_rating, 0.0) as rating,
                 COALESCE(p.total_reviews, 0) as total_reviews,
                 COALESCE(p.total_sold, 0) as total_sold,
                 COALESCE(NULLIF(p.thumbnail_url, ''), (SELECT pi.image_url FROM product_images pi
@@ -119,7 +122,7 @@ class DatabaseExtractor:
             ) prices ON p.id = prices.product_id
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN (
-                SELECT pc.product_id, MIN(c.name) as category_name
+                SELECT pc.product_id, GROUP_CONCAT(DISTINCT c.name ORDER BY c.name SEPARATOR ' | ') as category_name
                 FROM product_categories pc
                 JOIN categories c ON pc.category_id = c.id
                 WHERE c.is_deleted = 0
@@ -143,10 +146,33 @@ class DatabaseExtractor:
 
         try:
             with conn.cursor() as cur:
+                cur.execute("START TRANSACTION READ ONLY")
                 cur.execute(query)
                 rows = cur.fetchall()
+                cur.execute("SELECT pi.product_id, i.name, i.inci_name, i.functions, i.benefits FROM product_ingredients pi JOIN ingredients i ON i.id=pi.ingredient_id WHERE i.is_deleted=0")
+                ingredientRows = cur.fetchall()
+                cur.execute("SELECT c.product_id, s.code, c.score, c.is_recommended, c.contraindication_reason FROM product_skin_compatibility c JOIN skin_types s ON s.id=c.skin_type_id")
+                skinRows = cur.fetchall()
+                cur.execute("SELECT c.product_id, s.code, c.score FROM product_skin_concerns c JOIN skin_concerns s ON s.id=c.concern_id")
+                concernRows = cur.fetchall()
         finally:
             conn.close()
+
+        ingredientMap = defaultdict(list)
+        skinMap = defaultdict(list)
+        concernMap = defaultdict(list)
+        for row in ingredientRows:
+            parts = [row['name'], row['inci_name']]
+            for key in ('functions', 'benefits'):
+                value = row.get(key) or []
+                if isinstance(value, str):
+                    value = json.loads(value)
+                parts.extend(str(x) for x in value)
+            ingredientMap[row['product_id']].append(' '.join(parts))
+        for row in skinRows:
+            skinMap[row['product_id']].append(row)
+        for row in concernRows:
+            concernMap[row['product_id']].append(row)
 
         formattedProducts: List[dict[str, Any]] = []
         for r in rows:
@@ -167,15 +193,25 @@ class DatabaseExtractor:
             elif rawSkin == "SENSITIVE":
                 skinTypes = ["sensitive"]
             elif rawSkin == "ALL_SKIN":
-                skinTypes = ["all", "oily", "dry", "combination", "sensitive"]
-            else:
                 skinTypes = ["all"]
+            elif rawSkin == "COMBINATION":
+                skinTypes = ["combination"]
+            elif rawSkin == "NORMAL":
+                skinTypes = ["normal"]
+            else:
+                skinTypes = []
+            compatibility = skinMap[r['id']]
+            if compatibility:
+                skinTypes = [('all' if item['code'] == 'ALL_SKIN' else item['code'].lower())
+                             for item in compatibility if item['is_recommended'] and float(item['score']) > 0]
 
             textForConcerns = f"{r['name']} {r['short_description']} {r['description']} {rawCategory}".lower()
             detectedConcerns = [
                 concernKey for concernKey, kws in CONCERN_KEYWORDS.items()
                 if any(kw in textForConcerns for kw in kws)
             ]
+            if concernMap[r['id']]:
+                detectedConcerns = [item['code'].lower() for item in concernMap[r['id']] if float(item['score']) > 0]
 
             benefitsList = []
             if r["short_description"]:
@@ -191,16 +227,25 @@ class DatabaseExtractor:
                 "name": str(r["name"]).strip(),
                 "brand": str(r["brand"]).strip(),
                 "category": categoryVal,
+                "category_names": [name.strip() for name in rawCategory.split(' | ') if name.strip()],
                 "price": float(r["price"] or 0.0),
                 "stock": int(r["stock"] or 0),
-                "rating": float(r.get("rating") or 5.0),
+                "rating": float(r.get("rating") or 0.0),
                 "total_reviews": int(r.get("total_reviews") or 0),
                 "total_sold": int(r.get("total_sold") or 0),
                 "description": str(r["description"] or r["short_description"] or "").strip(),
                 "ingredients": ingList,
+                "mapped_ingredients": ingredientMap[r['id']],
+                "has_fragrance": None if r.get('has_fragrance') is None else bool(r['has_fragrance']),
+                "has_alcohol": None if r.get('has_alcohol') is None else bool(r['has_alcohol']),
+                "is_featured": bool(r.get('is_featured')),
+                "not_ideal_skin_types": [item['code'].lower() for item in compatibility if not item['is_recommended']],
                 "benefits": benefitsList,
                 "skin_type": skinTypes,
+                "skin_scores": {('all' if item['code'] == 'ALL_SKIN' else item['code'].lower()): float(item['score'])
+                                for item in compatibility if item['is_recommended']},
                 "concerns": detectedConcerns,
+                "concern_scores": {item['code'].lower(): float(item['score']) for item in concernMap[r['id']]},
                 "usage": str(r["how_to_use"] or "").strip(),
                 "reviews": [],
                 "target_type": "PRODUCT",

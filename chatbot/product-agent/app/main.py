@@ -1,4 +1,5 @@
 import re
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
@@ -31,6 +32,7 @@ from app.core.logging import getLogger
 from app.llm.client import llmClient
 from app.models.database import initDb
 from app.services import bm25Service, dbExtractor, embeddingService, indexingService
+from app.services.recommendation import recommendationService
 
 settings = getSettings()
 logger = getLogger("appMain")
@@ -66,9 +68,21 @@ async def lifespan(app: FastAPI):
                     await indexingService.ingestCatalogFromFile(catalogPath)
                 except Exception as exc:
                     logger.warning("Lỗi nạp danh mục sản phẩm mẫu khi khởi động: %s", exc)
-    yield
-    await embeddingService.aclose()
-    await llmClient.aclose()
+    async def refresh_content_catalog():
+        while True:
+            await asyncio.to_thread(recommendationService.refresh)
+            await asyncio.sleep(5)
+    refresh_task = asyncio.create_task(refresh_content_catalog())
+    try:
+        yield
+    finally:
+        refresh_task.cancel()
+        try:
+            await refresh_task
+        except asyncio.CancelledError:
+            pass
+        await embeddingService.aclose()
+        await llmClient.aclose()
 
 
 app = FastAPI(
