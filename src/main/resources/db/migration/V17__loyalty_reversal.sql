@@ -1,0 +1,1 @@
+ALTER TABLE loyalty_point_awards ADD COLUMN reversed BOOLEAN NOT NULL DEFAULT FALSE;

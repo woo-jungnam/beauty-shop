@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: beautyshop-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+    hikari:
+      connection-init-sql: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+  kafka:
+    admin:
+      auto-create: false
+    listener:
+      auto-startup: false
+
+app:
+  jobs:
+    enabled: false
+  cache:
+    provider: local
+
+jwt:
+  secret: beautyshop_test_profile_only_key_32_bytes_minimum_1234567890
+  expiration-ms: 900000
+  refresh-expiration-ms: 604800000
+
+sepay:
+  webhook:
+    api-key: test-sepay-api-key
+  bank:
+    name: TEST BANK
+    account-name: TEST ACCOUNT
+    account-number: "0000000000"
+    bin: "000000"

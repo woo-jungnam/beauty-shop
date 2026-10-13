@@ -1,0 +1,70 @@
+HELP.md
+target/
+target-spa-validation/
+.spa-validation-pom.xml
+spa-*-tests.log
+*.log
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+.env
+
+# Secrets and private environment configuration
+.env
+.env.*
+!.env.example
+*.env
+.npmrc
+.netrc
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials*.json
+service-account*.json
+*service-account*.json
+*.har
+
+# Runtime data and private dumps
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.log
+*.tar.gz
+/backups/
+/dumps/
+/backup*.sql
+coverage/
+/uploads/
+!/uploads/.gitkeep
+docs/*VALIDATION*.json

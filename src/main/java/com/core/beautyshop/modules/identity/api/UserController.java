@@ -1,0 +1,73 @@
+package com.core.beautyshop.modules.identity.api;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
+
+import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.shared.dto.PageResponse;
+import com.core.beautyshop.modules.identity.application.dto.request.UpdateProfileRequest;
+import com.core.beautyshop.modules.identity.application.dto.response.UserProfileResponse;
+import com.core.beautyshop.modules.identity.application.service.UserService;
+import com.core.beautyshop.modules.identity.application.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@Tag(name = "Quản lý người dùng", description = "API quản lý người dùng")
+@RestController
+@RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+    private final AuthService authService;
+
+    @Operation(summary = "Lấy thông tin cá nhân hiện tại")
+    @GetMapping({"/profile", "/me"})
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getCurrentUser() {
+        UserProfileResponse profile = userService.getCurrentUserProfile();
+        return ResponseEntity.ok(ApiResponse.success(profile));
+    }
+
+    @Operation(summary = "Cập nhật thông tin cá nhân", description = "Bearer JWT của chính tài khoản. Chỉ cập nhật các trường gửi với giá trị khác null; bỏ qua hoặc null giữ giá trị hiện tại. Không đổi username/email/password/roles qua API này.")
+    @PutMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request) {
+        UserProfileResponse profile = userService.updateProfile(request);
+        return ResponseEntity.ok(ApiResponse.success(profile));
+    }
+
+    @Operation(summary = "Lấy danh sách người dùng qua tuyến tương thích (ADMIN)", description = "Yêu cầu ROLE_ADMIN. Dùng /api/v1/admin/users để có thêm bộ lọc keyword/status/role. page bắt đầu từ 0, size mặc định 20, sort theo Spring Pageable.")
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<PageResponse<UserProfileResponse>>> getAllUsers(
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        Page<UserProfileResponse> page = userService.getAllUsers(pageable);
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
+    }
+
+    @Operation(summary = "Xem thông tin người dùng theo ID (Admin)")
+    @GetMapping("/admin/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getUserById(
+            @PathVariable Long id) {
+        UserProfileResponse profile = userService.getUserById(id);
+        return ResponseEntity.ok(ApiResponse.success(profile));
+    }
+
+    @Operation(summary = "Buộc đăng xuất người dùng trên tất cả thiết bị (ADMIN)", description = "Thu hồi toàn bộ họ phiên và tăng tokenVersion; access token hiện hành của tài khoản không còn được chấp nhận.")
+    @PostMapping("/admin/{id}/force-logout")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable Long id) {
+        authService.forceLogoutUser(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Đã thu hồi toàn bộ phiên đăng nhập của người dùng"));
+    }
+}
