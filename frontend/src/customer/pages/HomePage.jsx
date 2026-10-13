@@ -23,6 +23,7 @@ import { ToastNotification } from '../components/ui/ToastNotification';
 import { useCustomerCart } from '../stores/customerCartStore';
 import { apiClient } from '../../shared/api/client';
 import { ENDPOINTS } from '../../shared/api/endpoints';
+import { resolveMediaUrl } from '../../shared/utils/formatters';
 import { getGuestSessionId } from '../../shared/utils/session';
 import { useHomeSectionLimits } from '../components/ui/useHomeSectionLimits';
 
@@ -310,7 +311,7 @@ export const HomePage = ({ onNavigate }) => {
 
   // Map brand name → representative product image
   const getBrandImage = (brand) => {
-    if (brand.logoUrl) return brand.logoUrl;
+    if (brand.logoUrl) return resolveMediaUrl(brand.logoUrl);
     const name = (brand.name || '').toLowerCase();
     if (name.includes('la roche') || name.includes('laroche'))
       return 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=300&q=75';
