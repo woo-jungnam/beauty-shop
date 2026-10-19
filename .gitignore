@@ -77,3 +77,6 @@ credentials*.json
 *.db
 *.db-*
 .auth/
+
+# Versioned schema migrations are source code, not database dumps.
+!backend/src/main/resources/db/migration/V[0-9]*__*.sql

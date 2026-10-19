@@ -104,11 +104,16 @@ jobs:
       - name: Validate Docker Compose Configuration
         env:
           JWT_SECRET: "ci-dummy-jwt-secret-for-syntax-validation-only-32bytes"
+          # Syntax validation only: no production credentials are used.
+          DB_PASSWORD: ci-dummy-database-password
+          GRAFANA_ADMIN_PASSWORD: ci-dummy-grafana-password
+          SEPAY_WEBHOOK_API_KEY: ci-dummy-webhook-key
+          SEPAY_BANK_ACCOUNT_NUMBER: "0000000000"
         run: |
           mkdir -p chatbot/product-agent
           touch chatbot/product-agent/.env
           touch .env
-          docker compose -f docker-compose.yml config
+          docker compose -f docker-compose.yml config --quiet
 
       - name: Test Nginx Configuration Syntax
         run: |
