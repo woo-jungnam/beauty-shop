@@ -27,6 +27,8 @@ except Exception:
 from app.api.chat import router as apiRouter
 from app.api.chat import router as api_router
 from app.api.recommend import router as recommendRouter
+from app.api.image_search import router as imageSearchRouter, ImageSearchBodyLimit
+from app.image_search.service import ImageSearchService
 from app.core.config import getSettings
 from app.core.logging import getLogger
 from app.llm.client import llmClient
@@ -42,6 +44,8 @@ static_dir = staticDir
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.image_search = ImageSearchService(settings)
+    await asyncio.to_thread(app.state.image_search.initialize)
     initDb()
     if not bm25Service.chunks:
         synced = False
@@ -106,6 +110,9 @@ if staticDir.exists():
 
 app.include_router(apiRouter)
 app.include_router(recommendRouter)
+app.include_router(imageSearchRouter)
+app.add_middleware(ImageSearchBodyLimit, max_bytes=settings.image_search_max_bytes,
+                   token=settings.image_search_internal_token)
 
 
 @app.get("/", tags=["Giao diện"], summary="Trang giao diện tư vấn mỹ phẩm")

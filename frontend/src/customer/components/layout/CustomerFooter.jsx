@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { apiClient } from '../../../shared/api/client';
+import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Truck, RotateCcw, Award, Mail, Phone, MapPin, Clock, X } from 'lucide-react';
 
 const POLICIES = {
@@ -6,10 +7,10 @@ const POLICIES = {
     title: 'Điều Khoản Sử Dụng',
     content: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
-        <p><strong>1. Giới thiệu:</strong> Chào mừng bạn đến với hệ thống BeautyShop. Khi sử dụng dịch vụ trên website, quý khách đồng ý tuân thủ toàn bộ các điều khoản và quy định được ban hành tại đây.</p>
-        <p><strong>2. Tài khoản & Bảo mật:</strong> Khách hàng có trách nhiệm bảo mật thông tin đăng nhập cá nhân. Mọi giao dịch phát sinh qua tài khoản đã xác thực được xem là hợp lệ.</p>
-        <p><strong>3. Đặt hàng & Xác nhận:</strong> Khi quý khách đặt hàng, hệ thống sẽ tự động gửi email/thông báo xác nhận. BeautyShop có quyền từ chối hoặc hủy đơn trong các trường hợp nghi ngờ gian lận hoặc sai sót giá niêm yết do sự cố hệ thống.</p>
-        <p><strong>4. Quyền sở hữu trí tuệ:</strong> Toàn bộ nội dung, hình ảnh, nhãn hiệu thuộc bản quyền của BeautyShop hoặc các thương hiệu đối tác được ủy quyền.</p>
+        <p><strong>Tài khoản:</strong> Bảo mật thông tin đăng nhập và kiểm tra thông tin người nhận trước khi gửi đơn hàng hoặc đặt lịch.</p>
+        <p><strong>Đơn hàng:</strong> Xem lại sản phẩm, số lượng, giá và phí vận chuyển tại bước thanh toán. Theo dõi kết quả xử lý trong chi tiết đơn hàng.</p>
+        <p><strong>Lịch hẹn:</strong> Kiểm tra dịch vụ, nhân viên, giờ trống và điều kiện được hiển thị trước khi xác nhận đặt lịch.</p>
+        <p><strong>Hỗ trợ:</strong> Gửi yêu cầu đổi trả từ đơn hàng hoặc dùng thông tin liên hệ do cửa hàng công khai khi cần hỗ trợ.</p>
       </div>
     )
   },
@@ -17,41 +18,41 @@ const POLICIES = {
     title: 'Chính Sách Bảo Mật Thông Tin',
     content: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
-        <p><strong>1. Thu thập thông tin:</strong> Chúng tôi chỉ thu thập các thông tin cần thiết phục vụ đơn hàng và dịch vụ Clinic (Họ tên, Số điện thoại, Email, Địa chỉ nhận hàng).</p>
-        <p><strong>2. Mục đích sử dụng:</strong> Thông tin được sử dụng để đóng gói vận chuyển, cấp mã vé điện tử Spa, thông báo tình trạng đơn hàng và tư vấn chăm sóc da chuyên sâu.</p>
-        <p><strong>3. Cam kết bảo mật:</strong> BeautyShop cam kết tuyệt đối không chia sẻ, mua bán hay tiết lộ dữ liệu người dùng cho bên thứ ba ngoại trừ các đơn vị vận chuyển đối tác.</p>
-        <p><strong>4. Quyền của khách hàng:</strong> Quý khách có quyền kiểm tra, cập nhật hoặc yêu cầu hủy bỏ thông tin cá nhân bất kỳ lúc nào tại mục Quản lý tài khoản.</p>
+        <p><strong>Thông tin bạn cung cấp:</strong> Hồ sơ, địa chỉ nhận hàng và thông tin đặt lịch được dùng trong các thao tác tương ứng trên hệ thống.</p>
+        <p><strong>Quản lý hồ sơ:</strong> Bạn có thể xem và cập nhật các trường được hỗ trợ trong tài khoản của mình.</p>
+        <p><strong>Bản tin:</strong> Đăng ký nhận email cần sự đồng ý của bạn; bạn có thể yêu cầu hủy đăng ký.</p>
+        <p><strong>Trao đổi về dữ liệu:</strong> Dùng thông tin liên hệ do cửa hàng công khai nếu cần trao đổi về thông tin cá nhân đã cung cấp.</p>
       </div>
     )
   },
   shipping: {
-    title: 'Chính Sách Giao Hàng 2H NowFree',
+    title: 'Thông Tin Giao Hàng',
     content: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
-        <p><strong>1. Giao nhanh 2H:</strong> Áp dụng cho đơn hàng nội thành TP.HCM & Hà Nội đặt trong khung giờ từ 08:00 đến 20:00 hàng ngày.</p>
-        <p><strong>2. Biểu phí vận chuyển:</strong> Miễn phí vận chuyển toàn quốc cho tất cả đơn hàng từ <strong>249.000 ₫</strong>. Đơn hàng dưới 249.000 ₫ áp dụng phí đồng giá 25.000 ₫ - 35.000 ₫.</p>
-        <p><strong>3. Thời gian giao hàng:</strong><br />• Nội thành: Giao nhanh 2H hoặc trong ngày theo yêu cầu.<br />• Ngoại thành & Các tỉnh: Từ 1 - 3 ngày làm việc qua đối tác vận chuyển hỏa tốc.</p>
-        <p><strong>4. Đồng kiểm khi nhận:</strong> Quý khách được quyền kiểm tra ngoại quan gói hàng (nguyên seal, tem phụ) trước khi ký nhận và thanh toán.</p>
+        <p><strong>Địa chỉ:</strong> Nhập đúng người nhận, số điện thoại và địa chỉ tại bước thanh toán.</p>
+        <p><strong>Phí vận chuyển:</strong> Kiểm tra mức phí được hiển thị tại bước thanh toán trước khi gửi đơn hàng.</p>
+        <p><strong>Theo dõi:</strong> Xem trạng thái xử lý và giao hàng trong chi tiết đơn. Thời điểm giao thực tế phụ thuộc quá trình xử lý đơn.</p>
+        <p><strong>Khi cần hỗ trợ:</strong> Dùng mã đơn và thông tin liên hệ do cửa hàng công khai để trao đổi về việc giao hàng.</p>
       </div>
     )
   },
   returns: {
-    title: 'Chính Sách Đổi Trả Miễn Phí 14 Ngày',
+    title: 'Yêu Cầu Đổi Trả Theo Đơn Hàng',
     content: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
-        <p><strong>1. Điều kiện đổi trả:</strong> Hỗ trợ đổi trả trong vòng 14 ngày kể từ khi nhận hàng. Sản phẩm còn nguyên tem mác, chưa qua sử dụng hoặc phát sinh dị ứng kích ứng da có xác nhận từ chuyên viên da liễu.</p>
-        <p><strong>2. Chi phí đổi trả:</strong> BeautyShop hỗ trợ 100% chi phí vận chuyển đổi trả nếu lỗi xuất phát từ nhà sản xuất hoặc do đóng gói sai quy cách.</p>
-        <p><strong>3. Thời gian hoàn tiền:</strong> Hoàn tiền vào tài khoản ngân hàng hoặc ví điểm thưởng trong vòng 1 - 3 ngày làm việc sau khi tiếp nhận sản phẩm hoàn về.</p>
+        <p><strong>Gửi yêu cầu:</strong> Mở đơn đã giao, chọn sản phẩm và số lượng muốn trả, điền lý do và đường dẫn bằng chứng nếu có. Hệ thống kiểm tra thời hạn và số lượng đủ điều kiện theo đơn.</p>
+        <p><strong>Xét duyệt và nhận hàng:</strong> Yêu cầu được cửa hàng duyệt hoặc từ chối có lý do. Theo dõi kết quả và xác nhận nhận hàng trong chi tiết yêu cầu.</p>
+        <p><strong>Hoàn tiền:</strong> Khoản hoàn được xử lý theo yêu cầu đã duyệt, hàng thực nhận và số tiền thực thu. Xem trạng thái xác nhận hoàn trong đơn hàng; phí phát sinh và cách nhận lại hàng cần được trao đổi với cửa hàng.</p>
       </div>
     )
   },
   authentic: {
-    title: 'Cam Kết 100% Chính Hãng - Giá Trị Thật',
+    title: 'Thông Tin Sản Phẩm',
     content: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
-        <p><strong>1. Nguồn gốc minh bạch:</strong> 100% sản phẩm phân phối tại BeautyShop đều có tem phụ tiếng Việt chuẩn Bộ Y Tế, hóa đơn chứng từ VAT và nhập khẩu chính ngạch từ các thương hiệu dược mỹ phẩm hàng đầu.</p>
-        <p><strong>2. Bồi thường 200%:</strong> Cam kết hoàn tiền và đền bù 200% giá trị sản phẩm nếu phát hiện bất kỳ hàng giả, hàng nhái nào trong hệ thống.</p>
-        <p><strong>3. Quản lý date FEFO:</strong> 100% sản phẩm có hạn sử dụng xa, được quản lý chặt chẽ theo quy trình xuất nhập FEFO trong kho bảo quản đạt chuẩn GSP.</p>
+        <p><strong>Trước khi mua:</strong> Xem thương hiệu, mô tả và thông tin sản phẩm được cửa hàng công bố trên trang chi tiết.</p>
+        <p><strong>Chọn đúng phân loại:</strong> Kiểm tra phân loại, số lượng, giá và khả năng cung ứng trước khi gửi đơn.</p>
+        <p><strong>Khi có thắc mắc:</strong> Trao đổi với cửa hàng về nguồn gốc, nhãn hàng hóa hoặc thông tin chưa rõ trước khi chọn mua.</p>
       </div>
     )
   }
@@ -59,6 +60,29 @@ const POLICIES = {
 
 export const CustomerFooter = ({ onNavigate }) => {
   const [activePolicy, setActivePolicy] = useState(null);
+  const [storeContact, setStoreContact] = useState({ address: '', hotline: '', email: '' });
+  useEffect(() => {
+    let active = true;
+    // Only values explicitly exposed by the public API may be displayed here.
+    // Contract: STRING store.address / store.hotline / store.email; no seeded defaults.
+    apiClient.get('/api/v1/system-configs/public').then(response => {
+      if (!active || response?.success === false) return;
+      const configs = response?.data ?? response;
+      const text = key => typeof configs?.[key] === 'string' ? configs[key].trim() : '';
+      setStoreContact({ address: text('store.address'), hotline: text('store.hotline'), email: text('store.email') });
+    }).catch(() => { /* Missing contact information stays unconfigured on failure. */ });
+    return () => { active = false; };
+  }, []);
+  const hotlineNumber = storeContact.hotline.replace(/[\s().-]/g, '');
+  const hotlineHref = /^\+?\d{6,15}$/.test(hotlineNumber) ? `tel:${hotlineNumber}` : null;
+  const emailHref = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(storeContact.email)
+    ? `mailto:${encodeURIComponent(storeContact.email).replace('%40', '@')}` : null;
+  const contactLinkStyle = { color: 'inherit', textDecoration: 'underline' };
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterFeedback, setNewsletterFeedback] = useState('');
+  const [newsletterBusy, setNewsletterBusy] = useState(false);
+  const subscribe = async () => { if (newsletterBusy) return; if (!newsletterConsent) { setNewsletterFeedback('Vui lòng đồng ý nhận bản tin trước khi đăng ký.'); return; } if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsletterEmail)) { setNewsletterFeedback('Vui lòng nhập email hợp lệ.'); return; } setNewsletterBusy(true); try { const response = await apiClient.post('/api/v1/newsletter/subscriptions', { email: newsletterEmail, consent: newsletterConsent }); setNewsletterFeedback(response?.message || 'Đã đăng ký nhận bản tin.'); setNewsletterEmail(''); } catch (error) { setNewsletterFeedback(error.message); } finally { setNewsletterBusy(false); } };
   return (
     <footer style={{
       backgroundColor: '#8C2A47',
@@ -66,7 +90,7 @@ export const CustomerFooter = ({ onNavigate }) => {
       marginTop: 'auto',
       borderTop: '1px solid rgba(255, 255, 255, 0.08)'
     }}>
-      {/* 1. Value Proposition Pillars - Hasaki 4 Cam Kết Vàng */}
+      {/* Storefront information and customer actions */}
       <div style={{
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '32px 0',
@@ -81,7 +105,7 @@ export const CustomerFooter = ({ onNavigate }) => {
             <div
               style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', cursor: 'pointer' }}
               onClick={() => setActivePolicy('authentic')}
-              title="Xem cam kết chính hãng"
+              title="Xem thông tin sản phẩm"
             >
               <div style={{
                 width: '44px',
@@ -97,10 +121,10 @@ export const CustomerFooter = ({ onNavigate }) => {
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
-                  100% Chính Hãng - Giá Trị Thật
+                  Thông Tin Sản Phẩm
                 </h4>
                 <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
-                  Cam kết xuất xứ rõ ràng, tem phụ chuẩn Bộ Y Tế. Đền bù 200% nếu phát hiện hàng giả.
+                  Xem thương hiệu, mô tả và phân loại trước khi chọn mua.
                 </p>
               </div>
             </div>
@@ -108,7 +132,7 @@ export const CustomerFooter = ({ onNavigate }) => {
             <div
               style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', cursor: 'pointer' }}
               onClick={() => setActivePolicy('shipping')}
-              title="Xem chính sách giao nhanh 2H"
+              title="Xem thông tin giao hàng"
             >
               <div style={{
                 width: '44px',
@@ -124,10 +148,10 @@ export const CustomerFooter = ({ onNavigate }) => {
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
-                  Giao Nhanh 2H NowFree
+                  Phí Giao Hàng Tại Thanh Toán
                 </h4>
                 <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
-                  Giao nhanh trong 2 giờ nội thành TP.HCM & Hà Nội. Miễn phí vận chuyển toàn quốc từ 249.000 ₫.
+                  Nhập địa chỉ và kiểm tra phí vận chuyển khi thanh toán.
                 </p>
               </div>
             </div>
@@ -151,10 +175,10 @@ export const CustomerFooter = ({ onNavigate }) => {
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
-                  Đổi Trả Miễn Phí 14 Ngày
+                  Yêu Cầu Đổi Trả Theo Đơn
                 </h4>
                 <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
-                  Hỗ trợ đổi trả hoặc hoàn tiền 100% khi sản phẩm còn nguyên tem mác hoặc phát sinh lỗi kích ứng.
+                  Gửi mặt hàng, số lượng và lý do để cửa hàng xét duyệt.
                 </p>
               </div>
             </div>
@@ -162,7 +186,7 @@ export const CustomerFooter = ({ onNavigate }) => {
             <div
               style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', cursor: 'pointer' }}
               onClick={() => onNavigate('spa')}
-              title="Khám phá dịch vụ Spa & Clinic"
+              title="Khám phá dịch vụ Spa"
             >
               <div style={{
                 width: '44px',
@@ -178,10 +202,10 @@ export const CustomerFooter = ({ onNavigate }) => {
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
-                  Beauty Clinic & Spa
+                  Dịch Vụ Spa
                 </h4>
                 <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
-                  Bác sĩ chuyên khoa Da Liễu khám và soi da miễn phí. Dàn máy móc thẩm mỹ hiện đại chuẩn FDA.
+                  Xem dịch vụ, nhân viên và khung giờ còn trống trước khi đặt lịch.
                 </p>
               </div>
             </div>
@@ -220,20 +244,30 @@ export const CustomerFooter = ({ onNavigate }) => {
                 marginTop: '12px',
                 lineHeight: 1.6
               }}>
-                Hệ thống chuỗi cửa hàng mỹ phẩm chính hãng và phòng khám da liễu Clinic & Spa. Cam kết chất lượng thật, giá trị thật cho người tiêu dùng Việt Nam.
+                Mua sắm mỹ phẩm và đặt lịch dịch vụ làm đẹp. Theo dõi đơn hàng, lịch hẹn và các yêu cầu của bạn trong tài khoản.
               </p>
               <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#FCE7EC' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MapPin size={15} color="#FFCCD5" />
-                  <span>Trụ sở: 123 Lê Lợi, Bến Nghé, Quận 1, TP. Hồ Chí Minh</span>
+                  <span>Địa chỉ cửa hàng: {storeContact.address
+                    ? <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeContact.address)}`} target="_blank" rel="noopener noreferrer" style={contactLinkStyle}>{storeContact.address}</a>
+                    : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Phone size={15} color="#FFCCD5" />
-                  <span>Hotline CSKH: 1800 6324 (Miễn phí 08:00 - 22:00)</span>
+                  <span>Hotline CSKH: {hotlineHref
+                    ? <a href={hotlineHref} style={contactLinkStyle}>{storeContact.hotline}</a>
+                    : 'Chưa cập nhật.'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Mail size={15} color="#FFCCD5" />
+                  <span>Email liên hệ: {emailHref
+                    ? <a href={emailHref} style={contactLinkStyle}>{storeContact.email}</a>
+                    : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Clock size={15} color="#FFCCD5" />
-                  <span>Giờ mở cửa Clinic: 09:00 - 21:00 (Tất cả các ngày)</span>
+                  <button type="button" onClick={() => onNavigate('booking')} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}>Xem giờ trống và đặt lịch Spa</button>
                 </div>
               </div>
             </div>
@@ -255,13 +289,11 @@ export const CustomerFooter = ({ onNavigate }) => {
             {/* Column 3: Spa Treatments */}
             <div>
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
-                Dịch Vụ Clinic & Spa
+                Dịch Vụ Làm Đẹp
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#CBD5E1' }}>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('spa')}>Khám & Soi Da Miễn Phí Với Bác Sĩ</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking?serviceId=1')}>Aqua Peel Làm Sạch Sâu Lỗ Chân Lông</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking?serviceId=2')}>Trị Mụn Y Khoa Bio-Light Không Thâm</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking?serviceId=3')}>Điện Di Tinh Chất Phục Hồi Chuyên Sâu</li>
+                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('spa')}>Xem Danh Sách Dịch Vụ</li>
+                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Chọn Nhân Viên Và Giờ Trống</li>
                 <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Đăng Ký Đặt Lịch Hẹn Trực Tuyến</li>
               </ul>
             </div>
@@ -272,12 +304,12 @@ export const CustomerFooter = ({ onNavigate }) => {
                 Khuyến Mãi & Bản Tin
               </h4>
               <p style={{ fontSize: '12px', color: '#CBD5E1', marginBottom: '12px' }}>
-                Đăng ký email để nhận voucher giảm 50.000 ₫ và cập nhật deal giờ vàng:
+                Đăng ký email để nhận thông tin ưu đãi và sản phẩm mới:
               </p>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   type="email"
-                  placeholder="Nhập email của bạn..."
+                  placeholder="Nhập email của bạn..." value={newsletterEmail} onChange={event => setNewsletterEmail(event.target.value)} aria-label="Email đăng ký bản tin"
                   style={{
                     padding: '8px 12px',
                     borderRadius: '4px',
@@ -290,7 +322,7 @@ export const CustomerFooter = ({ onNavigate }) => {
                   }}
                 />
                 <button
-                  onClick={() => alert('Cảm ơn bạn đã đăng ký nhận bản tin BeautyShop!')}
+                  onClick={subscribe} disabled={newsletterBusy}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '4px',
@@ -306,20 +338,8 @@ export const CustomerFooter = ({ onNavigate }) => {
                 </button>
               </div>
 
-              <div style={{ marginTop: '18px' }}>
-                <span style={{
-                  display: 'inline-block',
-                  padding: '5px 10px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  borderRadius: '4px',
-                  fontSize: '10.5px',
-                  color: '#FFCCD5',
-                  fontWeight: 700
-                }}>
-                  ✓ ĐÃ THÔNG BÁO BỘ CÔNG THƯƠNG
-                </span>
-              </div>
+              <label style={{ display: 'flex', gap: 6, fontSize: 12, marginTop: 10 }}><input type="checkbox" checked={newsletterConsent} onChange={event => setNewsletterConsent(event.target.checked)} />Tôi đồng ý nhận email ưu đãi và có thể hủy đăng ký.</label>
+              {newsletterFeedback && <p role="status">{newsletterFeedback}</p>}
             </div>
           </div>
 
@@ -337,14 +357,14 @@ export const CustomerFooter = ({ onNavigate }) => {
             color: '#94A3B8'
           }}>
             <div>
-              © 2026 BeautyShop. Hệ thống Mỹ phẩm & Clinic phân phối chính hãng.
+              © 2026 BeautyShop. Mỹ phẩm & dịch vụ làm đẹp.
             </div>
             <div style={{ display: 'flex', gap: '16px' }}>
               <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setActivePolicy('terms')}>Điều khoản sử dụng</span>
               <span>•</span>
               <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setActivePolicy('privacy')}>Chính sách bảo mật</span>
               <span>•</span>
-              <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setActivePolicy('shipping')}>Chính sách giao hàng 2H</span>
+              <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setActivePolicy('shipping')}>Thông tin giao hàng</span>
             </div>
           </div>
         </div>

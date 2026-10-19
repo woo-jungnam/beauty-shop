@@ -19,19 +19,19 @@ import java.util.List;
 public class SpaPreparationController {
     private final SpaPreparationService preparation;
 
-    @Operation(summary = "Xem hồ sơ chăm sóc và versionHash hiện tại", description = "ADMIN/STAFF/SPA_RECEPTION/CS_STAFF hoặc SPA_THERAPIST được giao lịch. Khách sở hữu cũng không được đọc private CRM notes qua endpoint này. Hash gồm care notes và các câu trả lời form hiện tại của lịch; dùng hash này để acknowledge trước START khi warningsRequired.")
+    @Operation(summary = "Xem hồ sơ chăm sóc và versionHash hiện tại", description = "ADMIN hoặc STAFF có SPA_EXECUTION được giao lịch; Spa thường còn cho STAFF có CRM. Hồ sơ liệu trình chỉ ADMIN/người thực hiện được giao, không cấp theo quyền điều phối. Chủ lịch không được đọc ghi chú CRM riêng qua endpoint này. Hash gồm care notes và các câu trả lời form hiện tại; dùng để acknowledge trước START khi warningsRequired.")
     @GetMapping("/care-summary")
     public ApiResponse<SpaPreparationService.CareSummary> care(@PathVariable Long id) {
         return ApiResponse.success(preparation.careSummary(id));
     }
 
-    @Operation(summary = "Xem yêu cầu chuẩn bị đã chụp theo từng item", description = "Chủ lịch hoặc ADMIN/STAFF/SPA_RECEPTION/SPA_THERAPIST được giao. Trả form-version, latest response và lịch sử acknowledgment/override; không trả private care notes. Legacy booking không có snapshot được đánh dấu legacyBooking và không tự áp yêu cầu mới.")
+    @Operation(summary = "Xem yêu cầu chuẩn bị đã chụp theo từng item", description = "Chủ lịch hoặc ADMIN; STAFF có SPA_EXECUTION được giao. Spa thường còn cho STAFF có SPA_RECEPTION/CRM; với liệu trình, được phân công nhưng thiếu SPA_EXECUTION vẫn bị từ chối. Trả form-version, latest response và lịch sử acknowledgment/override, không trả ghi chú CRM riêng. Legacy booking không có snapshot không tự áp yêu cầu mới.")
     @GetMapping("/preparation")
     public ApiResponse<List<SpaPreparationService.ItemPreparation>> forms(@PathVariable Long id) {
         return ApiResponse.success(preparation.preparation(id));
     }
 
-    @Operation(summary = "Khách nộp và xác nhận form đã đặt", description = "Chỉ CUSTOMER/USER sở hữu lịch; nhân viên/ADMIN không được nộp thay khách khác. requirementId là ID yêu cầu trong preparation, không phải template/versionId. Lịch PENDING/CONFIRMED/IN_PROGRESS nhưng item còn PLANNED chưa START. acknowledged phải true, answers đúng form-version; mỗi lần nộp tạo bản ghi append-only, chưa hỗ trợ từ chối/rút consent.")
+    @Operation(summary = "Khách nộp và xác nhận form đã đặt", description = "Chỉ tài khoản sở hữu lịch, kể cả STAFF/ADMIN đặt lịch cho chính mình; không được nộp thay người khác. requirementId là ID yêu cầu trong preparation, không phải template/versionId. Lịch PENDING/CONFIRMED/IN_PROGRESS nhưng item còn PLANNED chưa START. acknowledged phải true, answers đúng form-version; mỗi lần nộp tạo bản ghi append-only, chưa hỗ trợ từ chối/rút consent.")
     @PostMapping("/preparation/forms/{requirementId}/responses")
     @ResponseStatus(HttpStatus.CREATED)
     @AuditAction(action="SUBMIT_CUSTOMER_CONSENT", resourceType="APPOINTMENT")
@@ -40,7 +40,7 @@ public class SpaPreparationController {
         return ApiResponse.created(preparation.submit(id, requirementId, command), "Customer consent recorded");
     }
 
-    @Operation(summary = "Người thực hiện xác nhận đã đọc cảnh báo", description = "ADMIN/STAFF hoặc SPA_THERAPIST được giao đúng item. Item PLANNED, chưa START; gửi versionHash hiện tại từ care-summary. Hồ sơ/form thay đổi làm hash cũ không hợp lệ. START kiểm acknowledgment của chính actor bắt đầu; không xác nhận thay người khác.")
+    @Operation(summary = "Người thực hiện xác nhận đã đọc cảnh báo", description = "ADMIN hoặc STAFF có SPA_EXECUTION được giao đúng item. Item PLANNED, chưa START; gửi versionHash hiện tại từ care-summary. Hồ sơ/form thay đổi làm hash cũ không hợp lệ. START kiểm acknowledgment của chính actor bắt đầu; không xác nhận thay người khác.")
     @PostMapping("/preparation/items/{itemId}/acknowledge-warnings")
     @ResponseStatus(HttpStatus.CREATED)
     @AuditAction(action="ACKNOWLEDGE_CARE_WARNINGS", resourceType="APPOINTMENT")

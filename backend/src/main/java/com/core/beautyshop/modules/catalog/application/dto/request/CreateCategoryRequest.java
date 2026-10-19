@@ -38,4 +38,7 @@ public class CreateCategoryRequest {
 
     @Schema(description = "Thứ tự hiển thị", example = "0")
     private Integer displayOrder;
+
+    @Schema(description = "Trạng thái kích hoạt; null mặc định true", example = "true")
+    private Boolean isActive;
 }

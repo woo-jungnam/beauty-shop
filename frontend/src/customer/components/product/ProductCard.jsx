@@ -1,22 +1,26 @@
+import { useCustomerWishlist } from '../../stores/customerWishlistStore';
 import React, { useEffect, useRef, useState } from 'react';
 import { Star, ShoppingBag, Eye, Check, Heart } from 'lucide-react';
 import { useCustomerCart } from '../../stores/customerCartStore';
 import { cleanDisplayName, resolveMediaUrl } from '../../../shared/utils/formatters';
 import { recordSearchClick } from '../../utils/productInteractions';
+import { chooseVariant, isClearanceProduct, knownCount, knownNumber, productPath, variantPrice } from '../../utils/productSelection';
 
 const formatCurrency = (val) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
 };
+
+const PRODUCT_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><rect width="800" height="800" fill="#F8F6F2"/><g fill="none" stroke="#C5BDB4" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><rect x="310" y="250" width="180" height="230" rx="20"/><path d="M350 250v-45h100v45M365 335h70M365 375h70"/></g><text x="400" y="560" text-anchor="middle" fill="#817970" font-family="Arial,sans-serif" font-size="28">Chưa có ảnh sản phẩm</text></svg>')}`;
 
 export const resolveProductImage = (product) => {
   const raw = product?.featuredImage || product?.thumbnailUrl || product?.images?.[0]?.imageUrl;
-  if (raw && raw.trim().length > 0) {
+  if (typeof raw === 'string' && raw.trim().length > 0) {
     if (raw.startsWith('/') && !raw.startsWith('//')) {
       return resolveMediaUrl(raw);
     }
     return raw;
   }
-  return 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=85';
+  return PRODUCT_PLACEHOLDER;
 };
 
 export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = false }) => {
@@ -28,33 +32,41 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
   const feedbackTimerRef = useRef(null);
   useEffect(() => () => clearTimeout(feedbackTimerRef.current), []);
 
-  // Image resolution from backend product data or authentic catalog map
+  // Missing media uses a neutral placeholder, never another product's photo.
   const imageUrl = resolveProductImage(product);
 
-  // Compute pricing from default variant or direct fields
   const variants = product.variants || [];
-  const activeVariants = variants.filter((variant) => variant.isActive === true && !variant.isDeleted);
-  const defaultVariant = activeVariants.find((variant) => variant.isDefault) || activeVariants[0] || null;
-  const price = Number(defaultVariant?.discountPrice ?? defaultVariant?.price ?? product.minPrice ?? product.basePrice ?? product.price ?? 0);
-  const originalPrice = Number(defaultVariant?.originalPrice ?? defaultVariant?.price ?? product.originalPrice ?? price);
-  const discountPercent = originalPrice > price
+  const isClearance = isClearanceProduct(product);
+  const selectedVariant = chooseVariant(product);
+  const price = isClearance ? variantPrice(selectedVariant)
+    : knownNumber(selectedVariant?.discountPrice ?? selectedVariant?.price ?? product.minPrice ?? product.basePrice ?? product.price);
+  const originalPrice = knownNumber(isClearance ? selectedVariant?.price : selectedVariant?.originalPrice ?? selectedVariant?.price ?? product.originalPrice);
+  const stock = knownCount(selectedVariant?.stockQuantity);
+  const clearanceStock = knownCount(product.clearanceStock);
+  const clearanceDiscount = knownNumber(selectedVariant?.discountPrice);
+  const unavailable = product.status && product.status !== 'ACTIVE' || stock === 0
+    || isClearance && (!selectedVariant || stock == null || clearanceStock == null || clearanceStock === 0
+      || clearanceDiscount == null || originalPrice == null || clearanceDiscount >= originalPrice);
+  const path = productPath(product, isClearance ? product.clearanceVariant?.id ?? '' : undefined);
+  const discountPercent = price !== null && originalPrice !== null && originalPrice > price
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
 
-  const brandName = product.brandName || product.brand?.name || 'Dược Mỹ Phẩm';
-  const rating = Number(product.averageRating ?? 0);
-  const reviewCount = Number(product.totalReviews ?? product.reviewCount ?? 0);
-  const soldCount = Number(product.totalSold ?? product.soldCount ?? 0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const brandName = product.brandName?.trim() || product.brand?.name?.trim() || 'Chưa có thông tin thương hiệu';
+  const rawRating = knownNumber(product.averageRating);
+  const rating = rawRating !== null && rawRating <= 5 ? rawRating : null;
+  const reviewCount = knownCount(product.totalReviews ?? product.reviewCount);
+  const soldCount = knownCount(product.totalSold ?? product.soldCount);
+  const { active: isWishlisted, toggle: toggleWishlist, busy: wishlistBusy, error: wishlistError } = useCustomerWishlist(product.id);
 
   const handleQuickAdd = async (e) => {
     e.stopPropagation();
-    if (addPendingRef.current || isLoading) return;
+    if (addPendingRef.current || isLoading || unavailable) return;
     addPendingRef.current = true;
     setIsAdding(true);
     setJustAdded(false);
     try {
-      if (await addItem(product, defaultVariant, 1)) {
+      if (await addItem(product, selectedVariant, 1)) {
         setJustAdded(true);
         clearTimeout(feedbackTimerRef.current);
         feedbackTimerRef.current = setTimeout(() => setJustAdded(false), 1200);
@@ -67,7 +79,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
 
   const handleToggleWishlist = (e) => {
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
+    toggleWishlist();
   };
 
   return (
@@ -85,7 +97,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
         backgroundColor: '#FFFFFF',
         height: '100%'
       }}
-      onClick={() => { if (fromSearch) recordSearchClick(product.id); onNavigate(`product/${product.id}`); }}
+      onClick={() => { if (fromSearch) recordSearchClick(product.id); onNavigate(path); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -104,9 +116,8 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           decoding="async"
           onError={(e) => {
             e.currentTarget.onerror = null;
-            const fallback = resolveProductImage(product);
-            if (e.currentTarget.src !== fallback) {
-              e.currentTarget.src = fallback;
+            if (e.currentTarget.src !== PRODUCT_PLACEHOLDER) {
+              e.currentTarget.src = PRODUCT_PLACEHOLDER;
             }
           }}
           style={{
@@ -145,7 +156,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
               -{discountPercent}%
             </span>
           )}
-          {product.earliestExpirationDate && (
+          {isClearance && product.earliestExpirationDate && (
             <span style={{
               backgroundColor: '#B45309',
               color: '#FFFFFF',
@@ -179,7 +190,10 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
         {/* Wishlist Heart Button */}
         <button
           onClick={handleToggleWishlist}
-          title={isWishlisted ? "Bỏ yêu thích" : "Lưu vào yêu thích"}
+          disabled={wishlistBusy}
+          aria-pressed={isWishlisted}
+          aria-label={wishlistError || (isWishlisted ? "Bỏ yêu thích" : "Lưu vào yêu thích")}
+          title={wishlistError || (isWishlisted ? "Bỏ yêu thích" : "Lưu vào yêu thích")}
           style={{
             position: 'absolute',
             top: '10px',
@@ -254,7 +268,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           <button
             type="button"
             onClick={handleQuickAdd}
-            disabled={isAdding || isLoading}
+            disabled={isAdding || isLoading || unavailable}
             aria-busy={isAdding}
             aria-label={`Thêm ${product.name} vào giỏ`}
             style={{
@@ -282,7 +296,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
             ) : (
               <>
                 <ShoppingBag size={14} color="#FFFFFF" />
-                <span>{isAdding ? 'Đang thêm…' : 'Thêm vào giỏ'}</span>
+                <span>{unavailable ? 'Hiện không khả dụng' : isAdding ? 'Đang thêm…' : 'Thêm vào giỏ'}</span>
               </>
             )}
           </button>
@@ -318,7 +332,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           minHeight: '36px',
           letterSpacing: '-0.01em'
         }}>
-          <a className="product-card-title-link" href={`#/product/${product.id}`} onClick={(event) => { event.stopPropagation(); if (fromSearch) recordSearchClick(product.id); }}>{product.name}</a>
+          <a className="product-card-title-link" href={`#/${path}`} onClick={(event) => { event.stopPropagation(); if (fromSearch) recordSearchClick(product.id); }}>{product.name}</a>
         </h3>
 
         {/* Rating and Volume / Sales */}
@@ -331,21 +345,21 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           color: 'var(--c-text-light)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            {reviewCount > 0 ? (
+            {rating !== null && reviewCount !== 0 ? (
               <>
                 <Star size={12} fill="#F59E0B" color="#F59E0B" />
                 <span style={{ fontWeight: 700, color: '#1F2937' }}>
                   {rating.toFixed(1)}
                 </span>
-                <span>({reviewCount})</span>
+                {reviewCount !== null && <span>({reviewCount})</span>}
               </>
             ) : (
-              <span style={{ fontWeight: 600, color: 'var(--c-text-muted)' }}>Mới</span>
+              <span style={{ fontWeight: 600, color: 'var(--c-text-muted)' }}>{reviewCount === null ? 'Chưa có dữ liệu đánh giá' : reviewCount === 0 ? 'Chưa có đánh giá' : `${reviewCount} đánh giá`}</span>
             )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {defaultVariant?.volumeMl && (
+            {selectedVariant?.volumeMl && (
               <span style={{
                 backgroundColor: 'var(--c-primary-light, #FFF0F3)',
                 color: 'var(--c-primary, #D45D79)',
@@ -354,14 +368,19 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
                 fontWeight: 600,
                 fontSize: '10px'
               }}>
-                {defaultVariant.volumeMl}ml
+                {selectedVariant.volumeMl}ml
               </span>
             )}
-            <span style={{ color: 'var(--c-text-muted)', fontSize: '10.5px' }}>
-              {soldCount > 0 ? `Đã bán ${soldCount}` : 'Còn hàng'}
-            </span>
+            {soldCount !== null && <span style={{ color: 'var(--c-text-muted)', fontSize: '10.5px' }}>
+              Đã bán {soldCount}
+            </span>}
           </div>
         </div>
+
+        {isClearance && <p role={unavailable ? 'alert' : undefined} style={{ fontSize: '12px', margin: '8px 0 0', color: 'var(--c-text-muted)' }}>
+          {unavailable ? 'Ưu đãi này không còn khả dụng. Vui lòng tải lại.'
+            : `SKU ${selectedVariant.sku} · Còn ${clearanceStock} sản phẩm cận hạn tại lúc tải${knownCount(product.daysRemaining) != null ? ` · HSD gần nhất còn ${product.daysRemaining} ngày` : ''}`}
+        </p>}
 
         {/* Price Row - Rose Red Bold Accent */}
         <div className="product-card-price" style={{
@@ -376,10 +395,10 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
             color: 'var(--c-deal-red, #E11D48)',
             fontFamily: 'var(--font-mono)'
           }}>
-            {variants.length > 1 ? `Từ ${formatCurrency(price)}` : formatCurrency(price)}
+            {price === null ? 'Chưa có thông tin giá' : !isClearance && variants.length > 1 ? `Từ ${formatCurrency(price)}` : formatCurrency(price)}
           </span>
 
-          {originalPrice > price && (
+          {price !== null && originalPrice !== null && originalPrice > price && (
             <span style={{
               fontSize: '11.5px',
               color: '#9CA3AF',

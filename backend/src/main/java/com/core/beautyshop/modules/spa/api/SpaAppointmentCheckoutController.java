@@ -17,10 +17,15 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Thanh toán buổi Spa", description = "Hóa đơn buổi đã hoàn tất và phiếu thu CASH/BANK; không thu lại dịch vụ dùng vé")
 public class SpaAppointmentCheckoutController {
     private final SpaAppointmentCheckoutService checkout;
+    private final SpaFinancialService finance;
     @Operation(summary = "Xem quy tắc chốt hóa đơn Spa", description = "Mọi tài khoản đăng nhập. Mặc định invoice sau COMPLETED, chỉ tính item PERFORMED không dùng vé, làm tròn tổng VND HALF_UP. Chưa bật cọc/phí hủy/phí no-show hoặc tự hoàn mục bỏ qua.")
     @GetMapping("/checkout-policy")
     @PreAuthorize("isAuthenticated()")
-    public ApiResponse<SpaCheckoutPolicy> policy() { return ApiResponse.success(SpaCheckoutPolicy.defaults()); }
+    public ApiResponse<SpaCheckoutPolicy> policy() {
+        var p=finance.policy();
+        return ApiResponse.success(new SpaCheckoutPolicy("COMPLETED","PERFORMED_WITHOUT_TICKET","VND","HALF_UP_ON_INVOICE_TOTAL",
+                p.depositAmount().signum()>0,p.cancellationFee().signum()>0,p.noShowFee().signum()>0,false));
+    }
 
     @Operation(summary = "Lập hóa đơn cố định cho buổi Spa", description = "ADMIN hoặc STAFF. Buổi COMPLETED, mỗi item phải PERFORMED/SKIPPED; LEGACY_FINALIZED cần đối soát. Chỉ tính giá/tên đã đặt của mục PERFORMED không dùng vé, tổng làm tròn VND HALF_UP; 0 đồng là PAID không tạo phiếu thu. Một lịch có một invoice; replay trả invoice hiện có, cùng khóa khác nội dung bị từ chối. HTTP 200 cho cả tạo mới/replay. Chỉ BANK/CASH; không vận chuyển, trừ tồn kho hoặc cấp vé.")
     @PostMapping("/{id}/invoice")

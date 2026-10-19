@@ -13,10 +13,16 @@ import java.util.List;
 @Repository
 public interface ServicePackageRepository extends JpaRepository<ServicePackage, Long> {
 
+    @Query("select count(i) from ServicePackageItem i where i.service.id = :serviceId and i.servicePackage.isDeleted = false")
+    long countServiceReferences(@Param("serviceId") Long serviceId);
+
+    @Query("select count(t) from TreatmentTemplate t where t.serviceId = :serviceId")
+    long countTreatmentReferences(@Param("serviceId") Long serviceId);
+
     @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service " +
-            "WHERE p.isActive = true AND p.isDeleted = false AND p.items IS NOT EMPTY " +
+            "WHERE p.isActive = true AND p.isDeleted = false AND (p.treatmentManaged = false OR p.treatmentManaged IS NULL) AND p.items IS NOT EMPTY " +
             "AND NOT EXISTS (SELECT bad.id FROM ServicePackageItem bad WHERE bad.servicePackage = p " +
-            "AND (bad.isDeleted = true OR bad.service.isDeleted = true OR bad.service.isActive = false)) ORDER BY p.id")
+            "AND (bad.isDeleted = true OR bad.service.isDeleted = true OR bad.service.isActive = false OR bad.service.serviceType = 'TREATMENT_COURSE')) ORDER BY p.id")
     List<ServicePackage> findAllActiveWithItems();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

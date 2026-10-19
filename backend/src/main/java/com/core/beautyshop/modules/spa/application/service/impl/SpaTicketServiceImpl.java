@@ -87,6 +87,9 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         if (!Boolean.TRUE.equals(servicePackage.getIsActive())) {
             throw new BusinessException("Gói dịch vụ Spa này hiện đang tạm ngưng phục vụ");
         }
+        if (Boolean.TRUE.equals(servicePackage.getTreatmentManaged())) {
+            throw new BusinessException("Please purchase this treatment through its published treatment plan");
+        }
         if (servicePackage.getPrice() == null || servicePackage.getPrice().compareTo(java.math.BigDecimal.ONE) < 0) {
             throw new BusinessException("Gói dịch vụ Spa chưa có giá thanh toán hợp lệ");
         }
@@ -107,8 +110,15 @@ public class SpaTicketServiceImpl implements SpaTicketService {
             if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
                 throw new BusinessException("Gói liệu trình chứa dịch vụ đã tạm ngưng phục vụ");
             }
+            if ("TREATMENT_COURSE".equals(service.getServiceType()))
+                throw new BusinessException("Gói lượt thông thường không được chứa dịch vụ điều trị theo lộ trình");
+            if (service.getBasePrice() == null || service.getBasePrice().signum() < 0)
+                throw new BusinessException("Giá trị dịch vụ thành phần chưa hợp lệ để phân bổ gói");
         });
 
+        if (request.getPurchaseToken() != null && !request.getPurchaseToken().equals(
+                com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse.token(servicePackage)))
+            throw new BusinessException("Thông tin gói đã thay đổi. Hãy tải lại và xác nhận quyền lợi, giá trước khi mua");
         SpaPackageOrderResult result = orderFacade.createSpaPackageOrder(CreateSpaPackageOrderCommand.builder()
                 .userId(currentUserId)
                 .servicePackageId(servicePackage.getId())
@@ -125,6 +135,8 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         var snapshot = new com.core.beautyshop.modules.spa.domain.SpaPurchaseSnapshot();
         snapshot.setOrderId(result.getOrderId());
         snapshot.setPackageId(servicePackage.getId());
+        snapshot.setPackageName(servicePackage.getName());
+        snapshot.setPurchaseAmount(result.getTotalAmount());
         snapshot.setValidityDays(servicePackage.getValidityDays());
         snapshot.setExpiryCheckMode(policies.expiryCheckMode());
         if (servicePackage.getItems() == null || servicePackage.getItems().isEmpty()) {
@@ -134,6 +146,8 @@ public class SpaTicketServiceImpl implements SpaTicketService {
             int quantity = item.getQuantity() == null ? 1 : item.getQuantity();
             if (quantity <= 0 || item.getService() == null) throw new BusinessException("Quyền lợi dịch vụ trong gói không hợp lệ");
             snapshot.getEntitlements().merge(item.getService().getId(), quantity, Math::addExact);
+            snapshot.getServiceDetails().put(item.getService().getId(),
+                    new com.core.beautyshop.modules.spa.domain.PurchasedServiceDetail(item.getService().getName(), item.getService().getBasePrice()));
         }
         snapshots.save(snapshot);
         return result;

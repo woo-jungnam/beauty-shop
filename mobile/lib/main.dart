@@ -6,6 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/spa_provider.dart';
+import 'providers/treatment_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/chatbot_provider.dart';
 import 'providers/theme_provider.dart';
@@ -22,7 +23,17 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProvider(create: (_) => SpaProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, SpaProvider>(
+          create: (_) => SpaProvider(),
+          update: (_, auth, provider) =>
+              provider!
+                ..bindUser(auth.isAuthenticated ? auth.currentUser?.id : null),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, TreatmentProvider>(
+          create: (_) => TreatmentProvider(),
+          update: (_, auth, provider) => provider!
+            ..bindUser(auth.currentUser, authenticated: auth.isAuthenticated),
+        ),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => ChatbotProvider()),
       ],

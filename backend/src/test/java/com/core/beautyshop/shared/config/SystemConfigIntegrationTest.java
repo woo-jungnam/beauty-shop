@@ -16,6 +16,47 @@ class SystemConfigIntegrationTest {
     @Autowired SystemConfigRepository repository;
     @Autowired com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService policies;
     @org.junit.jupiter.api.BeforeEach void clearConfigs() { repository.deleteAll(); }
+
+    @Test void newContactKeysRemainPrivateUnlessExplicitlyPublished() {
+        var privateContact = configs.create("store.email", "care@example.test", "Contact", null);
+        assertFalse(privateContact.getIsPublic());
+        assertFalse(configs.getPublicConfigs().containsKey("store.email"));
+        var publicContact = configs.create("store.address", "Configured test address", "Contact", "STRING", true);
+        assertTrue(publicContact.getIsPublic());
+        assertEquals("Configured test address", configs.getPublicConfigs().get("store.address"));
+        assertFalse(configs.getPublicConfigs().containsKey("store.email"));
+    }
+
+    @Test void updatingValueWithoutVisibilityPreservesBothPublicAndPrivateSettings() {
+        configs.create("store.hotline", "0901234567", null, null, true);
+        configs.create("store.email", "old@example.test", null, null, false);
+        configs.update("store.hotline", "0907654321");
+        configs.update("store.email", "new@example.test", null);
+        assertEquals("0907654321", configs.getPublicConfigs().get("store.hotline"));
+        assertFalse(configs.getPublicConfigs().containsKey("store.email"));
+        configs.update("store.email", "new@example.test", true);
+        assertEquals("new@example.test", configs.getPublicConfigs().get("store.email"));
+        configs.update("store.hotline", "0907654321", false);
+        assertFalse(configs.getPublicConfigs().containsKey("store.hotline"));
+    }
+
+    @Test void restoringDeletedPublicKeyDefaultsToPrivateAgain() {
+        var original = configs.create("store.email", "old@example.test", null, null, true);
+        configs.delete("store.email");
+        var restored = configs.create("store.email", "new@example.test", null, null);
+        assertEquals(original.getId(), restored.getId());
+        assertFalse(restored.getIsPublic());
+        assertFalse(configs.getPublicConfigs().containsKey("store.email"));
+    }
+
+    @Test void publishingUnreviewedKeysIsRejectedWithoutLeakingOrChangingStoredValue() {
+        assertThrows(BusinessException.class, () -> configs.create("payment.webhook.secret", "sensitive", null, null, true));
+        configs.create("custom.internal.setting", "private-old", null, null);
+        assertThrows(BusinessException.class, () -> configs.update("custom.internal.setting", "private-new", true));
+        assertEquals("private-old", repository.findByConfigKeyAndIsDeletedFalse("custom.internal.setting").orElseThrow().getConfigValue());
+        assertFalse(configs.getPublicConfigs().containsKey("custom.internal.setting"));
+        assertFalse(configs.getPublicConfigs().containsKey("payment.webhook.secret"));
+    }
     @Test void bookingRulesRejectInvalidTypesBoundsAndUnsupportedActions() {
         assertThrows(BusinessException.class, () -> configs.create("spa.booking.pending_ttl_minutes", "-1", null, null));
         assertThrows(BusinessException.class, () -> configs.create("spa.booking.cancel_cutoff_minutes", "30", null, "STRING"));

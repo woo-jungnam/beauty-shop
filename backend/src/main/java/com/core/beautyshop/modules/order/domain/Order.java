@@ -60,6 +60,8 @@ public class Order extends Base {
 
     @Column(name = "service_package_id")
     private Long servicePackageId;
+    @Column(name = "spa_benefit_type", length = 30)
+    private String spaBenefitType;
 
     @Column(name = "appointment_id", unique = true)
     private Long appointmentId;
@@ -83,6 +85,12 @@ public class Order extends Base {
 
     @Column(name = "customer_phone", nullable = false, length = 20)
     private String customerPhone;
+
+    @Column(name = "customer_email", length = 150)
+    private String customerEmail;
+
+    @Column(name = "delivered_at")
+    private java.time.Instant deliveredAt;
 
     @Column(name = "shipping_address", nullable = false, length = 500)
     private String shippingAddress;

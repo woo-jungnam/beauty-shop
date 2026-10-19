@@ -25,6 +25,12 @@ public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
+    @GetMapping("/{id}/available-slots") @PreAuthorize("isAuthenticated()")
+    public ApiResponse<List<String>> availableSlots(@PathVariable Long id,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        return ApiResponse.success(appointmentService.availableSlots(id,date));
+    }
+
     @Operation(summary = "Đặt yêu cầu lịch hẹn Spa", description = "Yêu cầu đăng nhập; chủ lịch là tài khoản hiện tại. Tạo PENDING, chưa cam kết đã phân công nhân viên. Các mục chạy tuần tự theo thứ tự items, dùng giờ Việt Nam, giữ quota vé và tài nguyên nếu có cấu hình. Giá/tên/thời lượng/yêu cầu được lưu lúc đặt. Endpoint không hỗ trợ Idempotency-Key cho booking.")
     @PostMapping("/book")
     @PreAuthorize("isAuthenticated()")
@@ -108,7 +114,7 @@ public class AppointmentController {
         return ApiResponse.success(appointmentService.checkIn(id));
     }
 
-    @Operation(summary = "Ghi kết quả thực hiện một dịch vụ", description = "ADMIN hoặc STAFF. Buổi phải IN_PROGRESS. Chỉ PLANNED→IN_PROGRESS→PERFORMED hoặc PLANNED→SKIPPED; SKIPPED cần notes. START kiểm thứ tự item, staff/tài nguyên còn đang bận, form/ack và hạn vé theo policy. PERFORMED tiêu thụ lượt đã giữ; SKIPPED hoàn giữ.")
+    @Operation(summary = "Ghi kết quả thực hiện một dịch vụ", description = "ADMIN hoặc STAFF được phân công. Buổi phải IN_PROGRESS. PLANNED→IN_PROGRESS→PERFORMED hoặc PLANNED→SKIPPED; mục thuộc lộ trình có thể IN_PROGRESS→SKIPPED khi dừng do sự cố, bắt buộc lý do và lưu thời điểm dừng. START kiểm thứ tự item, staff/tài nguyên, form/ack, hạn vé và lộ trình. PERFORMED tiêu thụ lượt đã giữ; SKIPPED hoàn giữ và không tính hoàn thành điều trị.")
     @PutMapping("/{id}/items/{itemId}/execution")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ApiResponse<AppointmentResponse> executeItem(@PathVariable Long id, @PathVariable Long itemId,

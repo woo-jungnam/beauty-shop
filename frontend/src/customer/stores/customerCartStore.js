@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../../shared/api/client';
 import { ENDPOINTS } from '../../shared/api/endpoints';
+import { isClearanceProduct } from '../utils/productSelection';
 
 const STORAGE_KEY = 'beautyshop_customer_cart';
 const DEFAULT_FALLBACK_THRESHOLD = 249000;
@@ -153,6 +154,10 @@ export const cartActions = {
     if (memoryState.isLoading) return fail('Giỏ hàng đang được cập nhật. Vui lòng đợi một chút.');
     memoryState.cartError = '';
     if (!Number.isSafeInteger(qty) || qty <= 0) return fail('Số lượng phải là số nguyên dương.');
+    const clearance = isClearanceProduct(product);
+    const requestedVariantId = variant?.id ?? (clearance ? product.clearanceVariant?.id : undefined);
+    const explicitSelection = variant != null || clearance;
+    if (explicitSelection && !isPositiveId(requestedVariantId)) return fail('Không xác định được phân loại đã chọn. Vui lòng tải lại sản phẩm.');
     if (variant && (variant.isActive === false || variant.isDeleted)) return fail('Phân loại này hiện không được bán.');
     memoryState.isLoading = true;
     notifyListeners();
@@ -160,11 +165,12 @@ export const cartActions = {
     try {
       const pickVariant = (variants) => {
         const active = (Array.isArray(variants) ? variants : []).filter(isActiveVariant);
-        return variant ? active.find((item) => Number(item.id) === Number(variant.id))
+        return explicitSelection ? active.find((item) => Number(item.id) === Number(requestedVariantId))
           : active.find((item) => item.isDefault) || active[0];
       };
       let selectedVariant = isActiveVariant(variant) ? variant : pickVariant(product?.variants);
-      if (!selectedVariant && isPositiveId(product?.id)) {
+      // Clearance cards are snapshots; recheck the exact SKU, never the current default.
+      if ((clearance || !selectedVariant) && isPositiveId(product?.id)) {
         let prodRes;
         try {
           prodRes = await apiClient.get(ENDPOINTS.CATALOG.PUBLIC_PRODUCT_DETAIL(product.id));
@@ -172,9 +178,12 @@ export const cartActions = {
           return fail(cartErrorMessage(error, 'Không thể tải phân loại sản phẩm. Vui lòng thử lại.'));
         }
         const fullProduct = prodRes?.data ?? prodRes;
-        if (Number(fullProduct?.id) === Number(product.id)) selectedVariant = pickVariant(fullProduct.variants);
+        selectedVariant = Number(fullProduct?.id) === Number(product.id) && (!fullProduct.status || fullProduct.status === 'ACTIVE')
+          ? pickVariant(fullProduct.variants) : null;
       }
-      if (!selectedVariant) return fail('Sản phẩm chưa có phân loại đang bán với mã SKU hợp lệ.');
+      if (!selectedVariant) return fail(explicitSelection
+        ? 'Phân loại đã chọn không còn khả dụng. Vui lòng tải lại sản phẩm.'
+        : 'Sản phẩm chưa có phân loại đang bán với mã SKU hợp lệ.');
       if (selectedVariant.stockQuantity != null
           && (!Number.isSafeInteger(selectedVariant.stockQuantity) || selectedVariant.stockQuantity < qty)) {
         return fail('Số lượng yêu cầu vượt quá số hàng hiện có của phân loại này.');
@@ -281,16 +290,45 @@ export const cartActions = {
     }
   },
 
-  applyVoucher: (code, discountPercent = 10, maxDiscount = 100000) => {
-    const upper = code.trim().toUpperCase();
-    if (!upper) return false;
-    memoryState.voucher = {
-      code: upper,
-      discountPercent,
-      maxDiscount,
-    };
-    saveCart();
-    return true;
+  applyVoucher: async (code, currentSubtotal = null) => {
+    const upper = (code || '').trim().toUpperCase();
+    if (!upper) {
+      throw new Error('Vui lòng nhập mã giảm giá');
+    }
+    const orderTotal = currentSubtotal != null
+      ? Number(currentSubtotal)
+      : memoryState.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    if (orderTotal <= 0) {
+      throw new Error('Giỏ hàng trống, không thể áp dụng mã');
+    }
+
+    try {
+      const res = await apiClient.post(ENDPOINTS.VOUCHERS.VALIDATE, {
+        code: upper,
+        orderAmount: orderTotal,
+      });
+      const data = res?.data || res;
+      if (!data || !data.code) {
+        throw new Error('Mã giảm giá không hợp lệ');
+      }
+      memoryState.voucher = {
+        code: data.code,
+        name: data.name,
+        voucherId: data.voucherId,
+        discountType: data.discountType,
+        discountValue: Number(data.discountValue ?? 0),
+        discountAmount: Number(data.discountAmount ?? 0),
+        minOrderAmount: Number(data.minOrderAmount ?? 0),
+        maxDiscount: data.maxDiscountAmount ? Number(data.maxDiscountAmount) : null,
+        message: data.message,
+      };
+      saveCart();
+      return { success: true, voucher: memoryState.voucher, message: data.message };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn';
+      throw new Error(msg);
+    }
   },
 
   removeVoucher: () => {
@@ -337,8 +375,21 @@ export const useCustomerCart = () => {
 
   let discountAmount = 0;
   if (memoryState.voucher && subtotal > 0) {
-    const calc = subtotal * (memoryState.voucher.discountPercent / 100);
-    discountAmount = Math.min(calc, memoryState.voucher.maxDiscount || calc);
+    const v = memoryState.voucher;
+    if (v.minOrderAmount && subtotal < v.minOrderAmount) {
+      discountAmount = 0;
+    } else if (v.discountType === 'FIXED_AMOUNT') {
+      discountAmount = Math.min(v.discountValue || v.discountAmount || 0, subtotal);
+    } else if (v.discountType === 'PERCENTAGE') {
+      const percent = v.discountValue || 0;
+      const calc = Math.round(subtotal * (percent / 100));
+      discountAmount = Math.min(calc, v.maxDiscount || calc, subtotal);
+    } else if (v.discountPercent) {
+      const calc = Math.round(subtotal * (v.discountPercent / 100));
+      discountAmount = Math.min(calc, v.maxDiscount || calc, subtotal);
+    } else if (v.discountAmount) {
+      discountAmount = Math.min(v.discountAmount, subtotal);
+    }
   }
 
   const isFreeShipping = subtotal >= memoryState.freeShippingThreshold;

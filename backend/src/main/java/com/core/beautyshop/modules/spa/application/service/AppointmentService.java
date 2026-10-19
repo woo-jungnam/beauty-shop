@@ -14,6 +14,7 @@ public interface AppointmentService {
     AppointmentResponse bookAppointment(BookAppointmentRequest request);
     List<AppointmentResponse> getMyAppointments();
     AppointmentResponse getAppointmentById(Long id);
+    List<String> availableSlots(Long id, LocalDate date);
     void cancelAppointment(Long appointmentId);
     void cancelAppointment(Long appointmentId, String reason);
     Page<AppointmentResponse> getAllAppointments(LocalDate date, AppointmentStatus status, Pageable pageable);

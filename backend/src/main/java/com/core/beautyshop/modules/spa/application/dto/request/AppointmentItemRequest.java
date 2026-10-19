@@ -17,6 +17,9 @@ public class AppointmentItemRequest {
 
     @Schema(description = "Vé paid thuộc tài khoản đặt, có lượt khả dụng cho serviceId; null là buổi lẻ. Book giữ quota, chưa redeem", example = "101")
     private Long ticketId;
+
+    @Schema(description = "Mục dịch vụ trong buổi điều trị đã mua; backend kiểm tra chủ hồ sơ, thứ tự buổi và quyền lợi", example = "201")
+    private Long treatmentSessionItemId;
     @Schema(description = "Tài nguyên cụ thể yêu cầu ưu tiên bắt buộc khi book; phải phù hợp type và còn capacity. Các loại khác vẫn tự phân bổ nếu cần", example = "1")
     private Long facilityId;
 }

@@ -70,7 +70,7 @@ public class ProductSearchRequest {
     @Schema(description = "true: có SKU discountPrice < price; false: có SKU không giảm giá. Kết hợp giá/tồn kho true trên cùng SKU. Đây là giá catalog, chưa tính voucher.")
     private Boolean onSale;
 
-    @Schema(description = "true: có SKU còn tồn khả dụng, cùng SKU thỏa giá/onSale; false: không có SKU active còn tồn khả dụng. Loại lượng đã giữ chỗ, lô hết hạn và kho ngừng hoạt động/đã xóa.")
+    @Schema(description = "Mặc định/true: có SKU còn tồn an toàn, cùng SKU thỏa giá/onSale; false: tìm thông tin sản phẩm không có SKU active còn tồn an toàn. Tồn an toàn loại lượng đã giữ, lô HSD <= ngày Việt Nam +30, lô thu hồi và kho ngừng/đã xóa. Lô chưa có HSD giữ quy tắc tồn hiện tại.")
     private Boolean inStock;
 
     @Schema(description = "Lọc cờ có hương liệu chính xác")

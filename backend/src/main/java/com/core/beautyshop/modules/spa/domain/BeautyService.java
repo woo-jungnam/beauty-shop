@@ -22,6 +22,14 @@ public class BeautyService extends Base {
     @Column(name = "slug", nullable = false, unique = true, length = 150)
     private String slug;
 
+    @Column(name = "service_type", nullable = false, length = 30)
+    @Builder.Default
+    private String serviceType = "SINGLE_SESSION";
+
+    @Column(name = "requires_certification", nullable = false)
+    @Builder.Default
+    private Boolean requiresCertification = false;
+
     @Column(name = "short_description", length = 250)
     private String shortDescription;
 

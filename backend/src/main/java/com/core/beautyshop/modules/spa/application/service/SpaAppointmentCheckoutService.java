@@ -21,11 +21,14 @@ public class SpaAppointmentCheckoutService {
     private final EntityManager entities;
     private final OrderFacade orders;
     private final IdentityFacade identity;
+    private final SpaFinancialService finance;
+    private final SpaAccessService access;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     @com.core.beautyshop.shared.audit.api.annotation.AuditAction(action = "CREATE_SPA_VISIT_INVOICE", resourceType = "APPOINTMENT")
     public SpaVisitInvoiceResult create(Long appointmentId, CreateSpaVisitInvoiceRequest request, String key) {
+        if(!access.canManageReception()) throw new org.springframework.security.access.AccessDeniedException("Cần quyền tiếp đón/thu ngân Spa để lập hóa đơn");
         Appointment appointment = lock(appointmentId);
         if (appointment.getStatus() != AppointmentStatus.COMPLETED)
             throw new BusinessException("Chỉ có thể xuất hóa đơn cho buổi hẹn đã hoàn thành");
@@ -46,7 +49,8 @@ public class SpaAppointmentCheckoutService {
         SpaVisitInvoiceResult invoice = orders.createSpaVisitOrder(new CreateSpaVisitOrderCommand(appointmentId, appointment.getUserId(), charges,
                 request.paymentMethod(), customer.getFullName(), customer.getPhone(), request.notes(), key));
         appointment.setOrderId(invoice.orderId());
-        return invoice;
+        finance.applyAdvance(appointment,invoice.totalAmount());
+        return orders.getSpaVisitInvoiceForStaff(appointmentId);
     }
 
     @Transactional(readOnly = true)
@@ -59,6 +63,7 @@ public class SpaAppointmentCheckoutService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public SpaVisitInvoiceResult collectCash(Long appointmentId, SpaCashReceiptRequest request, String receiptKey) {
+        if(!access.canManageReception()) throw new org.springframework.security.access.AccessDeniedException("Cần quyền tiếp đón/thu ngân Spa để ghi phiếu thu");
         Appointment appointment = lock(appointmentId);
         if (appointment.getStatus() != AppointmentStatus.COMPLETED) throw new BusinessException("Buổi hẹn Spa chưa hoàn thành");
         return orders.collectSpaVisitCash(appointmentId, request.amount(), receiptKey);
@@ -71,7 +76,6 @@ public class SpaAppointmentCheckoutService {
         return appointment;
     }
     private boolean canManage() {
-        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .anyMatch(role -> Set.of("ROLE_ADMIN", "ROLE_STAFF").contains(role.getAuthority()));
+        return access.canManageReception();
     }
 }

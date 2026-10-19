@@ -12,6 +12,7 @@ import com.core.beautyshop.modules.inventory.application.dto.response.WarehouseR
 import com.core.beautyshop.modules.inventory.application.dto.response.WarehouseStockResponse;
 import com.core.beautyshop.modules.inventory.application.service.WarehouseService;
 import com.core.beautyshop.modules.inventory.application.service.WarehouseStockService;
+import com.core.beautyshop.modules.inventory.application.service.InventoryCommandService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ public class WarehouseController {
     private final WarehouseService warehouseService;
     private final WarehouseStockService warehouseStockService;
     private final com.core.beautyshop.modules.inventory.application.service.InventoryMovementService movementService;
+    private final InventoryCommandService commands;
 
     @Operation(summary = "Lấy danh sách kho chưa xóa", description = "Gồm kho active và inactive; không phân trang.")
     @GetMapping
@@ -87,12 +89,12 @@ public class WarehouseController {
                 warehouseStockService.addOrUpdateStock(id, request)));
     }
 
-    @Operation(summary = "Nhập tăng số lượng một lô", description = "quantity>0 được cộng vào tồn hiện tại; bảo toàn reserved/quarantine và cấu hình min/max/location của lô đã có. Hạn dùng phải sau hôm nay và không được thay hạn đã có sang giá trị khác. Không tự chống gửi lại: retry request có thể nhập thêm lần nữa; phiếu mua dùng /procurement/orders/{id}/receive để kiểm soát vòng đời.")
+    @Operation(summary = "Receive additional batch stock", description = "Requires Idempotency-Key (1-100 chars). The same key and request replay the recorded receipt; a different payload with the same key is rejected. Expiry and recall rules apply.")
     @PostMapping("/{id}/receipts")
     public ResponseEntity<ApiResponse<WarehouseStockResponse>> receiveStock(
-            @PathVariable Long id, @Valid @RequestBody WarehouseStockRequest request) {
+            @PathVariable Long id, @Valid @RequestBody WarehouseStockRequest request,@RequestHeader("Idempotency-Key") String key) {
         return ResponseEntity.ok(ApiResponse.success(
-                warehouseStockService.receiveStock(id, request, "MANUAL_RECEIPT", null)));
+                commands.receive(id, request,key)));
     }
 
     @Operation(summary = "Xóa mềm lô tồn kho", description = "Chặn khi còn reserved hoặc quarantine. Tồn bán được còn lại ghi DISPOSAL rồi đưa về 0; không phải chỉ ẩn dòng.")
@@ -109,10 +111,10 @@ public class WarehouseController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
-    @Operation(summary = "Điều chuyển tồn khả dụng sang kho khác", description = "quantity>0 và ≤quantity−reservedQuantity; kho nguồn/đích phải khác, active và chưa xóa. Giữ SKU, batchCode và hạn dùng; không chuyển reservations hoặc quarantine. Cặp lô đích đã có phải khớp hạn dùng. Đây là cộng/trừ tồn, không có Idempotency-Key; retry có thể chuyển tiếp.")
+    @Operation(summary = "Transfer available stock to another warehouse", description = "Requires Idempotency-Key (1-100 chars). Retries do not transfer a second time. Reserved, quarantined and recalled stock cannot be transferred as sellable stock.")
     @PostMapping("/stocks/{stockId}/transfer")
-    public ResponseEntity<ApiResponse<Void>> transfer(@PathVariable Long stockId, @RequestBody TransferRequest request) {
-        movementService.transfer(stockId, request.targetWarehouseId(), request.quantity(), request.reason());
+    public ResponseEntity<ApiResponse<Void>> transfer(@PathVariable Long stockId, @RequestBody TransferRequest request,@RequestHeader("Idempotency-Key")String key) {
+        commands.transfer(stockId, request.targetWarehouseId(), request.quantity(), request.reason(),key);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
     @Schema(description = "Điều chỉnh tuyệt đối; kiểm tra nghiệp vụ tại service")

@@ -17,23 +17,23 @@ const staffList = (response) => {
 const skillFor = (row, serviceId) => row.skills?.find((skill) => String(skill.serviceId) === String(serviceId));
 const permissionFor = (row, serviceId) => {
   const skill = skillFor(row, serviceId);
-  return { granted: Boolean(skill), certified: Boolean(skill?.certified) };
+  return { granted: Boolean(skill), certified: Boolean(skill?.certified), certifiedUntil: skill?.certifiedUntil || "" };
 };
 const permissionsFor = (rows, serviceId) => Object.fromEntries(rows.map((row) => [row.id, permissionFor(row, serviceId)]));
 const samePermission = (first, second) => Boolean(first?.granted) === Boolean(second?.granted)
-  && (!first?.granted || Boolean(first?.certified) === Boolean(second?.certified));
+  && (!first?.granted || Boolean(first?.certified) === Boolean(second?.certified) && (first?.certifiedUntil || "") === (second?.certifiedUntil || ""));
 const searchText = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
 const nameFor = (row) => row.fullName || `Kỹ thuật viên #${row.id}`;
 const applyPermission = (row, service, permission) => ({
   ...row,
   skills: [
     ...(row.skills || []).filter((skill) => String(skill.serviceId) !== String(service.id)),
-    ...(permission.granted ? [{ serviceId: service.id, serviceName: service.name, certified: permission.certified }] : []),
+    ...(permission.granted ? [{ serviceId: service.id, serviceName: service.name, certified: permission.certified, certifiedUntil: permission.certifiedUntil || null }] : []),
   ],
 });
 
-// Certification records training; an active staff profile with the assigned skill is eligible.
-const getEligibleStaffCount = (serviceId, staff = []) => staff.filter((row) => row.active === true && skillFor(row, serviceId)).length;
+const certificationValid = (permission, required) => !required || (permission?.certified && (!permission.certifiedUntil || permission.certifiedUntil >= new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())));
+const getEligibleStaffCount = (service, staff = []) => staff.filter(row => row.active === true && skillFor(row, service.id) && certificationValid(permissionFor(row, service.id), service.requiresCertification)).length;
 
 export default function SkillsMatrix({ service, staff = [], onClose, onSaved }) {
   const [rows, setRows] = useState(() => staff);
@@ -49,8 +49,8 @@ export default function SkillsMatrix({ service, staff = [], onClose, onSaved }) 
   const baseline = useMemo(() => permissionsFor(rows, service.id), [rows, service.id]);
   const changes = useMemo(() => rows.filter((row) => !samePermission(baseline[row.id], draft[row.id])), [rows, baseline, draft]);
   const visibleRows = useMemo(() => rows.filter((row) => searchText(`${nameFor(row)} ${row.specialty || ''}`).includes(searchText(keyword).trim())), [rows, keyword]);
-  const currentEligible = getEligibleStaffCount(service.id, rows);
-  const projectedEligible = rows.filter((row) => row.active === true && draft[row.id]?.granted).length;
+  const currentEligible = getEligibleStaffCount(service, rows);
+  const projectedEligible = rows.filter((row) => row.active === true && draft[row.id]?.granted && certificationValid(draft[row.id], service.requiresCertification)).length;
   const removals = changes.filter((row) => baseline[row.id]?.granted && !draft[row.id]?.granted);
 
   const close = () => { if (!lockRef.current) onClose?.(); };
@@ -124,7 +124,7 @@ export default function SkillsMatrix({ service, staff = [], onClose, onSaved }) 
         try {
           if (target.granted) {
             const response = unwrap(await apiClient.put(ENDPOINTS.SPA.STAFF_SKILLS(row.id), {
-              serviceId: Number(service.id), certified: target.certified,
+              serviceId: Number(service.id), certified: target.certified, certifiedUntil: target.certifiedUntil || null,
             }));
             const confirmedRow = String(response?.id) === String(row.id) && Array.isArray(response.skills)
               ? response : applyPermission(row, service, target);
@@ -212,7 +212,7 @@ export default function SkillsMatrix({ service, staff = [], onClose, onSaved }) 
           <div><Users size={18} aria-hidden="true" /><strong>{currentEligible}</strong><span>KTV đủ điều kiện hiện tại</span></div>
           <div><Award size={18} aria-hidden="true" /><strong>{projectedEligible}</strong><span>KTV dự kiến sau khi lưu</span></div>
         </div>
-        <p className="spa-catalog-help">KTV đang hoạt động và được cấp quyền có thể nhận dịch vụ. Cờ “Đã chứng nhận” dùng để ghi nhận đào tạo; KTV tạm dừng không được phân ca.</p>
+        <p className="spa-catalog-help">KTV cần ca làm việc bao quát. Khi dịch vụ yêu cầu chứng nhận, ngày hẹn phải nằm trong hạn chứng nhận; bỏ trống hạn nghĩa là không giới hạn ngày.</p>
         <Input label="Tìm kỹ thuật viên" placeholder="Nhập tên hoặc chuyên môn…" icon={Search} value={keyword} onChange={(event) => setKeyword(event.target.value)} disabled={busy} />
         {notice && <div className={`spa-catalog-notice ${failures.length || syncNeeded ? 'is-warning' : 'is-success'}`} role={failures.length || syncNeeded ? 'alert' : 'status'}>{notice}</div>}
         {failures.length > 0 && (
@@ -247,6 +247,7 @@ export default function SkillsMatrix({ service, staff = [], onClose, onSaved }) 
                         <input type="checkbox" checked={permission.granted && permission.certified} disabled={busy || syncNeeded || !permission.granted} onChange={(event) => setPermission(row.id, 'certified', event.target.checked)} aria-label={`Đã chứng nhận cho ${nameFor(row)}`} />
                         <span>{permission.granted && permission.certified ? 'Đã chứng nhận' : 'Chưa ghi nhận'}</span>
                       </label>
+                      <input type="date" aria-label={`Chứng nhận đến ngày cho ${nameFor(row)}`} value={permission.certifiedUntil || ''} disabled={busy || !permission.certified} onChange={event => setPermission(row.id, 'certifiedUntil', event.target.value)} />
                     </td>
                   </tr>
                 );

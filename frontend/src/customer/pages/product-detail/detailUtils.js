@@ -1,7 +1,7 @@
 export const unwrap = response => response?.data ?? response;
 export const textList = value => [...new Set((Array.isArray(value) ? value : typeof value === 'string' ? [value] : [])
   .filter(item => typeof item === 'string').map(item => item.trim()).filter(Boolean))];
-export const activeVariants = product => (product?.variants || []).filter(variant => variant.isActive === true && !variant.isDeleted && Number.isSafeInteger(Number(variant.id)) && Number(variant.id) > 0);
+export { activeVariants, chooseVariant } from '../../utils/productSelection';
 export const variantLabel = variant => variant?.volume || (variant?.volumeValue != null && variant?.volumeUnit ? `${variant.volumeValue} ${variant.volumeUnit}` : '')
   || variant?.variantName || variant?.color || (variant ? `Phân loại #${variant.id}` : 'Chưa cập nhật');
 export const variantChoiceLabels = variants => new Map(variants.map(variant => {
@@ -9,12 +9,6 @@ export const variantChoiceLabels = variants => new Map(variants.map(variant => {
   const duplicates = variants.filter(candidate => variantLabel(candidate) === label).length > 1;
   return [String(variant.id), duplicates ? [label, variant.color, variant.sku || `SKU #${variant.id}`].filter(Boolean).join(' · ') : label];
 }));
-export const chooseVariant = product => {
-  const rows = activeVariants(product);
-  const withSku = rows.filter(row => typeof row.sku === 'string' && row.sku.trim());
-  const choices = withSku.length ? withSku : rows;
-  return choices.find(row => row.isDefault) || choices[0] || null;
-};
 export const productGallery = product => {
   const images = (product?.images || []).filter(image => typeof image.imageUrl === 'string' && image.imageUrl.trim())
     .map((image, index) => ({ ...image, key: image.id ?? index, index }))

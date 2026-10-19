@@ -180,7 +180,8 @@ async def main():
 """
 
     print("\n" + report)
-    out_file = BASE_DIR / "BENCHMARK_REPORT_GOOGLE_VS_FINETUNE.md"
+    out_file = BASE_DIR.parent.parent / "docs" / "ai" / "benchmarks" / "benchmark_embedding_google_vs_finetune.md"
+    out_file.parent.mkdir(parents=True, exist_ok=True)
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(report)
     print(f"\n[+] Đã lưu toàn bộ báo cáo chi tiết vào file: {out_file}")

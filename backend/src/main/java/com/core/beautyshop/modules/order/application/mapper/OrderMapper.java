@@ -22,6 +22,7 @@ public class OrderMapper {
                 .id(order.getId())
                 .userId(order.getUserId())
                 .servicePackageId(order.getServicePackageId())
+                .spaBenefitType(order.getSpaBenefitType())
                 .appointmentId(order.getAppointmentId())
                 .spaVisitItems(order.getSpaVisitItems() == null ? List.of() : order.getSpaVisitItems().stream()
                         .map(item -> new com.core.beautyshop.modules.order.api.dto.SpaVisitCharge(item.getAppointmentItemId(),
@@ -32,6 +33,8 @@ public class OrderMapper {
                 .paymentStatus(order.getPaymentStatus())
                 .customerName(order.getCustomerName())
                 .customerPhone(order.getCustomerPhone())
+                .customerEmail(order.getCustomerEmail())
+                .deliveredAt(order.getDeliveredAt())
                 .shippingAddress(formatShippingAddress(order))
                 .subTotal(order.getSubTotal())
                 .shippingFee(order.getShippingFee())

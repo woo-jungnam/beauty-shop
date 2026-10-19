@@ -33,6 +33,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
 
   const [inputVoucher, setInputVoucher] = useState('');
   const [voucherError, setVoucherError] = useState('');
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const drawerRef = useRef(null);
   useCustomerDialog(isCartOpen, drawerRef, () => setCartOpen(false));
 
@@ -71,15 +72,18 @@ export const MiniCartDrawer = ({ onNavigate }) => {
 
   if (!isCartOpen) return cartErrorNotice;
 
-  const handleApplyVoucher = (e) => {
+  const handleApplyVoucher = async (e) => {
     e.preventDefault();
     if (!inputVoucher.trim()) return;
-    const success = applyVoucher(inputVoucher.trim(), 10, 100000);
-    if (success) {
-      setVoucherError('');
+    setIsApplyingVoucher(true);
+    setVoucherError('');
+    try {
+      await applyVoucher(inputVoucher.trim(), subtotal);
       setInputVoucher('');
-    } else {
-      setVoucherError('Mã không hợp lệ hoặc đã hết lượt.');
+    } catch (err) {
+      setVoucherError(err.message || 'Mã không hợp lệ hoặc đã hết lượt.');
+    } finally {
+      setIsApplyingVoucher(false);
     }
   };
 
@@ -423,20 +427,22 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                       outline: 'none'
                     }}
                   />
-                  <button 
+                  <button
                     type="submit"
+                    disabled={isApplyingVoucher || !inputVoucher.trim()}
                     style={{
                       padding: '8px 14px',
-                      backgroundColor: 'var(--c-primary)',
+                      backgroundColor: inputVoucher.trim() ? 'var(--c-primary)' : 'var(--c-border)',
                       color: '#FFFFFF',
                       border: 'none',
                       borderRadius: 'var(--radius-pill)',
                       fontSize: '12px',
                       fontWeight: 600,
-                      cursor: 'pointer'
+                      cursor: inputVoucher.trim() && !isApplyingVoucher ? 'pointer' : 'not-allowed',
+                      opacity: isApplyingVoucher ? 0.7 : 1,
                     }}
                   >
-                    Áp dụng
+                    {isApplyingVoucher ? 'Đang kiểm tra...' : 'Áp dụng'}
                   </button>
                 </form>
               )}

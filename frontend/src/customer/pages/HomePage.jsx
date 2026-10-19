@@ -63,9 +63,11 @@ export const HomePage = ({ onNavigate }) => {
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [isHeroHovered, setIsHeroHovered] = useState(false);
 
-  // 2. Flash Sale Live Countdown Timer & Clearance State
-  const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 42, seconds: 18 });
+  // Clearance is independent of the normal catalog; errors never become fallback deals.
   const [clearanceProducts, setClearanceProducts] = useState([]);
+  const [clearanceLoading, setClearanceLoading] = useState(true);
+  const [clearanceError, setClearanceError] = useState('');
+  const [clearanceAttempt, setClearanceAttempt] = useState(0);
 
   // 3. Product Catalog Filter & Search State
   const [catalogCategoryFilter, setCatalogCategoryFilter] = useState('ALL');
@@ -84,24 +86,19 @@ export const HomePage = ({ onNavigate }) => {
       setLoading(true);
       try {
         const guestSessionId = getGuestSessionId();
-        const [prodRes, spaRes, catRes, brandRes, bannerRes, recRes, clearanceRes] = await Promise.allSettled([
+        const [prodRes, spaRes, catRes, brandRes, bannerRes, recRes] = await Promise.allSettled([
           apiClient.get('/api/v1/products?size=60'),
           apiClient.get('/api/v1/spa/services'),
           apiClient.get('/api/v1/categories'),
           apiClient.get('/api/v1/brands?size=20'),
           apiClient.get('/api/v1/banners'),
-          apiClient.get(`/api/v1/products/recommended-for-you?limit=8&sessionId=${encodeURIComponent(guestSessionId)}`),
-          apiClient.get('/api/v1/products/expiring-soon?limit=8&thresholdDays=90')
+          apiClient.get(`/api/v1/products/recommended-for-you?limit=8&sessionId=${encodeURIComponent(guestSessionId)}`)
         ]);
 
         if (isMounted) {
           if (prodRes.status === 'fulfilled') {
             const list = prodRes.value?.data?.content || prodRes.value?.content || [];
             setProducts(list);
-          }
-          if (clearanceRes.status === 'fulfilled') {
-            const clList = clearanceRes.value?.data || clearanceRes.value || [];
-            setClearanceProducts(Array.isArray(clList) ? clList : (clList?.content || []));
           }
           if (recRes.status === 'fulfilled') {
             const rList = recRes.value?.data || recRes.value || [];
@@ -134,6 +131,27 @@ export const HomePage = ({ onNavigate }) => {
     fetchData();
     return () => { isMounted = false; };
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setClearanceLoading(true);
+    setClearanceError('');
+    apiClient.get('/api/v1/products/expiring-soon?limit=8&thresholdDays=90', { signal: controller.signal })
+      .then(response => {
+        const data = response?.data ?? response;
+        const list = Array.isArray(data) ? data : data?.content;
+        if (response?.success === false || !Array.isArray(list)) throw new Error('Invalid clearance response');
+        if (!controller.signal.aborted) setClearanceProducts(list);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setClearanceProducts([]);
+          setClearanceError('Chưa tải được sản phẩm xả kho. Vui lòng thử lại.');
+        }
+      })
+      .finally(() => { if (!controller.signal.aborted) setClearanceLoading(false); });
+    return () => controller.abort();
+  }, [clearanceAttempt]);
 
   // Fetch category products dynamically from backend when category filter pill is clicked
   useEffect(() => {
@@ -337,66 +355,53 @@ export const HomePage = ({ onNavigate }) => {
     return fallbacks[(brand.id || 0) % fallbacks.length];
   };
 
-  // Flash Sale Countdown Interval
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return { hours: 12, minutes: 0, seconds: 0 };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const DEFAULT_HERO_SLIDES = [
     {
       badge: 'CHÍNH HÃNG 100%',
       title: 'Mỹ Phẩm Chính Hãng & Clinic Chuẩn Y Khoa.',
-      description: 'Cam kết 100% hàng thật, date xa rõ ràng, đền bù 200% nếu phát hiện hàng giả. Dịch vụ khám da miễn phí với bác sĩ chuyên khoa.',
+      description: 'Cam kết 100% hàng thật, date xa rõ ràng, nguồn gốc minh bạch. Dịch vụ khám da với bác sĩ chuyên khoa.',
       ctaPrimary: 'Mua Sắm Ngay',
       ctaSecondary: 'Xem Tất Cả Mỹ Phẩm',
       targetPrimary: 'products',
       targetSecondary: '#store-catalog',
-      stat1: '10.000+ Sản Phẩm',
-      stat2: '100% Chính Hãng',
-      stat3: 'Giao Nhanh 2H',
+      stat1: '100% Chính Hãng',
+      stat2: 'FDA Chuẩn Y Khoa',
+      stat3: '24/7 Tư Vấn Tận Tâm',
       image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
     },
     {
-      badge: 'DEAL GIỜ VÀNG',
-      title: 'Đại Tiệc Flash Sale - Giảm Giá Đến 50% Hôm Nay.',
-      description: 'Cơ hội sở hữu tinh chất phục hồi da B5, kem chống nắng kiềm dầu quang phổ rộng và kem dưỡng ẩm từ các thương hiệu hàng đầu thế giới.',
+      badge: 'XẢ KHO CẬN DATE',
+      title: 'Xả Kho Cận Date - Ưu Đãi Giá Tốt.',
+      description: 'Cơ hội sở hữu tinh chất phục hồi da B5, kem chống nắng kiềm dầu quang phổ rộng và kem dưỡng ẩm từ các thương hiệu chính hãng.',
       ctaPrimary: 'Săn Deal Ngay',
-      ctaSecondary: 'Nhận Voucher 100K',
+      ctaSecondary: 'Xem Tất Cả Mỹ Phẩm',
       targetPrimary: '#flash-sale',
-      targetSecondary: '#voucher-section',
-      stat1: '-50% Giảm Sốc',
-      stat2: 'Freeship từ 249K',
-      stat3: 'Tặng Quà Fullsize',
+      targetSecondary: '#store-catalog',
+      stat1: '100% Minh Bạch HSD',
+      stat2: '31–90 Ngày Hạn Dùng',
+      stat3: 'Giá Tốt Trực Tiếp',
       image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=1000&q=80',
     },
     {
       badge: 'CLINIC & SPA',
       title: 'Dịch Vụ Điều Trị & Chăm Sóc Da Chuẩn Y Khoa.',
-      description: 'Quy trình Aqua Peel làm sạch sâu đa tầng, điện di vi điểm căng bóng và trị mụn chuẩn y khoa không thâm sẹo với công nghệ FDA tiên tiến.',
+      description: 'Quy trình Aqua Peel làm sạch sâu đa tầng, điện di vi điểm căng bóng và trị mụn chuẩn y khoa với công nghệ hiện đại.',
       ctaPrimary: 'Đặt Lịch Hẹn Ngay',
       ctaSecondary: 'Xem Bảng Giá Spa',
       targetPrimary: 'booking',
       targetSecondary: '#spa-section',
-      stat1: 'Bác Sĩ Da Liễu',
-      stat2: '100% Chuẩn Y Khoa',
-      stat3: 'Hệ Thống Toàn Quốc',
+      stat1: '100% Bác Sĩ Da Liễu',
+      stat2: 'FDA Chuẩn Y Khoa',
+      stat3: 'Clinic Chuyên Sâu',
       image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
     }
   ];
 
   const DEFAULT_SIDE_BANNERS = [
     {
-      eyebrow: 'DEAL GIỜ VÀNG',
-      title: 'Flash Sale Mỹ Phẩm Chính Hãng',
-      desc: 'Giảm đến 50%, freeship từ 249K và quà fullsize giới hạn hôm nay.',
+      eyebrow: 'XẢ KHO CẬN DATE',
+      title: 'Xả Kho Cận Date Giá Tốt',
+      desc: 'Minh bạch hạn dùng, lô 31–90 ngày với giá ưu đãi trực tiếp.',
       cta: 'Săn deal',
       target: '#flash-sale',
       image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=700&q=80',
@@ -425,9 +430,9 @@ export const HomePage = ({ onNavigate }) => {
           ctaSecondary: 'Xem Tất Cả Mỹ Phẩm',
           targetPrimary: b.targetUrl || 'products',
           targetSecondary: '#store-catalog',
-          stat1: '10.000+ Sản Phẩm',
-          stat2: '100% Chính Hãng',
-          stat3: 'Giao Nhanh 2H',
+          stat1: '100% Chính Hãng',
+          stat2: 'FDA Chuẩn Y Khoa',
+          stat3: '24/7 Tư Vấn Tận Tâm',
           image: b.imageUrl,
         }));
       }
@@ -634,42 +639,48 @@ export const HomePage = ({ onNavigate }) => {
                   }}>
                     <div>
                       <div style={{
-                        fontSize: '24px',
+                        fontSize: '22px',
                         fontWeight: 800,
                         color: 'var(--c-gold)',
                         fontFamily: 'var(--font-mono)'
                       }}>
-                        {stat1.split(' ')[0]}
+                        {stat1.includes(' ') ? stat1.split(' ')[0] : stat1}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 500 }}>
-                        {stat1.substring(stat1.indexOf(' ') + 1)}
-                      </div>
+                      {stat1.includes(' ') && (
+                        <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 600 }}>
+                          {stat1.substring(stat1.indexOf(' ') + 1)}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <div style={{
-                        fontSize: '24px',
+                        fontSize: '22px',
                         fontWeight: 800,
                         color: 'var(--c-gold)',
                         fontFamily: 'var(--font-mono)'
                       }}>
-                        {stat2.split(' ')[0]}
+                        {stat2.includes(' ') ? stat2.split(' ')[0] : stat2}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 500 }}>
-                        {stat2.substring(stat2.indexOf(' ') + 1)}
-                      </div>
+                      {stat2.includes(' ') && (
+                        <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 600 }}>
+                          {stat2.substring(stat2.indexOf(' ') + 1)}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <div style={{
-                        fontSize: '24px',
+                        fontSize: '22px',
                         fontWeight: 800,
                         color: 'var(--c-gold)',
                         fontFamily: 'var(--font-mono)'
                       }}>
-                        {stat3.split(' ')[0]}
+                        {stat3.includes(' ') ? stat3.split(' ')[0] : stat3}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 500 }}>
-                        {stat3.substring(stat3.indexOf(' ') + 1)}
-                      </div>
+                      {stat3.includes(' ') && (
+                        <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 600 }}>
+                          {stat3.substring(stat3.indexOf(' ') + 1)}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -962,66 +973,32 @@ export const HomePage = ({ onNavigate }) => {
               </span>
             </div>
 
-            {/* Countdown Digits */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-muted)' }}>Kết thúc sau:</span>
-              <div className="countdown-digit-box">
-                <span className="countdown-digit-val">{String(timeLeft.hours).padStart(2, '0')}</span>
-                <span className="countdown-digit-label">Giờ</span>
-              </div>
-              <span style={{ fontWeight: 800, color: 'var(--c-deal-red, #E31837)' }}>:</span>
-              <div className="countdown-digit-box">
-                <span className="countdown-digit-val">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                <span className="countdown-digit-label">Phút</span>
-              </div>
-              <span style={{ fontWeight: 800, color: 'var(--c-deal-red, #E31837)' }}>:</span>
-              <div className="countdown-digit-box">
-                <span className="countdown-digit-val">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                <span className="countdown-digit-label">Giây</span>
-              </div>
-            </div>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
+              Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.
+            </p>
           </div>
 
-          {/* Compact deals adapt to the available screen width. */}
-          <div className="flash-sale-grid">
-            {((clearanceProducts && clearanceProducts.length > 0 ? clearanceProducts : products).slice(0, sectionLimits.deals)).map((prod, idx) => {
-              const remainingStock = prod.clearanceStock ?? (prod.stock ?? 10);
-              const soldCount = prod.totalSold || 0;
-              const claimed = prod.clearanceStock
-                ? Math.min(95, Math.max(25, Math.round((50 / (50 + prod.clearanceStock)) * 100)))
-                : (soldCount > 0 ? Math.min(95, Math.max(15, (soldCount % 80) + 15)) : 50);
-              return (
-                <div key={prod.id || idx} style={{ display: 'flex', flexDirection: 'column' }}>
-                  <ProductCard product={prod} onNavigate={onNavigate} onQuickView={setQuickViewProduct} />
-                  {/* Stock claim status bar */}
-                  <div className="home-deal-stock" style={{ marginTop: '10px', padding: '0 4px' }}>
-                    <div className="flash-deal-progress-bg">
-                      <div className="flash-deal-progress-fill" style={{ width: `${claimed}%` }} />
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: '11px',
-                      color: 'var(--c-text-light)',
-                      marginTop: '4px'
-                    }}>
-                      <span style={{ fontWeight: 600, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <Flame size={12} color="#DC2626" />
-                        <span>Đã bán {claimed}%</span>
-                      </span>
-                      {prod.earliestExpirationDate ? (
-                        <span style={{ fontWeight: 600, color: '#B45309' }}>
-                          Còn {remainingStock} suất ({prod.daysRemaining != null ? `còn ${prod.daysRemaining} ngày` : 'cận date'})
-                        </span>
-                      ) : (
-                        <span>Chỉ còn {remainingStock} suất</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {clearanceLoading ? (
+            <div role="status" aria-label="Đang tải sản phẩm xả kho" className="flash-sale-grid">
+              {Array.from({ length: sectionLimits.deals }, (_, index) => <ProductCardSkeleton key={index} />)}
+            </div>
+          ) : clearanceError ? (
+            <div role="alert">
+              <p>{clearanceError}</p>
+              <button type="button" className="btn-luxury-outline" onClick={() => setClearanceAttempt(value => value + 1)}>Thử lại sản phẩm xả kho</button>
+            </div>
+          ) : clearanceProducts.length === 0 ? (
+            <p role="status">Hiện chưa có sản phẩm xả kho đủ điều kiện.</p>
+          ) : (
+            <div className="flash-sale-grid">
+              {clearanceProducts.slice(0, sectionLimits.deals).map(prod => (
+                <ProductCard key={prod.id} product={prod} onNavigate={onNavigate} onQuickView={setQuickViewProduct} />
+              ))}
+            </div>
+          )}
+          <p style={{ margin: '16px 0 0', fontSize: '12px', color: 'var(--c-text-muted)' }}>
+            HSD là ngày gần nhất của tồn cận hạn tại lúc tải. Số lượng có thể thay đổi; giỏ hàng chưa giữ chỗ hoặc cam kết một lô cụ thể.
+          </p>
         </div>
       </section>
 
@@ -1033,9 +1010,6 @@ export const HomePage = ({ onNavigate }) => {
           <h2 className="section-title-editorial">
             Danh mục sản phẩm
           </h2>
-          <p className="section-desc-editorial">
-            Chọn danh mục để khám phá các dòng dược mỹ phẩm và dịch vụ trị liệu phù hợp nhất.
-          </p>
         </div>
 
         <div className="category-grid-8">
@@ -1078,9 +1052,6 @@ export const HomePage = ({ onNavigate }) => {
           <h2 className="section-title-editorial">
             Thương hiệu chính hãng
           </h2>
-          <p className="section-desc-editorial">
-            100% sản phẩm có tem phụ tiếng Việt, nguồn gốc minh bạch và chứng từ nhập khẩu chính ngạch từ các tập đoàn dược mỹ phẩm hàng đầu.
-          </p>
         </div>
 
         <div className="brands-grid-12">
@@ -1143,9 +1114,6 @@ export const HomePage = ({ onNavigate }) => {
           <h2 className="section-title-editorial">
             Gợi ý cho bạn
           </h2>
-          <p className="section-desc-editorial">
-            Gợi ý dựa trên các sản phẩm bạn quan tâm. Khi chưa có đủ lịch sử, bạn sẽ thấy sản phẩm nổi bật và bán chạy.
-          </p>
         </div>
 
         {loading ? (
@@ -1176,9 +1144,6 @@ export const HomePage = ({ onNavigate }) => {
           <h2 className="section-title-editorial">
             Tất cả sản phẩm
           </h2>
-          <p className="section-desc-editorial">
-            Khám phá đầy đủ {products.length}+ sản phẩm chính ngạch có tem phụ tiếng Việt, bảo quản tiêu chuẩn kho lạnh chuyên dụng.
-          </p>
         </div>
 
         {/* Quick Search & Sort Bar */}
@@ -1332,9 +1297,6 @@ export const HomePage = ({ onNavigate }) => {
             <h2 className="section-title-editorial">
               Dịch vụ Spa & Clinic
             </h2>
-            <p className="section-desc-editorial">
-              Ứng dụng công nghệ oxy hóa đa tầng, vi kim sinh học và điện di ion giúp dưỡng chất thẩm thấu sâu hơn gấp 10 lần phương pháp bôi thoa thông thường.
-            </p>
           </div>
 
           {/* Dynamic Category Filter Chips for Spa */}

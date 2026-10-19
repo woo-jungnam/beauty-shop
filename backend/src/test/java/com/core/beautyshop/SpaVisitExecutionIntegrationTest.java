@@ -12,6 +12,9 @@ import java.time.*;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+@org.springframework.boot.test.context.SpringBootTest(properties={
+        "spring.datasource.url=jdbc:h2:mem:spa_visit_execution;DB_CLOSE_DELAY=-1;MODE=MySQL",
+        "spring.jpa.properties.hibernate.jdbc.time_zone=UTC"})
 class SpaVisitExecutionIntegrationTest extends SpaConcurrencyIntegrityIntegrationTest {
     @Autowired TicketSessionMovementRepository movements;
     @Autowired AppointmentActionHistoryRepository actions;
@@ -36,6 +39,8 @@ class SpaVisitExecutionIntegrationTest extends SpaConcurrencyIntegrityIntegratio
         tx(() -> {
             var a = appointmentRows.findById(id).orElseThrow(); a.setAppointmentDate(LocalDate.now(SpaTimeRules.ZONE).minusDays(1));
             a.setCheckedInAt(Instant.now().minusSeconds(60));
+            a.setActualStartedAt(Instant.now().minusSeconds(60));
+            a.setStatus(AppointmentStatus.IN_PROGRESS);
             for (var i : a.getItems()) if (!shifts.coversWorkingInterval(i.getStaff().getId(), a.getAppointmentDate(), LocalTime.of(8,0), LocalTime.of(20,0))) shifts.save(StaffSchedule.builder().staff(i.getStaff()).workDate(a.getAppointmentDate())
                     .startTime(LocalTime.of(8,0)).endTime(LocalTime.of(20,0)).build());
             return null;
@@ -50,7 +55,6 @@ class SpaVisitExecutionIntegrationTest extends SpaConcurrencyIntegrityIntegratio
     }
     @Test void itemPerformanceConsumesQuotaOnceAndVisitCannotCompleteWithoutItemOutcome() {
         var f=fixture(); long id=book(f,f.ticketId()); status(f,id,AppointmentStatus.CONFIRMED,null); readyToStart(id);
-        status(f,id,AppointmentStatus.IN_PROGRESS,null);
         assertThrows(BusinessException.class, () -> status(f,id,AppointmentStatus.COMPLETED,null));
         long item=itemId(id); item(f,id,item,AppointmentItemExecutionStatus.IN_PROGRESS,null);
         item(f,id,item,AppointmentItemExecutionStatus.PERFORMED,"Completed facial");
@@ -61,7 +65,7 @@ class SpaVisitExecutionIntegrationTest extends SpaConcurrencyIntegrityIntegratio
             assertEquals(2,movements.findByTicketIdOrderByIdDesc(f.ticketId(),org.springframework.data.domain.PageRequest.of(0,20)).getTotalElements()); return null; });
     }
     @Test void skipRequiresReasonAndReturnsHeldQuotaWithoutChargingAService() {
-        var f=fixture(); long id=book(f,f.ticketId()); status(f,id,AppointmentStatus.CONFIRMED,null); readyToStart(id); status(f,id,AppointmentStatus.IN_PROGRESS,null);
+        var f=fixture(); long id=book(f,f.ticketId()); status(f,id,AppointmentStatus.CONFIRMED,null); readyToStart(id);
         long item=itemId(id); assertThrows(BusinessException.class, () -> item(f,id,item,AppointmentItemExecutionStatus.SKIPPED,null));
         item(f,id,item,AppointmentItemExecutionStatus.SKIPPED,"Customer declined before treatment"); status(f,id,AppointmentStatus.COMPLETED,null);
         tx(() -> { var t=tickets.findById(f.ticketId()).orElseThrow(); assertEquals(0,t.getUsedSessions()); assertEquals(0,t.getReservedSessions()); return null; });
@@ -116,7 +120,7 @@ class SpaVisitExecutionIntegrationTest extends SpaConcurrencyIntegrityIntegratio
         var f=fixture(); long first=book(f,null);
         long second=as(f.customer(), () -> appointments.bookAppointment(booking(f,f.firstStaffId(),LocalTime.of(12,0),null))).getId();
         status(f,first,AppointmentStatus.CONFIRMED,null); status(f,second,AppointmentStatus.CONFIRMED,null);
-        readyToStart(first); readyToStart(second); status(f,first,AppointmentStatus.IN_PROGRESS,null); status(f,second,AppointmentStatus.IN_PROGRESS,null);
+        readyToStart(first); readyToStart(second);
         item(f,first,itemId(first),AppointmentItemExecutionStatus.IN_PROGRESS,null);
         assertThrows(BusinessException.class, () -> item(f,second,itemId(second),AppointmentItemExecutionStatus.IN_PROGRESS,null));
         item(f,first,itemId(first),AppointmentItemExecutionStatus.PERFORMED,null);
@@ -128,8 +132,7 @@ class SpaVisitExecutionIntegrationTest extends SpaConcurrencyIntegrityIntegratio
         long other=as(f.customer(), () -> appointments.bookAppointment(booking(f,f.secondStaffId(),LocalTime.of(12,0),null))).getId();
         var therapist=tx(() -> {
             var user=users.findById(staffs.findById(f.firstStaffId()).orElseThrow().getUserId()).orElseThrow();
-            var role=roles.findByName("ROLE_SPA_THERAPIST").orElseGet(()->roles.save(com.core.beautyshop.modules.identity.domain.Role.builder().name("ROLE_SPA_THERAPIST").build()));
-            user.setRoles(new java.util.ArrayList<>(List.of(role))); return users.save(user);
+            user.setStaffPermissions(new HashSet<>(List.of("SPA_EXECUTION"))); return users.save(user);
         });
         var page=as(therapist, () -> appointments.getAllAppointments(null,null,org.springframework.data.domain.PageRequest.of(0,20)));
         assertEquals(1,page.getTotalElements()); assertEquals(own,page.getContent().getFirst().getId());

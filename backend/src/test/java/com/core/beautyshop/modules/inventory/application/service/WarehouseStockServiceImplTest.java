@@ -65,6 +65,64 @@ class WarehouseStockServiceImplTest {
     }
 
     @Test
+    void normalUpdatePreservesOmittedKnownExpiryEvenWithZeroStock() {
+        var expiry = com.core.beautyshop.shared.time.BusinessTime.today().plusDays(30);
+        var stock = existingBatch(expiry, 0);
+        var request = stockRequest(null);
+        when(stockRepository.save(any(WarehouseStock.class))).thenAnswer(call -> call.getArgument(0));
+
+        service.addOrUpdateStock(1L, request);
+
+        assertEquals(expiry, stock.getExpirationDate());
+        assertEquals(3, stock.getQuantity());
+    }
+
+    @Test
+    void knownExpiryCannotBeExtendedByNormalUpdateOrReceiptEvenWithZeroStock() {
+        var expiry = com.core.beautyshop.shared.time.BusinessTime.today().plusDays(30);
+        var stock = existingBatch(expiry, 0);
+        var request = stockRequest(expiry.plusDays(100));
+
+        assertThrows(BusinessException.class, () -> service.addOrUpdateStock(1L, request));
+        assertThrows(BusinessException.class, () -> service.receiveStock(1L, request, "RECEIPT", "R-1"));
+
+        assertEquals(expiry, stock.getExpirationDate());
+        assertEquals(0, stock.getQuantity());
+        verify(stockRepository, never()).save(any());
+    }
+
+    @Test
+    void receiptOfNearExpiryStockStillRecordsPhysicalInventory() {
+        var expiry = com.core.beautyshop.shared.time.BusinessTime.today().plusDays(20);
+        var stock = existingBatch(expiry, 4);
+        var request = stockRequest(null);
+        when(stockRepository.save(any(WarehouseStock.class))).thenAnswer(call -> call.getArgument(0));
+
+        service.receiveStock(1L, request, "RECEIPT", "R-1");
+
+        assertEquals(expiry, stock.getExpirationDate());
+        assertEquals(7, stock.getQuantity());
+    }
+
+    private WarehouseStock existingBatch(java.time.LocalDate expiry, int quantity) {
+        var warehouse = Warehouse.builder().name("Main").code("MAIN").build(); warehouse.setId(1L);
+        var stock = WarehouseStock.builder().warehouse(warehouse).productVariantId(11L)
+                .quantity(quantity).batchCode("LOT-1").expirationDate(expiry).build(); stock.setId(7L);
+        when(batches.lockWarehouse(1L)).thenReturn(warehouse);
+        when(catalogFacade.getVariantSummaryForInventory(11L))
+                .thenReturn(ProductVariantSummaryDto.builder().id(11L).sku("SKU-11").build());
+        when(batches.lockBatch(1L, 11L, "LOT-1")).thenReturn(Optional.of(stock));
+        return stock;
+    }
+
+    private WarehouseStockRequest stockRequest(java.time.LocalDate expiry) {
+        var request = new WarehouseStockRequest();
+        request.setProductVariantId(11L); request.setBatchCode("LOT-1");
+        request.setQuantity(3); request.setExpirationDate(expiry);
+        return request;
+    }
+
+    @Test
     void purchaseReceiptIncrementsQuantityAndPreservesStockPolicy() {
         Warehouse warehouse = Warehouse.builder().name("Main").code("MAIN").build();
         warehouse.setId(1L);

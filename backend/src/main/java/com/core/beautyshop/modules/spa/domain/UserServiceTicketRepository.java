@@ -34,6 +34,7 @@ public interface UserServiceTicketRepository extends JpaRepository<UserServiceTi
     Optional<UserServiceTicket> findByIdAndUserId(Long id, Long userId);
 
     boolean existsByOrderId(Long orderId);
+    Optional<UserServiceTicket> findByOrderId(Long orderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from UserServiceTicket t where t.orderId = :orderId")

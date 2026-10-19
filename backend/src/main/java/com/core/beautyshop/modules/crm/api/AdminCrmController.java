@@ -62,7 +62,7 @@ public class AdminCrmController {
         return ApiResponse.success(service.notesPage(id, page, size));
     }
 
-    @Operation(summary = "Thêm ghi chú nội bộ về chăm sóc khách", description = "ADMIN/CS_STAFF; content 1–10000 ký tự, noteType tối đa 30, các trường hồ sơ tối đa 1000. followUpAt chỉ lưu thời điểm, không tự tạo instruction/gửi thông báo. HTTP thực tế 200, body ApiResponse.status=201 khi tạo thành công.")
+    @Operation(summary = "Thêm ghi chú nội bộ về chăm sóc khách", description = "Content 1–10000 ký tự. followUpAt tạo công việc theo dõi; COMPLAINT tạo hồ sơ khiếu nại. Công việc và ghi chú nội bộ không được công khai cho khách.")
     @PostMapping("/customers/{id}/notes")
     public ApiResponse<CustomerCareService.NoteView> add(@PathVariable Long id, @RequestBody CustomerCareService.NoteCommand command) {
         return ApiResponse.created(service.add(id, command), "Care note created");

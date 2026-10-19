@@ -36,7 +36,7 @@ public class AdminDashboardService {
         Map<String, Object> collections = row("SELECT COALESCE(SUM(amount),0) revenue, "
                 + "COALESCE(SUM(CASE WHEN gateway = 'COD' THEN amount ELSE 0 END),0) cod_amount, COALESCE(SUM(CASE WHEN gateway = 'CASH' THEN amount ELSE 0 END),0) cash_amount, COUNT(*) receipt_count "
                 + "FROM payment_transactions WHERE " + RECEIPTS + " AND created_at >= ? AND created_at < ?", range.from(), range.to());
-        BigDecimal refunds = decimal(first(row("SELECT COALESCE(SUM(amount),0) refunded_amount FROM refund_confirmations WHERE confirmed_at >= ? AND confirmed_at < ?", range.from(), range.to())));
+        BigDecimal refunds = decimal(first(row("SELECT COALESCE(SUM(amount),0) refunded_amount FROM (SELECT amount,confirmed_at recorded_at FROM refund_confirmations UNION ALL SELECT amount,created_at recorded_at FROM payment_resolutions WHERE kind='REFUND') r WHERE recorded_at >= ? AND recorded_at < ?", range.from(), range.to())));
         long customers = number(first(row("""
                 SELECT COUNT(DISTINCT u.id) customer_count FROM users u JOIN user_roles ur ON ur.user_id = u.id
                 JOIN roles r ON r.id = ur.role_id WHERE u.is_deleted = false AND u.status = 'ACTIVE'
@@ -84,8 +84,8 @@ public class AdminDashboardService {
             bucket.receipts = number(receipt.get("receipt_count")).longValue();
         }
         for (var refund : rows("""
-                SELECT DATE_FORMAT(CONVERT_TZ(confirmed_at,'+00:00','+07:00'), ?) period_key, COALESCE(SUM(amount),0) refunded_amount
-                FROM refund_confirmations WHERE confirmed_at >= ? AND confirmed_at < ?
+                SELECT DATE_FORMAT(CONVERT_TZ(recorded_at,'+00:00','+07:00'), ?) period_key, COALESCE(SUM(amount),0) refunded_amount
+                FROM (SELECT amount,confirmed_at recorded_at FROM refund_confirmations UNION ALL SELECT amount,created_at recorded_at FROM payment_resolutions WHERE kind='REFUND') r WHERE recorded_at >= ? AND recorded_at < ?
                 GROUP BY period_key
                 """, format, range.from(), range.to())) bucket(buckets, refund).refunds = decimal(refund.get("refunded_amount"));
         for (var paid : rows("""

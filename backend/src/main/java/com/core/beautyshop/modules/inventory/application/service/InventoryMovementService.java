@@ -41,6 +41,7 @@ public class InventoryMovementService {
         Warehouse targetWarehouse = first.getId().equals(targetWarehouseId) ? first : second;
         WarehouseStock source = stocks.findByIdForUpdate(sourceStockId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lô hàng tại kho xuất"));
         if (Boolean.TRUE.equals(source.getIsDeleted())) throw new BusinessException("Lô hàng đã xóa không thể điều chuyển");
+        if (Boolean.TRUE.equals(source.getIsBlocked())) throw new BusinessException("Recalled stock cannot be transferred as sellable inventory");
         int available = source.getQuantity() - value(source.getReservedQuantity());
         if (available < quantity) throw new BusinessException("Số lượng tồn khả dụng không đủ để điều chuyển");
         int sourceBefore = source.getQuantity(); source.setQuantity(sourceBefore - quantity);

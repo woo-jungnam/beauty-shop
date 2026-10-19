@@ -1,5 +1,4 @@
 import '../storage/storage_service.dart';
-import 'package:flutter/foundation.dart';
 
 class ApiConstants {
   static String? _customBaseUrl;
@@ -17,14 +16,10 @@ class ApiConstants {
     if (savedUrl != null && savedUrl.isNotEmpty) {
       return savedUrl;
     }
-    const envUrl = String.fromEnvironment('BACKEND_URL');
-    if (envUrl.isNotEmpty) {
-      return envUrl;
-    }
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8080';
-    }
-    return 'http://127.0.0.1:8080';
+    return const String.fromEnvironment(
+      'BACKEND_URL',
+      defaultValue: 'https://api.dermascan.world',
+    );
   }
 
   static const Duration connectTimeout = Duration(seconds: 15);
@@ -41,10 +36,12 @@ class ApiConstants {
   // Catalog & Products
   static const String products = '/api/v1/products';
   static const String productFeatured = '/api/v1/products/featured';
-  static const String recommendedForYou = '/api/v1/products/recommended-for-you';
+  static const String recommendedForYou =
+      '/api/v1/products/recommended-for-you';
   static const String expiringSoon = '/api/v1/products/expiring-soon';
   static const String productSearch = '/api/v1/products/search';
-  static const String productCategory = '/api/v1/products/category/'; // + categoryId
+  static const String productCategory =
+      '/api/v1/products/category/'; // + categoryId
   static const String productDetail = '/api/v1/products/'; // + id
   static const String categories = '/api/v1/categories';
   static const String rootCategories = '/api/v1/categories/root';
@@ -69,13 +66,23 @@ class ApiConstants {
 
   // Spa & Clinic
   static const String spaServices = '/api/v1/spa/services';
+  static const String treatmentTemplates = '/api/v1/spa/treatment-templates';
+  static const String adminTreatmentTemplates =
+      '/api/v1/admin/spa/treatment-templates';
+  static const String treatmentPurchases = '/api/v1/spa/treatment-purchases';
+  static const String myTreatments = '/api/v1/spa/my-treatments';
+  static const String treatmentNotifications =
+      '/api/v1/spa/treatment-notifications';
   static const String spaPackages = '/api/v1/spa/services/packages';
   static const String spaTickets = '/api/v1/spa/tickets/my-tickets';
-  static const String spaActiveTickets = '/api/v1/spa/tickets/my-active-tickets';
+  static const String spaActiveTickets =
+      '/api/v1/spa/tickets/my-active-tickets';
   static const String bookAppointment = '/api/v1/appointments/book';
   static const String myAppointments = '/api/v1/appointments/my-appointments';
-  static const String cancelAppointment = '/api/v1/appointments/'; // + id + '/cancel'
-  static String appointmentCancelUrl(int id) => '/api/v1/appointments/$id/cancel';
+  static const String cancelAppointment =
+      '/api/v1/appointments/'; // + id + '/cancel'
+  static String appointmentCancelUrl(int id) =>
+      '/api/v1/appointments/$id/cancel';
 
   // Chatbot AI
   static const String chat = '/api/v1/chatbot/chat';
@@ -83,4 +90,5 @@ class ApiConstants {
 
   // System & Public Configs
   static const String publicConfigs = '/api/v1/system-configs/public';
+  static const String validateVoucher = '/api/v1/promotions/validate';
 }

@@ -26,6 +26,14 @@ public class ServicePackageResponse {
     private String thumbnailUrl;
     private Boolean isActive;
     private List<Item> items;
+    private String purchaseToken;
+    public static String token(ServicePackage entity) {
+        String value = entity.getId()+"|"+entity.getName()+"|"+entity.getPrice()+"|"+entity.getValidityDays()+"|"+
+                entity.getItems().stream().sorted(java.util.Comparator.comparing(i -> i.getService().getId()))
+                .map(i -> i.getService().getId()+":"+i.getService().getName()+":"+i.getQuantity()+":"+i.getService().getBasePrice()).toList();
+        try { return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8))); }
+        catch(java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+    }
 
     @Data
     @Builder
@@ -42,6 +50,7 @@ public class ServicePackageResponse {
     public static ServicePackageResponse fromEntity(ServicePackage entity) {
         return ServicePackageResponse.builder()
                 .id(entity.getId())
+                .purchaseToken(token(entity))
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .price(entity.getPrice())

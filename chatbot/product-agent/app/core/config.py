@@ -2,6 +2,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DB_PATH = BASE_DIR / "cosmetics_ecommerce.db"
@@ -20,7 +21,7 @@ class Settings(BaseSettings):
     mysql_host: str = "localhost"
     mysql_port: int = 3306
     mysql_user: str = "root"
-    mysql_password: str = "Sql@123456"
+    mysql_password: str = ""
     mysql_database: str = "beautyshop"
 
     qdrant_url: str = ":memory:"
@@ -55,6 +56,20 @@ class Settings(BaseSettings):
     enable_cache: bool = True
     cache_ttl_seconds: int = 3600
     recommendation_internal_token: str = ""
+    image_search_enabled: bool = False
+    image_search_model_id: str = "sentence-transformers/clip-ViT-B-32"
+    image_search_model_revision: str = "327ab6726d33c0e22f920c83f2ff9e4bd38ca37f"
+    image_search_index_path: str = str(BASE_DIR / "data" / "image-search" / "index.npz")
+    image_search_cache_dir: str = str(BASE_DIR / "data" / "model-cache")
+    image_search_internal_token: str = ""
+    image_search_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1, le=5 * 1024 * 1024)
+    image_search_max_pixels: int = Field(default=20_000_000, ge=1, le=40_000_000)
+    image_search_batch_size: int = Field(default=16, ge=1, le=64)
+    image_search_upload_dir: str = str(BASE_DIR.parent.parent / "backend" / "uploads")
+    image_search_media_origin: str = "http://localhost:8080"
+    # Trusted aliases for /uploads/ URLs, comma separated; images are never downloaded.
+    image_search_allowed_origins: str = ""
+    image_search_excluded_hosts: str = "images.unsplash.com,via.placeholder.com,placehold.co"
 
     model_config = SettingsConfigDict(
         env_file=(

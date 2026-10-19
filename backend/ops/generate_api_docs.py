@@ -2,17 +2,21 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import argparse
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
-BUILD = ROOT / "target-spa-validation"
+_args = argparse.ArgumentParser(description=__doc__)
+_args.add_argument("--build-dir", default="target-spa-validation")
+BUILD = ROOT / _args.parse_args().build_dir
 SOURCE = BUILD / "api-docs" / "openapi.json"
 REPORT = BUILD / "surefire-reports" / "TEST-com.core.beautyshop.OpenApiContractIntegrationTest.xml"
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "trace"}
 MODULES = [
     ("identity", "Xác thực, tài khoản và vai trò"),
+    ("notification", "Thông báo cá nhân"),
     ("catalog", "Sản phẩm và danh mục"),
     ("cart", "Giỏ hàng"),
     ("order", "Đơn hàng và hoàn tiền"),
@@ -81,7 +85,7 @@ def publish() -> None:
     lines = [
         "# Danh mục endpoint API",
         "",
-        f"Sinh từ OpenAPI đã kiểm chứng lúc {datetime.now().astimezone().isoformat(timespec='seconds')}. "
+        f"Sinh từ OpenAPI đã kiểm chứng lúc {datetime.now(timezone(timedelta(hours=7))).isoformat(timespec='seconds')}. "
         f"**{len(operations)} operations trên {len(document['paths'])} đường dẫn.**",
         "",
         "Nguồn chi tiết: [OpenAPI JSON](openapi.json), [hướng dẫn Swagger](API_GUIDE.md). "
@@ -101,14 +105,20 @@ def publish() -> None:
                 "bearer": "JWT; kiểm thêm phạm vi tại service",
                 "sepay-key": "API key SePay",
             }[operation["x-access-mode"]]
+            if operation.get("x-staff-permission"):
+                access += "; STAFF cần " + operation["x-staff-permission"]
             success = ", ".join(sorted(code for code in operation.get("responses", {}) if code.startswith("2")))
             lines.append(f"| {method.upper()} | `{path}` | {cell(operation.get('summary', ''))} | {cell(access)} | {success} |")
         lines.append("")
     destination = ROOT / "docs"
     destination.mkdir(exist_ok=True)
     (destination / "openapi.json").write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (destination / "API_ENDPOINTS.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"Published {len(operations)} operations / {len(document['paths'])} paths to backend/docs")
+    content = "\n".join(lines) + "\n"
+    (destination / "API_ENDPOINTS.md").write_text(content, encoding="utf-8")
+    global_docs = ROOT.parent / "docs" / "backend"
+    if global_docs.exists():
+        (global_docs / "danh_muc_endpoint_api.md").write_text(content, encoding="utf-8")
+    print(f"Published {len(operations)} operations / {len(document['paths'])} paths to backend/docs and docs/backend")
 
 
 if __name__ == "__main__":

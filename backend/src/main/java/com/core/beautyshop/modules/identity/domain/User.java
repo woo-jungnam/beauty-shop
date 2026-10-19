@@ -72,4 +72,11 @@ public class User extends Base {
     @Column(name = "token_version", nullable = false)
     @Builder.Default
     private Integer tokenVersion = 0;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "staff_permissions", joinColumns = @JoinColumn(name = "user_id"),
+            uniqueConstraints = @UniqueConstraint(name = "uk_staff_permission", columnNames = {"user_id", "permission"}))
+    @Column(name = "permission", nullable = false, length = 40)
+    @Builder.Default
+    private java.util.Set<String> staffPermissions = new java.util.HashSet<>();
 }

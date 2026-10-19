@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 public class CreateSpaPackageOrderCommand {
     Long userId;
     Long servicePackageId;
+    @Builder.Default
+    String benefitType = "SERVICE_PACKAGE";
     String packageName;
     BigDecimal amount;
     String customerName;

@@ -8,52 +8,64 @@ import {
   Clock,
   Truck,
   Sparkles,
-  QrCode,
-  Building2,
-  CreditCard,
-  UserCheck
+  QrCode
 } from 'lucide-react';
 import { apiClient } from '../../shared/api/client';
 import { getGuestSessionId } from '../../shared/utils/session';
 import { serverBaseUrl } from '../../shared/api/baseUrl';
+import { orderBenefitDestination } from '../../features/spa/benefitModel';
 
 const formatCurrency = (val) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+  const amount = val == null || typeof val === 'boolean' || String(val).trim() === '' ? NaN : Number(val);
+  return Number.isFinite(amount) && amount >= 0
+    ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
+    : 'Chưa có dữ liệu';
 };
 
-const getPaymentWsUrl = (orderCode, orderId) => {
+const validOrderId = value => /^[1-9][0-9]*$/.test(String(value ?? '')) ? String(value) : null;
+
+const getPaymentWsUrl = (subscriptionToken) => {
   const httpUrl = serverBaseUrl(import.meta.env.VITE_API_BASE_URL) || (typeof window !== 'undefined' ? window.location.origin : '');
   const wsProtocol = httpUrl.startsWith('https') ? 'wss:' : 'ws:';
   const host = httpUrl ? httpUrl.replace(/^https?:\/\//, '') : 'localhost:8080';
-  return `${wsProtocol}//${host}/ws/payment?orderCode=${encodeURIComponent(orderCode || '')}&orderId=${encodeURIComponent(orderId || '')}`;
+  return `${wsProtocol}//${host}/ws/payment?subscriptionToken=${encodeURIComponent(subscriptionToken)}`;
 };
 
 export const OrderSuccessPage = ({
   onNavigate,
-  orderId = null,
-  orderCode = '',
-  paymentMethod = 'BANK',
-  amount = 0
+  orderId = null
 }) => {
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedContent, setCopiedContent] = useState(false);
-  const [countdown, setCountdown] = useState(1800); // 30 minutes payment window
-  const [isPaid, setIsPaid] = useState(false);
-  const [orderDetail, setOrderDetail] = useState(() => {
+  const [countdown, setCountdown] = useState(null); // Derived from the server deadline, never restarted on reload.
+  const [clockNow, setClockNow] = useState(() => Date.now());
+  const [orderError, setOrderError] = useState('');
+  const [orderFetchVersion, setOrderFetchVersion] = useState(0);
+  const [cachedOrderId] = useState(() => {
     try {
       const stored = sessionStorage.getItem('last_created_order');
-      return stored ? JSON.parse(stored) : null;
+      const cached = stored ? JSON.parse(stored) : null;
+      return validOrderId(cached?.id ?? cached?.orderId);
     } catch {
       return null;
     }
   });
+  const targetOrderId = orderId == null ? cachedOrderId : validOrderId(orderId);
+  const [loadedOrder, setOrderDetail] = useState(null);
+  const orderDetail = loadedOrder && String(loadedOrder.id) === targetOrderId ? loadedOrder : null;
+  const hasVerifiedOrder = Boolean(orderDetail) && !orderError;
+  const isPaid = orderDetail?.paymentStatus === 'PAID';
+  const isBankMethod = ['BANK', 'VIETQR_SEPAY'].includes(orderDetail?.paymentMethod);
+  const isCodMethod = orderDetail?.paymentMethod === 'COD';
+  const isClosed = ['CANCELLED', 'EXPIRED', 'RETURNED', 'REFUNDED', 'RETURN_TO_SENDER'].includes(orderDetail?.status);
 
   // Fetch full real order information if orderId exists
   useEffect(() => {
     let isMounted = true;
     const fetchOrder = async () => {
-      const targetId = orderId || orderDetail?.id;
-      if (!targetId) return;
+      const targetId = targetOrderId;
+      if (!targetId) { setOrderError('Không có mã tham chiếu đơn hợp lệ để xác minh. Vui lòng mở đơn từ lịch sử hoặc đặt hàng lại.'); return; }
+      setOrderError('');
 
       try {
         const sessionId = getGuestSessionId();
@@ -61,35 +73,37 @@ export const OrderSuccessPage = ({
           headers: { 'X-Guest-Session-Id': sessionId }
         });
         const data = res?.data || res;
-        if (isMounted && data) {
+        if (!data || String(data.id) !== targetId) throw new Error('Invalid order response');
+        if (isMounted) {
+          setClockNow(Date.now());
           setOrderDetail(data);
-          if (data.paymentStatus === 'PAID') {
-            setIsPaid(true);
-          }
         }
       } catch (err) {
+        if (isMounted) setOrderError(err.response?.data?.message || 'Chưa tải được hướng dẫn thanh toán của đơn này. Vui lòng thử lại.');
         console.warn('Could not fetch latest order details:', err);
       }
     };
 
     fetchOrder();
     return () => { isMounted = false; };
-  }, [orderId]);
+  }, [targetOrderId, orderFetchVersion]);
 
   // Real-time WebSocket connection for instant payment push (< 100ms)
   useEffect(() => {
-    const isBankPayment = paymentMethod === 'BANK' || paymentMethod === 'VIETQR_SEPAY';
-    if (!isBankPayment || isPaid) return;
-
-    const targetCode = orderCode || orderDetail?.orderCode || orderDetail?.orderNumber || '';
-    const targetId = orderId || orderDetail?.id || '';
-    if (!targetCode && !targetId) return;
+    if (!hasVerifiedOrder || !isBankMethod || isPaid || isClosed) return;
+    const targetId = targetOrderId;
 
     let ws = null;
     let pingInterval = null;
+    let reconnectTimer = null;
 
+    let cancelled = false;
+    const connect = async () => {
     try {
-      const wsUrl = getPaymentWsUrl(targetCode, targetId);
+      const response = await apiClient.get(`/api/v1/orders/${targetId}/payment-subscription`, { headers: { 'X-Guest-Session-Id': getGuestSessionId() } });
+      const data = response?.data || response;
+      if (cancelled || !data.subscriptionToken) return;
+      const wsUrl = getPaymentWsUrl(data.subscriptionToken);
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
@@ -102,93 +116,108 @@ export const OrderSuccessPage = ({
 
       ws.onmessage = (event) => {
         try {
-          if (event.data === 'pong') return;
+          if (cancelled || event.data === 'pong') return;
           const msg = JSON.parse(event.data);
           if (msg.type === 'PAYMENT_SUCCESS' || msg.status === 'PAID') {
-            setIsPaid(true);
-            setOrderDetail((prev) => ({ ...(prev || {}), paymentStatus: 'PAID', status: 'PROCESSING' }));
+            setOrderDetail(previous => previous && String(previous.id) === targetId ? { ...previous, paymentStatus: 'PAID' } : previous);
+            setOrderFetchVersion(value => value + 1);
           }
         } catch {
           // ignore non-json
         }
       };
 
+      ws.onclose = () => { if (!cancelled) reconnectTimer = setTimeout(connect, 2000); };
       ws.onerror = (err) => {
         console.warn('Payment WebSocket error, falling back to polling:', err);
       };
     } catch (err) {
       console.warn('Could not establish WebSocket:', err);
     }
+    }; connect();
 
     return () => {
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (pingInterval) clearInterval(pingInterval);
       if (ws) {
         ws.close();
       }
     };
-  }, [orderId, orderCode, orderDetail?.orderCode, orderDetail?.orderNumber, orderDetail?.id, paymentMethod, isPaid]);
+  }, [targetOrderId, hasVerifiedOrder, isBankMethod, isPaid, isClosed]);
 
   // Real-time polling fallback for payment confirmation webhook (every 4 seconds)
   useEffect(() => {
-    const isBankPayment = paymentMethod === 'BANK' || paymentMethod === 'VIETQR_SEPAY';
-    if (!isBankPayment || isPaid || countdown <= 0) return;
+    if (!hasVerifiedOrder || !isBankMethod || isPaid || isClosed || (orderDetail?.paymentDeadline && Date.parse(orderDetail.paymentDeadline) <= Date.now())) return;
 
-    const targetId = orderId || orderDetail?.id;
+    const targetId = targetOrderId;
     if (!targetId) return;
+    let active = true;
 
     const interval = setInterval(async () => {
+      if (orderDetail?.paymentDeadline && Date.parse(orderDetail.paymentDeadline) <= Date.now()) { clearInterval(interval); setOrderFetchVersion(value => value + 1); return; }
       try {
         const sessionId = getGuestSessionId();
         const res = await apiClient.get(`/api/v1/orders/${targetId}`, {
           headers: { 'X-Guest-Session-Id': sessionId }
         });
         const data = res?.data || res;
-        if (data && data.paymentStatus === 'PAID') {
-          setIsPaid(true);
-          setOrderDetail(data);
-          clearInterval(interval);
-        }
+        if (!active || !data || String(data.id) !== targetId) return;
+        setClockNow(Date.now());
+        setOrderDetail(data);
+        if (['CANCELLED', 'EXPIRED', 'RETURNED', 'REFUNDED', 'RETURN_TO_SENDER'].includes(data.status) || data.paymentStatus === 'PAID') clearInterval(interval);
       } catch {
         // quiet retry
       }
     }, 4000);
 
-    return () => clearInterval(interval);
-  }, [orderId, orderDetail?.id, paymentMethod, isPaid, countdown]);
+    return () => { active = false; clearInterval(interval); };
+  }, [targetOrderId, orderDetail?.paymentDeadline, hasVerifiedOrder, isBankMethod, isPaid, isClosed]);
 
-  // Countdown timer
+  // Keep the remaining time anchored to the backend Instant across navigation/reloads.
   useEffect(() => {
-    if (countdown <= 0 || isPaid) return;
-    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
-    return () => clearInterval(timer);
-  }, [countdown, isPaid]);
+    const update = () => {
+      setClockNow(Date.now());
+      const deadline = Date.parse(orderDetail?.paymentDeadline);
+      setCountdown(Number.isFinite(deadline) ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null);
+    };
+    update(); const timer = setInterval(update, 1000); return () => clearInterval(timer);
+  }, [orderDetail?.paymentDeadline]);
+  const formattedTime = countdown == null ? 'Không có hạn thanh toán tự động' : countdown === 0 ? 'Đã hết hạn thanh toán' : `${String(Math.floor(countdown / 60)).padStart(2, '0')}:${String(countdown % 60).padStart(2, '0')}`;
 
-  const minutes = Math.floor(countdown / 60);
-  const seconds = countdown % 60;
-  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-  const currentOrderCode = orderDetail?.orderNumber || orderCode || 'ORD-Chờ-Xác-Nhận';
-  const currentTotalAmount = orderDetail?.totalAmount || amount || 0;
-  const isBankMethod = paymentMethod === 'BANK' || paymentMethod === 'VIETQR_SEPAY' || orderDetail?.paymentMethod === 'BANK';
-
-  // Compute VietQR image URL from instruction or dynamic VietQR format
+  const currentOrderCode = orderDetail?.orderNumber || orderDetail?.orderCode;
+  const currentTotalAmount = orderDetail?.totalAmount ?? null;
+  const hasKnownTotal = currentTotalAmount != null && typeof currentTotalAmount !== 'boolean' && String(currentTotalAmount).trim() !== '' && Number.isFinite(Number(currentTotalAmount)) && Number(currentTotalAmount) >= 0;
+  const paymentDeadline = Date.parse(orderDetail?.paymentDeadline);
+  const isExpired = isBankMethod && !isPaid && (countdown === 0 || (Number.isFinite(paymentDeadline) && paymentDeadline <= clockNow) || orderDetail?.paymentStatus === 'EXPIRED');
+  // Payment instructions come from the current order; never invent bank details.
   const paymentInstruction = orderDetail?.paymentInstruction;
-  const qrImageUrl = useMemo(() => {
-    if (paymentInstruction?.qrCodeUrl) {
-      return paymentInstruction.qrCodeUrl;
-    }
-    const bankBin = '970422'; // MBBank BIN
-    const bankAccount = paymentInstruction?.bankAccountNumber || '0902588750';
-    const cleanAmount = Math.round(Number(currentTotalAmount) || 0);
-    const syntax = encodeURIComponent(currentOrderCode);
-    const accName = encodeURIComponent(paymentInstruction?.bankAccountName || 'BEAUTYSHOP');
-    return `https://img.vietqr.io/image/${bankBin}-${bankAccount}-compact.jpg?amount=${cleanAmount}&addInfo=${syntax}&accountName=${accName}`;
-  }, [paymentInstruction, currentTotalAmount, currentOrderCode]);
+  const hasBankInstructions = Boolean(hasVerifiedOrder && hasKnownTotal && Number(currentTotalAmount) > 0 && paymentInstruction?.bankAccountNumber && paymentInstruction?.transferSyntax && !isClosed && !isExpired);
+  const positiveHeader = hasVerifiedOrder && !isClosed && !isExpired && (isPaid || isCodMethod);
+  const header = !hasVerifiedOrder
+    ? { tag: orderError ? 'CHƯA XÁC MINH ĐƯỢC ĐƠN' : 'ĐANG XÁC MINH ĐƠN', title: orderError ? 'Chưa xác minh được đơn hàng' : 'Đang xác minh đơn hàng' }
+    : isClosed
+      ? { tag: 'ĐƠN ĐÃ ĐÓNG', title: orderDetail.status === 'CANCELLED' ? 'Đơn hàng đã hủy' : 'Đơn hàng đã đóng thanh toán' }
+      : isExpired
+        ? { tag: 'HẾT HẠN THANH TOÁN', title: 'Đã hết hạn thanh toán đơn hàng' }
+        : isPaid
+          ? { tag: 'ĐÃ THANH TOÁN THÀNH CÔNG', title: 'Thanh Toán Thành Công!' }
+          : isBankMethod
+            ? hasBankInstructions
+              ? { tag: 'CHỜ THANH TOÁN CHUYỂN KHOẢN', title: 'Đơn Hàng Đã Tạo — Vui Lòng Chuyển Khoản' }
+              : { tag: 'CẦN CẬP NHẬT THÔNG TIN THANH TOÁN', title: 'Đơn hàng đã tạo — Chưa đủ hướng dẫn thanh toán' }
+            : isCodMethod
+              ? { tag: 'ĐƠN HÀNG COD ĐÃ TIẾP NHẬN', title: 'Đặt Hàng Thành Công!' }
+              : { tag: 'THÔNG TIN ĐƠN HÀNG', title: 'Thông tin đơn hàng' };
 
-  const bankName = paymentInstruction?.bankName || 'MBBank (Ngân hàng Quân Đội)';
-  const bankAccountName = paymentInstruction?.bankAccountName || 'BEAUTYSHOP';
-  const bankAccountNumber = paymentInstruction?.bankAccountNumber || '0902588750';
-  const transferSyntax = paymentInstruction?.transferSyntax || currentOrderCode;
+  const qrImageUrl = useMemo(() => {
+    return paymentInstruction?.qrCodeUrl || '';
+  }, [paymentInstruction]);
+
+  const bankName = paymentInstruction?.bankName || '';
+  const bankAccountName = paymentInstruction?.bankAccountName || '';
+  const bankAccountNumber = paymentInstruction?.bankAccountNumber || '';
+  const transferSyntax = paymentInstruction?.transferSyntax || '';
 
   const handleCopy = (text, type) => {
     if (!text) return;
@@ -217,15 +246,15 @@ export const OrderSuccessPage = ({
           width: '64px',
           height: '64px',
           borderRadius: '50%',
-          backgroundColor: isPaid || !isBankMethod ? 'var(--c-safe-green-bg, #ECFDF5)' : 'var(--c-primary-light, #FFF0F3)',
-          color: isPaid || !isBankMethod ? 'var(--c-safe-green, #059669)' : 'var(--c-primary, #D45D79)',
+          backgroundColor: positiveHeader ? 'var(--c-safe-green-bg, #ECFDF5)' : 'var(--c-canvas, #F8FAFC)',
+          color: positiveHeader ? 'var(--c-safe-green, #059669)' : 'var(--c-text-muted, #64748B)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 16px auto',
-          border: isPaid || !isBankMethod ? '2px solid var(--c-safe-green-border, #A7F3D0)' : '2px solid var(--c-gold-border)'
+          border: positiveHeader ? '2px solid var(--c-safe-green-border, #A7F3D0)' : '2px solid var(--c-border-subtle)'
         }}>
-          {isPaid || !isBankMethod ? <CheckCircle2 size={34} /> : <QrCode size={32} />}
+          {positiveHeader ? <CheckCircle2 size={34} /> : hasBankInstructions ? <QrCode size={32} /> : <Clock size={32} />}
         </div>
 
         {/* State Tag */}
@@ -237,24 +266,27 @@ export const OrderSuccessPage = ({
             borderRadius: '9999px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
-            backgroundColor: isPaid ? '#ECFDF5' : (isBankMethod ? '#FFF0F3' : '#ECFDF5'),
-            color: isPaid ? '#059669' : (isBankMethod ? '#D45D79' : '#059669'),
-            border: isPaid ? '1px solid #A7F3D0' : (isBankMethod ? '1px solid var(--c-gold-border)' : '1px solid #A7F3D0')
+            backgroundColor: positiveHeader ? '#ECFDF5' : 'var(--c-canvas, #F8FAFC)',
+            color: positiveHeader ? '#059669' : 'var(--c-text-muted, #64748B)',
+            border: positiveHeader ? '1px solid #A7F3D0' : '1px solid var(--c-border-subtle)'
           }}>
-            {isPaid ? 'ĐÃ THANH TOÁN THÀNH CÔNG' : (isBankMethod ? 'CHỜ THANH TOÁN CHUYỂN KHOẢN' : 'ĐƠN HÀNG COD ĐÃ TIẾP NHẬN')}
+            {header.tag}
           </span>
         </div>
 
         <h1 style={{ fontSize: '24px', margin: '0 0 8px 0', fontFamily: 'var(--font-sans)', fontWeight: 800, color: '#1F2937' }}>
-          {isPaid ? 'Thanh Toán Thành Công!' : (isBankMethod ? 'Đơn Hàng Đã Tạo — Vui Lòng Chuyển Khoản' : 'Đặt Hàng Thành Công!')}
+          {header.title}
         </h1>
         <p style={{ fontSize: '13.5px', color: 'var(--c-text-muted)', margin: '0 0 24px 0' }}>
-          Mã số đơn hàng: <strong style={{ color: 'var(--c-deal-red, #E11D48)', fontFamily: 'var(--font-mono)' }}>{currentOrderCode}</strong>
-          {isBankMethod && !isPaid && ' • Đơn hàng sẽ được xử lý ngay sau khi hệ thống nhận được tiền chuyển khoản.'}
+          {hasVerifiedOrder && currentOrderCode ? <>Mã số đơn hàng: <strong style={{ color: 'var(--c-deal-red, #E11D48)', fontFamily: 'var(--font-mono)' }}>{currentOrderCode}</strong></> : 'Thông tin đơn sẽ hiển thị sau khi hệ thống xác minh quyền truy cập.'}
+          {hasBankInstructions && !isPaid && ' • Đơn hàng sẽ được xử lý sau khi hệ thống xác nhận thanh toán.'}
         </p>
 
         {/* ================= VIETQR REALTIME PAYMENT SECTION ================= */}
-        {isBankMethod && (
+        {!orderDetail && !orderError && <p role="status">Đang xác minh đơn và hướng dẫn thanh toán…</p>}
+        {orderError && <div role="alert" style={{ padding: 16, background: '#fff0ed', borderRadius: 10, marginBottom: 20 }}><p>{orderError}</p><button type="button" className="btn-luxury-outline" onClick={() => setOrderFetchVersion(value => value + 1)}>Tải lại hướng dẫn thanh toán</button></div>}
+        {hasVerifiedOrder && isBankMethod && !isPaid && !isClosed && !hasBankInstructions && <div role="alert" style={{ padding: 16, background: '#fff8e8', borderRadius: 10, marginBottom: 20 }}><p>{isExpired ? 'Đơn đã hết hạn thanh toán. Vui lòng kiểm tra lại trạng thái đơn trước khi thanh toán.' : 'Chưa có đủ thông tin thanh toán đã xác minh cho đơn này. Vui lòng tải lại trước khi chuyển khoản.'}</p><button type="button" className="btn-luxury-outline" onClick={() => setOrderFetchVersion(value => value + 1)}>Tải lại thông tin đơn</button></div>}
+        {hasVerifiedOrder && !isClosed && isBankMethod && (isPaid || hasBankInstructions) && (
           <div style={{
             maxWidth: '520px',
             margin: '0 auto 32px auto',
@@ -283,7 +315,7 @@ export const OrderSuccessPage = ({
                   Đã Nhận Thanh Toán Chuyển Khoản!
                 </h3>
                 <p style={{ fontSize: '13px', color: 'var(--c-text-main)', margin: 0 }}>
-                  Hệ thống SePay đã tự động khớp lệnh thanh toán thành công. Đơn hàng đang được điều phối sang kho để đóng gói.
+                  {orderDetail?.servicePackageId ? (orderDetail.spaBenefitType === 'TREATMENT_COURSE' ? 'Hệ thống đã xác nhận thanh toán. Mở lộ trình điều trị để theo dõi tiếp nhận và đặt từng buổi.' : 'Hệ thống đã xác nhận thanh toán. Mở ví vé Spa để xem quyền lợi từng dịch vụ và đặt lịch bằng vé.') : 'Hệ thống đã xác nhận thanh toán cho đơn hàng. Mở chi tiết đơn để theo dõi tiến độ xử lý và giao hàng.'}
                 </p>
               </div>
             ) : (
@@ -313,7 +345,7 @@ export const OrderSuccessPage = ({
                   justifyContent: 'center',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
                 }}>
-                  <img
+                  {qrImageUrl && <img
                     src={qrImageUrl}
                     alt="VietQR Payment Code"
                     style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }}
@@ -322,10 +354,10 @@ export const OrderSuccessPage = ({
                       const fallback = e.target.nextSibling;
                       if (fallback) fallback.style.display = 'flex';
                     }}
-                  />
-                  <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                    <QrCode size={120} color="var(--c-primary)" />
-                    <span style={{ fontSize: '11px', color: 'var(--c-text-muted)', marginTop: '4px' }}>Mã QR Chuyển Khoản</span>
+                  />}
+                  <div style={{ display: qrImageUrl ? 'none' : 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <QrCode size={36} color="var(--c-text-muted)" />
+                    <span style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '8px' }}>Chưa tải được mã QR. Bạn có thể dùng thông tin chuyển khoản bên dưới.</span>
                   </div>
                 </div>
 
@@ -392,7 +424,7 @@ export const OrderSuccessPage = ({
         )}
 
         {/* ================= COD DETAILS SECTION ================= */}
-        {!isBankMethod && (
+        {hasVerifiedOrder && !isClosed && isCodMethod && hasKnownTotal && (
           <div style={{
             maxWidth: '520px',
             margin: '0 auto 32px auto',
@@ -410,14 +442,11 @@ export const OrderSuccessPage = ({
             <p style={{ color: 'var(--c-text-muted)', margin: '0 0 10px 0', lineHeight: 1.5 }}>
               Đơn hàng của bạn sẽ được nhân viên đóng gói cẩn thận. Bạn vui lòng chuẩn bị số tiền <strong>{formatCurrency(currentTotalAmount)}</strong> khi shipper giao hàng tới.
             </p>
-            <div style={{ fontSize: '11.5px', color: 'var(--c-safe-green)', fontWeight: 600 }}>
-              Được phép mở hộp đồng kiểm tra tem phụ và hạn sử dụng trước khi thanh toán.
-            </div>
           </div>
         )}
 
         {/* Next Steps */}
-        <div style={{
+        {hasVerifiedOrder && !isClosed && <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '16px',
@@ -430,30 +459,31 @@ export const OrderSuccessPage = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: 'var(--c-primary)', marginBottom: '4px' }}>
               <Truck size={16} color="var(--c-gold)" />
-              <span>Giao Hàng Nhanh Chóng</span>
+              <span>Theo Dõi Đơn Hàng</span>
             </div>
             <div style={{ color: 'var(--c-text-muted)' }}>
-              Đơn hàng sẽ được chuyển tới tay bạn trong vòng 1-2 ngày làm việc.
+              Xem trạng thái xử lý và giao hàng được cập nhật trong chi tiết đơn.
             </div>
           </div>
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: 'var(--c-primary)', marginBottom: '4px' }}>
               <ShieldCheck size={16} color="var(--c-safe-green)" />
-              <span>Đồng Kiểm & Bảo Hiểm</span>
+              <span>Yêu Cầu Đổi Trả</span>
             </div>
             <div style={{ color: 'var(--c-text-muted)' }}>
-              Được mở hộp kiểm tra tem phụ, bảo hiểm đổi trả 7 ngày nếu không hợp da.
+              Điều kiện đổi trả được kiểm tra theo đơn hàng và chính sách cửa hàng.
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '14px' }}>
           <button onClick={() => onNavigate('products')} className="btn-luxury-outline">
             Tiếp Tục Mua Sắm
           </button>
-          <button onClick={() => onNavigate('profile?tab=orders')} className="btn-luxury-primary">
+          {hasVerifiedOrder && orderDetail?.servicePackageId && <button onClick={() => onNavigate(orderBenefitDestination(orderDetail))} className="btn-luxury-primary">{orderDetail.spaBenefitType === 'TREATMENT_COURSE' ? 'Mở lộ trình điều trị của tôi' : 'Mở ví vé Spa của tôi'} <ArrowRight size={16} /></button>}
+          <button onClick={() => onNavigate(targetOrderId ? `order-lookup?id=${targetOrderId}` : 'order-lookup')} className="btn-luxury-primary">
             <span>Theo Dõi Đơn Hàng Của Tôi</span>
             <ArrowRight size={15} />
           </button>

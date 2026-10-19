@@ -9,17 +9,20 @@ import { Modal } from '../../shared/ui/Modal';
 import { formatCurrency, resolveMediaUrl } from '../../shared/utils/formatters';
 import { spaErrorMessage } from '../../shared/utils/spaMessages';
 import { RESOURCE_NAMES, resourceName, slugify, unwrap } from './catalogUtils';
+import { ServiceMaterialsEditor } from './ServiceMaterialsEditor';
 
 const initialForm = service => ({
   name: service?.name || '', slug: service?.slug || '', categoryId: String(service?.categoryId || ''),
   basePrice: String(service?.basePrice ?? 500000), durationMinutes: String(service?.durationMinutes ?? 60),
   preparationTimeMinutes: String(service?.preparationTimeMinutes ?? 15), thumbnailUrl: service?.thumbnailUrl || '',
   shortDescription: service?.shortDescription || '', description: service?.description || '', active: service?.isActive ?? true,
+  serviceType: service?.serviceType || 'SINGLE_SESSION',
+  requiresCertification: Boolean(service?.requiresCertification),
 });
 const payloadOf = form => ({
   name: form.name.trim(), slug: form.slug.trim() || slugify(form.name), categoryId: form.categoryId ? Number(form.categoryId) : null,
   basePrice: Number(form.basePrice), durationMinutes: Number(form.durationMinutes), preparationTimeMinutes: Number(form.preparationTimeMinutes),
-  thumbnailUrl: form.thumbnailUrl.trim() || null, shortDescription: form.shortDescription.trim(), description: form.description.trim(), active: form.active,
+  thumbnailUrl: form.thumbnailUrl.trim() || null, shortDescription: form.shortDescription.trim(), description: form.description.trim(), active: form.active, serviceType: form.serviceType, requiresCertification: form.requiresCertification,
 });
 const normalizeResources = resources => resources.map(row => ({ type: String(row.type).trim().toUpperCase(), units: Number(row.units) })).sort((a, b) => a.type.localeCompare(b.type));
 
@@ -131,6 +134,7 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
         <div role="tabpanel" id={`${tabId}-info-panel`} aria-labelledby={`${tabId}-info`} hidden={tab !== 'info'}>
           <div className="spa-service-editor-layout"><div className="spa-editor-fields">
             <Input label="Tên dịch vụ" required maxLength={150} value={form.name} onChange={event => update('name', event.target.value)} placeholder="Ví dụ: Phục hồi da chuyên sâu" />
+            <Select label="Loại dịch vụ" value={form.serviceType} onChange={event => update('serviceType', event.target.value)} options={[{ value: 'SINGLE_SESSION', label: 'Một lần — sử dụng trong ngày hẹn' }, { value: 'TREATMENT_COURSE', label: 'Điều trị theo lộ trình — nhiều buổi có theo dõi' }]} helperText="Dịch vụ theo lộ trình cần mẫu đã xuất bản tại mục Lộ trình điều trị trước khi khách mua." />
             <Input label="Đường dẫn slug" maxLength={150} value={form.slug} onChange={event => update('slug', event.target.value)} helperText={`Đường dẫn: /${form.slug || slugify(form.name) || 'ten-dich-vu'} · Tự tạo từ tên khi để trống.`} placeholder="phuc-hoi-da-chuyen-sau" />
             <Select label="Danh mục liệu trình" value={form.categoryId} onChange={event => update('categoryId', event.target.value)} options={[{ value: '', label: 'Chưa phân nhóm' }, ...categories.map(category => ({ value: String(category.id), label: category.name }))]} />
             <Input label="Giá niêm yết (VND)" type="number" min={0} max={99999999} step={1} required value={form.basePrice} onChange={event => update('basePrice', event.target.value)} />
@@ -138,7 +142,9 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
               <Input label="Khử trùng / chuẩn bị (phút)" type="number" min={0} max={719} step={1} required value={form.preparationTimeMinutes} onChange={event => update('preparationTimeMinutes', event.target.value)} /></div>
             <Input label="Mô tả ngắn" maxLength={250} value={form.shortDescription} onChange={event => update('shortDescription', event.target.value)} />
             <label className="spa-editor-textarea">Mô tả quy trình<textarea rows={3} value={form.description} onChange={event => update('description', event.target.value)} placeholder="Các bước thực hiện và lưu ý khi chăm sóc…" /></label>
+            <label className="spa-catalog-checkbox"><input type="checkbox" checked={form.requiresCertification} onChange={event => update('requiresCertification', event.target.checked)} />Chỉ giao cho nhân viên có chứng nhận còn hiệu lực</label>
             <label className="spa-catalog-checkbox"><input type="checkbox" checked={form.active} onChange={event => update('active', event.target.checked)} />Đang hoạt động</label>
+            <ServiceMaterialsEditor serviceId={service?.id} />
           </div><aside className="spa-service-preview"><div className="spa-service-preview-image">{form.thumbnailUrl && !previewFailed ? <img src={resolveMediaUrl(form.thumbnailUrl)} alt="Ảnh xem trước dịch vụ" onError={() => setPreviewFailed(true)} /> : <Sparkles size={42} />}</div>
             <Input label="Ảnh thumbnail (URL)" maxLength={500} value={form.thumbnailUrl} onChange={event => { update('thumbnailUrl', event.target.value); setPreviewFailed(false); }} placeholder="/uploads/anh-dich-vu.jpg" />
             {previewFailed && <small className="spa-catalog-muted">Chưa tải được ảnh xem trước. Vui lòng kiểm tra đường dẫn.</small>}

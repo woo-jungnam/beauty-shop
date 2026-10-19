@@ -12,13 +12,13 @@ class InventoryBatchServiceTest {
     void duplicateLegacyUnnamedBatchesFailInsteadOfHidingOrOverwritingInventory() {
         var stocks = mock(WarehouseStockRepository.class);
         when(stocks.lockBatch(1L, 2L, "")).thenReturn(List.of(new WarehouseStock(), new WarehouseStock()));
-        var service = new InventoryBatchService(mock(WarehouseRepository.class), stocks, mock(jakarta.persistence.EntityManager.class));
+        var service = new InventoryBatchService(mock(WarehouseRepository.class), stocks, mock(jakarta.persistence.EntityManager.class), mock(com.core.beautyshop.modules.inventory.domain.BatchRecallRepository.class));
         assertThrows(BusinessException.class, () -> service.lockBatch(1L, 2L, null));
     }
 
     @Test
     void onlyEmptyDeletedBatchesMayBeRestored() {
-        var service = new InventoryBatchService(mock(WarehouseRepository.class), mock(WarehouseStockRepository.class), mock(jakarta.persistence.EntityManager.class));
+        var service = new InventoryBatchService(mock(WarehouseRepository.class), mock(WarehouseStockRepository.class), mock(jakarta.persistence.EntityManager.class), mock(com.core.beautyshop.modules.inventory.domain.BatchRecallRepository.class));
         var stock = WarehouseStock.builder().quantity(0).build(); stock.setIsDeleted(true);
         service.restoreEmptyBatch(stock); assertFalse(stock.getIsDeleted());
         stock.setIsDeleted(true); stock.setQuarantinedQuantity(1);

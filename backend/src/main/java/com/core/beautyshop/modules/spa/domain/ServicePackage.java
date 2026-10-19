@@ -35,6 +35,11 @@ public class ServicePackage extends Base {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "treatment_managed", nullable = false)
+    @Builder.Default
+    private Boolean treatmentManaged = false;
+
     @OneToMany(mappedBy = "servicePackage", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ServicePackageItem> items;
+    @Builder.Default
+    private List<ServicePackageItem> items = new java.util.ArrayList<>();
 }

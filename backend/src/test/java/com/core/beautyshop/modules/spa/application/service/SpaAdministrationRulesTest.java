@@ -47,8 +47,8 @@ class SpaAdministrationRulesTest {
         verifyNoInteractions(packages);
     }
     @Test void packageCannotIncludeDeletedService() {
-        var service = BeautyService.builder().name("Deleted").build(); service.setIsDeleted(true);
-        when(services.findById(1L)).thenReturn(Optional.of(service));
+        // The locked query excludes deleted services before the package is changed.
+        when(services.findByIdForUpdate(1L)).thenReturn(Optional.empty());
         assertThrows(com.core.beautyshop.shared.exception.ResourceNotFoundException.class, () -> catalog.savePackage(null,
                 new AdminSpaCatalogService.PackageCommand("Package", null, BigDecimal.TEN, 30, null, true,
                         List.of(new AdminSpaCatalogService.PackageItemCommand(1L, 1)))));
@@ -99,7 +99,7 @@ class SpaAdministrationRulesTest {
         assertThrows(BusinessException.class, () -> catalog.deleteService(1L));
         assertTrue(value.getIsActive());
     }
-    @Test void extensionAndCompensationCannotCreateRightsForRetiredService() {
+    @Test void extensionAndCompensationCannotCreateRightsForRetiredOrConvertedService() {
         var ticket = UserServiceTicket.builder().userId(10L).orderId(20L).totalSessions(3).usedSessions(1)
                 .expiryDate(Instant.now().minusSeconds(60)).status(TicketStatus.EXPIRED).build(); ticket.setId(1L);
         ticket.getEntitlements().put(2L, new TicketEntitlement(3, 1));
@@ -110,6 +110,12 @@ class SpaAdministrationRulesTest {
         assertEquals(expiry, ticket.getExpiryDate());
         ticket.setUsedSessions(3); ticket.getEntitlements().get(2L).setUsed(3);
         assertThrows(BusinessException.class, () -> administration.compensate(1L, 2L, 1));
+        assertEquals(3, ticket.getTotalSessions());
+        when(services.findAvailableByIdForUpdate(2L)).thenReturn(Optional.of(BeautyService.builder().name("Converted").serviceType("TREATMENT_COURSE").build()));
+        assertThrows(BusinessException.class, () -> administration.compensate(1L, 2L, 1));
+        ticket.setUsedSessions(1); ticket.getEntitlements().get(2L).setUsed(1);
+        assertThrows(BusinessException.class, () -> administration.extend(1L, 30));
+        assertEquals(expiry, ticket.getExpiryDate());
         assertEquals(3, ticket.getTotalSessions());
     }
 }

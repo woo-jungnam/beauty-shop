@@ -10,6 +10,9 @@ from app.services.agent.dialogue import conversationManager
 from app.services.agent.generation import generationService
 from app.services.agent.router import fastPathParser, queryRouter
 from app.services.ingestion.cleaning import remove_emojis
+from app.services.ingestion.extractor import dbExtractor
+from app.services.inventory_availability import filter_available_candidates
+from starlette.concurrency import run_in_threadpool
 from app.services.retrieval.reranker import rerankerService
 from app.services.retrieval.search import retrievalService
 
@@ -229,6 +232,13 @@ class AgentOrchestrator:
                 understanding=mergedUnderstanding,
                 topK=rerankLimit,
             )
+
+        with tracker.measure("live_inventory"):
+            try:
+                rerankedCandidates = await run_in_threadpool(filter_available_candidates, rerankedCandidates, dbExtractor)
+            except Exception:
+                logger.exception("Chưa xác minh được tồn an toàn; không quảng bá sản phẩm từ snapshot cũ")
+                rerankedCandidates = [candidate for candidate in rerankedCandidates if candidate.product.targetType == "SERVICE"]
 
         return PipelinePreparedContext(
             sessionId=reqSessionId,

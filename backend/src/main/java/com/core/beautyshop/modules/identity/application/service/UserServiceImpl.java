@@ -153,49 +153,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRED)
-    public void addLoyaltyPoints(Long userId, Long orderId, int pointsToAdd) {
-        if (userId == null || orderId == null || pointsToAdd <= 0) {
-            return;
-        }
-
-        User user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với id: " + userId));
-
-        if (loyaltyPointAwardRepository.existsByOrderId(orderId)) {
-            return;
-        }
-
-        int currentPoints = user.getLoyaltyPoints() != null ? user.getLoyaltyPoints() : 0;
-        long calculatedTotal = (long) currentPoints + pointsToAdd;
-        if (calculatedTotal > Integer.MAX_VALUE) {
-            throw new BusinessException("Điểm tích lũy vượt quá giới hạn hệ thống");
-        }
-
-        int newTotalPoints = (int) calculatedTotal;
-        user.setLoyaltyPoints(newTotalPoints);
-
-        com.core.beautyshop.modules.identity.domain.enums.MembershipTier newTier;
-        if (newTotalPoints >= com.core.beautyshop.modules.identity.domain.enums.MembershipTier.PLATINUM.getRequiredPoints()) {
-            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.PLATINUM;
-        } else if (newTotalPoints >= com.core.beautyshop.modules.identity.domain.enums.MembershipTier.GOLD.getRequiredPoints()) {
-            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.GOLD;
-        } else if (newTotalPoints >= com.core.beautyshop.modules.identity.domain.enums.MembershipTier.SILVER.getRequiredPoints()) {
-            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.SILVER;
-        } else {
-            newTier = com.core.beautyshop.modules.identity.domain.enums.MembershipTier.MEMBER;
-        }
-
-        user.setMembershipTier(newTier);
-        userRepository.save(user);
-        loyaltyPointAwardRepository.save(LoyaltyPointAward.builder()
-                .orderId(orderId)
-                .userId(userId)
-                .points(pointsToAdd)
-                .build());
-    }
-
-    @Override
     @Transactional
     public UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason) {
         if (status == null) throw new BusinessException("Trạng thái tài khoản là bắt buộc");

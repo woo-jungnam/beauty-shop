@@ -1,4 +1,6 @@
+import '../treatments/treatment_appointment_screen.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/catalog_state.dart';
 import 'package:provider/provider.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
@@ -13,7 +15,8 @@ class MyAppointmentsScreen extends StatefulWidget {
   State<MyAppointmentsScreen> createState() => _MyAppointmentsScreenState();
 }
 
-class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with SingleTickerProviderStateMixin {
+class _MyAppointmentsScreenState extends State<MyAppointmentsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final List<String> _tabs = ['Tất cả', 'Sắp tới', 'Hoàn thành', 'Đã hủy'];
 
@@ -51,7 +54,14 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
   List<Appointment> _filterAppointments(List<Appointment> list, int tabIdx) {
     switch (tabIdx) {
       case 1:
-        return list.where((a) => a.status == 'PENDING' || a.status == 'CONFIRMED' || a.status == 'IN_PROGRESS').toList();
+        return list
+            .where(
+              (a) =>
+                  a.status == 'PENDING' ||
+                  a.status == 'CONFIRMED' ||
+                  a.status == 'IN_PROGRESS',
+            )
+            .toList();
       case 2:
         return list.where((a) => a.status == 'COMPLETED').toList();
       case 3:
@@ -64,7 +74,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.canvas,
+      backgroundColor: HasakiColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Lịch Hẹn Spa & Làm Đẹp'),
         backgroundColor: HasakiColors.primary,
@@ -74,14 +84,19 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
           indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
           tabs: _tabs.map((t) => Tab(text: t)).toList(),
         ),
       ),
       body: Consumer<SpaProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading && provider.appointments.isEmpty) {
-            return const Center(child: CircularProgressIndicator(color: HasakiColors.primary));
+            return const Center(
+              child: CircularProgressIndicator(color: HasakiColors.primary),
+            );
           }
 
           final allAppointments = provider.appointments;
@@ -90,17 +105,34 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
             controller: _tabController,
             children: List.generate(_tabs.length, (tabIdx) {
               final filtered = _filterAppointments(allAppointments, tabIdx);
+              if (provider.loadingAppointments)
+                return const Center(child: CircularProgressIndicator());
+              if (provider.appointmentsError != null)
+                return CatalogState(
+                  message: provider.appointmentsError!,
+                  onRetry: provider.fetchAppointments,
+                );
 
               if (filtered.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.calendar_month_outlined, size: 56, color: HasakiColors.textLight.withOpacity(0.5)),
+                      Icon(
+                        Icons.calendar_month_outlined,
+                        size: 56,
+                        color: HasakiColors.textLight.withOpacity(0.5),
+                      ),
                       const SizedBox(height: 12),
-                      Text('Chưa có lịch hẹn nào', style: HasakiTypography.titleMedium),
+                      Text(
+                        'Chưa có lịch hẹn nào',
+                        style: HasakiTypography.titleMedium,
+                      ),
                       const SizedBox(height: 6),
-                      Text('Đặt lịch dịch vụ chăm sóc da tại mục Spa & Làm Đẹp', style: HasakiTypography.bodySmall),
+                      Text(
+                        'Đặt lịch dịch vụ chăm sóc da tại mục Spa & Làm Đẹp',
+                        style: HasakiTypography.bodySmall,
+                      ),
                     ],
                   ),
                 );
@@ -115,7 +147,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, idx) {
                     final appointment = filtered[idx];
-                    return _buildAppointmentCard(context, appointment, provider);
+                    return _buildAppointmentCard(
+                      context,
+                      appointment,
+                      provider,
+                    );
                   },
                 ),
               );
@@ -126,13 +162,17 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
     );
   }
 
-  Widget _buildAppointmentCard(BuildContext context, Appointment appointment, SpaProvider provider) {
+  Widget _buildAppointmentCard(
+    BuildContext context,
+    Appointment appointment,
+    SpaProvider provider,
+  ) {
     final statusColor = _getStatusColor(appointment.status);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HasakiColors.getSurface(context),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: HasakiColors.borderSubtle),
       ),
@@ -145,11 +185,18 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
             children: [
               Row(
                 children: [
-                  const Icon(Icons.spa_outlined, size: 18, color: HasakiColors.primary),
+                  const Icon(
+                    Icons.spa_outlined,
+                    size: 18,
+                    color: HasakiColors.primary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Mã lịch #${appointment.id}',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -175,33 +222,53 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
           // Service Name
           Text(
             appointment.serviceName,
-            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: HasakiColors.textMain),
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w800,
+              color: HasakiColors.getTextMain(context),
+            ),
           ),
           const SizedBox(height: 8),
 
           // Branch & Time
-          Row(
-            children: [
-              const Icon(Icons.location_on_outlined, size: 15, color: HasakiColors.textMuted),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  appointment.branchName,
-                  style: HasakiTypography.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          if (appointment.branchName.isNotEmpty)
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 15,
+                  color: HasakiColors.textMuted,
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    appointment.branchName,
+                    style: HasakiTypography.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.access_time, size: 15, color: HasakiColors.textMuted),
+              const Icon(
+                Icons.access_time,
+                size: 15,
+                color: HasakiColors.textMuted,
+              ),
               const SizedBox(width: 6),
               Text(
-                '${appointment.timeSlot} — ${HasakiFormatters.formatDate(appointment.appointmentDate)}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: HasakiColors.primary),
+                appointment.appointmentDate == null ||
+                        appointment.timeSlot.isEmpty
+                    ? 'Chưa cập nhật thời gian hẹn'
+                    : '${appointment.timeSlot} — ${HasakiFormatters.formatDate(appointment.appointmentDate)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: HasakiColors.primary,
+                ),
               ),
             ],
           ),
@@ -209,10 +276,29 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
             const SizedBox(height: 6),
             Text(
               'Ghi chú: ${appointment.notes}',
-              style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: HasakiColors.textMuted),
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontStyle: FontStyle.italic,
+                color: HasakiColors.textMuted,
+              ),
             ),
           ],
 
+          OutlinedButton(
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TreatmentAppointmentScreen(
+                    id: appointment.id,
+                    operate: false,
+                  ),
+                ),
+              );
+              if (context.mounted) await provider.fetchAppointments();
+            },
+            child: const Text('Chi tiết, đổi lịch & phiếu chuẩn bị'),
+          ),
           // Cancel Action
           if (appointment.canCancel) ...[
             const Divider(height: 18, color: HasakiColors.borderSubtle),
@@ -224,12 +310,20 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Hủy lịch hẹn?'),
-                      content: Text('Bạn có chắc chắn muốn hủy lịch hẹn ngày ${HasakiFormatters.formatDate(appointment.appointmentDate)} lúc ${appointment.timeSlot} không?'),
+                      content: Text(
+                        'Bạn có chắc chắn muốn hủy lịch hẹn ngày ${HasakiFormatters.formatDate(appointment.appointmentDate)} lúc ${appointment.timeSlot} không?',
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Không')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Không'),
+                        ),
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Xác nhận hủy', style: TextStyle(color: HasakiColors.dealRed)),
+                          child: const Text(
+                            'Xác nhận hủy',
+                            style: TextStyle(color: HasakiColors.dealRed),
+                          ),
                         ),
                       ],
                     ),
@@ -239,15 +333,32 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> with Single
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(ok ? 'Đã hủy lịch hẹn thành công' : 'Không thể hủy lịch hẹn'),
-                          backgroundColor: ok ? HasakiColors.primary : HasakiColors.dealRed,
+                          content: Text(
+                            ok
+                                ? 'Đã hủy lịch hẹn thành công'
+                                : 'Không thể hủy lịch hẹn',
+                          ),
+                          backgroundColor: ok
+                              ? HasakiColors.primary
+                              : HasakiColors.dealRed,
                         ),
                       );
                     }
                   }
                 },
-                icon: const Icon(Icons.cancel_outlined, size: 16, color: HasakiColors.dealRed),
-                label: const Text('HỦY LỊCH HẸN', style: TextStyle(color: HasakiColors.dealRed, fontSize: 12, fontWeight: FontWeight.w800)),
+                icon: const Icon(
+                  Icons.cancel_outlined,
+                  size: 16,
+                  color: HasakiColors.dealRed,
+                ),
+                label: const Text(
+                  'HỦY LỊCH HẸN',
+                  style: TextStyle(
+                    color: HasakiColors.dealRed,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ),
           ],

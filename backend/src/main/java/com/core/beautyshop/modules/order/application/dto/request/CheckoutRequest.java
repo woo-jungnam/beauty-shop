@@ -28,6 +28,10 @@ public class CheckoutRequest {
     @Schema(description = "Số điện thoại người nhận (định dạng Việt Nam)", example = "0987654321", requiredMode = Schema.RequiredMode.REQUIRED)
     private String customerPhone;
 
+    @jakarta.validation.constraints.Email
+    @Size(max = 150)
+    private String customerEmail;
+
     @NotBlank(message = "Địa chỉ giao hàng không được để trống")
     @Schema(description = "Địa chỉ chi tiết (số nhà, tên đường)", example = "123 Đường Nguyễn Huệ", requiredMode = Schema.RequiredMode.REQUIRED)
     @Size(max = 500)
@@ -39,7 +43,6 @@ public class CheckoutRequest {
     private String ward;
 
     @Schema(description = "Quận / Huyện", example = "Quận 1", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank(message = "Quận / huyện không được để trống")
     @Size(max = 100)
     private String district;
 

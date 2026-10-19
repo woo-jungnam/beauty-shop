@@ -34,6 +34,11 @@ import { Modal } from '../shared/ui/Modal';
 import { SpaCatalogTab } from './spa-catalog/SpaCatalogTab';
 import { SpaVisitCheckout } from '../shared/ui/SpaVisitCheckout';
 import { spaErrorMessage } from '../shared/utils/spaMessages';
+import { SpaOperatingPolicy } from './spa-catalog/SpaOperatingPolicy';
+import { TreatmentAppointmentDialog } from '../features/treatments/TreatmentAppointmentDialog';
+import { useAuth } from '../app/providers/AuthProvider';
+import { SpaRefundDialog } from '../features/spa/SpaRefundDialog';
+import { TicketDetails } from '../features/spa/TicketDetails';
 
 const slugify = (value) =>
   value
@@ -47,6 +52,9 @@ const slugify = (value) =>
     .replace(/^-|-$/g, '');
 
 export const SpaPage = () => {
+  const { isAdmin }=useAuth();
+  const [workspaceId,setWorkspaceId]=useState(null);
+  const [settlementTicket, setSettlementTicket] = useState(null);
   const [activeTab, setActiveTab] = useState('appointments');
   const [loading, setLoading] = useState(false);
 
@@ -120,6 +128,7 @@ export const SpaPage = () => {
   const [staffSkillList, setStaffSkillList] = useState([]);
   const [newSkillServiceId, setNewSkillServiceId] = useState('');
   const [newSkillCertified, setNewSkillCertified] = useState(true);
+  const [newSkillUntil,setNewSkillUntil]=useState('');
   const [skillSubmitting, setSkillSubmitting] = useState(false);
 
   // ==========================================
@@ -467,6 +476,7 @@ export const SpaPage = () => {
       const res = await apiClient.put(ENDPOINTS.SPA.STAFF_SKILLS(selectedStaffForSkills.id), {
         serviceId: Number(newSkillServiceId),
         certified: newSkillCertified,
+        certifiedUntil:newSkillUntil || null,
       });
       const updated = res.data || res;
       setStaffSkillList(updated.skills || []);
@@ -752,6 +762,7 @@ export const SpaPage = () => {
       header: 'Thao tác',
       accessor: (row) => (
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <Button variant="outline" size="sm" onClick={()=>setWorkspaceId(row.id)}>Chuẩn bị / thực hiện</Button>
           {row.status === 'CONFIRMED' && !row.checkedInAt && (
             <Button variant="outline" size="sm" onClick={() => handleCheckIn(row.id)} icon={UserCheck} title="Check-in khách">
               Check-in
@@ -895,7 +906,7 @@ export const SpaPage = () => {
 
   const ticketColumns = [
     { header: 'Mã vé', accessor: 'id', width: '70px' },
-    { header: 'Mã gói / Dịch vụ', accessor: (row) => row.serviceName || `Service #${row.serviceId}` },
+    { header: 'Gói / Quyền lợi', accessor: (row) => <div>{row.packageName || `Gói #${row.packageId}`}<TicketDetails ticket={row} /></div> },
     { header: 'Số buổi còn lại', accessor: (row) => <strong>{row.remainingSessions} / {row.totalSessions} buổi</strong> },
     { header: 'Hạn dùng', accessor: (row) => formatDate(row.expiryDate) },
     {
@@ -910,6 +921,7 @@ export const SpaPage = () => {
       header: 'Thao tác',
       accessor: (row) => (
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+          {isAdmin && row.benefitType !== 'TREATMENT_COURSE' && row.status !== 'REVOKED' && <Button variant="outline" size="sm" onClick={() => setSettlementTicket(row)}>Quyết toán</Button>}
           <Button
             variant="outline"
             size="sm"
@@ -943,6 +955,7 @@ export const SpaPage = () => {
 
   return (
     <div className={`content-container ${activeTab === 'services' ? 'spa-management-catalog' : ''}`}>
+      {settlementTicket && <SpaRefundDialog ticketId={settlementTicket.id} onClose={() => setSettlementTicket(null)} onUpdated={fetchTickets} />}
       <div className="page-header">
         <div>
           <h1 className="page-title">Quản trị Spa, Gói Liệu trình & Ca trực Chuyên viên</h1>
@@ -994,6 +1007,7 @@ export const SpaPage = () => {
 
       {policyFeedback && !policyModalOpen && <div className={`spa-catalog-notice ${policyFeedback.tone}`} role={policyFeedback.tone === 'error' ? 'alert' : 'status'}>{policyFeedback.message}<button type="button" aria-label="Đóng thông báo" onClick={() => setPolicyFeedback(null)}>×</button></div>}
 
+      <SpaOperatingPolicy />
       {/* Tabs */}
       <div className="tabs-header">
         <button
@@ -1380,6 +1394,7 @@ export const SpaPage = () => {
                 </label>
               </div>
             </div>
+            <Input label="Chứng nhận đến ngày (để trống nếu không có hạn)" type="date" value={newSkillUntil} onChange={e=>setNewSkillUntil(e.target.value)} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
               <Button variant="outline" type="button" onClick={() => setSkillsModalOpen(false)}>Đóng</Button>
               <Button variant="primary" type="submit" loading={skillSubmitting} icon={Award}>Gán kỹ năng</Button>
@@ -1700,6 +1715,7 @@ export const SpaPage = () => {
       </Modal>
 
       {/* MODAL: APPOINTMENT INVOICE & CHECKOUT */}
+      {workspaceId&&<TreatmentAppointmentDialog appointmentId={workspaceId} role={isAdmin?'admin':'staff'} onClose={()=>setWorkspaceId(null)} onSaved={()=>fetchAppointments(aptPage)} />}
       <Modal
         isOpen={invoiceModalOpen}
         onClose={() => setInvoiceModalOpen(false)}

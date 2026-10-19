@@ -10,3 +10,7 @@ PyMySQL>=1.1.0,<2.0
 python-dotenv>=1.0.0,<2.0
 pytest>=8.0.0,<10.0
 pytest-asyncio>=0.23.0,<2.0
+# Multipart parsing is required when the image-search router is registered.
+python-multipart==0.0.32
+Pillow==12.3.0
+numpy==2.2.6

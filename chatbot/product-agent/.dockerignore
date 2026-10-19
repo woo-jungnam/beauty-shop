@@ -8,6 +8,7 @@ venv
 *.db
 *.db-*
 qdrant_storage
+data/
 app/data/embedding_cache*.json
 evaluation
 test_*.py

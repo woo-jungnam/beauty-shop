@@ -9,7 +9,7 @@ import {
   ChevronDown,
   Clock,
   Copy,
-  Flower2,
+  Info,
   Leaf,
   LoaderCircle,
   Mail,
@@ -17,8 +17,8 @@ import {
   Moon,
   Phone,
   RefreshCw,
+  Search,
   ShieldCheck,
-  Sparkles,
   Sun,
   Ticket,
   User,
@@ -86,13 +86,14 @@ const StepHeading = ({ number, title, description, complete }) => (
   </div>
 );
 
-export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
+export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTicketId }) => {
   const { user, isAuthenticated } = useAuth();
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [serviceError, setServiceError] = useState(false);
   const [serviceVersion, setServiceVersion] = useState(0);
   const [category, setCategory] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedService, setSelectedService] = useState(null);
   const [staff, setStaff] = useState([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
@@ -118,6 +119,18 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState("");
+  const [financialPolicy, setFinancialPolicy] = useState(null);
+  const [financialAccepted, setFinancialAccepted] = useState(false);
+
+  useEffect(() => {
+    apiClient
+      .get("/api/v1/spa/financial-policy")
+      .then((response) => setFinancialPolicy(readData(response)))
+      .catch(() =>
+        setBookingError("Chưa tải được chính sách cọc. Vui lòng tải lại trước khi đặt."),
+      );
+  }, []);
+
   const [bookingResult, setBookingResult] = useState(null);
   const [copied, setCopied] = useState(false);
   const formRef = useRef(null);
@@ -168,7 +181,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
         if (cancelled) return;
         const data = readData(response);
         const list = Array.isArray(data)
-          ? data.filter((service) => service.isActive !== false)
+          ? data.filter(
+              (service) =>
+                service.isActive !== false &&
+                service.serviceType !== "TREATMENT_COURSE",
+            )
           : [];
         setServices(list);
         setSelectedService(
@@ -283,10 +300,23 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
   const applicableTickets = useMemo(
     () =>
       tickets.filter(
-        (ticket) => (ticket.remainingByService?.[selectedService?.id] ?? 0) > 0,
+        (ticket) =>
+          ticket.benefitType !== "TREATMENT_COURSE" &&
+          (ticket.remainingByService?.[selectedService?.id] ?? 0) > 0,
       ),
     [tickets, selectedService?.id],
   );
+  const appliedPreselection = useRef(null);
+  useEffect(() => {
+    if (
+      preselectedTicketId &&
+      appliedPreselection.current !== preselectedTicketId &&
+      applicableTickets.some((t) => String(t.id) === String(preselectedTicketId))
+    ) {
+      setSelectedTicketId(Number(preselectedTicketId));
+      appliedPreselection.current = preselectedTicketId;
+    }
+  }, [preselectedTicketId, applicableTickets]);
   useEffect(() => {
     if (
       selectedTicketId &&
@@ -320,10 +350,23 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
     () => [...new Set(services.map(getCategory))],
     [services],
   );
-  const visibleServices =
-    category === "ALL"
-      ? services
-      : services.filter((service) => getCategory(service) === category);
+  const visibleServices = useMemo(() => {
+    let list =
+      category === "ALL"
+        ? services
+        : services.filter((service) => getCategory(service) === category);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (service) =>
+          (service.name || "").toLowerCase().includes(q) ||
+          (service.shortDescription || "").toLowerCase().includes(q) ||
+          getCategory(service).toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [services, category, searchQuery]);
+
   const dates = useMemo(
     () =>
       Array.from({ length: 7 }, (_, index) => {
@@ -379,22 +422,29 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
     setBookingError("");
     if (!isAuthenticated) return onNavigate("login");
     if (!selectedService || !validSlot) {
-      setBookingError(
-        "Vui lòng chọn một khung giờ còn trống trước khi xác nhận.",
-      );
-      goToStep(2);
-      return;
-    }
-    if (!contactComplete) {
-      goToStep(3);
+      if (!selectedService) goToStep(1);
+      else if (!validSlot) goToStep(2);
       return;
     }
     setSubmitting(true);
     try {
+      if (!financialPolicy)
+        throw new Error("Chưa tải được chính sách cọc. Vui lòng tải lại trang.");
+      if (
+        [
+          financialPolicy.depositAmount,
+          financialPolicy.cancellationFee,
+          financialPolicy.noShowFee,
+        ].some((value) => Number(value) > 0) &&
+        !financialAccepted
+      )
+        throw new Error("Vui lòng xác nhận chính sách cọc, hủy và vắng hẹn.");
       const notes = [...skinTags, contact.note.trim()]
         .filter(Boolean)
         .join("; ");
       const response = await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, {
+        acceptedFinancialPolicy: financialAccepted,
+        financialPolicyVersion: financialPolicy.version,
         appointmentDate: selectedDate,
         startTime:
           selectedSlot.length === 5 ? selectedSlot + ":00" : selectedSlot,
@@ -478,20 +528,16 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
       <div className="spa-booking-page booking-success-page">
         <div ref={successRef} className="booking-success" tabIndex={-1}>
           <span className="booking-success-icon">
-            <CheckCircle2 size={34} />
+            <CheckCircle2 size={36} />
           </span>
-          <span className="booking-eyebrow">MỘT CUỘC HẸN DÀNH CHO BẠN</span>
           <h1>Hẹn gặp bạn tại BeautyShop.</h1>
           <p>
-            Lịch hẹn đã được ghi nhận. Bạn có thể theo dõi trạng thái trong tài
-            khoản và xuất trình mã đặt lịch khi đến Spa.
+            Lịch hẹn đã được ghi nhận vào hệ thống. Bạn có thể theo dõi chi tiết
+            trong tài khoản hoặc xuất trình mã xác nhận khi đến Spa.
           </p>
           <div className="booking-confirmation-ticket">
             <div className="booking-confirmation-top">
-              <Flower2 size={24} />
-              <span>
-                BEAUTYSHOP <small>CLINIC & SPA</small>
-              </span>
+              <span>BEAUTYSHOP CLINIC & SPA</span>
               <span className="booking-status">
                 {bookingResult.status === "CONFIRMED"
                   ? "Đã xác nhận"
@@ -509,7 +555,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                   onClick={copyCode}
                   aria-label="Sao chép mã đặt lịch"
                 >
-                  {copied ? <Check size={19} /> : <Copy size={19} />}
+                  {copied ? <Check size={18} /> : <Copy size={18} />}
                 </button>
               </div>
               {copied && <small role="status">Đã sao chép mã đặt lịch</small>}
@@ -527,8 +573,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                   <Clock size={16} /> Thời gian
                 </dt>
                 <dd>
-                  {bookingResult.time.slice(0, 5)} · {bookingResult.duration}{" "}
-                  phút
+                  {bookingResult.time.slice(0, 5)} · {bookingResult.duration} phút
                 </dd>
               </div>
               <div>
@@ -544,9 +589,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 <dd>{bookingResult.phone}</dd>
               </div>
               <div>
-                <dt>
-                  <Sparkles size={16} /> Chuyên viên
-                </dt>
+                <dt>Chuyên viên</dt>
                 <dd>{bookingResult.staff}</dd>
               </div>
               <div>
@@ -566,7 +609,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               className="booking-primary-button"
               onClick={() => onNavigate("profile?tab=appointments")}
             >
-              Xem lịch hẹn của tôi <ArrowRight size={17} />
+              Xem lịch hẹn của tôi <ArrowRight size={16} />
             </button>
             <button
               type="button"
@@ -592,68 +635,67 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
           <span>Đặt lịch Spa</span>
         </div>
 
+        {/* Compact, purposeful Hero Section */}
         <section className="booking-hero" aria-labelledby="spa-booking-title">
           <div className="booking-hero-copy">
-            <span className="booking-eyebrow">
-              <span /> BEAUTYSHOP CLINIC & SPA
-            </span>
             <h1 id="spa-booking-title">
-              Một chút thời gian,
-              <br />
-              <em>một làn da được yêu thương.</em>
+              Đặt lịch dịch vụ Spa & Trị liệu da
+              <small className="booking-hero-sub">
+                Một chút thời gian cho làn da được phục hồi chuyên sâu.
+              </small>
             </h1>
             <p>
-              Chọn liệu trình phù hợp, tìm một khung giờ thuận tiện. Phần còn
-              lại, hãy để BeautyShop chăm sóc bạn.
+              Chọn dịch vụ và khung giờ phù hợp. Chuyên viên sẽ chuẩn bị phòng và
+              phác đồ tiếp đón chu đáo nhất.
             </p>
             <div className="booking-hero-benefits">
               <span>
-                <Leaf size={16} /> Chăm sóc riêng cho bạn
+                <ShieldCheck size={15} /> Chuẩn y khoa
               </span>
               <span>
-                <CalendarDays size={16} /> Chủ động chọn lịch hẹn
+                <CalendarDays size={15} /> Chủ động chọn lịch
               </span>
               <span>
-                <ShieldCheck size={16} /> Thanh toán tại Spa
+                <Leaf size={15} /> Thanh toán tại Spa
               </span>
+            </div>
+            <div className="booking-hero-shortcuts">
+              <button
+                type="button"
+                className="booking-link-chip"
+                onClick={() => onNavigate("service-packages")}
+              >
+                Gói dịch vụ tiết kiệm →
+              </button>
+              <a href="#/treatments" className="booking-link-chip">
+                Lộ trình điều trị y khoa →
+              </a>
             </div>
           </div>
           <div className="booking-hero-photo">
             <img
               src="/images/spa/spa-ritual.jpg"
-              alt="Khăn mềm, hoa và đồ chăm sóc cho một buổi Spa thư giãn"
-              width="1000"
-              height="667"
-              fetchPriority="high"
+              alt="Không gian thư giãn tại BeautyShop Clinic"
+              width="600"
+              height="300"
+              loading="lazy"
             />
-            <span className="booking-photo-label">
-              <Flower2 size={17} /> Your moment of care
-            </span>
-            <div className="booking-photo-note">
-              <span>
-                <CalendarDays size={21} />
-              </span>
-              <div>
-                <strong>Cuộc hẹn của riêng bạn</strong>
-                <small>Dễ dàng đặt lịch trong 3 bước</small>
-              </div>
-              <CheckCircle2 size={18} />
-            </div>
           </div>
         </section>
 
+        {/* Stepper Progress Bar */}
         <nav className="booking-stepper" aria-label="Các bước đặt lịch">
           {[
             {
               number: 1,
               title: "Chọn dịch vụ",
-              subtitle: "Liệu trình dành cho bạn",
+              subtitle: "Liệu trình chăm sóc",
               complete: Boolean(selectedService),
             },
             {
               number: 2,
               title: "Ngày & giờ hẹn",
-              subtitle: "Lịch phù hợp với bạn",
+              subtitle: "Khung giờ và chuyên viên",
               complete: validSlot,
             },
             {
@@ -671,13 +713,13 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               onClick={() => goToStep(step.number)}
             >
               <span>
-                {step.complete ? <Check size={18} /> : `0${step.number}`}
+                {step.complete ? <Check size={16} /> : `0${step.number}`}
               </span>
               <div>
                 <strong>{step.title}</strong>
                 <small>{step.subtitle}</small>
               </div>
-              <ArrowRight size={17} />
+              <ArrowRight size={16} />
             </button>
           ))}
         </nav>
@@ -689,6 +731,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
           onSubmit={confirmBooking}
         >
           <div className="booking-form-sections">
+            {/* STEP 1: CHOOSE SERVICE */}
             <section
               id="spa-step-1"
               className="booking-section"
@@ -702,9 +745,32 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                     Bạn muốn chăm sóc da thế nào?
                   </span>
                 }
-                description="Khám phá và chọn một liệu trình phù hợp với bạn."
+                description="Khám phá và chọn một liệu trình phù hợp với nhu cầu của bạn."
                 complete={Boolean(selectedService)}
               />
+
+              {/* Service Search Box */}
+              <div className="booking-service-search">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Tìm tên dịch vụ, liệu trình..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Tìm kiếm dịch vụ"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Xóa tìm kiếm"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Category Filter Pills */}
               <div
                 className="booking-category-pills"
                 role="group"
@@ -754,9 +820,9 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 </div>
               ) : visibleServices.length === 0 ? (
                 <div className="booking-empty-state">
-                  <Flower2 size={28} />
-                  <strong>Chưa có dịch vụ trong danh mục này</strong>
-                  <p>Hãy chọn danh mục khác hoặc quay lại sau.</p>
+                  <Info size={28} />
+                  <strong>Chưa tìm thấy dịch vụ phù hợp</strong>
+                  <p>Hãy thử từ khóa khác hoặc chọn xem tất cả danh mục.</p>
                 </div>
               ) : (
                 <div
@@ -813,9 +879,10 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                   })}
                 </div>
               )}
+
               {applicableTickets.length > 0 && (
                 <div className="booking-ticket-benefit">
-                  <Ticket size={23} />
+                  <Ticket size={22} />
                   <div>
                     <strong>Bạn có vé liệu trình phù hợp</strong>
                     <p>Sử dụng 1 buổi từ vé để thanh toán cho cuộc hẹn này.</p>
@@ -847,6 +914,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               )}
             </section>
 
+            {/* STEP 2: CHOOSE DATE & SLOTS */}
             <section
               id="spa-step-2"
               className="booking-section"
@@ -857,12 +925,13 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 number="02"
                 title={
                   <span id="spa-schedule-title">
-                    Một khung giờ dành riêng cho bạn
+                    Khung giờ và chuyên viên
                   </span>
                 }
-                description="Chọn ngày và giờ còn trống. Giờ hẹn theo múi giờ Việt Nam."
+                description="Chọn ngày và giờ còn trống. Giờ hẹn tính theo múi giờ Việt Nam."
                 complete={validSlot}
               />
+
               <div className="booking-date-heading">
                 <label htmlFor="spa-date">Ngày bạn muốn đến</label>
                 <div className="booking-custom-date">
@@ -877,6 +946,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                   />
                 </div>
               </div>
+
               <div
                 className="booking-date-strip"
                 role="group"
@@ -903,16 +973,17 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 ))}
               </div>
 
+              {/* Specialist Selection Dropdown */}
               <details className="booking-provider">
                 <summary>
                   <span>
-                    <User size={17} />{" "}
+                    <User size={16} />{" "}
                     {selectedStaff === "AUTO"
                       ? "Để Spa sắp xếp chuyên viên"
                       : selectedStaffName}
-                    <small>Bạn có thể chọn chuyên viên nếu muốn</small>
+                    <small>Bạn có thể chọn chuyên viên mong muốn</small>
                   </span>
-                  <ChevronDown size={17} />
+                  <ChevronDown size={16} />
                 </summary>
                 <div className="booking-staff-grid">
                   <button
@@ -925,10 +996,10 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                     }}
                   >
                     <span className="booking-staff-avatar">
-                      <Sparkles size={20} />
+                      <User size={18} />
                     </span>
                     <span>
-                      <strong>Không có yêu cầu riêng</strong>
+                      <strong>Không yêu cầu riêng</strong>
                       <small>Spa sắp xếp chuyên viên phù hợp</small>
                     </span>
                     {selectedStaff === "AUTO" && <Check size={15} />}
@@ -972,22 +1043,23 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 )}
                 {staffError && (
                   <p className="booking-muted">
-                    Chưa tải được danh sách chuyên viên. Bạn vẫn có thể chọn để
-                    Spa sắp xếp.
+                    Chưa tải được danh sách chuyên viên. Bạn vẫn có thể để Spa sắp xếp.
                   </p>
                 )}
               </details>
 
+              {/* Slot Heading */}
               <div className="booking-slot-heading">
-                <strong>Chọn giờ bắt đầu</strong>
+                <strong>Khung giờ bắt đầu</strong>
                 <span>
-                  <i /> Giờ còn trống
+                  <i /> Khung giờ còn trống
                 </span>
               </div>
+
               {loadingSlots ? (
                 <div className="booking-slot-loading" role="status">
                   <LoaderCircle size={22} className="booking-spinner" />
-                  <span>Đang tìm khung giờ phù hợp…</span>
+                  <span>Đang kiểm tra lịch trống…</span>
                 </div>
               ) : slotError ? (
                 <div className="booking-empty-state" role="alert">
@@ -1005,15 +1077,14 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               ) : !selectedService ? (
                 <div className="booking-empty-state">
                   <CalendarDays size={26} />
-                  <p>Chọn dịch vụ ở bước 1 để xem các khung giờ phù hợp.</p>
+                  <p>Vui lòng chọn dịch vụ ở bước 1 để xem các khung giờ phù hợp.</p>
                 </div>
               ) : slots.length === 0 ? (
                 <div className="booking-empty-state">
                   <CalendarDays size={27} />
                   <strong>Chưa có giờ trống vào ngày này</strong>
                   <p>
-                    Chọn một ngày khác hoặc để Spa sắp xếp chuyên viên để xem
-                    thêm lịch.
+                    Vui lòng chọn một ngày khác hoặc để Spa tự động sắp xếp chuyên viên.
                   </p>
                 </div>
               ) : (
@@ -1038,7 +1109,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                     .map((group) => (
                       <div className="booking-slot-group" key={group.name}>
                         <span>
-                          <group.Icon size={16} /> {group.name}
+                          <group.Icon size={15} /> {group.name}
                         </span>
                         <div role="group" aria-label={group.name}>
                           {group.times.map((slot) => (
@@ -1064,11 +1135,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 </div>
               )}
               <p className="booking-schedule-note">
-                <InfoIcon /> Lịch trống được cập nhật theo dịch vụ và chuyên
-                viên bạn chọn.
+                <Info size={14} /> Lịch trống được cập nhật theo dịch vụ và chuyên viên bạn chọn.
               </p>
             </section>
 
+            {/* STEP 3: CONTACT & CONFIRMATION */}
             <section
               id="spa-step-3"
               className="booking-section"
@@ -1079,16 +1150,16 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 number="03"
                 title={
                   <span id="spa-contact-title">
-                    Để chúng mình đón tiếp bạn tốt hơn
+                    Thông tin liên hệ & xác nhận
                   </span>
                 }
-                description="Thông tin liên hệ giúp Spa xác nhận cuộc hẹn của bạn."
+                description="Thông tin giúp chuyên viên chuẩn bị phòng và liên hệ xác nhận cuộc hẹn."
                 complete={contactComplete}
               />
               {!isAuthenticated && (
                 <div className="booking-login-note">
                   <User size={18} />
-                  <span>Đăng nhập để xác nhận và theo dõi lịch hẹn.</span>
+                  <span>Đăng nhập để lưu và theo dõi lịch hẹn trong tài khoản của bạn.</span>
                   <button type="button" onClick={() => onNavigate("login")}>
                     Đăng nhập <ArrowRight size={14} />
                   </button>
@@ -1140,7 +1211,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                       name="email"
                       type="email"
                       autoComplete="email"
-                      placeholder="Email của bạn"
+                      placeholder="Email nhận thông tin xác nhận"
                       value={contact.email}
                       onChange={(event) =>
                         setContact({ ...contact, email: event.target.value })
@@ -1149,9 +1220,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                   </div>
                 </label>
               </div>
+
+              {/* Skin Condition Tags */}
               <div className="booking-skin-tags">
-                <strong>Bạn muốn Spa lưu ý điều gì?</strong>
-                <span>Chọn nếu phù hợp với bạn · Không bắt buộc</span>
+                <strong>Tình trạng da cần lưu ý</strong>
+                <span>Chọn các mục phù hợp để chuyên viên chuẩn bị phác đồ an toàn</span>
                 <div role="group" aria-label="Thông tin cần lưu ý">
                   {SKIN_TAGS.map((tag) => (
                     <button
@@ -1166,38 +1239,39 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                   ))}
                 </div>
               </div>
+
               <label className="booking-note-field" htmlFor="spa-note">
-                Lời nhắn cho chuyên viên{" "}
+                Ghi chú thêm cho chuyên viên
                 <textarea
                   id="spa-note"
                   name="notes"
                   rows={3}
-                  placeholder="Mong muốn chăm sóc, tình trạng da hoặc điều bạn muốn chia sẻ…"
+                  placeholder="Mong muốn điều trị, tiền sử phản ứng hoặc yêu cầu đặc biệt…"
                   value={contact.note}
                   onChange={(event) =>
                     setContact({ ...contact, note: event.target.value })
                   }
                 />
               </label>
+
               <div className="booking-contact-note">
-                <ShieldCheck size={16} />
+                <ShieldCheck size={15} />
                 <span>
-                  Thông tin được sử dụng để phục vụ lịch hẹn và chăm sóc bạn tại
-                  Spa.
+                  Thông tin cá nhân chỉ được sử dụng phục vụ cuộc hẹn và hồ sơ da liễu tại Spa.
                 </span>
               </div>
             </section>
           </div>
 
+          {/* ASIDE: STICKY BOOKING SUMMARY */}
           <aside
             className="booking-summary"
             aria-labelledby="spa-summary-title"
           >
             <div className="booking-summary-heading">
-              <span className="booking-eyebrow">CUỘC HẸN CỦA BẠN</span>
-              <Flower2 size={23} />
-              <h2 id="spa-summary-title">Hẹn một buổi chăm sóc.</h2>
-              <p>Mọi thông tin, gọn trong một nơi.</p>
+              <span className="booking-eyebrow">TÓM TẮT CUỘC HẸN</span>
+              <h2 id="spa-summary-title">Chi tiết lịch hẹn</h2>
+              <p>Xác nhận dịch vụ và khung giờ trước khi đặt.</p>
             </div>
             {selectedService ? (
               <div className="booking-summary-service">
@@ -1217,14 +1291,13 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               </div>
             ) : (
               <div className="booking-summary-placeholder">
-                <Flower2 size={28} />
-                <p>Chọn dịch vụ để bắt đầu cuộc hẹn.</p>
+                <p>Vui lòng chọn dịch vụ ở Bước 1.</p>
               </div>
             )}
             <dl className="booking-summary-details">
               <div>
                 <dt>
-                  <CalendarDays size={17} /> Ngày hẹn
+                  <CalendarDays size={16} /> Ngày hẹn
                 </dt>
                 <dd>
                   {formatDate(selectedDate, {
@@ -1237,7 +1310,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               </div>
               <div>
                 <dt>
-                  <Clock size={17} /> Giờ bắt đầu
+                  <Clock size={16} /> Giờ bắt đầu
                 </dt>
                 <dd className={validSlot ? "is-ready" : "is-pending"}>
                   {validSlot ? selectedSlot.slice(0, 5) : "Bạn chưa chọn giờ"}
@@ -1245,20 +1318,20 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               </div>
               <div>
                 <dt>
-                  <User size={17} /> Chuyên viên
+                  <User size={16} /> Chuyên viên
                 </dt>
                 <dd>{selectedStaffName}</dd>
               </div>
               <div>
                 <dt>
-                  <MapPin size={17} /> Địa điểm
+                  <MapPin size={16} /> Cơ sở Spa
                 </dt>
                 <dd>123 Đồng Khởi, Quận 1, TP.HCM</dd>
               </div>
             </dl>
             <div className="booking-summary-price">
               <div>
-                <span>Giá dịch vụ</span>
+                <span>Giá dịch vụ niêm yết</span>
                 <span>
                   {selectedService ? formatCurrency(servicePrice) : "—"}
                 </span>
@@ -1274,13 +1347,42 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                   <strong>Thanh toán tại Spa</strong>
                   <small>
                     {selectedTicketId
-                      ? "Sử dụng 1 buổi từ vé liệu trình"
-                      : "Bạn chưa cần thanh toán lúc đặt lịch"}
+                      ? "Khấu trừ 1 buổi từ vé liệu trình"
+                      : "Thanh toán trực tiếp sau khi hoàn tất"}
                   </small>
                 </div>
                 <b>{selectedService ? formatCurrency(total) : "—"}</b>
               </div>
             </div>
+
+            {/* Financial Policy Acceptance Box */}
+            {financialPolicy &&
+              [
+                financialPolicy.depositAmount,
+                financialPolicy.cancellationFee,
+                financialPolicy.noShowFee,
+              ].some((value) => Number(value) > 0) && (
+                <div className="booking-financial-policy">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={financialAccepted}
+                      onChange={(event) =>
+                        setFinancialAccepted(event.target.checked)
+                      }
+                    />
+                    <span>
+                      Tôi đồng ý chính sách phiên bản {financialPolicy.version}:
+                      cọc tối đa {formatCurrency(financialPolicy.depositAmount)},
+                      phí hủy sau hạn {formatCurrency(financialPolicy.cancellationFee)},
+                      phí vắng hẹn {formatCurrency(financialPolicy.noShowFee)}.
+                      Tiền cọc sẽ được trừ trực tiếp vào hóa đơn tại Spa.
+                    </span>
+                  </label>
+                </div>
+              )}
+
+            {/* Error Message Alert */}
             {bookingError && (
               <div
                 id="spa-booking-error"
@@ -1292,6 +1394,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
                 <span>{bookingError}</span>
               </div>
             )}
+
             <button
               type={isAuthenticated && validSlot ? "submit" : "button"}
               onClick={
@@ -1317,7 +1420,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               )}
             </button>
             <div className="booking-summary-footer">
-              <ShieldCheck size={15} />
+              <ShieldCheck size={14} />
               <span>
                 {validSlot
                   ? "Kiểm tra thông tin trước khi xác nhận"
@@ -1325,21 +1428,24 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
               </span>
             </div>
             <div className="booking-help">
-              <span>Cần hỗ trợ chọn liệu trình?</span>
+              <span>Cần hỗ trợ tư vấn liệu trình?</span>
               <a href="tel:18006324">
                 <Phone size={14} /> 1800 6324
               </a>
             </div>
           </aside>
         </form>
+
         <div className="booking-bottom-note">
-          <Leaf size={18} />
+          <Leaf size={16} />
           <p>
-            Mỗi làn da đều có một câu chuyện. BeautyShop ở đây để lắng nghe và
-            chăm sóc.
+            BeautyShop Clinic & Spa cam kết dịch vụ chuẩn y khoa, an toàn và bảo
+            mật thông tin khách hàng.
           </p>
         </div>
       </div>
+
+      {/* Mobile Bottom Fixed Bar */}
       <div className="booking-mobile-bar">
         <div>
           <small>Thanh toán tại Spa</small>
@@ -1354,16 +1460,9 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId }) => {
           onClick={continueBooking}
         >
           {submitting ? "Đang xác nhận…" : actionLabel}
-          <ArrowRight size={17} />
+          <ArrowRight size={16} />
         </button>
       </div>
     </div>
   );
 };
-
-const InfoIcon = () => (
-  <span className="booking-info-icon" aria-hidden="true">
-    i
-  </span>
-);
-export default SpaBookingPage;

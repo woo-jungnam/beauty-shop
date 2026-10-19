@@ -58,17 +58,23 @@ class OrderItem {
       id: (json['id'] as num?)?.toInt() ?? 0,
       productId: (json['productId'] as num?)?.toInt(),
       variantId: (json['variantId'] as num?)?.toInt(),
-      productName: json['productName']?.toString() ?? json['name']?.toString() ?? 'Sản phẩm',
+      productName:
+          json['productName']?.toString() ??
+          json['name']?.toString() ??
+          'Sản phẩm',
       variantName: json['variantName']?.toString() ?? 'Tiêu chuẩn',
-      thumbnailUrl: json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
+      thumbnailUrl:
+          json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
     );
   }
 }
 
 class OrderResponse {
   final int id;
+  final int? servicePackageId;
+  final String? spaBenefitType;
   final String orderCode;
   final String status;
   final double totalAmount;
@@ -87,6 +93,8 @@ class OrderResponse {
 
   OrderResponse({
     required this.id,
+    this.servicePackageId,
+    this.spaBenefitType,
     required this.orderCode,
     required this.status,
     required this.totalAmount,
@@ -115,6 +123,8 @@ class OrderResponse {
     'DELIVERED' => 'Đã giao hàng',
     'CANCELLED' => 'Đã hủy',
     'RETURNED' => 'Đã trả hàng',
+    'DELIVERY_FAILED' => 'Giao không thành công',
+    'RETURN_TO_SENDER' => 'Hàng chuyển về shop',
     _ => status,
   };
 
@@ -122,8 +132,13 @@ class OrderResponse {
     final rawItems = json['items'] as List<dynamic>? ?? [];
     return OrderResponse(
       id: ((json['id'] ?? json['orderId']) as num?)?.toInt() ?? 0,
-      orderCode: json['orderCode']?.toString() ?? json['orderNumber']?.toString() ?? 'ORD-${json['id']}',
-      status: json['status']?.toString() ?? 'PENDING',
+      servicePackageId: (json['servicePackageId'] as num?)?.toInt(),
+      spaBenefitType: json['spaBenefitType']?.toString(),
+      orderCode:
+          json['orderCode']?.toString() ??
+          json['orderNumber']?.toString() ??
+          'ORD-${json['id']}',
+      status: json['status']?.toString() ?? 'UNKNOWN',
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       subTotal: (json['subTotal'] as num?)?.toDouble() ?? 0.0,
       shippingFee: (json['shippingFee'] as num?)?.toDouble() ?? 0.0,
@@ -131,14 +146,20 @@ class OrderResponse {
       customerName: json['customerName']?.toString(),
       customerPhone: json['customerPhone']?.toString(),
       shippingAddress: json['shippingAddress']?.toString(),
-      paymentMethod: json['paymentMethod']?.toString() ?? 'COD',
-      paymentStatus: json['paymentStatus']?.toString() ?? 'PENDING',
+      paymentMethod: json['paymentMethod']?.toString(),
+      paymentStatus: json['paymentStatus']?.toString(),
       paymentDeadline: json['paymentDeadline']?.toString(),
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
-      paymentInstruction: json['paymentInstruction'] != null
-          ? PaymentInstruction.fromJson(json['paymentInstruction'] as Map<String, dynamic>)
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
           : null,
-      items: rawItems.map((i) => OrderItem.fromJson(i as Map<String, dynamic>)).toList(),
+      paymentInstruction: json['paymentInstruction'] != null
+          ? PaymentInstruction.fromJson(
+              json['paymentInstruction'] as Map<String, dynamic>,
+            )
+          : null,
+      items: rawItems
+          .map((i) => OrderItem.fromJson(i as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -148,6 +169,7 @@ class CheckoutRequest {
   final String? sessionId;
   final String customerName;
   final String customerPhone;
+  final String? customerEmail;
   final String shippingAddress;
   final String ward;
   final String district;
@@ -161,10 +183,11 @@ class CheckoutRequest {
     this.sessionId,
     required this.customerName,
     required this.customerPhone,
+    this.customerEmail,
     required this.shippingAddress,
-    this.ward = 'Phường Bến Nghé',
-    this.district = 'Quận 1',
-    this.city = 'TP. Hồ Chí Minh',
+    required this.ward,
+    required this.district,
+    required this.city,
     this.paymentMethod = 'BANK',
     this.notes,
     this.voucherCode,
@@ -173,13 +196,15 @@ class CheckoutRequest {
   Map<String, dynamic> toJson() => {
     'customerName': customerName,
     'customerPhone': customerPhone,
+    'customerEmail': customerEmail,
     'shippingAddress': shippingAddress,
     'ward': ward,
     'district': district,
     'city': city,
     'paymentMethod': paymentMethod,
     if (notes != null && notes!.isNotEmpty) 'notes': notes,
-    if (voucherCode != null && voucherCode!.isNotEmpty) 'voucherCode': voucherCode,
+    if (voucherCode != null && voucherCode!.isNotEmpty)
+      'voucherCode': voucherCode,
     if (sessionId != null) 'sessionId': sessionId,
   };
 }

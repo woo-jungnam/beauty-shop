@@ -7,6 +7,7 @@ import com.core.beautyshop.modules.catalog.domain.enums.SkinType;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ErrorCode;
+import com.core.beautyshop.shared.time.BusinessTime;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CommonAbstractCriteria;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -21,11 +22,13 @@ import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -41,6 +44,31 @@ public class ProductSearchRepository {
     private final InventoryFacade inventoryFacade;
 
     public Page<ProductListResponse> search(ProductSearchRequest request, Pageable pageable) {
+        return search(request, pageable, BusinessTime.today(), null, null, false);
+    }
+
+    public List<ProductListResponse> findAvailableByIds(Collection<Long> ids, LocalDate businessDate) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return search(new ProductSearchRequest(), Pageable.unpaged(), businessDate, ids, null, false).getContent();
+    }
+
+    public List<ProductListResponse> findAvailableSimilar(Long excludeId, List<Long> categoryIds, Long brandId,
+                                                          int limit, LocalDate businessDate) {
+        ProductSearchRequest request = new ProductSearchRequest();
+        request.setCategoryIds(categoryIds);
+        request.setBrandId(brandId);
+        return search(request, PageRequest.of(0, limit, Sort.by(Sort.Order.desc("totalSold"))),
+                businessDate, null, excludeId, true).getContent();
+    }
+
+    public List<ProductListResponse> findAvailablePopular(int limit, LocalDate businessDate) {
+        return search(new ProductSearchRequest(), PageRequest.of(0, limit,
+                        Sort.by(Sort.Order.desc("isFeatured"), Sort.Order.desc("totalSold"), Sort.Order.desc("averageRating"))),
+                businessDate, null, null, false).getContent();
+    }
+
+    private Page<ProductListResponse> search(ProductSearchRequest request, Pageable pageable, LocalDate businessDate,
+                                               Collection<Long> ids, Long excludeId, boolean categoryOrBrand) {
         if (request.getMinPrice() != null && request.getMaxPrice() != null && request.getMinPrice().compareTo(request.getMaxPrice()) > 0) {
             throw invalid("maxPrice must be greater than or equal to minPrice");
         }
@@ -48,14 +76,14 @@ public class ProductSearchRepository {
         CriteriaQuery<ProductListResponse> query = builder.createQuery(ProductListResponse.class);
         Root<Product> product = query.from(Product.class);
         Join<Product, Brand> brand = visibleBrand(builder, product);
-        Expression<BigDecimal> minPrice = builder.coalesce(variantPrice(builder, query, product, false), BigDecimal.ZERO);
-        Expression<BigDecimal> maxPrice = builder.coalesce(variantPrice(builder, query, product, true), BigDecimal.ZERO);
+        Expression<BigDecimal> minPrice = builder.coalesce(variantPrice(builder, query, product, false, request, businessDate), BigDecimal.ZERO);
+        Expression<BigDecimal> maxPrice = builder.coalesce(variantPrice(builder, query, product, true, request, businessDate), BigDecimal.ZERO);
         query.select(builder.construct(ProductListResponse.class,
                 product.get("id"), product.get("name"), product.get("slug"), product.get("shortDescription"), product.get("thumbnailUrl"),
                 minPrice, maxPrice, product.get("status"), product.get("isFeatured"), product.get("averageRating"),
                 product.get("totalReviews"), product.get("totalSold"), brand.get("name"), brand.get("id"),
                 firstCategoryId(builder, query, product)));
-        query.where(filters(builder, query, product, brand, request).toArray(Predicate[]::new));
+        query.where(filters(builder, query, product, brand, request, businessDate, ids, excludeId, categoryOrBrand).toArray(Predicate[]::new));
         query.orderBy(orders(builder, product, minPrice, maxPrice, pageable.getSort()));
 
         if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
@@ -69,7 +97,7 @@ public class ProductSearchRepository {
         Root<Product> countProduct = countQuery.from(Product.class);
         Join<Product, Brand> countBrand = visibleBrand(builder, countProduct);
         countQuery.select(builder.count(countProduct));
-        countQuery.where(filters(builder, countQuery, countProduct, countBrand, request).toArray(Predicate[]::new));
+        countQuery.where(filters(builder, countQuery, countProduct, countBrand, request, businessDate, ids, excludeId, categoryOrBrand).toArray(Predicate[]::new));
         return new PageImpl<>(content, pageable, entityManager.createQuery(countQuery).getSingleResult());
     }
 
@@ -80,10 +108,13 @@ public class ProductSearchRepository {
     }
 
     private List<Predicate> filters(CriteriaBuilder builder, CommonAbstractCriteria query, Root<Product> product,
-                                    Join<Product, Brand> brand, ProductSearchRequest request) {
+                                    Join<Product, Brand> brand, ProductSearchRequest request, LocalDate businessDate,
+                                    Collection<Long> productIds, Long excludeId, boolean categoryOrBrand) {
         List<Predicate> conditions = new ArrayList<>();
         conditions.add(builder.isFalse(product.get("isDeleted")));
         conditions.add(builder.equal(product.get("status"), ProductStatus.ACTIVE));
+        if (productIds != null) conditions.add(product.get("id").in(productIds));
+        if (excludeId != null) conditions.add(builder.notEqual(product.get("id"), excludeId));
 
         String keyword = request.getKeyword() == null ? "" : request.getKeyword().trim();
         if (!keyword.isEmpty()) {
@@ -118,8 +149,9 @@ public class ProductSearchRepository {
                     .toArray(Predicate[]::new)));
         }
 
+        List<Predicate> taxonomy = new ArrayList<>();
         Set<Long> brands = ids(request.getBrandId(), request.getBrandIds());
-        if (!brands.isEmpty()) conditions.add(brand.get("id").in(brands));
+        if (!brands.isEmpty()) taxonomy.add(brand.get("id").in(brands));
         Set<Long> categories = ids(request.getCategoryId(), request.getCategoryIds());
         if (!categories.isEmpty()) {
             Subquery<Integer> categoryQuery = query.subquery(Integer.class);
@@ -127,8 +159,10 @@ public class ProductSearchRepository {
             Join<Product, Category> category = categoryProduct.join("categories");
             categoryQuery.select(builder.literal(1)).where(builder.equal(categoryProduct.get("id"), product.get("id")),
                     category.get("id").in(categories), builder.isFalse(category.get("isDeleted")), builder.isTrue(category.get("isActive")));
-            conditions.add(builder.exists(categoryQuery));
+            taxonomy.add(builder.exists(categoryQuery));
         }
+        if (categoryOrBrand) conditions.add(builder.or(taxonomy.toArray(Predicate[]::new)));
+        else conditions.addAll(taxonomy);
         if (present(request.getTagIds())) {
             Subquery<Integer> tagQuery = query.subquery(Integer.class);
             Root<Product> tagProduct = tagQuery.from(Product.class);
@@ -163,27 +197,18 @@ public class ProductSearchRepository {
             conditions.add(builder.equal(builder.lower(product.get("originCountry")), request.getOriginCountry().trim().toLowerCase(Locale.ROOT)));
         }
 
-        if (request.getMinPrice() != null || request.getMaxPrice() != null || request.getOnSale() != null || Boolean.TRUE.equals(request.getInStock())) {
+        if (request.getMinPrice() != null || request.getMaxPrice() != null || request.getOnSale() != null || !Boolean.FALSE.equals(request.getInStock())) {
             Subquery<Integer> variantQuery = query.subquery(Integer.class);
             Root<ProductVariant> variant = variantQuery.from(ProductVariant.class);
-            List<Predicate> variantConditions = new ArrayList<>();
-            variantConditions.add(activeVariant(builder, variant, product));
-            Expression<BigDecimal> price = effectivePrice(builder, variant);
-            if (request.getMinPrice() != null) variantConditions.add(builder.greaterThanOrEqualTo(price, request.getMinPrice()));
-            if (request.getMaxPrice() != null) variantConditions.add(builder.lessThanOrEqualTo(price, request.getMaxPrice()));
-            if (request.getOnSale() != null) {
-                Predicate sale = builder.and(builder.isNotNull(variant.get("discountPrice")), builder.lessThan(variant.<BigDecimal>get("discountPrice"), variant.<BigDecimal>get("price")));
-                variantConditions.add(Boolean.TRUE.equals(request.getOnSale()) ? sale : builder.not(sale));
-            }
-            if (Boolean.TRUE.equals(request.getInStock())) variantConditions.add(inventoryFacade.hasAvailableStock(builder, variantQuery, variant.get("id")));
-            variantQuery.select(builder.literal(1)).where(variantConditions.toArray(Predicate[]::new));
+            variantQuery.select(builder.literal(1)).where(matchingVariantConditions(builder, variantQuery, variant, product, request, businessDate)
+                    .toArray(Predicate[]::new));
             conditions.add(builder.exists(variantQuery));
         }
         if (Boolean.FALSE.equals(request.getInStock())) {
             Subquery<Integer> stockedVariant = query.subquery(Integer.class);
             Root<ProductVariant> variant = stockedVariant.from(ProductVariant.class);
             stockedVariant.select(builder.literal(1)).where(activeVariant(builder, variant, product),
-                    inventoryFacade.hasAvailableStock(builder, stockedVariant, variant.get("id")));
+                    inventoryFacade.hasAvailableStock(builder, stockedVariant, variant.get("id"), businessDate));
             conditions.add(builder.not(builder.exists(stockedVariant)));
         }
         return conditions;
@@ -219,11 +244,35 @@ public class ProductSearchRepository {
         return builder.coalesce(variant.<BigDecimal>get("discountPrice"), variant.<BigDecimal>get("price"));
     }
 
-    private Subquery<BigDecimal> variantPrice(CriteriaBuilder builder, CommonAbstractCriteria query, Root<Product> product, boolean maximum) {
+    private List<Predicate> matchingVariantConditions(CriteriaBuilder builder, CommonAbstractCriteria query,
+                                                       Root<ProductVariant> variant, Root<Product> product,
+                                                       ProductSearchRequest request, LocalDate businessDate) {
+        List<Predicate> conditions = new ArrayList<>();
+        conditions.add(activeVariant(builder, variant, product));
+        Expression<BigDecimal> price = effectivePrice(builder, variant);
+        if (request.getMinPrice() != null) conditions.add(builder.greaterThanOrEqualTo(price, request.getMinPrice()));
+        if (request.getMaxPrice() != null) conditions.add(builder.lessThanOrEqualTo(price, request.getMaxPrice()));
+        if (request.getOnSale() != null) {
+            Predicate sale = builder.and(builder.isNotNull(variant.get("discountPrice")),
+                    builder.greaterThanOrEqualTo(variant.<BigDecimal>get("discountPrice"), BigDecimal.ZERO),
+                    builder.lessThan(variant.<BigDecimal>get("discountPrice"), variant.<BigDecimal>get("price")));
+            conditions.add(Boolean.TRUE.equals(request.getOnSale()) ? sale : builder.not(sale));
+        }
+        if (!Boolean.FALSE.equals(request.getInStock())) {
+            conditions.add(inventoryFacade.hasAvailableStock(builder, query, variant.get("id"), businessDate));
+        }
+        return conditions;
+    }
+
+    private Subquery<BigDecimal> variantPrice(CriteriaBuilder builder, CommonAbstractCriteria query, Root<Product> product,
+                                               boolean maximum, ProductSearchRequest request, LocalDate businessDate) {
         Subquery<BigDecimal> priceQuery = query.subquery(BigDecimal.class);
         Root<ProductVariant> variant = priceQuery.from(ProductVariant.class);
+        List<Predicate> conditions = Boolean.FALSE.equals(request.getInStock())
+                ? List.of(activeVariant(builder, variant, product))
+                : matchingVariantConditions(builder, priceQuery, variant, product, request, businessDate);
         priceQuery.select(maximum ? builder.max(effectivePrice(builder, variant)) : builder.min(effectivePrice(builder, variant)))
-                .where(activeVariant(builder, variant, product));
+                .where(conditions.toArray(Predicate[]::new));
         return priceQuery;
     }
 
@@ -245,7 +294,7 @@ public class ProductSearchRepository {
                 case "price", "minPrice" -> minPrice;
                 case "maxPrice" -> maxPrice;
                 case "name" -> builder.lower(product.get("name"));
-                case "id", "createdAt", "updatedAt", "averageRating", "totalSold" -> product.get(order.getProperty());
+                case "id", "createdAt", "updatedAt", "averageRating", "totalSold", "isFeatured" -> product.get(order.getProperty());
                 default -> throw invalid("Unsupported product sort: " + order.getProperty());
             };
             if (order.isIgnoreCase() && !order.getProperty().equals("name")) throw invalid("Ignore-case sorting is supported only for name");

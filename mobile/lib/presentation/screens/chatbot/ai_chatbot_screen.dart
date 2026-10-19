@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
-import 'package:beautyshop_mobile/core/theme/app_typography.dart';
+import '../../../core/utils/cart_actions.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
 import 'package:beautyshop_mobile/providers/chatbot_provider.dart';
-import 'package:beautyshop_mobile/providers/cart_provider.dart';
 import 'package:beautyshop_mobile/data/models/chat_model.dart';
 import 'package:beautyshop_mobile/data/models/product_model.dart';
-import 'package:beautyshop_mobile/presentation/screens/product_detail/product_detail_screen.dart';
 
 class AiChatbotScreen extends StatefulWidget {
   const AiChatbotScreen({Key? key}) : super(key: key);
@@ -43,18 +41,24 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.canvas,
+      backgroundColor: HasakiColors.getCanvas(context),
       appBar: AppBar(
         backgroundColor: HasakiColors.primary,
         title: const Column(
           children: [
-            Text('Trợ Lý Làm Đẹp AI', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            Text(
+              'Trợ Lý Làm Đẹp AI',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.circle, color: Color(0xFF86EFAC), size: 7),
                 SizedBox(width: 4),
-                Text('Trực tuyến 24/7', style: TextStyle(fontSize: 10, color: Colors.white70)),
+                Text(
+                  'Tư vấn sản phẩm và dịch vụ',
+                  style: TextStyle(fontSize: 10, color: Colors.white70),
+                ),
               ],
             ),
           ],
@@ -62,7 +66,8 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => context.read<ChatbotProvider>().resetConversation(),
+            onPressed: () =>
+                context.read<ChatbotProvider>().resetConversation(),
           ),
         ],
       ),
@@ -86,17 +91,29 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
               // 2. Typing Indicator
               if (chat.isTyping)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: HasakiColors.getSurface(context),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: HasakiColors.borderSubtle),
                         ),
-                        child: const Text('Trợ lý AI đang soạn câu trả lời...', style: TextStyle(fontSize: 11.5, color: HasakiColors.textMuted)),
+                        child: const Text(
+                          'Trợ lý AI đang soạn câu trả lời...',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: HasakiColors.textMuted,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -105,9 +122,12 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
               // 3. Quick Suggestions Bar
               Container(
                 height: 40,
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   scrollDirection: Axis.horizontal,
                   itemCount: chat.quickPrompts.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
@@ -119,7 +139,10 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                         _scrollToBottom();
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: HasakiColors.primaryLight,
                           borderRadius: BorderRadius.circular(14),
@@ -128,7 +151,11 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                         child: Center(
                           child: Text(
                             prompt,
-                            style: const TextStyle(fontSize: 11, color: HasakiColors.primary, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: HasakiColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
@@ -139,8 +166,11 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
 
               // 4. Message Input Row
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                color: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                color: HasakiColors.getSurface(context),
                 child: SafeArea(
                   child: Row(
                     children: [
@@ -148,12 +178,20 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                         child: TextField(
                           controller: _messageController,
                           decoration: InputDecoration(
-                            hintText: 'Hỏi về routine, hoạt chất, liệu trình spa...',
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+                            hintText:
+                                'Hỏi về routine, hoạt chất, liệu trình spa...',
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
-                              borderSide: const BorderSide(color: HasakiColors.border),
+                              borderSide: const BorderSide(
+                                color: HasakiColors.border,
+                              ),
                             ),
                           ),
                           onSubmitted: (text) {
@@ -167,8 +205,14 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton.filled(
-                        style: IconButton.styleFrom(backgroundColor: HasakiColors.primary),
-                        icon: const Icon(Icons.send, size: 18, color: Colors.white),
+                        style: IconButton.styleFrom(
+                          backgroundColor: HasakiColors.primary,
+                        ),
+                        icon: const Icon(
+                          Icons.send,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                         onPressed: () {
                           if (_messageController.text.isNotEmpty) {
                             chat.sendMessage(_messageController.text);
@@ -192,10 +236,14 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
-        crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: msg.isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: msg.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: msg.isUser
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!msg.isUser) ...[
@@ -208,11 +256,16 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
               ],
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: msg.isUser ? HasakiColors.primary : Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: msg.isUser ? null : Border.all(color: HasakiColors.borderSubtle),
+                    border: msg.isUser
+                        ? null
+                        : Border.all(color: HasakiColors.borderSubtle),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.03),
@@ -224,7 +277,9 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                   child: Text(
                     msg.text,
                     style: TextStyle(
-                      color: msg.isUser ? Colors.white : HasakiColors.textMain,
+                      color: msg.isUser
+                          ? Colors.white
+                          : HasakiColors.getTextMain(context),
                       fontSize: 13,
                       height: 1.45,
                     ),
@@ -235,16 +290,26 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
           ),
 
           // Recommended Products Cards inside chat bubble
-          if (msg.recommendedProducts != null && msg.recommendedProducts!.isNotEmpty) ...[
+          if (msg.recommendedProducts != null &&
+              msg.recommendedProducts!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.only(left: 36),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('GỢI Ý PHÙ HỢP CHO BẠN:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: HasakiColors.primary)),
+                  const Text(
+                    'GỢI Ý PHÙ HỢP CHO BẠN:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: HasakiColors.primary,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-                  ...msg.recommendedProducts!.map((p) => _buildChatProductTile(p)).toList(),
+                  ...msg.recommendedProducts!
+                      .map((p) => _buildChatProductTile(p))
+                      .toList(),
                 ],
               ),
             ),
@@ -259,7 +324,7 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HasakiColors.getSurface(context),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: HasakiColors.primaryLight),
       ),
@@ -274,7 +339,8 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
                   ? CachedNetworkImage(
                       imageUrl: product.thumbnailUrl!,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(color: HasakiColors.canvas),
+                      errorWidget: (_, __, ___) =>
+                          Container(color: HasakiColors.canvas),
                     )
                   : Container(color: HasakiColors.canvas),
             ),
@@ -284,24 +350,41 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(product.name, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text(HasakiFormatters.formatCurrency(product.displayPrice), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: HasakiColors.dealRed)),
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  HasakiFormatters.formatCurrency(product.displayPrice),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: HasakiColors.dealRed,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add_shopping_cart, size: 18, color: HasakiColors.primary),
-            onPressed: () {
-              context.read<CartProvider>().addToCart(
-                    productId: product.id,
-                    variantId: 0,
-                    productName: product.name,
-                    variantName: 'Tiêu chuẩn',
-                    price: product.displayPrice,
-                    thumbnailUrl: product.thumbnailUrl,
-                  );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã thêm vào giỏ hàng'), backgroundColor: HasakiColors.primary),
+            icon: const Icon(
+              Icons.add_shopping_cart,
+              size: 18,
+              color: HasakiColors.primary,
+            ),
+            onPressed: () async {
+              await addProductToCart(
+                context,
+                productId: product.id,
+                variantId: 0,
+                productName: product.name,
+                variantName: 'Tiêu chuẩn',
+                price: product.displayPrice,
+                thumbnailUrl: product.thumbnailUrl,
               );
             },
           ),

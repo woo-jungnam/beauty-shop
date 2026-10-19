@@ -113,6 +113,10 @@ class AppointmentServiceImplTest {
     @Mock private com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService policies;
     @Mock private com.core.beautyshop.modules.spa.domain.AppointmentActionHistoryRepository history;
     @Mock private com.core.beautyshop.modules.spa.domain.TicketSessionMovementRepository movements;
+    @Mock private com.core.beautyshop.modules.spa.application.service.TreatmentAppointmentBridge treatments;
+    @Mock private com.core.beautyshop.modules.spa.application.service.SpaBusinessCalendarService calendar;
+    @Mock private com.core.beautyshop.modules.spa.application.service.SpaConsumableService materials;
+    @Mock private com.core.beautyshop.modules.spa.application.service.SpaFinancialService finance;
     private AppointmentServiceImpl appointmentService;
 
     private static final Long USER_ID = 50L;
@@ -121,7 +125,8 @@ class AppointmentServiceImplTest {
     void setUpSecurity() {
         appointmentService = new AppointmentServiceImpl(appointmentRepository, beautyServiceRepository, staffRepository, ticketRepository,
                 identityFacade, orderFacade, schedules, new com.core.beautyshop.modules.spa.application.service.SpaAccessService(),
-                preparation, facilities, policies, new com.core.beautyshop.modules.spa.application.service.TicketUsageService(movements), history);
+                preparation, facilities, policies, new com.core.beautyshop.modules.spa.application.service.TicketUsageService(movements), history, treatments, calendar, materials, finance);
+        lenient().when(calendar.forDate(any())).thenAnswer(call -> new com.core.beautyshop.modules.spa.application.service.SpaBusinessCalendarService.Window(call.getArgument(0),false,LocalTime.of(8,0),LocalTime.of(20,0),null));
         lenient().when(policies.forAppointment(any())).thenReturn(new com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService.Policy("test",0,0,0,0,"FORFEIT"));
         lenient().when(schedules.coversWorkingInterval(anyLong(), any(), any(), any())).thenReturn(true);
         UserDetailsImpl userDetails = new UserDetailsImpl(

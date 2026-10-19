@@ -13,8 +13,7 @@ public class StockInspectionService {
     public void inspect(Long id, int quantity, boolean restock) {
         var stock = stocks.findByIdForUpdate(id).orElseThrow(() -> new BusinessException("Không tìm thấy lô hàng"));
         if (quantity <= 0 || quantity > stock.getQuarantinedQuantity()) throw new BusinessException("Số lượng hàng kiểm định không hợp lệ");
-        if (restock && (Boolean.TRUE.equals(stock.getIsDeleted()) || stock.getExpirationDate() != null
-                && !stock.getExpirationDate().isAfter(java.time.LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE)))) throw new BusinessException("Lô hàng đã hết hạn hoặc bị xóa không thể bán lại");
+        if (restock) StockAllocationService.requireSellable(stock, com.core.beautyshop.shared.time.BusinessTime.today());
         stock.setQuarantinedQuantity(stock.getQuarantinedQuantity() - quantity);
         if (restock) {
             int before = stock.getQuantity();

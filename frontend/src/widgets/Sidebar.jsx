@@ -24,7 +24,7 @@ export const Sidebar = ({
   useEffect(() => {
     closeRef.current = onCloseMobile;
   }, [onCloseMobile]);
-  const sections = getAdminSections(user?.roles);
+  const sections = getAdminSections(user?.roles, user?.permissions);
   const name = user?.fullName || user?.username || "BeautyShop";
 
   useEffect(() => {

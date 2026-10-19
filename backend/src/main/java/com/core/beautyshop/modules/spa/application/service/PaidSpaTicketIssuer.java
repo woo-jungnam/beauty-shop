@@ -28,12 +28,14 @@ public class PaidSpaTicketIssuer {
     private final IdentityFacade identityFacade;
     private final OrderFacade orderFacade;
     private final com.core.beautyshop.modules.spa.domain.SpaPurchaseSnapshotRepository snapshots;
+    private final TreatmentCourseService treatmentCourses;
 
     @Transactional
     public void issue(SpaPackagePaidEvent event) {
         validateEvent(event);
 
         if (ticketRepository.existsByOrderId(event.orderId())) {
+            if (treatmentCourses != null) ticketRepository.findByOrderId(event.orderId()).ifPresent(treatmentCourses::onTicketIssued);
             log.info("Spa ticket for paid order {} already exists; skipping duplicate event", event.orderId());
             return;
         }
@@ -62,6 +64,7 @@ public class PaidSpaTicketIssuer {
                 .userId(event.userId())
                 .servicePackage(servicePackage)
                 .orderId(event.orderId())
+                .packageNameSnapshot(snapshot.getPackageName())
                 .totalSessions(totalSessions)
                 .usedSessions(0)
                 .expiryCheckMode(snapshot.getExpiryCheckMode())
@@ -70,7 +73,9 @@ public class PaidSpaTicketIssuer {
                 .build();
         snapshot.getEntitlements().forEach((serviceId, quantity) -> ticket.getEntitlements().put(serviceId,
                 new com.core.beautyshop.modules.spa.domain.TicketEntitlement(quantity, 0)));
+        snapshot.getServiceDetails().forEach((serviceId, detail) -> ticket.getServiceNames().put(serviceId, detail.getName()));
         ticketRepository.save(ticket);
+        if (treatmentCourses != null) treatmentCourses.onTicketIssued(ticket);
 
         log.info("Issued Spa ticket for paid order {}, user {}, package {}",
                 event.orderId(), event.userId(), event.packageId());

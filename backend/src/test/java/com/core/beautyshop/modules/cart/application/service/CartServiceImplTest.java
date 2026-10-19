@@ -63,6 +63,9 @@ class CartServiceImplTest {
     @Mock
     private InventoryFacade inventoryFacade;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private CartServiceImpl cartService;
 

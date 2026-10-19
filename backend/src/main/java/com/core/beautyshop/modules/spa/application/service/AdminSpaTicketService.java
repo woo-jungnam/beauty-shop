@@ -47,6 +47,8 @@ public class AdminSpaTicketService {
     public UserServiceTicketResponse extend(Long id, int days, String reason, String key) {
         if (days <= 0 || days > 3650) throw new BusinessException("Số ngày gia hạn phải từ 1 đến 3650 ngày");
         UserServiceTicket ticket = lock(id);
+        if (ticket.getServicePackage() != null && Boolean.TRUE.equals(ticket.getServicePackage().getTreatmentManaged()))
+            throw new BusinessException("Please extend treatment validity through its course extension request");
         String fingerprint = fingerprint("EXTEND:" + days + ":" + reason);
         if (replayed(ticket, "EXTEND", reason, key, fingerprint)) return UserServiceTicketResponse.of(ticket);
         requirePaidTicket(ticket);
@@ -112,8 +114,10 @@ public class AdminSpaTicketService {
     }
 
     private void requireAvailableService(Long id) {
-        services.findAvailableByIdForUpdate(id)
+        var service = services.findAvailableByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException("Không thể cấp quyền lợi cho dịch vụ đã ngưng hoạt động; cần đối soát"));
+        if ("TREATMENT_COURSE".equals(service.getServiceType()))
+            throw new BusinessException("Dịch vụ đã chuyển sang điều trị theo lộ trình; không gia hạn hoặc bù lượt vào vé thông thường, cần đối soát quyền lợi cũ");
     }
 
     private UserServiceTicket lock(Long id) { return repository.findByIdForUpdate(id)

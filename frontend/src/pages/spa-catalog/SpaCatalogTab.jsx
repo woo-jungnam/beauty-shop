@@ -94,7 +94,7 @@ export const SpaCatalogTab = ({ onOpenPolicy }) => {
       <div className="spa-service-grid">{group.services.map(service => {
         const qualified = eligibleStaff(service.id);
         return <article className="spa-service-card" key={`${service.id}-${service.thumbnailUrl}`} data-service-id={service.id}><div className="spa-card-image"><Thumbnail item={service} /><ActiveBadge active={service.isActive} /></div><div className="spa-card-body">
-          <h4>{service.name}</h4><code>/{service.slug}</code><p className="spa-card-description">{service.shortDescription || service.description || 'Chưa bổ sung mô tả dịch vụ.'}</p>
+          <h4>{service.name}</h4><small className="spa-business-status active">{service.serviceType === 'TREATMENT_COURSE' ? 'Điều trị theo lộ trình' : 'Dịch vụ một lần'}</small><code>/{service.slug}</code><p className="spa-card-description">{service.shortDescription || service.description || 'Chưa bổ sung mô tả dịch vụ.'}</p>
           <div className="spa-card-duration"><Clock size={15} /><strong>{service.durationMinutes} phút</strong><span>+ {service.preparationTimeMinutes ?? 15}p chuẩn bị</span></div>
           <div className="spa-card-price"><span>Giá niêm yết</span><strong>{formatCurrency(service.basePrice)}</strong></div>
           <button type="button" className={`spa-qualified-badge ${qualified.length ? '' : 'empty'}`} aria-label={`Ma trận KTV ${service.name}`} disabled={!catalog.ready.staff} onClick={() => setSkills(service)}><Award size={15} />{catalog.ready.staff ? `${qualified.length} KTV đủ điều kiện` : 'Chưa tải kỹ năng KTV'}<span>Quản lý →</span></button>

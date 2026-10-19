@@ -7,6 +7,7 @@ import pymysql.cursors
 from dotenv import load_dotenv
 from app.core.config import getSettings
 from app.core.logging import getLogger
+from app.services.inventory_availability import AVAILABLE_STOCK_SQL, sale_cutoff
 
 load_dotenv()
 logger = getLogger("db_extractor")
@@ -90,10 +91,11 @@ class DatabaseExtractor:
     _get_connection = getConnection
 
     def extractProducts(self, limit: Optional[int] = None) -> List[dict[str, Any]]:
+        cutoff = sale_cutoff()
         conn = self.getConnection()
         query = """
-            SELECT 
-                p.id, 
+            SELECT
+                p.id,
                 p.name, 
                 COALESCE(b.name, 'Khác') as brand,
                 COALESCE(cat.category_name, 'Khác') as category,
@@ -112,13 +114,15 @@ class DatabaseExtractor:
                  WHERE pi.product_id = p.id AND pi.is_deleted = 0
                  ORDER BY pi.is_primary DESC, pi.display_order ASC, pi.id ASC
                  LIMIT 1)) as image_url,
-                COALESCE(stk.total_stock, 0) as stock
+                prices.total_stock as stock
             FROM products p
             JOIN (
-                SELECT product_id, MIN(COALESCE(discount_price, price)) as price
-                FROM product_variants
-                WHERE is_deleted = 0 AND is_active = 1
-                GROUP BY product_id
+                SELECT pv.product_id, MIN(COALESCE(pv.discount_price, pv.price)) AS price,
+                       SUM(safe_stock.available) AS total_stock
+                FROM product_variants pv
+                JOIN (""" + AVAILABLE_STOCK_SQL + """) safe_stock ON safe_stock.product_variant_id = pv.id
+                WHERE pv.is_deleted = 0 AND pv.is_active = 1
+                GROUP BY pv.product_id
             ) prices ON p.id = prices.product_id
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN (
@@ -128,16 +132,6 @@ class DatabaseExtractor:
                 WHERE c.is_deleted = 0
                 GROUP BY pc.product_id
             ) cat ON p.id = cat.product_id
-            LEFT JOIN (
-                SELECT pv.product_id, SUM(ws.quantity - ws.reserved_quantity) as total_stock
-                FROM product_variants pv
-                JOIN warehouse_stocks ws ON pv.id = ws.product_variant_id
-                JOIN warehouses w ON ws.warehouse_id = w.id
-                WHERE pv.is_deleted = 0 AND pv.is_active = 1 AND ws.is_deleted = 0
-                  AND w.is_active = 1 AND w.is_deleted = 0
-                  AND (ws.expiration_date IS NULL OR ws.expiration_date > CURRENT_DATE)
-                GROUP BY pv.product_id
-            ) stk ON p.id = stk.product_id
             WHERE p.is_deleted = 0 AND p.status = 'ACTIVE'
             ORDER BY p.id ASC
         """
@@ -147,7 +141,7 @@ class DatabaseExtractor:
         try:
             with conn.cursor() as cur:
                 cur.execute("START TRANSACTION READ ONLY")
-                cur.execute(query)
+                cur.execute(query, (cutoff,))
                 rows = cur.fetchall()
                 cur.execute("SELECT pi.product_id, i.name, i.inci_name, i.functions, i.benefits FROM product_ingredients pi JOIN ingredients i ON i.id=pi.ingredient_id WHERE i.is_deleted=0")
                 ingredientRows = cur.fetchall()
@@ -256,6 +250,30 @@ class DatabaseExtractor:
         return formattedProducts
 
     extract_products = extractProducts
+
+    def getAvailableProductPrices(self, product_ids):
+        ids = sorted({int(value) for value in product_ids if str(value).isdigit() and int(value) > 0})
+        if not ids:
+            return {}
+        cutoff = sale_cutoff()
+        placeholders = ",".join(["%s"] * len(ids))
+        query = """
+            SELECT p.id, MIN(COALESCE(pv.discount_price, pv.price)) AS price
+            FROM products p
+            JOIN product_variants pv ON pv.product_id = p.id
+            JOIN (""" + AVAILABLE_STOCK_SQL + """) safe_stock ON safe_stock.product_variant_id = pv.id
+            WHERE p.is_deleted = 0 AND p.status = 'ACTIVE'
+              AND pv.is_deleted = 0 AND pv.is_active = 1
+              AND p.id IN (""" + placeholders + """)
+            GROUP BY p.id
+        """
+        conn = self.getConnection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(query, (cutoff, *ids))
+                return {int(row['id']): float(row['price']) for row in cur.fetchall()}
+        finally:
+            conn.close()
 
     def extractServices(self, limit: Optional[int] = None) -> List[dict[str, Any]]:
         conn = self.getConnection()

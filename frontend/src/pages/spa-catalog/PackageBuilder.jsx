@@ -33,11 +33,11 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const serviceMap = useMemo(() => new Map(catalog.map(service => [String(service.id), service])), [catalog]);
-  const activeServices = catalog.filter(service => service.isActive !== false);
+  const activeServices = catalog.filter(service => service.isActive !== false && service.serviceType !== 'TREATMENT_COURSE');
   const selectedIds = new Set(rows.map(row => row.serviceId).filter(Boolean));
   const totals = rows.reduce((result, row) => {
     const service = serviceMap.get(row.serviceId);
-    const valid = service && service.isActive !== false && positiveInteger(row.quantity) && Number.isFinite(Number(service.basePrice)) && Number(service.basePrice) >= 0;
+    const valid = service && service.isActive !== false && service.serviceType !== 'TREATMENT_COURSE' && positiveInteger(row.quantity) && Number.isFinite(Number(service.basePrice)) && Number(service.basePrice) >= 0;
     return {
       original: result.original + (valid ? Number(service.basePrice) * Number(row.quantity) : 0),
       sessions: result.sessions + (valid ? Number(row.quantity) : 0),
@@ -86,6 +86,7 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
     rows.forEach(row => {
       const service = serviceMap.get(row.serviceId);
       if (!service) problems[`row-${row.key}`] = 'Vui lòng chọn dịch vụ có trong danh mục hiện tại.';
+      else if (service.serviceType === 'TREATMENT_COURSE') problems[`row-${row.key}`] = 'Dịch vụ điều trị theo lộ trình cần mẫu riêng tại mục Lộ trình điều trị. Vui lòng thay bằng dịch vụ một lần.';
       else if (service.isActive === false) problems[`row-${row.key}`] = 'Dịch vụ đang tạm dừng. Vui lòng chọn dịch vụ đang hoạt động.';
       else if (!Number.isFinite(Number(service.basePrice)) || Number(service.basePrice) < 0) problems[`row-${row.key}`] = 'Giá dịch vụ chưa hợp lệ. Vui lòng tải lại danh mục dịch vụ.';
       else if (seen.has(row.serviceId)) problems[`row-${row.key}`] = 'Mỗi dịch vụ chỉ xuất hiện một lần. Hãy tăng số buổi của dòng đã chọn.';
@@ -157,11 +158,11 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
                 <div><h4 id="spa-package-items-title"><Ticket size={18} aria-hidden="true" /> Dịch vụ thành phần</h4><p>Chọn từng dịch vụ và số buổi khách được sử dụng.</p></div>
                 <Button variant="secondary" size="sm" icon={Plus} onClick={addRow} disabled={busy || uncertain || rows.length >= activeServices.length}>Thêm dịch vụ</Button>
               </div>
-              {!activeServices.length && <p className="spa-package-empty">Chưa có dịch vụ đang hoạt động để thêm vào gói.</p>}
+              {!activeServices.length && <p className="spa-package-empty">Chưa có dịch vụ một lần đang hoạt động để thêm vào gói.</p>}
               {rows.map((row, index) => {
                 const service = serviceMap.get(row.serviceId);
-                const available = catalog.filter(candidate => String(candidate.id) === row.serviceId || (candidate.isActive !== false && !selectedIds.has(String(candidate.id))));
-                const rowPrice = service ? Number(service.basePrice) : 0;
+                const available = catalog.filter(candidate => String(candidate.id) === row.serviceId || (candidate.isActive !== false && candidate.serviceType !== 'TREATMENT_COURSE' && !selectedIds.has(String(candidate.id))));
+                const rowPrice = service && service.serviceType !== 'TREATMENT_COURSE' ? Number(service.basePrice) : 0;
                 const lineAmount = positiveInteger(row.quantity) ? rowPrice * Number(row.quantity) : 0;
                 return (
                   <div key={row.key} className="spa-package-item">
@@ -169,12 +170,12 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
                       <Select label={`Dịch vụ ${index + 1}`} value={row.serviceId} onChange={event => updateRow(row.key, 'serviceId', event.target.value)} disabled={busy || uncertain} error={fieldErrors[`row-${row.key}`]}>
                         <option value="">Chọn dịch vụ</option>
                         {row.serviceId && !service && <option value={row.serviceId} disabled>{row.serviceName || 'Dịch vụ không còn trong danh mục'}</option>}
-                        {available.map(candidate => <option key={candidate.id} value={candidate.id} disabled={candidate.isActive === false}>{candidate.name}{candidate.isActive === false ? ' — Tạm dừng' : ''}</option>)}
+                        {available.map(candidate => <option key={candidate.id} value={candidate.id} disabled={candidate.isActive === false || candidate.serviceType === 'TREATMENT_COURSE'}>{candidate.name}{candidate.serviceType === 'TREATMENT_COURSE' ? ' — Lộ trình cần mẫu riêng, vui lòng thay dịch vụ' : candidate.isActive === false ? ' — Tạm dừng' : ''}</option>)}
                       </Select>
                       <Input label={`Số buổi dịch vụ ${index + 1}`} type="number" min={1} max={2147483647} step={1} inputMode="numeric" value={row.quantity} onChange={event => updateRow(row.key, 'quantity', event.target.value)} disabled={busy || uncertain} />
                       <Button variant="ghost" icon={Trash2} onClick={() => removeRow(row.key)} disabled={busy || uncertain || rows.length <= 1} aria-label={`Xóa dịch vụ ${index + 1} khỏi gói`} className="spa-package-remove">Xóa</Button>
                     </div>
-                    <div className="spa-package-item-cost"><span>{service ? `${formatCurrency(rowPrice)} / buổi` : 'Chọn dịch vụ để xem giá'}</span><strong>{formatCurrency(lineAmount)}</strong></div>
+                    <div className="spa-package-item-cost"><span>{service?.serviceType === 'TREATMENT_COURSE' ? 'Lộ trình không dùng làm dịch vụ thành phần của gói lượt.' : service ? `${formatCurrency(rowPrice)} / buổi` : 'Chọn dịch vụ để xem giá'}</span><strong>{formatCurrency(lineAmount)}</strong></div>
                   </div>
                 );
               })}

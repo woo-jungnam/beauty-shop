@@ -22,12 +22,6 @@ class _HasakiBannerCarouselState extends State<HasakiBannerCarousel> {
   int _currentIndex = 0;
   Timer? _timer;
 
-  final List<String> _defaultBanners = const [
-    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=1000&q=80',
-    'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1000&q=80',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -37,7 +31,7 @@ class _HasakiBannerCarouselState extends State<HasakiBannerCarousel> {
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      final list = widget.banners.isNotEmpty ? widget.banners : _defaultBanners;
+      final list = widget.banners;
       if (_pageController.hasClients && list.isNotEmpty) {
         final nextPage = (_currentIndex + 1) % list.length;
         _pageController.animateToPage(
@@ -58,7 +52,8 @@ class _HasakiBannerCarouselState extends State<HasakiBannerCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    final list = widget.banners.isNotEmpty ? widget.banners : _defaultBanners;
+    final list = widget.banners;
+    if (list.isEmpty) return const SizedBox.shrink();
 
     return AspectRatio(
       aspectRatio: 2.3,
@@ -72,7 +67,9 @@ class _HasakiBannerCarouselState extends State<HasakiBannerCarousel> {
             itemCount: list.length,
             itemBuilder: (context, index) {
               return GestureDetector(
-                onTap: () => widget.onBannerTap?.call(index),
+                onTap: widget.onBannerTap == null
+                    ? null
+                    : () => widget.onBannerTap!(index),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: ClipRRect(
@@ -80,7 +77,8 @@ class _HasakiBannerCarouselState extends State<HasakiBannerCarousel> {
                     child: CachedNetworkImage(
                       imageUrl: list[index],
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: HasakiColors.primaryLight),
+                      placeholder: (_, __) =>
+                          Container(color: HasakiColors.primaryLight),
                       errorWidget: (_, __, ___) => Container(
                         color: HasakiColors.primary,
                         child: const Center(

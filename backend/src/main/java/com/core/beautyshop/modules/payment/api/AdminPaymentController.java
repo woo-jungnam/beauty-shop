@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 public class AdminPaymentController {
     private final PaymentTransactionRepository repository;
     private final com.core.beautyshop.modules.order.api.OrderFacade orders;
+    private final com.core.beautyshop.modules.payment.domain.PaymentResolutionRepository resolutions;
 
     @Operation(summary = "Lấy sổ giao dịch thanh toán", description = "ADMIN; gồm SEPAY, COD và CASH. Status là kết quả đối soát giao dịch, khác PaymentStatus của order. Dữ liệu chi tiết có rawPayload dành cho đối soát quản trị.")
     @GetMapping
@@ -76,7 +77,7 @@ public class AdminPaymentController {
             }
         }
         BigDecimal received = matched.add(cancelled).add(unmatched).add(unidentified);
-        BigDecimal refunded = orders.getConfirmedRefundAmount(from, to);
+        BigDecimal refunded = orders.getConfirmedRefundAmount(from, to).add(resolutions.refundAmount(from,to));
         return ApiResponse.success(new Summary(total, received, failed, matched, cancelled, unmatched, unidentified,
                 refunded, cod, cash, received.subtract(cod).subtract(cash)));
     }

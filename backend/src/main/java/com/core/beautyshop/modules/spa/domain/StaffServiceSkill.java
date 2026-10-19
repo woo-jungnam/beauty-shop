@@ -24,4 +24,7 @@ public class StaffServiceSkill extends Base {
     @Column(name = "is_certified")
     @Builder.Default
     private Boolean isCertified = false;
+
+    @Column(name = "certified_until")
+    private java.time.LocalDate certifiedUntil;
 }

@@ -1,14 +1,16 @@
+import '../../widgets/customer_wishlist_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
+import '../../../core/utils/cart_actions.dart';
+import '../../widgets/catalog_state.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
 import 'package:beautyshop_mobile/providers/product_provider.dart';
 import 'package:beautyshop_mobile/providers/cart_provider.dart';
 import 'package:beautyshop_mobile/providers/auth_provider.dart';
 import 'package:beautyshop_mobile/providers/order_provider.dart';
-import 'package:beautyshop_mobile/data/models/product_model.dart';
 import 'package:beautyshop_mobile/data/models/review_model.dart';
 import 'package:beautyshop_mobile/presentation/screens/cart/cart_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/chatbot/ai_chatbot_screen.dart';
@@ -16,8 +18,13 @@ import 'package:beautyshop_mobile/presentation/widgets/hasaki_product_card.dart'
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
+  final int? initialVariantId;
 
-  const ProductDetailScreen({Key? key, required this.productId}) : super(key: key);
+  const ProductDetailScreen({
+    Key? key,
+    required this.productId,
+    this.initialVariantId,
+  }) : super(key: key);
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -30,6 +37,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedVariantId = widget.initialVariantId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().fetchProductDetail(widget.productId);
     });
@@ -72,8 +80,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Đánh giá sản phẩm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+                  const Text(
+                    'Đánh giá sản phẩm',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -86,7 +100,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       color: HasakiColors.star,
                       size: 32,
                     ),
-                    onPressed: () => setSheetState(() => selectedRating = index + 1),
+                    onPressed: () =>
+                        setSheetState(() => selectedRating = index + 1),
                   );
                 }),
               ),
@@ -112,34 +127,55 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 width: double.infinity,
                 height: 46,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: HasakiColors.primary),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: HasakiColors.primary,
+                  ),
                   onPressed: () async {
                     if (contentController.text.trim().isEmpty) return;
                     final orders = context.read<OrderProvider>().orders;
-                    final deliveredOrder = orders.where((o) =>
-                        o.status == 'DELIVERED' &&
-                        o.items.any((i) => i.productId == widget.productId)).firstOrNull;
+                    final deliveredOrder = orders
+                        .where(
+                          (o) =>
+                              o.status == 'DELIVERED' &&
+                              o.items.any(
+                                (i) => i.productId == widget.productId,
+                              ),
+                        )
+                        .firstOrNull;
                     final eligibleOrderId = deliveredOrder?.id;
 
                     final req = CreateReviewRequest(
                       productId: widget.productId,
                       orderId: eligibleOrderId,
                       rating: eligibleOrderId != null ? selectedRating : null,
-                      title: titleController.text.trim().isEmpty ? 'Đánh giá sản phẩm' : titleController.text.trim(),
+                      title: titleController.text.trim().isEmpty
+                          ? 'Đánh giá sản phẩm'
+                          : titleController.text.trim(),
                       content: contentController.text.trim(),
                     );
                     Navigator.pop(ctx);
-                    final ok = await context.read<ProductProvider>().submitReview(req);
+                    final ok = await context
+                        .read<ProductProvider>()
+                        .submitReview(req);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(ok ? 'Cảm ơn bạn đã gửi đánh giá!' : 'Không thể gửi đánh giá lúc này'),
-                          backgroundColor: ok ? HasakiColors.primary : HasakiColors.dealRed,
+                          content: Text(
+                            ok
+                                ? 'Cảm ơn bạn đã gửi đánh giá!'
+                                : 'Không thể gửi đánh giá lúc này',
+                          ),
+                          backgroundColor: ok
+                              ? HasakiColors.primary
+                              : HasakiColors.dealRed,
                         ),
                       );
                     }
                   },
-                  child: const Text('GỬI ĐÁNH GIÁ', style: TextStyle(fontWeight: FontWeight.w800)),
+                  child: const Text(
+                    'GỬI ĐÁNH GIÁ',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
             ],
@@ -153,41 +189,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     return Consumer<ProductProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoadingDetail || provider.selectedProductDetail == null) {
-          return const Scaffold(
-            backgroundColor: Colors.white,
-            body: Center(child: CircularProgressIndicator(color: HasakiColors.primary)),
+        if (provider.isLoadingDetail) {
+          return Scaffold(
+            backgroundColor: HasakiColors.getSurface(context),
+            body: const Center(
+              child: CircularProgressIndicator(color: HasakiColors.primary),
+            ),
           );
         }
+        if (provider.selectedProductDetail == null)
+          return Scaffold(
+            appBar: AppBar(title: const Text('Chi tiết sản phẩm')),
+            body: CatalogState(
+              message: provider.detailError ?? 'Không tìm thấy sản phẩm',
+              onRetry: () => provider.fetchProductDetail(widget.productId),
+            ),
+          );
 
         final detail = provider.selectedProductDetail!;
         final images = detail.imageUrls.isNotEmpty
             ? detail.imageUrls
             : [detail.thumbnailUrl ?? ''];
 
-        // Selected variant price calculation
-        ProductVariant? activeVariant;
-        if (detail.variants.isNotEmpty) {
-          activeVariant = detail.variants.firstWhere(
-            (v) => v.id == _selectedVariantId,
-            orElse: () => detail.variants.first,
-          );
-        }
+        final activeVariant = detail.variantForSelection(_selectedVariantId);
+        final canBuy =
+            detail.status == 'ACTIVE' && activeVariant?.isAvailable == true;
 
-        final currentPrice = activeVariant != null ? activeVariant.effectivePrice : detail.basePrice;
-        final basePrice = activeVariant != null ? (activeVariant.originalPrice ?? activeVariant.price) : detail.basePrice;
-        final discountPercent = HasakiFormatters.calculateDiscountPercent(basePrice, currentPrice);
+        final currentPrice = activeVariant != null
+            ? activeVariant.effectivePrice
+            : detail.basePrice;
+        final basePrice = activeVariant != null
+            ? (activeVariant.originalPrice ?? activeVariant.price)
+            : detail.basePrice;
+        final discountPercent = HasakiFormatters.calculateDiscountPercent(
+          basePrice,
+          currentPrice,
+        );
 
         return Scaffold(
-          backgroundColor: HasakiColors.canvas,
+          backgroundColor: HasakiColors.getCanvas(context),
           appBar: AppBar(
             backgroundColor: HasakiColors.primary,
             title: Text(detail.brandName ?? 'Chi tiết sản phẩm'),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                onPressed: () {},
-              ),
+              CustomerWishlistButton(productId: widget.productId),
               Consumer<CartProvider>(
                 builder: (context, cart, _) => IconButton(
                   icon: Badge(
@@ -212,20 +257,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 // 1. Image Carousel Gallery
                 Container(
-                  color: Colors.white,
+                  color: HasakiColors.getSurface(context),
                   child: AspectRatio(
                     aspectRatio: 1.0,
                     child: Stack(
                       children: [
                         PageView.builder(
                           itemCount: images.length,
-                          onPageChanged: (idx) => setState(() => _selectedImageIndex = idx),
+                          onPageChanged: (idx) =>
+                              setState(() => _selectedImageIndex = idx),
                           itemBuilder: (context, idx) {
                             return CachedNetworkImage(
                               imageUrl: images[idx],
                               fit: BoxFit.contain,
-                              placeholder: (_, __) => Container(color: HasakiColors.canvas),
-                              errorWidget: (_, __, ___) => const Icon(Icons.spa, size: 50, color: HasakiColors.textLight),
+                              placeholder: (_, __) =>
+                                  Container(color: HasakiColors.canvas),
+                              errorWidget: (_, __, ___) => const Icon(
+                                Icons.spa,
+                                size: 50,
+                                color: HasakiColors.textLight,
+                              ),
                             );
                           },
                         ),
@@ -234,14 +285,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           bottom: 12,
                           right: 12,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.65),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               '${_selectedImageIndex + 1}/${images.length}',
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
@@ -252,7 +310,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 // 2. Pricing & Title Header Box
                 Container(
-                  color: Colors.white,
+                  color: HasakiColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,25 +322,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         children: [
                           Text(
                             HasakiFormatters.formatCurrency(currentPrice),
-                            style: HasakiTypography.priceLarge.copyWith(fontSize: 22),
+                            style: HasakiTypography.priceLarge.copyWith(
+                              fontSize: 22,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           if (discountPercent > 0) ...[
                             Text(
                               HasakiFormatters.formatCurrency(basePrice),
-                              style: HasakiTypography.priceStrikethrough.copyWith(fontSize: 14),
+                              style: HasakiTypography.priceStrikethrough
+                                  .copyWith(fontSize: 14),
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: HasakiColors.dealRedLight,
-                                border: Border.all(color: HasakiColors.dealRedBorder),
+                                border: Border.all(
+                                  color: HasakiColors.dealRedBorder,
+                                ),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '-$discountPercent%',
-                                style: const TextStyle(color: HasakiColors.dealRed, fontSize: 11, fontWeight: FontWeight.w800),
+                                style: const TextStyle(
+                                  color: HasakiColors.dealRed,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ],
@@ -293,18 +363,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       // Product Title
                       Text(
                         detail.name,
-                        style: HasakiTypography.titleLarge.copyWith(fontSize: 16, height: 1.3),
+                        style: HasakiTypography.titleLarge.copyWith(
+                          fontSize: 16,
+                          height: 1.3,
+                        ),
                       ),
                       const SizedBox(height: 8),
 
                       // Rating & Sold
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Icon(Icons.star, color: HasakiColors.star, size: 16),
+                          const Icon(
+                            Icons.star,
+                            color: HasakiColors.star,
+                            size: 16,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            detail.averageRating.toStringAsFixed(1),
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                            detail.totalReviews > 0
+                                ? detail.averageRating.toStringAsFixed(1)
+                                : 'Chưa có đánh giá',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -313,7 +397,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'Đã bán: ${detail.totalSold > 0 ? detail.totalSold : 150}+',
+                            'Đã bán: ${detail.totalSold}',
                             style: HasakiTypography.caption,
                           ),
                         ],
@@ -324,59 +408,60 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 const SizedBox(height: 8),
 
-                // 3. Hasaki 100% Genuine Commitment Strip
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.verified, color: HasakiColors.primary, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Cam kết 100% chính hãng - Đền bù 200% nếu phát hiện hàng giả',
-                          style: HasakiTypography.caption.copyWith(color: HasakiColors.primary, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
                 const SizedBox(height: 8),
+
+                if (!canBuy)
+                  const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: Text(
+                      'Phân loại đã chọn hiện không khả dụng. Vui lòng tải lại hoặc chọn phân loại khác.',
+                    ),
+                  ),
 
                 // 4. Variant Selector (Dung tích / Kích thước)
                 if (detail.variants.isNotEmpty)
                   Container(
-                    color: Colors.white,
+                    color: HasakiColors.getSurface(context),
                     padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Chọn phân loại / dung tích:',
-                          style: HasakiTypography.titleMedium.copyWith(fontSize: 13),
+                          style: HasakiTypography.titleMedium.copyWith(
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: detail.variants.map((variant) {
-                            final isSelected = (activeVariant?.id == variant.id);
+                            final isSelected =
+                                (activeVariant?.id == variant.id);
                             return ChoiceChip(
-                              label: Text('${variant.variantName} (${HasakiFormatters.formatCurrency(variant.effectivePrice)})'),
+                              label: Text(
+                                '${variant.variantName} (${HasakiFormatters.formatCurrency(variant.effectivePrice)})',
+                              ),
                               selected: isSelected,
                               onSelected: (_) {
                                 setState(() => _selectedVariantId = variant.id);
                               },
                               selectedColor: HasakiColors.primaryLight,
-                              backgroundColor: HasakiColors.canvas,
+                              backgroundColor: HasakiColors.getCanvas(context),
                               labelStyle: TextStyle(
                                 fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                                color: isSelected ? HasakiColors.primary : HasakiColors.textMain,
+                                fontWeight: isSelected
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                                color: isSelected
+                                    ? HasakiColors.primary
+                                    : HasakiColors.getTextMain(context),
                               ),
                               side: BorderSide(
-                                color: isSelected ? HasakiColors.primary : HasakiColors.border,
+                                color: isSelected
+                                    ? HasakiColors.primary
+                                    : HasakiColors.border,
                               ),
                             );
                           }).toList(),
@@ -389,63 +474,157 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 // 5. Dermatology & INCI Ingredients Card
                 Container(
-                  color: Colors.white,
+                  color: HasakiColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.auto_awesome, color: HasakiColors.primary, size: 20),
-                          const SizedBox(width: 6),
-                          Text(
-                            'THÀNH PHẦN NỔI BẬT',
-                            style: HasakiTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      if (detail.skinType != null)
-                        _buildInfoRow('Loại da phù hợp:', detail.skinType!),
-                      if (detail.originCountry != null)
-                        _buildInfoRow('Xuất xứ thương hiệu:', detail.originCountry!),
-                      _buildInfoRow('Cồn khô:', detail.hasAlcohol ? 'Có' : 'Không'),
-                      _buildInfoRow('Hương liệu:', detail.hasFragrance ? 'Có' : 'Không'),
-                      if (detail.attributeValues.any((item) => item.variantId == null || item.variantId == activeVariant?.id))
-                        const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('THUỘC TÍNH ĐẶC TRƯNG', style: TextStyle(fontWeight: FontWeight.w700))),
-                      for (final attribute in detail.attributeValues.where((item) => item.variantId == null || item.variantId == activeVariant?.id))
-                        _buildInfoRow('${attribute.name}${attribute.variantId == null ? '' : ' (SKU)'}:', attribute.displayValue),
-                      if (detail.ingredientsList.any((item) => item.isKeyActive))
-                        _buildInfoRow('Hoạt chất nổi bật:', detail.ingredientsList.where((item) => item.isKeyActive)
-                            .map((item) => '${item.name}${item.concentration == null ? '' : ' ${item.concentrationLabel}'}').join(', '))
-                      else if (detail.keyActivesSummary?.isNotEmpty == true)
-                        _buildInfoRow('Hoạt chất nổi bật:', detail.keyActivesSummary!),
-                      for (final ingredient in detail.ingredientsList)
-                        ExpansionTile(
-                          tilePadding: EdgeInsets.zero,
-                          title: Text(ingredient.name, style: HasakiTypography.bodyMedium),
-                          subtitle: Text([
-                            if (ingredient.inciName.isNotEmpty) ingredient.inciName,
-                            if (ingredient.concentration != null) ingredient.concentrationLabel,
-                            if (ingredient.isKeyActive) 'Hoạt chất nổi bật',
-                          ].join(' • ')),
+                  child: Material(
+                    color: HasakiColors.getSurface(context),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            if (ingredient.functions.isNotEmpty) _buildInfoRow('Chức năng:', ingredient.functions.join(', ')),
-                            if (ingredient.benefits.isNotEmpty) _buildInfoRow('Lợi ích:', ingredient.benefits.join('; ')),
-                            if (ingredient.concerns.isNotEmpty) _buildInfoRow('Lưu ý:', ingredient.concerns.join('; ')),
-                            if (ingredient.functions.isEmpty && ingredient.benefits.isEmpty && ingredient.concerns.isEmpty)
-                              const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('Thông tin chi tiết chưa cập nhật.')),
+                            const Icon(
+                              Icons.auto_awesome,
+                              color: HasakiColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'THÀNH PHẦN NỔI BẬT',
+                              style: HasakiTypography.titleMedium.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ],
                         ),
-                      if (detail.ingredients != null && detail.ingredients!.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        ExpansionTile(
-                          tilePadding: EdgeInsets.zero,
-                          title: const Text('Bảng thành phần INCI đầy đủ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                          children: [SelectableText(detail.ingredients!, style: HasakiTypography.bodySmall)],
+                        const SizedBox(height: 10),
+                        if (detail.skinType != null)
+                          _buildInfoRow('Loại da phù hợp:', detail.skinType!),
+                        if (detail.originCountry != null)
+                          _buildInfoRow(
+                            'Xuất xứ sản phẩm:',
+                            detail.originCountry!,
+                          ),
+                        _buildInfoRow(
+                          'Cồn khô:',
+                          detail.hasAlcohol == null
+                              ? 'Chưa công bố'
+                              : detail.hasAlcohol!
+                              ? 'Có'
+                              : 'Không',
                         ),
+                        _buildInfoRow(
+                          'Hương liệu:',
+                          detail.hasFragrance == null
+                              ? 'Chưa công bố'
+                              : detail.hasFragrance!
+                              ? 'Có'
+                              : 'Không',
+                        ),
+                        if (detail.attributeValues.any(
+                          (item) =>
+                              item.variantId == null ||
+                              item.variantId == activeVariant?.id,
+                        ))
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'THUỘC TÍNH ĐẶC TRƯNG',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        for (final attribute in detail.attributeValues.where(
+                          (item) =>
+                              item.variantId == null ||
+                              item.variantId == activeVariant?.id,
+                        ))
+                          _buildInfoRow(
+                            '${attribute.name}${attribute.variantId == null ? '' : ' (SKU)'}:',
+                            attribute.displayValue,
+                          ),
+                        if (detail.ingredientsList.any(
+                          (item) => item.isKeyActive,
+                        ))
+                          _buildInfoRow(
+                            'Hoạt chất nổi bật:',
+                            detail.ingredientsList
+                                .where((item) => item.isKeyActive)
+                                .map(
+                                  (item) =>
+                                      '${item.name}${item.concentration == null ? '' : ' ${item.concentrationLabel}'}',
+                                )
+                                .join(', '),
+                          )
+                        else if (detail.keyActivesSummary?.isNotEmpty == true)
+                          _buildInfoRow(
+                            'Hoạt chất nổi bật:',
+                            detail.keyActivesSummary!,
+                          ),
+                        for (final ingredient in detail.ingredientsList)
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: Text(
+                              ingredient.name,
+                              style: HasakiTypography.bodyMedium,
+                            ),
+                            subtitle: Text(
+                              [
+                                if (ingredient.inciName.isNotEmpty)
+                                  ingredient.inciName,
+                                if (ingredient.concentration != null)
+                                  ingredient.concentrationLabel,
+                                if (ingredient.isKeyActive) 'Hoạt chất nổi bật',
+                              ].join(' • '),
+                            ),
+                            children: [
+                              if (ingredient.functions.isNotEmpty)
+                                _buildInfoRow(
+                                  'Chức năng:',
+                                  ingredient.functions.join(', '),
+                                ),
+                              if (ingredient.benefits.isNotEmpty)
+                                _buildInfoRow(
+                                  'Lợi ích:',
+                                  ingredient.benefits.join('; '),
+                                ),
+                              if (ingredient.concerns.isNotEmpty)
+                                _buildInfoRow(
+                                  'Lưu ý:',
+                                  ingredient.concerns.join('; '),
+                                ),
+                              if (ingredient.functions.isEmpty &&
+                                  ingredient.benefits.isEmpty &&
+                                  ingredient.concerns.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 8),
+                                  child: Text(
+                                    'Thông tin chi tiết chưa cập nhật.',
+                                  ),
+                                ),
+                            ],
+                          ),
+                        if (detail.ingredients != null &&
+                            detail.ingredients!.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: const Text(
+                              'Bảng thành phần INCI đầy đủ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            children: [
+                              SelectableText(
+                                detail.ingredients!,
+                                style: HasakiTypography.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
 
@@ -453,28 +632,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 // 6. Detailed Description Accordion
                 Container(
-                  color: Colors.white,
+                  color: HasakiColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'MÔ TẢ SẢN PHẨM',
-                        style: HasakiTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+                        style: HasakiTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        detail.description ?? detail.shortDescription ?? 'Đang cập nhật nội dung...',
+                        detail.description ??
+                            detail.shortDescription ??
+                            'Đang cập nhật nội dung...',
                         style: HasakiTypography.bodyMedium,
                       ),
                       if (detail.howToUse != null) ...[
                         const SizedBox(height: 12),
                         Text(
                           'HƯỚNG DẪN SỬ DỤNG',
-                          style: HasakiTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+                          style: HasakiTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         const SizedBox(height: 6),
-                        Text(detail.howToUse!, style: HasakiTypography.bodyMedium),
+                        Text(
+                          detail.howToUse!,
+                          style: HasakiTypography.bodyMedium,
+                        ),
                       ],
                     ],
                   ),
@@ -484,58 +672,103 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 // 7. Customer Reviews Section (Đánh Giá Khách Hàng)
                 Container(
-                  color: Colors.white,
+                  color: HasakiColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.rate_review_outlined, color: HasakiColors.primary, size: 20),
+                              const Icon(
+                                Icons.rate_review_outlined,
+                                color: HasakiColors.primary,
+                                size: 20,
+                              ),
                               const SizedBox(width: 6),
                               Text(
-                                'ĐÁNH GIÁ (${provider.currentProductReviews.length})',
-                                style: HasakiTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+                                'ĐÁNH GIÁ (${detail.totalReviews})',
+                                style: HasakiTypography.titleMedium.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ],
                           ),
                           TextButton.icon(
                             onPressed: () => _showAddReviewDialog(context),
-                            icon: const Icon(Icons.edit, size: 14, color: HasakiColors.primary),
-                            label: const Text('Viết đánh giá', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: HasakiColors.primary)),
+                            icon: const Icon(
+                              Icons.edit,
+                              size: 14,
+                              color: HasakiColors.primary,
+                            ),
+                            label: const Text(
+                              'Viết đánh giá',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: HasakiColors.primary,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 10),
 
-                      if (provider.currentProductReviews.isEmpty)
+                      if (provider.reviewsError != null)
+                        CatalogState(
+                          message: provider.reviewsError!,
+                          onRetry: () =>
+                              provider.fetchReviewsForProduct(detail.id),
+                        )
+                      else if (provider.currentProductReviews.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Text('Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!', style: TextStyle(fontSize: 12, color: HasakiColors.textMuted)),
+                          child: Text(
+                            'Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: HasakiColors.textMuted,
+                            ),
+                          ),
                         )
                       else
                         ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: provider.currentProductReviews.take(5).length,
-                          separatorBuilder: (_, __) => const Divider(height: 16, color: HasakiColors.borderSubtle),
+                          itemCount: provider.currentProductReviews
+                              .take(5)
+                              .length,
+                          separatorBuilder: (_, __) => const Divider(
+                            height: 16,
+                            color: HasakiColors.borderSubtle,
+                          ),
                           itemBuilder: (context, idx) {
                             final rev = provider.currentProductReviews[idx];
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(rev.authorName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                                    Text(
+                                      rev.authorName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
                                     Row(
                                       children: List.generate(
                                         5,
                                         (i) => Icon(
-                                          i < rev.rating ? Icons.star : Icons.star_border,
+                                          i < rev.rating
+                                              ? Icons.star
+                                              : Icons.star_border,
                                           size: 14,
                                           color: HasakiColors.star,
                                         ),
@@ -543,13 +776,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ),
                                   ],
                                 ),
-                                if (rev.title != null && rev.title!.isNotEmpty) ...[
+                                if (rev.title != null &&
+                                    rev.title!.isNotEmpty) ...[
                                   const SizedBox(height: 3),
-                                  Text(rev.title!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                                  Text(
+                                    rev.title!,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ],
-                                if (rev.content != null && rev.content!.isNotEmpty) ...[
+                                if (rev.content != null &&
+                                    rev.content!.isNotEmpty) ...[
                                   const SizedBox(height: 3),
-                                  Text(rev.content!, style: HasakiTypography.bodySmall),
+                                  Text(
+                                    rev.content!,
+                                    style: HasakiTypography.bodySmall,
+                                  ),
                                 ],
                               ],
                             );
@@ -564,7 +808,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 // 8. Similar Products Section (Sản phẩm tương tự)
                 if (provider.similarProducts.isNotEmpty)
                   Container(
-                    color: Colors.white,
+                    color: HasakiColors.getSurface(context),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,44 +817,45 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           child: Text(
                             'SẢN PHẨM TƯƠNG TỰ GỢI Ý',
-                            style: HasakiTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+                            style: HasakiTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
                         SizedBox(
-                          height: 215,
+                          height: 245,
                           child: ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             scrollDirection: Axis.horizontal,
                             itemCount: provider.similarProducts.take(6).length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
                             itemBuilder: (context, index) {
                               final p = provider.similarProducts[index];
                               return SizedBox(
-                                width: 125,
+                                width: 145,
                                 child: HasakiProductCard(
                                   product: p,
                                   onTap: () {
                                     Navigator.pushReplacement(
                                       context,
-                                      MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: p.id)),
+                                      MaterialPageRoute(
+                                        builder: (_) => ProductDetailScreen(
+                                          productId: p.id,
+                                        ),
+                                      ),
                                     );
                                   },
-                                  onAddToCart: () {
-                                    context.read<CartProvider>().addToCart(
+                                  onAddToCart: () async {
+                                    await addProductToCart(
+                                      context,
                                       productId: p.id,
                                       variantId: 0,
                                       productName: p.name,
                                       variantName: 'Tiêu chuẩn',
                                       price: p.displayPrice,
                                       thumbnailUrl: p.thumbnailUrl,
-                                    );
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Đã thêm "${p.name}" vào giỏ hàng'),
-                                        duration: const Duration(seconds: 2),
-                                        backgroundColor: HasakiColors.primary,
-                                      ),
                                     );
                                   },
                                 ),
@@ -631,7 +876,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           bottomNavigationBar: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: HasakiColors.getSurface(context),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.08),
@@ -648,17 +893,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AiChatbotScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const AiChatbotScreen(),
+                        ),
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       child: const Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.smart_toy_outlined, color: HasakiColors.primary, size: 20),
+                          Icon(
+                            Icons.smart_toy_outlined,
+                            color: HasakiColors.primary,
+                            size: 20,
+                          ),
                           SizedBox(height: 2),
-                          Text('Tư vấn AI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: HasakiColors.primary)),
+                          Text(
+                            'Tư vấn AI',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: HasakiColors.primary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -669,23 +930,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   // Add to Cart (Outlined)
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {
-                        context.read<CartProvider>().addToCart(
-                              productId: detail.id,
-                              variantId: activeVariant?.id ?? 0,
-                              productName: detail.name,
-                              variantName: activeVariant?.variantName ?? 'Tiêu chuẩn',
-                              price: currentPrice,
-                              thumbnailUrl: detail.thumbnailUrl,
-                            );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Đã thêm sản phẩm vào giỏ hàng'),
-                            duration: Duration(seconds: 2),
-                            backgroundColor: HasakiColors.primary,
-                          ),
-                        );
-                      },
+                      onPressed: !canBuy
+                          ? null
+                          : () async {
+                              await addProductToCart(
+                                context,
+                                productId: detail.id,
+                                variantId: activeVariant?.id ?? 0,
+                                productName: detail.name,
+                                variantName:
+                                    activeVariant?.variantName ?? 'Tiêu chuẩn',
+                                price: currentPrice,
+                                thumbnailUrl: detail.thumbnailUrl,
+                              );
+                            },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -698,20 +956,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   // Buy Now (Solid Red)
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        context.read<CartProvider>().addToCart(
-                              productId: detail.id,
-                              variantId: activeVariant?.id ?? 0,
-                              productName: detail.name,
-                              variantName: activeVariant?.variantName ?? 'Tiêu chuẩn',
-                              price: currentPrice,
-                              thumbnailUrl: detail.thumbnailUrl,
-                            );
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const CartScreen()),
-                        );
-                      },
+                      onPressed: !canBuy
+                          ? null
+                          : () async {
+                              final success = await addProductToCart(
+                                context,
+                                productId: detail.id,
+                                variantId: activeVariant?.id ?? 0,
+                                productName: detail.name,
+                                variantName:
+                                    activeVariant?.variantName ?? 'Tiêu chuẩn',
+                                price: currentPrice,
+                                thumbnailUrl: detail.thumbnailUrl,
+                              );
+                              if (!success || !context.mounted) return;
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CartScreen(),
+                                ),
+                              );
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: HasakiColors.dealRed,
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -738,13 +1003,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             width: 130,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12, color: HasakiColors.textMuted, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: 12,
+                color: HasakiColors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 12, color: HasakiColors.textMain, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: 12,
+                color: HasakiColors.getTextMain(context),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

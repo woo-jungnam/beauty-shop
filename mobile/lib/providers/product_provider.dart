@@ -9,146 +9,186 @@ import '../data/models/banner_model.dart';
 import '../data/models/review_model.dart';
 
 class ProductProvider extends ChangeNotifier {
-  final ApiClient _apiClient = ApiClient();
-
-  List<ProductItem> _products = [];
-  List<ProductItem> _flashSaleProducts = [];
-  List<ProductItem> _recommendedProducts = [];
+  final ApiClient _apiClient;
+  List<ProductItem> _products = [],
+      _flashSaleProducts = [],
+      _recommendedProducts = [],
+      _bestSellingProducts = [];
   List<CategoryItem> _categories = [];
   List<BrandItem> _brands = [];
   List<BannerItem> _banners = [];
-
-  bool _isLoading = false;
-  bool _isLoadingDetail = false;
-  String? _errorMessage;
+  bool _isLoading = false, _isLoadingDetail = false;
+  String? _errorMessage,
+      _categoriesError,
+      _dealsError,
+      _recommendedError,
+      _bestSellingError,
+      _detailError;
   ProductDetail? _selectedProductDetail;
   List<ReviewItem> _currentProductReviews = [];
   List<ProductItem> _similarProducts = [];
+  final Map<int, List<ProductItem>> _categoryProductsMap = {};
+  final Map<int, String> _categoryErrors = {};
+  final Set<int> _loadingCategories = {};
 
   List<ProductItem> get products => _products;
   List<ProductItem> get flashSaleProducts => _flashSaleProducts;
   List<ProductItem> get recommendedProducts => _recommendedProducts;
+  List<ProductItem> get bestSellingProducts => _bestSellingProducts;
   List<CategoryItem> get categories => _categories;
   List<BrandItem> get brands => _brands;
   List<BannerItem> get banners => _banners;
   bool get isLoading => _isLoading;
   bool get isLoadingDetail => _isLoadingDetail;
   String? get errorMessage => _errorMessage;
+  String? get categoriesError => _categoriesError;
+  String? get dealsError => _dealsError;
+  String? get recommendedError => _recommendedError;
+  String? get bestSellingError => _bestSellingError;
+  String? get detailError => _detailError;
+  String? _reviewsError;
+  String? get reviewsError => _reviewsError;
   ProductDetail? get selectedProductDetail => _selectedProductDetail;
   List<ReviewItem> get currentProductReviews => _currentProductReviews;
   List<ProductItem> get similarProducts => _similarProducts;
+  Map<int, List<ProductItem>> get categoryProductsMap => _categoryProductsMap;
+  bool get isLoadingCategoryProducts => _loadingCategories.isNotEmpty;
+  bool isLoadingCategory(int id) => _loadingCategories.contains(id);
+  String? categoryError(int id) => _categoryErrors[id];
 
-  ProductProvider() {
-    loadInitialData();
+  ProductProvider({ApiClient? apiClient, bool loadOnCreate = true})
+    : _apiClient = apiClient ?? ApiClient() {
+    if (loadOnCreate) loadInitialData();
   }
 
   Future<void> loadInitialData() async {
     _isLoading = true;
+    _categoryProductsMap.clear();
+    _categoryErrors.clear();
     notifyListeners();
     await Future.wait([
       fetchProducts(),
       fetchCategories(),
       fetchBrands(),
       fetchBanners(),
+      fetchRecommendedProducts(),
+      fetchFlashSaleProducts(),
+      fetchBestSellingProducts(),
     ]);
     _isLoading = false;
     notifyListeners();
   }
 
-  Future<void> fetchBanners() async {
-    try {
-      final response = await _apiClient.get<List<BannerItem>>(
-        ApiConstants.banners,
-        fromJsonT: (json) {
-          final list = json as List<dynamic>? ?? [];
-          return list.map((e) => BannerItem.fromJson(e as Map<String, dynamic>)).toList();
-        },
-      );
-      if (response.isSuccess && response.data != null) {
-        _banners = response.data!;
-        notifyListeners();
-      }
-    } catch (_) {}
+  Future<List<ProductItem>> fetchCatalogProducts({
+    Map<String, dynamic> filters = const {},
+  }) async {
+    final response = await _apiClient.get<PageResponse<ProductItem>>(
+      ApiConstants.productSearch,
+      queryParameters: {
+        'page': 0,
+        'size': 60,
+        'sort': 'createdAt,desc',
+        ...filters,
+      },
+      fromJsonT: (json) => PageResponse.fromJson(
+        json as Map<String, dynamic>,
+        (item) => ProductItem.fromJson(item as Map<String, dynamic>),
+      ),
+    );
+    if (!response.isSuccess || response.data == null)
+      throw StateError(response.message ?? 'Không thể tải sản phẩm');
+    return response.data!.content;
   }
 
   Future<void> fetchProducts({int page = 0, int size = 60}) async {
+    _errorMessage = null;
     try {
-      final response = await _apiClient.get<PageResponse<ProductItem>>(
-        ApiConstants.products,
-        queryParameters: {'page': page, 'size': size, 'sort': 'id,desc'},
-        fromJsonT: (json) => PageResponse.fromJson(
-          json as Map<String, dynamic>,
-          (item) => ProductItem.fromJson(item as Map<String, dynamic>),
-        ),
+      _products = await fetchCatalogProducts(
+        filters: {'page': page, 'size': size},
       );
-
-      if (response.isSuccess && response.data != null) {
-        _products = response.data!.content;
-        fetchRecommendedProducts();
-        fetchFlashSaleProducts();
-        notifyListeners();
-      }
-    } catch (e) {
-      _errorMessage = 'Không thể tải danh sách sản phẩm';
+    } catch (_) {
+      _products = [];
+      _errorMessage = 'Không thể tải sản phẩm. Vui lòng thử lại.';
     }
+    notifyListeners();
+  }
+
+  Future<void> fetchBestSellingProducts() async {
+    _bestSellingError = null;
+    try {
+      _bestSellingProducts = await fetchCatalogProducts(
+        filters: {'sort': 'totalSold,desc', 'size': 12},
+      );
+      _bestSellingProducts = _bestSellingProducts
+          .where((product) => product.totalSold > 0)
+          .toList();
+    } catch (_) {
+      _bestSellingProducts = [];
+      _bestSellingError = 'Không thể tải sản phẩm bán chạy.';
+    }
+    notifyListeners();
+  }
+
+  Future<void> fetchFlashSaleProducts() async {
+    _dealsError = null;
+    try {
+      final response = await _apiClient.get<List<ProductItem>>(
+        ApiConstants.expiringSoon,
+        queryParameters: {'thresholdDays': 90, 'limit': 50},
+        fromJsonT: (json) => (json as List<dynamic>)
+            .map((item) => ProductItem.fromJson(item as Map<String, dynamic>))
+            .toList(),
+      );
+      if (!response.isSuccess || response.data == null) {
+        throw StateError('Missing clearance products');
+      }
+      _flashSaleProducts = response.data!
+          .where((item) => item.isAvailableClearance)
+          .toList();
+    } catch (_) {
+      _flashSaleProducts = [];
+      _dealsError = 'Không thể tải sản phẩm ưu đãi.';
+    }
+    notifyListeners();
   }
 
   Future<void> fetchRecommendedProducts() async {
+    _recommendedError = null;
     try {
       final response = await _apiClient.get<List<ProductItem>>(
         ApiConstants.recommendedForYou,
         queryParameters: {'limit': 12},
-        fromJsonT: (json) {
-          final list = json as List<dynamic>? ?? [];
-          return list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList();
-        },
+        fromJsonT: (json) => (json as List<dynamic>)
+            .map((item) => ProductItem.fromJson(item as Map<String, dynamic>))
+            .toList(),
       );
-      if (response.isSuccess && response.data != null && response.data!.isNotEmpty) {
-        _recommendedProducts = response.data!;
-        notifyListeners();
-      } else {
-        _recommendedProducts = _products.reversed.toList();
-      }
+      if (!response.isSuccess || response.data == null)
+        throw StateError('Missing recommendations');
+      _recommendedProducts = response.data!;
     } catch (_) {
-      _recommendedProducts = _products.reversed.toList();
+      _recommendedProducts = [];
+      _recommendedError = 'Không thể tải gợi ý sản phẩm.';
     }
-  }
-
-  Future<void> fetchFlashSaleProducts() async {
-    try {
-      final response = await _apiClient.get<List<ProductItem>>(
-        ApiConstants.expiringSoon,
-        queryParameters: {'limit': 10, 'thresholdDays': 90},
-        fromJsonT: (json) {
-          final list = json as List<dynamic>? ?? [];
-          return list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList();
-        },
-      );
-      if (response.isSuccess && response.data != null && response.data!.isNotEmpty) {
-        _flashSaleProducts = response.data!;
-        notifyListeners();
-      } else {
-        _flashSaleProducts = _products.where((p) => p.discountPercent > 0 || p.isFeatured).toList();
-      }
-    } catch (_) {
-      _flashSaleProducts = _products.where((p) => p.discountPercent > 0 || p.isFeatured).toList();
-    }
+    notifyListeners();
   }
 
   Future<void> fetchCategories() async {
+    _categoriesError = null;
     try {
       final response = await _apiClient.get<List<CategoryItem>>(
         ApiConstants.categories,
-        fromJsonT: (json) {
-          final list = json as List<dynamic>? ?? [];
-          return list.map((e) => CategoryItem.fromJson(e as Map<String, dynamic>)).toList();
-        },
+        fromJsonT: (json) => (json as List<dynamic>)
+            .map((item) => CategoryItem.fromJson(item as Map<String, dynamic>))
+            .toList(),
       );
-      if (response.isSuccess && response.data != null) {
-        _categories = response.data!;
-        notifyListeners();
-      }
-    } catch (_) {}
+      if (!response.isSuccess || response.data == null)
+        throw StateError('Missing categories');
+      _categories = response.data!;
+    } catch (_) {
+      _categories = [];
+      _categoriesError = 'Không thể tải danh mục.';
+    }
+    notifyListeners();
   }
 
   Future<void> fetchBrands() async {
@@ -157,40 +197,84 @@ class ProductProvider extends ChangeNotifier {
         ApiConstants.brands,
         queryParameters: {'size': 20},
         fromJsonT: (json) {
-          final list = json is Map && json['content'] != null ? json['content'] as List : (json as List? ?? []);
-          return list.map((e) => BrandItem.fromJson(e as Map<String, dynamic>)).toList();
+          final list = json is Map
+              ? json['content'] as List<dynamic>
+              : json as List<dynamic>;
+          return list
+              .map((item) => BrandItem.fromJson(item as Map<String, dynamic>))
+              .toList();
         },
       );
-      if (response.isSuccess && response.data != null) {
-        _brands = response.data!;
-        notifyListeners();
-      }
-    } catch (_) {}
+      _brands = response.isSuccess ? response.data ?? [] : [];
+    } catch (_) {
+      _brands = [];
+    }
+    notifyListeners();
   }
+
+  Future<void> fetchBanners() async {
+    try {
+      final response = await _apiClient.get<List<BannerItem>>(
+        ApiConstants.banners,
+        fromJsonT: (json) => (json as List<dynamic>)
+            .map((item) => BannerItem.fromJson(item as Map<String, dynamic>))
+            .toList(),
+      );
+      _banners = response.isSuccess ? response.data ?? [] : [];
+    } catch (_) {
+      _banners = [];
+    }
+    notifyListeners();
+  }
+
+  Future<List<ProductItem>> fetchProductsByCategory(
+    int categoryId, {
+    bool refresh = false,
+  }) async {
+    if (!refresh && _categoryProductsMap.containsKey(categoryId))
+      return _categoryProductsMap[categoryId]!;
+    if (_loadingCategories.contains(categoryId))
+      return _categoryProductsMap[categoryId] ?? [];
+    _loadingCategories.add(categoryId);
+    _categoryErrors.remove(categoryId);
+    notifyListeners();
+    try {
+      _categoryProductsMap[categoryId] = await fetchCatalogProducts(
+        filters: {'categoryId': categoryId},
+      );
+    } catch (_) {
+      _categoryProductsMap.remove(categoryId);
+      _categoryErrors[categoryId] =
+          'Không thể tải sản phẩm trong danh mục này.';
+    } finally {
+      _loadingCategories.remove(categoryId);
+      notifyListeners();
+    }
+    return _categoryProductsMap[categoryId] ?? [];
+  }
+
+  Future<List<ProductItem>> searchProductsApi(String keyword) =>
+      fetchCatalogProducts(filters: {'keyword': keyword.trim()});
 
   Future<ProductDetail?> fetchProductDetail(int id) async {
     _isLoadingDetail = true;
+    _detailError = null;
     _selectedProductDetail = null;
     _currentProductReviews = [];
     _similarProducts = [];
     notifyListeners();
-
     try {
       final response = await _apiClient.get<ProductDetail>(
         '${ApiConstants.productDetail}$id',
-        fromJsonT: (json) => ProductDetail.fromJson(json as Map<String, dynamic>),
+        fromJsonT: (json) =>
+            ProductDetail.fromJson(json as Map<String, dynamic>),
       );
-
-      if (response.isSuccess && response.data != null) {
-        _selectedProductDetail = response.data;
-        // Fetch reviews & similar products in parallel
-        await Future.wait([
-          fetchReviewsForProduct(id),
-          fetchSimilarProducts(id),
-        ]);
-      }
-    } catch (e) {
-      _selectedProductDetail = null;
+      if (!response.isSuccess || response.data == null)
+        throw StateError('Missing product');
+      _selectedProductDetail = response.data;
+      await Future.wait([fetchReviewsForProduct(id), fetchSimilarProducts(id)]);
+    } catch (_) {
+      _detailError = 'Không thể tải chi tiết sản phẩm.';
     } finally {
       _isLoadingDetail = false;
       notifyListeners();
@@ -199,33 +283,43 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<void> fetchReviewsForProduct(int productId) async {
+    _reviewsError = null;
     try {
       final response = await _apiClient.get<PageResponse<ReviewItem>>(
         ApiConstants.reviews,
-        queryParameters: {'productId': productId, 'size': 20, 'sort': 'createdAt,desc'},
+        queryParameters: {
+          'productId': productId,
+          'size': 20,
+          'sort': 'createdAt,desc',
+        },
         fromJsonT: (json) => PageResponse.fromJson(
           json as Map<String, dynamic>,
           (item) => ReviewItem.fromJson(item as Map<String, dynamic>),
         ),
       );
-      if (response.isSuccess && response.data != null) {
-        _currentProductReviews = response.data!.content;
-        notifyListeners();
-      }
-    } catch (_) {}
+      if (!response.isSuccess || response.data == null)
+        throw StateError('Missing reviews');
+      _currentProductReviews = response.data!.content;
+    } catch (_) {
+      _currentProductReviews = [];
+      _reviewsError = 'Không thể tải đánh giá sản phẩm.';
+    }
+    notifyListeners();
   }
 
-  Future<bool> submitReview(CreateReviewRequest req) async {
+  Future<bool> submitReview(CreateReviewRequest request) async {
     try {
       final response = await _apiClient.post(
         ApiConstants.reviews,
-        data: req.toJson(),
+        data: request.toJson(),
       );
       if (response.isSuccess) {
-        await fetchReviewsForProduct(req.productId);
+        await fetchReviewsForProduct(request.productId);
         return true;
       }
-    } catch (_) {}
+    } catch (_) {
+      /* The caller displays the submission failure. */
+    }
     return false;
   }
 
@@ -235,94 +329,22 @@ class ProductProvider extends ChangeNotifier {
         '${ApiConstants.productDetail}$productId/similar',
         queryParameters: {'limit': 8},
         fromJsonT: (json) {
-          final list = json is Map && json['content'] != null ? json['content'] as List : (json as List? ?? []);
-          return list.map((e) => ProductItem.fromJson(e as Map<String, dynamic>)).toList();
+          final list = json is Map
+              ? json['content'] as List<dynamic>
+              : json as List<dynamic>;
+          return list
+              .map((item) => ProductItem.fromJson(item as Map<String, dynamic>))
+              .toList();
         },
       );
-      if (response.isSuccess && response.data != null) {
-        _similarProducts = response.data!.where((p) => p.id != productId).toList();
-      } else {
-        // Fallback: pick other products
-        _similarProducts = _products.where((p) => p.id != productId).take(6).toList();
-      }
-      notifyListeners();
+      _similarProducts = response.isSuccess
+          ? (response.data ?? [])
+                .where((product) => product.id != productId)
+                .toList()
+          : [];
     } catch (_) {
-      _similarProducts = _products.where((p) => p.id != productId).take(6).toList();
-      notifyListeners();
+      _similarProducts = [];
     }
-  }
-
-  final Map<int, List<ProductItem>> _categoryProductsMap = {};
-  bool _isLoadingCategoryProducts = false;
-
-  Map<int, List<ProductItem>> get categoryProductsMap => _categoryProductsMap;
-  bool get isLoadingCategoryProducts => _isLoadingCategoryProducts;
-
-  Future<List<ProductItem>> fetchProductsByCategory(int categoryId) async {
-    if (_categoryProductsMap.containsKey(categoryId) && _categoryProductsMap[categoryId]!.isNotEmpty) {
-      return _categoryProductsMap[categoryId]!;
-    }
-    _isLoadingCategoryProducts = true;
     notifyListeners();
-
-    try {
-      final response = await _apiClient.get<PageResponse<ProductItem>>(
-        '${ApiConstants.productCategory}$categoryId',
-        queryParameters: {'size': 60, 'sort': 'id,desc'},
-        fromJsonT: (json) => PageResponse.fromJson(
-          json as Map<String, dynamic>,
-          (item) => ProductItem.fromJson(item as Map<String, dynamic>),
-        ),
-      );
-      if (response.isSuccess && response.data != null) {
-        _categoryProductsMap[categoryId] = response.data!.content;
-      } else {
-        // Fallback filter
-        _categoryProductsMap[categoryId] = _products.where((p) => p.id % 2 == 0).toList();
-      }
-    } catch (_) {
-      _categoryProductsMap[categoryId] = _products.where((p) => p.id % 2 == 0).toList();
-    } finally {
-      _isLoadingCategoryProducts = false;
-      notifyListeners();
-    }
-    return _categoryProductsMap[categoryId] ?? [];
-  }
-
-  Future<List<ProductItem>> searchProductsApi(String keyword) async {
-    final cleanKeyword = keyword.trim();
-    if (cleanKeyword.isEmpty) return _products;
-
-    try {
-      final response = await _apiClient.get<PageResponse<ProductItem>>(
-        ApiConstants.productSearch,
-        queryParameters: {'keyword': cleanKeyword, 'size': 60},
-        fromJsonT: (json) => PageResponse.fromJson(
-          json as Map<String, dynamic>,
-          (item) => ProductItem.fromJson(item as Map<String, dynamic>),
-        ),
-      );
-      if (response.isSuccess && response.data != null) {
-        return response.data!.content;
-      }
-    } catch (_) {}
-    return searchProducts(cleanKeyword);
-  }
-
-  List<ProductItem> filterByActiveIngredient(String ingredient) {
-    final query = ingredient.toLowerCase();
-    return _products.where((p) {
-      return p.name.toLowerCase().contains(query) ||
-          (p.shortDescription != null && p.shortDescription!.toLowerCase().contains(query));
-    }).toList();
-  }
-
-  List<ProductItem> searchProducts(String query, {int? categoryId, int? brandId}) {
-    return _products.where((p) {
-      final matchesQuery = query.isEmpty ||
-          p.name.toLowerCase().contains(query.toLowerCase()) ||
-          (p.brandName != null && p.brandName!.toLowerCase().contains(query.toLowerCase()));
-      return matchesQuery;
-    }).toList();
   }
 }

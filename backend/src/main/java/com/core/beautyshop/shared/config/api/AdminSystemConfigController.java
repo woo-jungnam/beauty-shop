@@ -42,13 +42,13 @@ public class AdminSystemConfigController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<SystemConfig> create(@RequestBody CreateConfigRequest request) {
-        return ApiResponse.created(configService.create(request.key(), request.value(), request.description(), request.valueType()), "System config created");
+        return ApiResponse.created(configService.create(request.key(), request.value(), request.description(), request.valueType(), request.isPublic()), "System config created");
     }
 
-    @Operation(summary = "Cập nhật giá trị cấu hình", description = "Chỉ thay value của key đang hoạt động; không thay valueType qua endpoint này. Các policy đã chụp trong booking/ticket được giữ nguyên.")
+    @Operation(summary = "Cập nhật giá trị cấu hình", description = "Thay value; isPublic thiếu/null giữ trạng thái công khai cũ, false thu hồi công khai. Chỉ bật công khai các khóa cửa hàng, phí giao hàng và giờ phục vụ được hỗ trợ. Không thay valueType; các policy đã chụp được giữ nguyên.")
     @PutMapping("/{key}")
     public ApiResponse<SystemConfig> update(@PathVariable String key, @RequestBody ConfigRequest request) {
-        return ApiResponse.success(configService.update(key, request.value()));
+        return ApiResponse.success(configService.update(key, request.value(), request.isPublic()));
     }
 
     @Operation(summary = "Ngừng sử dụng cấu hình", description = "Soft-delete. Những bộ đọc có giá trị mặc định sẽ dùng lại mặc định; thao tác không sửa các snapshot đã lưu.")
@@ -59,10 +59,12 @@ public class AdminSystemConfigController {
     }
 
     public record ConfigRequest(
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Giá trị dưới dạng chuỗi, theo kiểu cấu hình hiện có", example = "30", requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) String value) { }
+            @io.swagger.v3.oas.annotations.media.Schema(description = "Giá trị dưới dạng chuỗi, theo kiểu cấu hình hiện có", example = "30", requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) String value,
+            @io.swagger.v3.oas.annotations.media.Schema(description = "Thiếu/null giữ trạng thái công khai; false ngừng công khai; true chỉ hỗ trợ các khóa công khai đã duyệt") Boolean isPublic) { }
     public record CreateConfigRequest(
             @io.swagger.v3.oas.annotations.media.Schema(description = "Key duy nhất; trim, tối đa 100 ký tự", example = "spa.booking.pending_ttl_minutes", requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) String key,
             @io.swagger.v3.oas.annotations.media.Schema(description = "Chuỗi không rỗng. BOOLEAN là true/false; JSON phải parse được. Các giá trị số chuẩn không âm; phút policy Spa tối đa 525600", example = "30", requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) String value,
             @io.swagger.v3.oas.annotations.media.Schema(description = "Mô tả, tối đa 500 ký tự") String description,
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Nếu bỏ trống, suy từ key chuẩn hoặc dùng STRING", allowableValues = {"STRING","INTEGER","DECIMAL","BOOLEAN","JSON"}, example = "INTEGER") String valueType) { }
+            @io.swagger.v3.oas.annotations.media.Schema(description = "Nếu bỏ trống, suy từ key chuẩn hoặc dùng STRING", allowableValues = {"STRING","INTEGER","DECIMAL","BOOLEAN","JSON"}, example = "INTEGER") String valueType,
+            @io.swagger.v3.oas.annotations.media.Schema(description = "Mặc định false. Chỉ bật cho store.address, store.hotline, store.email, shipping.free_threshold, shipping.default_fee, spa.opening_time, spa.closing_time") Boolean isPublic) { }
 }

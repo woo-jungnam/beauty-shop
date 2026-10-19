@@ -10,6 +10,8 @@ public class PurchasePackageRequest {
     @NotNull(message = "Mã gói dịch vụ không được để trống")
     @Schema(description = "Gói và các dịch vụ thành phần còn khả dụng", example = "1")
     private Long packageId;
+    @jakarta.validation.constraints.Size(max=64)
+    private String purchaseToken;
 
     @Schema(description = "Ghi chú đơn mua gói; tham gia fingerprint của yêu cầu idempotent", example = "Mua gói ba buổi")
     private String notes;

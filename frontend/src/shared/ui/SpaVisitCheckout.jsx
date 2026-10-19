@@ -7,8 +7,12 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { spaErrorMessage } from '../utils/spaMessages';
 import './spa-visit-checkout.css';
+import { useAuth } from '../../app/providers/AuthProvider';
+import { SpaRefundDialog } from '../../features/spa/SpaRefundDialog';
 
 export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
+  const { isAdmin } = useAuth();
+  const [refundOpen, setRefundOpen] = useState(false);
   const [invoice, setInvoice] = useState(null);
   const [method, setMethod] = useState('BANK');
   const [amount, setAmount] = useState('');
@@ -135,6 +139,8 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
   const canCollect = invoice?.paymentStatus === 'PENDING' && Number(invoice?.amountDue) > 0 && Number(invoice?.refundedAmount) === 0;
   return (
     <div className="spa-visit-checkout">
+      {refundOpen && <SpaRefundDialog appointmentId={appointment.id} onClose={() => setRefundOpen(false)} onUpdated={refresh} />}
+      {isAdmin && invoice && Number(invoice.paidAmount) > Number(invoice.refundedAmount) && <Button variant="outline" onClick={() => setRefundOpen(true)}>Hoàn tiền theo dịch vụ</Button>}
       <div className="checkout-customer"><span>ĐỐI SOÁT BUỔI CHĂM SÓC</span><strong>{appointment.customerName || 'Khách hàng'}</strong><small>{appointment.customerPhone} · SPA-{String(appointment.id).padStart(5, '0')}</small></div>
       {(appointment.items || []).some(item => item.ticketId || item.isTicketUsed) && <div className="checkout-tickets"><h4>Vé liệu trình sử dụng trong buổi</h4>{(appointment.items || []).filter(item => item.ticketId || item.isTicketUsed).map(item => <div key={item.id}><span><strong>{item.serviceName}</strong><small>Vé #{item.ticketId}</small></span><span>{item.ticketUsageState === 'REDEEMED' ? 'Đã trừ lượt' : item.ticketUsageState === 'RELEASED' ? 'Đã hoàn lượt giữ' : item.ticketUsageState === 'FORFEITED' ? 'Đã ghi nhận mất lượt' : item.ticketUsageState === 'RESERVED' ? 'Đang giữ lượt' : 'Xem đối soát từ hệ thống'}</span></div>)}<p>Lượt vé được đối soát theo kết quả dịch vụ; chỉ dịch vụ ngoài vé đã thực hiện được tính vào hóa đơn.</p></div>}
       {error && <p role="alert" className="checkout-feedback error">{error}</p>}

@@ -11,6 +11,8 @@ import java.util.List;
 
 public class OrderEvents {
 
+    public record OrderFinancialAdjustmentEvent(Long orderId, Long userId, BigDecimal netEligibleAmount) {}
+
     @Data
     @Builder
     @NoArgsConstructor

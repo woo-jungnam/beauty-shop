@@ -83,7 +83,7 @@ class OpenApiContractIntegrationTest {
         Set<String> expected = Set.of("keyword", "brandId", "brandIds", "categoryId", "categoryIds", "tagIds",
                 "productType", "skinType", "targetGender", "minPrice", "maxPrice", "minRating", "isFeatured",
                 "onSale", "inStock", "hasFragrance", "hasAlcohol", "originCountry", "ingredientIds",
-                "skinConcernIds", "page", "size", "sort");
+                "skinConcernIds", "activeIngredients", "page", "size", "sort");
         assertEquals(expected, parameters.keySet());
         assertEquals(200, parameters.get("keyword").path("schema").path("maxLength").asInt());
         assertEquals(0, parameters.get("page").path("schema").path("minimum").asInt(-1));
@@ -143,11 +143,19 @@ class OpenApiContractIntegrationTest {
         assertTrue(json("/v3/api-docs/06-spa").path("paths").has("/api/v1/admin/dashboard/spa-financials"));
     }
 
-    @Test @WithMockUser(roles = "CATALOG_STAFF")
-    void catalogStaffCanReadDermatologyReferenceData() throws Exception {
-        mvc.perform(get("/api/v1/admin/dermatology/skin-types"))
+    @Autowired com.core.beautyshop.modules.identity.domain.UserRepository users;
+    @Autowired com.core.beautyshop.modules.identity.domain.RoleRepository roles;
+    @Test
+    void staffCanReadDermatologyReferenceData() throws Exception {
+        var role=roles.findByName("ROLE_STAFF").orElseGet(()->roles.saveAndFlush(com.core.beautyshop.modules.identity.domain.Role.builder().name("ROLE_STAFF").build()));
+        var user=users.saveAndFlush(com.core.beautyshop.modules.identity.domain.User.builder().username("api-staff-"+UUID.randomUUID()).fullName("Catalog fixture").roles(new ArrayList<>(List.of(role))).build());
+        var principal=com.core.beautyshop.shared.security.services.UserDetailsImpl.build(user);
+        var authentication=new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal,null,principal.getAuthorities());
+        mvc.perform(get("/api/v1/admin/dermatology/skin-types").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(authentication))).andExpect(status().isForbidden());
+        user.setStaffPermissions(new HashSet<>(Set.of("CATALOG"))); users.saveAndFlush(user);
+        mvc.perform(get("/api/v1/admin/dermatology/skin-types").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(authentication)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data").isArray());
-        mvc.perform(get("/api/v1/admin/dermatology/skin-concerns"))
+        mvc.perform(get("/api/v1/admin/dermatology/skin-concerns").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(authentication)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data").isArray());
     }
 
@@ -184,7 +192,7 @@ class OpenApiContractIntegrationTest {
     }
 
     @Test void exportVerifiedSnapshot() throws Exception {
-        Path output = Path.of("target-spa-validation", "api-docs");
+        Path output = Path.of(System.getProperty("api.docs.output", "target-spa-validation/api-docs"));
         Files.createDirectories(output);
         mapper.writerWithDefaultPrettyPrinter().writeValue(output.resolve("openapi.json").toFile(), document);
         mapper.writerWithDefaultPrettyPrinter().writeValue(output.resolve("swagger-config.json").toFile(), json("/v3/api-docs/swagger-config"));

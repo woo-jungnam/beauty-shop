@@ -19,6 +19,7 @@ class IdentityOrderEventListenerTest {
 
     @Mock
     private UserService userService;
+    @Mock private com.core.beautyshop.modules.identity.application.service.LoyaltyReconciliationService loyalty;
 
     @InjectMocks
     private IdentityOrderEventListener listener;
@@ -39,7 +40,7 @@ class IdentityOrderEventListenerTest {
     void handleOrderDelivered_AwardsLoyaltyPoints() {
         listener.handleOrderDelivered(deliveredEvent);
 
-        verify(userService).addLoyaltyPoints(15L, 200L, 25);
+        verify(loyalty).reconcile(200L,15L,new BigDecimal("250000"));
     }
 
     @Test
@@ -52,16 +53,16 @@ class IdentityOrderEventListenerTest {
 
         listener.handleOrderDelivered(guestEvent);
 
-        verifyNoInteractions(userService);
+        verifyNoInteractions(userService,loyalty);
     }
 
     @Test
     void handleOrderDelivered_PropagatesFailureToRollbackOrder() {
         doThrow(new RuntimeException("DB Lock Exception"))
-                .when(userService).addLoyaltyPoints(15L, 200L, 25);
+                .when(loyalty).reconcile(200L,15L,new BigDecimal("250000"));
 
         assertThrows(RuntimeException.class, () -> listener.handleOrderDelivered(deliveredEvent));
 
-        verify(userService).addLoyaltyPoints(15L, 200L, 25);
+        verify(loyalty).reconcile(200L,15L,new BigDecimal("250000"));
     }
 }

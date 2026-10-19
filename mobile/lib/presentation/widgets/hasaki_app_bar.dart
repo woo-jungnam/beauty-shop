@@ -4,8 +4,9 @@ import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/storage/storage_service.dart';
 import 'package:beautyshop_mobile/providers/cart_provider.dart';
+import 'delivery_address_dialog.dart';
 
-class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
+class HasakiAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback onSearchTap;
   final VoidCallback onCartTap;
   final VoidCallback? onNotificationTap;
@@ -21,8 +22,13 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(104);
 
   @override
+  State<HasakiAppBar> createState() => _HasakiAppBarState();
+}
+
+class _HasakiAppBarState extends State<HasakiAppBar> {
+  @override
   Widget build(BuildContext context) {
-    final currentAddress = StorageService.getDeliveryAddress();
+    final currentAddress = StorageService.getFullDeliveryAddress();
 
     return Container(
       color: HasakiColors.primary,
@@ -36,10 +42,14 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
               // Row 1: Delivery Location & Quick Icons
               Row(
                 children: [
-                  const Icon(Icons.flash_on, color: HasakiColors.dealRed, size: 16),
+                  const Icon(
+                    Icons.flash_on,
+                    color: HasakiColors.dealRed,
+                    size: 16,
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    'Giao 2H đến: ',
+                    'Giao đến: ',
                     style: HasakiTypography.caption.copyWith(
                       color: HasakiColors.textOnDarkMuted,
                       fontWeight: FontWeight.w600,
@@ -47,12 +57,20 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                   Expanded(
                     child: InkWell(
-                      onTap: () {},
+                      onTap: () async {
+                        final saved = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => const DeliveryAddressDialog(),
+                        );
+                        if (saved == true && mounted) setState(() {});
+                      },
                       child: Row(
                         children: [
                           Flexible(
                             child: Text(
-                              currentAddress,
+                              currentAddress.isEmpty
+                                  ? 'Chọn địa chỉ nhận hàng'
+                                  : currentAddress,
                               style: HasakiTypography.caption.copyWith(
                                 color: HasakiColors.textOnDark,
                                 fontWeight: FontWeight.w700,
@@ -61,7 +79,11 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Icon(Icons.keyboard_arrow_down, color: HasakiColors.textOnDark, size: 16),
+                          const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: HasakiColors.textOnDark,
+                            size: 16,
+                          ),
                         ],
                       ),
                     ),
@@ -69,43 +91,63 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
                   const SizedBox(width: 8),
 
                   // Notifications Icon
-                  InkWell(
-                    onTap: onNotificationTap ?? () {},
-                    borderRadius: BorderRadius.circular(20),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(Icons.notifications_none, color: HasakiColors.textOnDark, size: 22),
+                  if (widget.onNotificationTap != null)
+                    InkWell(
+                      onTap: widget.onNotificationTap,
+                      borderRadius: BorderRadius.circular(20),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.notifications_none,
+                          color: HasakiColors.textOnDark,
+                          size: 22,
+                        ),
+                      ),
                     ),
-                  ),
                   const SizedBox(width: 4),
 
                   // Cart Icon with Live Badge
                   Consumer<CartProvider>(
                     builder: (context, cart, _) {
                       return InkWell(
-                        onTap: onCartTap,
+                        onTap: widget.onCartTap,
                         borderRadius: BorderRadius.circular(20),
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
                             const Padding(
                               padding: EdgeInsets.all(4),
-                              child: Icon(Icons.shopping_bag_outlined, color: HasakiColors.textOnDark, size: 22),
+                              child: Icon(
+                                Icons.shopping_bag_outlined,
+                                color: HasakiColors.textOnDark,
+                                size: 22,
+                              ),
                             ),
                             if (cart.totalItemsCount > 0)
                               Positioned(
                                 right: -2,
                                 top: -2,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 1.5,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: HasakiColors.dealRed,
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: HasakiColors.primary, width: 1.5),
+                                    border: Border.all(
+                                      color: HasakiColors.primary,
+                                      width: 1.5,
+                                    ),
                                   ),
-                                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
                                   child: Text(
-                                    cart.totalItemsCount > 99 ? '99+' : '${cart.totalItemsCount}',
+                                    cart.totalItemsCount > 99
+                                        ? '99+'
+                                        : '${cart.totalItemsCount}',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 9.5,
@@ -126,7 +168,7 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
 
               // Row 2: Search Pill Bar (Hasaki White Search Bar)
               InkWell(
-                onTap: onSearchTap,
+                onTap: widget.onSearchTap,
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
                   height: 40,
@@ -144,7 +186,11 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search, color: HasakiColors.primary, size: 20),
+                      const Icon(
+                        Icons.search,
+                        color: HasakiColors.primary,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -156,8 +202,6 @@ class HasakiAppBar extends StatelessWidget implements PreferredSizeWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.qr_code_scanner, color: HasakiColors.textMuted, size: 18),
                     ],
                   ),
                 ),

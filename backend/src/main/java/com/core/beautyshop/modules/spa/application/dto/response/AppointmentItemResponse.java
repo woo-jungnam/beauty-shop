@@ -19,6 +19,7 @@ public class AppointmentItemResponse {
     @Schema(description = "Nhãn staff hiện tại, ví dụ Staff #1; không bảo đảm là fullName tài khoản")
     private String staffName;
     private Long ticketId;
+    private Long treatmentSessionItemId;
     @Schema(description = "true nghĩa item có gắn ticketId, kể cả còn RESERVED; không chứng minh đã REDEEMED hoặc đã phục vụ")
     private Boolean isTicketUsed;
     @Schema(description = "Giá VND lưu lúc book; item dùng vé là 0; invoice chỉ lấy PERFORMED không dùng vé")

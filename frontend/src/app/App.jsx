@@ -19,6 +19,9 @@ const SpaStaffApp = lazy(() =>
 );
 
 const ADMIN_PAGES = {
+  treatments: lazy(() =>
+    import('../features/treatments/TreatmentWorkspace').then(module => ({ default: module.TreatmentAdminPage })),
+  ),
   dashboard: lazy(() =>
     import("../pages/DashboardPage").then((module) => ({
       default: module.DashboardPage,
@@ -222,8 +225,8 @@ const AdminShell = ({ tabName, navigationItems }) => {
 };
 
 export const App = () => {
-  const { isAuthenticated, isOperator, isAdmin, isSpaReception, user, loading } = useAuth();
-  const navigationItems = getAdminSections(user?.roles).flatMap(
+  const { isAuthenticated, isOperator, isAdmin, isSpaReception, isSpaTherapist, user, loading } = useAuth();
+  const navigationItems = getAdminSections(user?.roles, user?.permissions).flatMap(
     (section) => section.items,
   );
   const allowedTabs = navigationItems.map((item) => item.id);
@@ -275,15 +278,16 @@ export const App = () => {
   const isDedicatedReceptionRoute =
     currentHash === "reception" ||
     currentHash === "staff" ||
+    currentHash.startsWith("staff/") ||
     currentHash === "admin/spa-reception";
 
   const isSpaStaffOnly = isSpaReception && !isAdmin;
 
   // Dedicated Spa Receptionist Portal for direct reception route or staff landing
   const shouldShowReceptionPortal =
-    (isDedicatedReceptionRoute || (isSpaStaffOnly && !currentHash.startsWith("admin"))) &&
+    (isDedicatedReceptionRoute || (isSpaStaffOnly && (!currentHash || currentHash === 'home'))) &&
     isAuthenticated &&
-    isOperator;
+    isOperator && (isSpaReception || isSpaTherapist);
 
   if (shouldShowReceptionPortal) {
     const ReceptionPage = ADMIN_PAGES['spa-reception'];
@@ -307,7 +311,7 @@ export const App = () => {
           </div>
         }
       >
-        {currentHash === 'reception' || currentHash === 'admin/spa-reception' ? <ReceptionPage /> : <SpaStaffApp
+        {(currentHash === 'reception' || currentHash === 'admin/spa-reception') && isSpaReception ? <ReceptionPage /> : <SpaStaffApp
           onSwitchToAdmin={() => {
             window.location.hash = "/admin/spa";
           }}
@@ -319,7 +323,7 @@ export const App = () => {
   // Determine whether current route is for Admin Management or Customer Storefront
   const isExplicitAdmin =
     currentHash.startsWith("admin") ||
-    (currentHash !== "products" && Object.keys(ADMIN_PAGES).includes(currentHash));
+    (currentHash !== "products" && currentHash !== 'treatments' && Object.keys(ADMIN_PAGES).includes(currentHash));
 
   // If not admin route -> Render the Customer Storefront
   if (!isExplicitAdmin) {
@@ -350,6 +354,10 @@ export const App = () => {
   // If admin route requested but not logged in or not an operator -> Show Login Page
   if (!isAuthenticated || !isOperator) {
     return <LoginPage />;
+  }
+
+  if (!allowedTabs.length) {
+    return <div className="content-container" role="status"><h1>Chưa được phân công nghiệp vụ</h1><p>Quản trị viên cần cấp quyền công việc cho tài khoản nhân viên này.</p><a href="#/home">Về cửa hàng</a></div>;
   }
 
   // Extract active admin tab

@@ -23,9 +23,16 @@ class HasakiFormatters {
   }
 
   static int calculateDiscountPercent(num? basePrice, num? salePrice) {
-    if (basePrice == null || salePrice == null || basePrice <= 0) return 0;
+    if (basePrice == null ||
+        salePrice == null ||
+        !basePrice.isFinite ||
+        !salePrice.isFinite ||
+        basePrice <= 0 ||
+        salePrice < 0) {
+      return 0;
+    }
     if (salePrice >= basePrice) return 0;
     final percent = ((basePrice - salePrice) / basePrice * 100).round();
-    return percent.clamp(1, 99);
+    return percent.clamp(0, 100);
   }
 }

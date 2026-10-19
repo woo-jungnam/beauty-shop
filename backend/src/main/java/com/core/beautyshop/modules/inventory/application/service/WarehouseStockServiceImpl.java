@@ -51,10 +51,12 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     private WarehouseStockResponse saveStock(Long warehouseId, WarehouseStockRequest request,
                                              String referenceType, String referenceId, String note, boolean receipt) {
         Warehouse warehouse = batches.lockWarehouse(warehouseId);
+        var businessDate = com.core.beautyshop.shared.time.BusinessTime.today();
         if (request.getQuantity() == null || request.getQuantity() < 0) throw new BusinessException("Số lượng tồn kho không hợp lệ");
-        if (receipt && request.getExpirationDate() != null && !request.getExpirationDate().isAfter(java.time.LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE)))
+        if (receipt && request.getExpirationDate() != null && !request.getExpirationDate().isAfter(businessDate))
             throw new BusinessException("Hàng đã hết hạn không thể nhập vào kho bán lẻ");
         String batchCode = InventoryBatchService.normalizeBatchCode(request.getBatchCode());
+        batches.requireReceivable(request.getProductVariantId(),batchCode);
 
         ProductVariantSummaryDto variant = catalogFacade.getVariantSummaryForInventory(request.getProductVariantId());
 
@@ -64,6 +66,10 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
         int quantityBefore;
         if (existingStock.isPresent()) {
             stock = existingStock.get();
+            if (stock.getExpirationDate() != null && request.getExpirationDate() != null
+                    && !stock.getExpirationDate().equals(request.getExpirationDate()))
+                throw new BusinessException("Không được thay đổi hạn sử dụng đã biết của lô hàng; cần đối soát riêng");
+            if (request.getExpirationDate() == null) request.setExpirationDate(stock.getExpirationDate());
             batches.restoreEmptyBatch(stock);
             if (!receipt && (request.getQuantity() < stock.getReservedQuantity()
                     || request.getReservedQuantity() != null && !request.getReservedQuantity().equals(stock.getReservedQuantity()))) {
@@ -71,15 +77,16 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
             }
             quantityBefore = stock.getQuantity();
             if (receipt) {
-                if (request.getExpirationDate() != null && stock.getExpirationDate() != null
-                        && !request.getExpirationDate().equals(stock.getExpirationDate()))
-                    throw new BusinessException("Nhập thêm hàng không được thay đổi hạn sử dụng của lô hàng hiện có");
                 request.setMinQuantity(stock.getMinQuantity()); request.setMaxQuantity(stock.getMaxQuantity());
                 request.setLocation(stock.getLocation());
-                if (request.getExpirationDate() == null) request.setExpirationDate(stock.getExpirationDate());
-                if (request.getExpirationDate() != null && !request.getExpirationDate().isAfter(java.time.LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE)))
+                if (request.getExpirationDate() != null && !request.getExpirationDate().isAfter(businessDate))
                     throw new BusinessException("Hàng đã hết hạn không thể nhập vào kho bán lẻ");
                 if (request.getCostPrice() == null) request.setCostPrice(stock.getCostPrice());
+                if (quantityBefore > 0 && request.getCostPrice() != null && stock.getCostPrice() != null) {
+                    request.setCostPrice(stock.getCostPrice().multiply(java.math.BigDecimal.valueOf(quantityBefore))
+                            .add(request.getCostPrice().multiply(java.math.BigDecimal.valueOf(request.getQuantity())))
+                            .divide(java.math.BigDecimal.valueOf((long) quantityBefore + request.getQuantity()),2,java.math.RoundingMode.HALF_UP));
+                }
             }
             stock.setQuantity(receipt ? Math.addExact(quantityBefore, request.getQuantity()) : request.getQuantity());
             stock.setBatchCode(batchCode);
@@ -167,6 +174,8 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                 .maxQuantity(stock.getMaxQuantity())
                 .location(stock.getLocation())
                 .costPrice(stock.getCostPrice())
+                .isBlocked(stock.getIsBlocked())
+                .blockReason(stock.getBlockReason())
                 .expirationDate(stock.getExpirationDate())
                 .createdAt(stock.getCreatedAt())
                 .updatedAt(stock.getUpdatedAt())

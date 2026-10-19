@@ -84,16 +84,13 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     console.log('Category section found ✓');
   });
 
-  test('1.7 Flash Sale section tồn tại và đếm ngược hoạt động', async ({ page }) => {
+  test('1.7 Flash Sale công bố dải HSD, không dựng đếm ngược', async ({ page }) => {
     await page.goto(BASE);
     await waitForAppReady(page);
     const flashSection = page.locator('#flash-sale');
     await expect(flashSection).toBeVisible({ timeout: 8000 });
-    // Check countdown digits
-    const countdown = page.locator('.countdown-digit-val');
-    const countdownCount = await countdown.count();
-    console.log('Countdown digit count:', countdownCount);
-    expect(countdownCount).toBeGreaterThanOrEqual(3);
+    await expect(flashSection).toContainText('31–90 ngày');
+    await expect(flashSection.locator('.countdown-digit-val')).toHaveCount(0);
   });
 
   test('1.8 Section "10 sản phẩm ngẫu nhiên" hiển thị', async ({ page }) => {

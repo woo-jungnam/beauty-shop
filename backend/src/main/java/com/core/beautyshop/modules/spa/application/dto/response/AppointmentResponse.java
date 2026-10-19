@@ -74,6 +74,7 @@ public class AppointmentResponse {
                                     .serviceName(item.getServiceNameSnapshot() != null ? item.getServiceNameSnapshot() : item.getService() != null ? item.getService().getName() : null)
                                     .staffName(resolvedStaffName)
                                     .ticketId(item.getTicket() != null ? item.getTicket().getId() : null)
+                                    .treatmentSessionItemId(item.getTreatmentSessionItemId())
                                     .isTicketUsed(item.getTicket() != null)
                                     .price(item.getPrice())
                                     .startTime(item.getStartTime())

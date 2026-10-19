@@ -24,6 +24,8 @@ public class WarehouseStockResponse {
     private java.time.LocalDate expirationDate;
     @Schema(description = "Mã lô đã trim; chuỗi rỗng đại diện lô không mã")
     private String batchCode;
+    private Boolean isBlocked;
+    private String blockReason;
     private Integer minQuantity;
     private Integer maxQuantity;
     private String location;

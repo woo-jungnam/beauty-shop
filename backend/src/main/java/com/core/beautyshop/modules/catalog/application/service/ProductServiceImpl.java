@@ -9,13 +9,13 @@ import com.core.beautyshop.modules.catalog.domain.*;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.modules.catalog.infrastructure.RecommendationClient;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
+import com.core.beautyshop.modules.inventory.api.InventoryExpiryPolicy;
 import com.core.beautyshop.modules.inventory.api.dto.ExpiringVariantStockDto;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
-import com.core.beautyshop.shared.dto.CacheablePage;
+import com.core.beautyshop.shared.time.BusinessTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
@@ -79,19 +78,17 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "products_page", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
     public Page<ProductListResponse> getAllProducts(Pageable pageable) {
-        return CacheablePage.from(productRepository.findAllProductList(pageable));
+        return productSearchRepository.search(new ProductSearchRequest(), pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getFeaturedProducts(Pageable pageable) {
-        Page<ProductListResponse> featured = productRepository.findFeaturedProductList(pageable);
-        if (featured == null || featured.isEmpty()) {
-            return productRepository.findAllProductList(pageable);
-        }
-        return featured;
+        ProductSearchRequest request = new ProductSearchRequest();
+        request.setIsFeatured(true);
+        Page<ProductListResponse> featured = productSearchRepository.search(request, pageable);
+        return featured.isEmpty() ? getAllProducts(pageable) : featured;
     }
 
     @Override
@@ -111,14 +108,17 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getProductsByCategory(Long categoryId, Pageable pageable) {
-        Set<Long> categoryIds = collectCategoryAndDescendantIds(categoryId);
-        return productRepository.findProductListByCategoryIds(categoryIds, pageable);
+        ProductSearchRequest request = new ProductSearchRequest();
+        request.setCategoryIds(new ArrayList<>(collectCategoryAndDescendantIds(categoryId)));
+        return productSearchRepository.search(request, pageable);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getProductsByBrand(Long brandId, Pageable pageable) {
-        return productRepository.findProductListByBrandId(brandId, pageable);
+        ProductSearchRequest request = new ProductSearchRequest();
+        request.setBrandId(brandId);
+        return productSearchRepository.search(request, pageable);
     }
 
     @Override
@@ -322,6 +322,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private ProductResponse mapToProductResponse(Product product, boolean admin) {
+        LocalDate businessDate = BusinessTime.today();
         List<ProductVariant> activeVariants = product.getVariants() != null
                 ? product.getVariants().stream().filter(v -> !Boolean.TRUE.equals(v.getIsDeleted()) && !Boolean.FALSE.equals(v.getIsActive())).toList()
                 : List.of();
@@ -382,23 +383,7 @@ public class ProductServiceImpl implements ProductService {
                         .filter(v -> admin || Boolean.TRUE.equals(v.getIsActive()))
                         .sorted(Comparator.comparing((ProductVariant v) -> Boolean.TRUE.equals(v.getIsDefault()) ? 0 : 1)
                                 .thenComparing(v -> v.getPrice() != null ? v.getPrice() : BigDecimal.ZERO))
-                        .map(v -> ProductResponse.VariantResponse.builder()
-                                .id(v.getId())
-                                .sku(v.getSku())
-                                .variantName(v.getVariantName())
-                                .price(v.getPrice())
-                                .originalPrice(v.getOriginalPrice() != null ? v.getOriginalPrice() : v.getPrice())
-                                .discountPrice(v.getDiscountPrice())
-                                .currency(v.getCurrency() != null ? v.getCurrency() : "VND")
-                                .volume(v.getVolume())
-                                .volumeValue(v.getVolumeValue())
-                                .volumeUnit(v.getVolumeUnit())
-                                .color(v.getColor())
-                                .barcode(v.getBarcode())
-                                .isDefault(v.getIsDefault())
-                                .isActive(v.getIsActive())
-                                .stockQuantity(inventoryFacade.getAvailableQuantity(v.getId()))
-                                .build())
+                        .map(v -> mapVariantResponse(v, inventoryFacade.getAvailableQuantity(v.getId(), businessDate)))
                         .collect(Collectors.toList()) : new ArrayList<>())
                 .images(product.getImages() != null ? product.getImages().stream()
                         .filter(img -> !Boolean.TRUE.equals(img.getIsDeleted()))
@@ -495,6 +480,26 @@ public class ProductServiceImpl implements ProductService {
                 .build();
     }
 
+    private ProductResponse.VariantResponse mapVariantResponse(ProductVariant variant, int stockQuantity) {
+        return ProductResponse.VariantResponse.builder()
+                .id(variant.getId())
+                .sku(variant.getSku())
+                .variantName(variant.getVariantName())
+                .price(variant.getPrice())
+                .originalPrice(variant.getOriginalPrice() != null ? variant.getOriginalPrice() : variant.getPrice())
+                .discountPrice(variant.getDiscountPrice())
+                .currency(variant.getCurrency() != null ? variant.getCurrency() : "VND")
+                .volume(variant.getVolume())
+                .volumeValue(variant.getVolumeValue())
+                .volumeUnit(variant.getVolumeUnit())
+                .color(variant.getColor())
+                .barcode(variant.getBarcode())
+                .isDefault(variant.getIsDefault())
+                .isActive(variant.getIsActive())
+                .stockQuantity(stockQuantity)
+                .build();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getAllProductsForAdmin(Pageable pageable) {
@@ -553,6 +558,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public List<ProductListResponse> getSimilarProducts(Long productId, int limit) {
+        LocalDate businessDate = BusinessTime.today();
         int safeLimit = (limit <= 0 || limit > 50) ? 8 : limit;
         Product currentProduct = productRepository.findByIdAndIsDeletedFalse(productId).orElse(null);
         if (currentProduct == null) {
@@ -563,7 +569,7 @@ public class ProductServiceImpl implements ProductService {
         var recResult = recommendationClient.similar(productId, Math.min(50, safeLimit * 3));
         List<Long> similarIds = recResult.ids();
         if (similarIds != null && !similarIds.isEmpty()) {
-            List<ProductListResponse> products = productRepository.findProductListByIds(similarIds);
+            List<ProductListResponse> products = productSearchRepository.findAvailableByIds(similarIds, businessDate);
             Map<Long, ProductListResponse> map = products.stream()
                     .collect(Collectors.toMap(ProductListResponse::getId, p -> p, (a, b) -> a));
             List<ProductListResponse> ordered = similarIds.stream()
@@ -585,24 +591,20 @@ public class ProductServiceImpl implements ProductService {
                 : List.of();
         Long brandId = currentProduct.getBrand() != null ? currentProduct.getBrand().getId() : null;
 
-        return productRepository.findFallbackSimilarProducts(
-                productId,
-                categoryIds.isEmpty() ? List.of(-1L) : categoryIds,
-                brandId != null ? brandId : -1L,
-                org.springframework.data.domain.PageRequest.of(0, safeLimit)
-        );
+        return productSearchRepository.findAvailableSimilar(productId, categoryIds, brandId, safeLimit, businessDate);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ProductListResponse> getRecommendedForYou(Long userId, String sessionId, int limit) {
+        LocalDate businessDate = BusinessTime.today();
         int safeLimit = (limit <= 0 || limit > 50) ? 8 : limit;
 
         // 1. Thử lấy danh sách ID từ FastAPI RecSys (User-to-Item Centroid Vector)
         var recResult = recommendationClient.forUser(userId, sessionId, Math.min(50, safeLimit * 3));
         List<Long> recommendedIds = recResult.ids();
         if (recommendedIds != null && !recommendedIds.isEmpty()) {
-            List<ProductListResponse> products = productRepository.findProductListByIds(recommendedIds);
+            List<ProductListResponse> products = productSearchRepository.findAvailableByIds(recommendedIds, businessDate);
             Map<Long, ProductListResponse> map = products.stream()
                     .collect(Collectors.toMap(ProductListResponse::getId, p -> p, (a, b) -> a));
             List<ProductListResponse> ordered = recommendedIds.stream()
@@ -618,96 +620,95 @@ public class ProductServiceImpl implements ProductService {
         if (recResult.available()) return List.of();
 
         // 2. Fallback Cold-Start: Lấy danh sách sản phẩm phổ biến / bán chạy nhất
-        return productRepository.findPopularProducts(org.springframework.data.domain.PageRequest.of(0, safeLimit));
+        return productSearchRepository.findAvailablePopular(safeLimit, businessDate);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ProductListResponse> getExpiringSoonProducts(int thresholdDays, int limit) {
-        int safeThreshold = Math.max(15, Math.min(thresholdDays, 180));
+        LocalDate businessDate = BusinessTime.today();
+        int safeThreshold = Math.max(InventoryExpiryPolicy.MIN_REMAINING_DAYS + 1,
+                Math.min(thresholdDays, InventoryExpiryPolicy.MAX_CLEARANCE_DAYS));
         int safeLimit = Math.max(1, Math.min(limit, 50));
+        int pageSize = 100;
+        Comparator<ProductListResponse> order = Comparator.comparing(ProductListResponse::getEarliestExpirationDate)
+                .thenComparing(ProductListResponse::getTotalSold, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(ProductListResponse::getId)
+                .thenComparing(row -> row.getClearanceVariant().getId());
+        Map<Long, ProductListResponse> selected = new HashMap<>();
 
-        List<ExpiringVariantStockDto> expiringStocks = inventoryFacade.getExpiringVariantStocks(safeThreshold, safeLimit * 4);
-        if (expiringStocks == null || expiringStocks.isEmpty()) {
-            return List.of();
-        }
+        boolean finished = false;
+        for (int page = 0; !finished; page++) {
+            List<ExpiringVariantStockDto> stocks = inventoryFacade.getExpiringVariantStocks(businessDate, safeThreshold, page, pageSize);
+            if (stocks == null || stocks.isEmpty()) break;
+            Set<Long> variantIds = stocks.stream().map(ExpiringVariantStockDto::getVariantId)
+                    .filter(Objects::nonNull).collect(Collectors.toSet());
+            Map<Long, ProductVariant> variants = variantIds.isEmpty() ? Map.of()
+                    : productVariantRepository.findActiveVariantsWithProductAndBrandByIds(variantIds).stream()
+                    .collect(Collectors.toMap(ProductVariant::getId, variant -> variant));
 
-        Map<Long, ExpiringVariantStockDto> stockMap = expiringStocks.stream()
-                .filter(s -> s.getVariantId() != null && s.getEarliestExpirationDate() != null)
-                .collect(Collectors.toMap(ExpiringVariantStockDto::getVariantId, s -> s, (s1, s2) -> s1));
-
-        if (stockMap.isEmpty()) {
-            return List.of();
-        }
-
-        List<ProductVariant> variants = productVariantRepository.findActiveVariantsWithProductAndBrandByIds(stockMap.keySet());
-        if (variants.isEmpty()) {
-            return List.of();
-        }
-
-        Map<Long, ProductVariant> earliestVariantByProduct = new HashMap<>();
-        Map<Long, ExpiringVariantStockDto> earliestStockByProduct = new HashMap<>();
-
-        for (ProductVariant variant : variants) {
-            Product product = variant.getProduct();
-            if (product == null || product.getId() == null) continue;
-            Long productId = product.getId();
-            ExpiringVariantStockDto stock = stockMap.get(variant.getId());
-            if (stock == null || stock.getEarliestExpirationDate() == null) continue;
-
-            ExpiringVariantStockDto currentEarliest = earliestStockByProduct.get(productId);
-            if (currentEarliest == null || stock.getEarliestExpirationDate().isBefore(currentEarliest.getEarliestExpirationDate())) {
-                earliestVariantByProduct.put(productId, variant);
-                earliestStockByProduct.put(productId, stock);
+            for (ExpiringVariantStockDto stock : stocks) {
+                LocalDate expiry = stock.getEarliestExpirationDate();
+                if (expiry == null || !InventoryExpiryPolicy.isSellable(expiry, businessDate)
+                        || expiry.isAfter(businessDate.plusDays(safeThreshold))
+                        || stock.getAvailableQuantity() == null || stock.getAvailableQuantity() <= 0) continue;
+                ProductListResponse last = selected.values().stream().max(order).orElse(null);
+                // Read every tie at the final date, but keep only the best limit distinct products in memory.
+                if (selected.size() == safeLimit && expiry.isAfter(last.getEarliestExpirationDate())) {
+                    finished = true;
+                    break;
+                }
+                ProductVariant variant = variants.get(stock.getVariantId());
+                if (variant == null || !Boolean.TRUE.equals(variant.getIsActive()) || Boolean.TRUE.equals(variant.getIsDeleted())
+                        || variant.getPrice() == null || variant.getDiscountPrice() == null
+                        || variant.getDiscountPrice().signum() < 0 || variant.getDiscountPrice().compareTo(variant.getPrice()) >= 0) continue;
+                Product product = variant.getProduct();
+                if (product == null || product.getId() == null || Boolean.TRUE.equals(product.getIsDeleted())
+                        || product.getStatus() != ProductStatus.ACTIVE) continue;
+                ProductListResponse candidate = clearanceResponse(variant, stock, businessDate);
+                ProductListResponse previous = selected.get(product.getId());
+                if (previous != null) {
+                    if (order.compare(candidate, previous) < 0) selected.put(product.getId(), candidate);
+                } else if (selected.size() < safeLimit) {
+                    selected.put(product.getId(), candidate);
+                } else if (order.compare(candidate, last) < 0) {
+                    selected.remove(last.getId());
+                    selected.put(product.getId(), candidate);
+                }
             }
+            if (stocks.size() < pageSize) finished = true;
         }
+        List<ProductListResponse> result = selected.values().stream().sorted(order).toList();
+        result.forEach(row -> row.getClearanceVariant().setStockQuantity(
+                inventoryFacade.getAvailableQuantity(row.getClearanceVariant().getId(), businessDate)));
+        return result;
+    }
 
-        LocalDate today = LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE);
-        List<ProductListResponse> result = new ArrayList<>();
-
-        for (Map.Entry<Long, ProductVariant> entry : earliestVariantByProduct.entrySet()) {
-            ProductVariant variant = entry.getValue();
-            Product product = variant.getProduct();
-            ExpiringVariantStockDto stock = earliestStockByProduct.get(entry.getKey());
-
-            BigDecimal salePrice = variant.getDiscountPrice() != null
-                    ? variant.getDiscountPrice()
-                    : (variant.getPrice() != null
-                            ? variant.getPrice().multiply(new BigDecimal("0.80")).setScale(0, RoundingMode.HALF_UP)
-                            : BigDecimal.ZERO);
-            BigDecimal originalPrice = variant.getOriginalPrice() != null
-                    ? variant.getOriginalPrice()
-                    : (variant.getPrice() != null ? variant.getPrice() : salePrice);
-
-            int daysRemaining = Math.max(0, (int) ChronoUnit.DAYS.between(today, stock.getEarliestExpirationDate()));
-
-            ProductListResponse response = ProductListResponse.builder()
-                    .id(product.getId())
-                    .name(product.getName())
-                    .slug(product.getSlug())
-                    .shortDescription(product.getShortDescription())
-                    .thumbnailUrl(product.getThumbnailUrl())
-                    .minPrice(salePrice)
-                    .maxPrice(originalPrice)
-                    .status(product.getStatus())
-                    .isFeatured(product.getIsFeatured())
-                    .averageRating(product.getAverageRating())
-                    .totalReviews(product.getTotalReviews())
-                    .totalSold(product.getTotalSold())
-                    .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
-                    .brandId(product.getBrand() != null ? product.getBrand().getId() : null)
-                    .earliestExpirationDate(stock.getEarliestExpirationDate())
-                    .daysRemaining(daysRemaining)
-                    .clearanceStock(stock.getAvailableQuantity())
-                    .build();
-
-            result.add(response);
-        }
-
-        result.sort(Comparator.comparing(ProductListResponse::getEarliestExpirationDate)
-                .thenComparing(Comparator.comparing(ProductListResponse::getTotalSold, Comparator.nullsLast(Comparator.reverseOrder()))));
-
-        return result.stream().limit(safeLimit).collect(Collectors.toList());
+    private ProductListResponse clearanceResponse(ProductVariant variant, ExpiringVariantStockDto stock, LocalDate businessDate) {
+        Product product = variant.getProduct();
+        ProductResponse.VariantResponse clearanceVariant = mapVariantResponse(variant, 0);
+        clearanceVariant.setOriginalPrice(variant.getPrice());
+        boolean visibleBrand = product.getBrand() != null && !Boolean.TRUE.equals(product.getBrand().getIsDeleted());
+        return ProductListResponse.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .slug(product.getSlug())
+                .shortDescription(product.getShortDescription())
+                .thumbnailUrl(product.getThumbnailUrl())
+                .minPrice(variant.getDiscountPrice())
+                .maxPrice(variant.getDiscountPrice())
+                .status(product.getStatus())
+                .isFeatured(product.getIsFeatured())
+                .averageRating(product.getAverageRating())
+                .totalReviews(product.getTotalReviews())
+                .totalSold(product.getTotalSold())
+                .brandName(visibleBrand ? product.getBrand().getName() : null)
+                .brandId(visibleBrand ? product.getBrand().getId() : null)
+                .earliestExpirationDate(stock.getEarliestExpirationDate())
+                .daysRemaining((int) ChronoUnit.DAYS.between(businessDate, stock.getEarliestExpirationDate()))
+                .clearanceStock(stock.getAvailableQuantity())
+                .clearanceVariant(clearanceVariant)
+                .build();
     }
 
     @Override

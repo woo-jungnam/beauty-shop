@@ -1,0 +1,8 @@
+# Optional CLIP dependencies, isolated from the existing RAG dependency ranges.
+sentence-transformers==5.6.0
+transformers==4.57.6
+huggingface-hub==0.36.2
+torch==2.5.1
+Pillow==12.3.0
+numpy==2.2.6
+python-multipart==0.0.32

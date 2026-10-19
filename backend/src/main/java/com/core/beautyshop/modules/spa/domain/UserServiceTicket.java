@@ -26,6 +26,18 @@ public class UserServiceTicket extends Base {
     @Column(name = "order_id", unique = true)
     private Long orderId;
 
+    @Column(name = "package_name_snapshot", length = 255)
+    private String packageNameSnapshot;
+
+    @Column(name = "treatment_course_id")
+    private Long treatmentCourseId;
+
+    @ElementCollection
+    @CollectionTable(name = "ticket_service_names", joinColumns = @JoinColumn(name = "ticket_id"))
+    @MapKeyColumn(name = "service_id") @Column(name = "service_name", nullable = false, length = 255)
+    @Builder.Default
+    private java.util.Map<Long, String> serviceNames = new java.util.HashMap<>();
+
     @Column(name = "total_sessions", nullable = false)
     private Integer totalSessions;
 

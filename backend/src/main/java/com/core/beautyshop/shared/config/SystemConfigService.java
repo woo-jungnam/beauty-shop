@@ -17,6 +17,9 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class SystemConfigService {
+    private static final Set<String> EDITABLE_PUBLIC_KEYS = Set.of(
+            "shipping.free_threshold", "shipping.default_fee", "spa.opening_time", "spa.closing_time",
+            "store.address", "store.hotline", "store.email");
     private static final Map<String, String> KNOWN_TYPES = Map.ofEntries(
             Map.entry("inventory.expiry_warning_days", "INTEGER"), Map.entry("dashboard.monthly_order_target", "INTEGER"),
             Map.entry("dashboard.monthly_revenue_target", "DECIMAL"),
@@ -32,9 +35,15 @@ public class SystemConfigService {
 
     @Transactional
     public SystemConfig create(String key, String value, String description, String valueType) {
+        return create(key, value, description, valueType, null);
+    }
+
+    @Transactional
+    public SystemConfig create(String key, String value, String description, String valueType, Boolean isPublic) {
         if (key == null || key.isBlank() || key.trim().length() > 100) throw new BusinessException("Khóa cấu hình là bắt buộc và không quá 100 ký tự");
         if (description != null && description.length() > 500) throw new BusinessException("Mô tả cấu hình không được vượt quá 500 ký tự");
         String normalizedKey = key.trim();
+        validatePublicKey(normalizedKey, isPublic);
         SystemConfig config = repository.findByConfigKeyForUpdate(normalizedKey).orElse(null);
         if (config != null && !Boolean.TRUE.equals(config.getIsDeleted())) throw new BusinessException("Khóa cấu hình đã tồn tại: " + normalizedKey);
         String type = normalizeType(normalizedKey, valueType == null && config != null ? config.getValueType() : valueType);
@@ -44,14 +53,28 @@ public class SystemConfigService {
         config.setConfigValue(normalizedValue);
         config.setValueType(type);
         config.setDescription(description);
+        config.setIsPublic(Boolean.TRUE.equals(isPublic));
         return repository.save(config);
     }
 
     @Transactional
     public SystemConfig update(String key, String value) {
+        return update(key, value, null);
+    }
+
+    @Transactional
+    public SystemConfig update(String key, String value, Boolean isPublic) {
+        validatePublicKey(key, isPublic);
         SystemConfig config = activeForUpdate(key);
         config.setConfigValue(validate(key, value, normalizeType(key, config.getValueType())));
+        if (isPublic != null) config.setIsPublic(isPublic);
         return repository.save(config);
+    }
+
+    private void validatePublicKey(String key, Boolean isPublic) {
+        if (Boolean.TRUE.equals(isPublic) && !EDITABLE_PUBLIC_KEYS.contains(key)) {
+            throw new BusinessException("Chỉ công khai các khóa thông tin cửa hàng, phí giao hàng và giờ phục vụ được hỗ trợ");
+        }
     }
 
     @Transactional

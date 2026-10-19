@@ -14,6 +14,7 @@ public class PromotionOrderEventListener {
 
     private final PromotionFacade promotionFacade;
 
+    @org.springframework.core.annotation.Order(2)
     @EventListener
     public void handleOrderCancelled(OrderEvents.OrderCancelledEvent event) {
         if (event == null || event.getOrderId() == null) return;

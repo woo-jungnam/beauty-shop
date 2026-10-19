@@ -29,6 +29,11 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationReceiptRepository receiptRepository;
     private final Optional<JavaMailSender> mailSender;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerNotifications;
+
     @Value("${app.mail.enabled:false}")
     private boolean mailEnabled;
 
@@ -65,71 +70,55 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendOrderConfirmationNotification(Long orderId, String orderNumber, Long userId, BigDecimal totalAmount) {
-        String recipientEmail = "guest@beautyshop.local";
-        String recipientName = "Quý khách";
-
-        if (userId != null) {
-            UserSummaryDto userSummary = identityFacade.findUserSummaryById(userId).orElse(null);
-            if (userSummary != null) {
-                recipientEmail = userSummary.getEmail() != null ? userSummary.getEmail() : recipientEmail;
-                recipientName = userSummary.getFullName() != null ? userSummary.getFullName() : userSummary.getUsername();
-            }
-        }
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("orderId", orderId);
-        params.put("orderNumber", orderNumber);
-        params.put("totalAmount", totalAmount);
-
-        EmailMessageDto email = EmailMessageDto.builder()
-                .recipientEmail(recipientEmail)
-                .recipientName(recipientName)
-                .subject("Xác nhận đặt hàng thành công #" + orderNumber)
-                .templateCode("ORDER_CONFIRMATION")
-                .parameters(params)
-                .build();
-
-        sendEmail(email);
+        deliverOrder(orderId, "CREATED", "Đã tiếp nhận đơn hàng #" + orderNumber,
+                "Đơn hàng của bạn đã được tiếp nhận. Tổng thanh toán: " + totalAmount + " VND.");
     }
 
     @Override
     public void sendOrderPaidNotification(Long orderId, String orderNumber, Long userId, BigDecimal totalAmount) {
-        String recipientEmail = "guest@beautyshop.local";
-        String recipientName = "Quý khách";
-
-        if (userId != null) {
-            UserSummaryDto userSummary = identityFacade.findUserSummaryById(userId).orElse(null);
-            if (userSummary != null) {
-                recipientEmail = userSummary.getEmail() != null ? userSummary.getEmail() : recipientEmail;
-                recipientName = userSummary.getFullName() != null ? userSummary.getFullName() : userSummary.getUsername();
-            }
-        }
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("orderId", orderId);
-        params.put("orderNumber", orderNumber);
-        params.put("totalAmount", totalAmount);
-
-        EmailMessageDto email = EmailMessageDto.builder()
-                .recipientEmail(recipientEmail)
-                .recipientName(recipientName)
-                .subject("Xác nhận thanh toán thành công qua chuyển khoản đơn hàng #" + orderNumber)
-                .templateCode("ORDER_PAID")
-                .parameters(params)
-                .build();
-
-        sendEmail(email);
+        deliverOrder(orderId, "PAID", "Đã nhận thanh toán #" + orderNumber,
+                "Đã ghi nhận thanh toán cho đơn hàng của bạn. Vui lòng xem chi tiết đơn để đối chiếu số tiền.");
     }
 
     @Override
     public void sendOrderStatusUpdateNotification(Long orderId, String orderNumber, String previousStatus, String newStatus) {
-        log.info("Đã ghi nhận thông báo: Đơn hàng #{} thay đổi trạng thái từ {} sang {}", orderNumber, previousStatus, newStatus);
+        deliverOrder(orderId, "STATUS_" + previousStatus + "_" + newStatus,
+                "Cập nhật đơn hàng #" + orderNumber, "Trạng thái đơn hàng: " + statusLabel(newStatus) + ".");
     }
 
     @Override
     public void sendOrderCancelledNotification(Long orderId, String orderNumber) {
-        log.info("Đã ghi nhận thông báo: Đơn hàng #{} đã được hủy", orderNumber);
+        deliverOrder(orderId, "CANCELLED", "Đã hủy đơn hàng #" + orderNumber,
+                "Đơn hàng đã được hủy. Nếu có tiền đã thanh toán, khoản hoàn sẽ được xử lý và ghi nhận riêng.");
     }
+
+    private void deliverOrder(Long orderId, String event, String title, String body) {
+        var recipients = jdbc.query("select user_id, customer_email, customer_name, updated_at from orders where id=? and is_deleted=false",
+                (rs, row) -> new OrderRecipient(rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
+                        rs.getString("customer_email"), rs.getString("customer_name"), String.valueOf(rs.getTimestamp("updated_at"))), orderId);
+        if (recipients.isEmpty()) return;
+        var recipient = recipients.getFirst();
+        String email = recipient.email();
+        String name = recipient.name();
+        if (recipient.userId() != null) {
+            var account = identityFacade.findUserSummaryById(recipient.userId()).orElse(null);
+            if (account != null && (email == null || email.isBlank())) email = account.getEmail();
+            String eventKey = "order:" + orderId + ":" + event + (event.startsWith("STATUS_") ? ":" + recipient.updatedAt() : "");
+            customerNotifications.publish(recipient.userId(), eventKey, "ORDER", title, body, "profile?tab=orders&order=" + orderId);
+        }
+        if (email == null || email.isBlank()) return;
+        sendEmail(EmailMessageDto.builder().recipientEmail(email).recipientName(name).subject(title)
+                .templateCode("ORDER_EVENT").parameters(Map.of("body", body)).build());
+    }
+    private String statusLabel(String status) {
+        return switch (status) {
+            case "PENDING" -> "Chờ xử lý"; case "CONFIRMED" -> "Đã xác nhận"; case "PROCESSING" -> "Đang chuẩn bị";
+            case "SHIPPED" -> "Đang giao"; case "DELIVERED" -> "Đã giao"; case "CANCELLED" -> "Đã hủy";
+            case "RETURNED" -> "Đã trả hàng"; case "DELIVERY_FAILED" -> "Giao chưa thành công";
+            case "RETURN_TO_SENDER" -> "Đang hoàn về cửa hàng"; case "COMPLETED" -> "Đã hoàn tất"; default -> status;
+        };
+    }
+    private record OrderRecipient(Long userId, String email, String name, String updatedAt) {}
 
     @Override
     @Transactional
@@ -141,7 +130,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private String buildEmailHtml(EmailMessageDto dto) {
-        if ("SPA_APPOINTMENT_REMINDER".equals(dto.getTemplateCode()) || "SPA_STAFF_FOLLOW_UP".equals(dto.getTemplateCode())) {
+        if ("SPA_APPOINTMENT_REMINDER".equals(dto.getTemplateCode()) || "SPA_STAFF_FOLLOW_UP".equals(dto.getTemplateCode()) || "ORDER_EVENT".equals(dto.getTemplateCode())) {
             String recipient = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getRecipientName() == null ? "Quý khách" : dto.getRecipientName());
             String subject = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getSubject() == null ? "BeautyShop Spa" : dto.getSubject());
             String body = org.springframework.web.util.HtmlUtils.htmlEscape(String.valueOf(dto.getParameters().getOrDefault("body", "")))
@@ -149,7 +138,7 @@ public class NotificationServiceImpl implements NotificationService {
             return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h2>" + subject
                     + "</h2><p>Xin chào " + recipient + ",</p><p>" + body + "</p></body></html>";
         }
-        String name = dto.getRecipientName() != null ? dto.getRecipientName() : "Quý khách";
+        String name = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getRecipientName() != null ? dto.getRecipientName() : "Quý khách");
         String orderNumber = dto.getParameters() != null && dto.getParameters().get("orderNumber") != null
                 ? String.valueOf(dto.getParameters().get("orderNumber")) : "";
         String amount = dto.getParameters() != null && dto.getParameters().get("totalAmount") != null

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function checkout(page, existing = false) {
-  const profile = { id: 1, username: 'reception-test', fullName: 'Test Reception', roles: ['ROLE_STAFF'] };
+  const profile = { id: 1, username: 'reception-test', fullName: 'Test Reception', roles: ['ROLE_STAFF'], permissions: ['SPA_RECEPTION'] };
   await page.addInitScript((user) => {
     localStorage.setItem('beautyshop_admin_token', 'test-token');
     localStorage.setItem('beautyshop_admin_user', JSON.stringify(user));
@@ -9,7 +9,7 @@ async function checkout(page, existing = false) {
   let invoice = existing ? makeInvoice() : null;
   const receipts = [];
   await page.route('**/img.vietqr.io/**', (route) => route.abort());
-  await page.route('**/api/**', async (route) => {
+  await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     let data = [];
@@ -24,7 +24,7 @@ async function checkout(page, existing = false) {
       if (request.method() === 'POST') invoice = makeInvoice();
       if (!invoice) return route.fulfill({ status: 404, json: { message: 'No invoice' } });
       data = invoice;
-    } else if (path.includes('/appointments/admin/all')) data = { content: [{ id: 42, status: 'COMPLETED', orderId: existing ? 9 : null, customerName: 'Test Guest', appointmentDate: '2026-10-08', startTime: '10:00', items: [{ serviceName: 'Test Service', price: 900 }] }] };
+    } else if (path.includes('/appointments/admin/all')) data = { content: [{ id: 42, status: 'COMPLETED', orderId: existing ? 9 : null, customerName: 'Test Guest', appointmentDate: '2026-10-08', startTime: '10:00', items: [{ id: 1, serviceName: 'Test Service', price: 900 }] }] };
     await route.fulfill({ json: { data } });
   });
   await page.goto('/#/reception');
@@ -41,7 +41,7 @@ function makeInvoice() {
     orderNumber: `ORD-${'A'.repeat(32)}`, totalAmount: 301, paidAmount: 0, amountDue: 301,
     refundedAmount: 0, paymentMethod: 'BANK', paymentStatus: 'PENDING',
     items: [{ appointmentItemId: 1, serviceName: 'Performed Service', unitPrice: 301 }],
-    paymentInstruction: { bankName: 'MBBank', bankAccountName: 'BEAUTY SHOP', bankAccountNumber: '0902588750', transferSyntax: `ORD-${'A'.repeat(32)}`, qrCodeUrl: `https://img.vietqr.io/image/970422-0902588750-compact.jpg?amount=301&addInfo=ORD-${'A'.repeat(32)}` },
+    paymentInstruction: { bankName: 'MBBank', bankAccountName: 'BEAUTY SHOP', bankAccountNumber: '0000000000', transferSyntax: `ORD-${'A'.repeat(32)}`, qrCodeUrl: `https://img.vietqr.io/image/970422-0000000000-compact.jpg?amount=301&addInfo=ORD-${'A'.repeat(32)}` },
   };
 }
 
@@ -49,7 +49,7 @@ test('Spa BANK waits for payment; partial transfers update QR; PAID hides QR', a
   const flow = await checkout(page);
   await page.getByRole('button', { name: 'Lập hóa đơn & tạo QR' }).click();
   await expect(page.getByText('Trạng thái: Chờ thanh toán', { exact: true })).toBeVisible();
-  await expect(page.getByText('0902588750', { exact: true })).toBeVisible();
+  await expect(page.getByText('0000000000', { exact: true })).toBeVisible();
   await expect(page.getByText('Thanh toán hoàn tất', { exact: true })).toHaveCount(0);
   flow.partial();
   await page.getByRole('button', { name: 'Kiểm tra thanh toán' }).click();

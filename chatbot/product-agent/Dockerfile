@@ -11,9 +11,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 COPY requirements.txt ./
+COPY requirements-image-search.txt ./
+ARG INSTALL_IMAGE_SEARCH=false
 RUN pip install --no-cache-dir -r requirements.txt \
+    && if [ "$INSTALL_IMAGE_SEARCH" = "true" ]; then pip install --no-cache-dir torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu && pip install --no-cache-dir -r requirements-image-search.txt; fi \
     && mkdir -p /app/data
 COPY app ./app
+COPY scripts ./scripts
 
 EXPOSE 8000
 HEALTHCHECK --interval=20s --timeout=5s --start-period=600s --retries=3 \

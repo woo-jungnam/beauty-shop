@@ -103,13 +103,13 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
           <div style={{ backgroundColor: 'var(--c-canvas)', padding: '14px', borderRadius: '8px', border: '1px solid var(--c-border-subtle)' }}>
             <div style={{ fontSize: '11px', color: 'var(--c-text-light)' }}>Độ pH hoạt động</div>
             <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-primary)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-              {ingredient.phRange || 'pH 4.5 - 6.5'}
+              {ingredient.phRange || 'Chưa công bố'}
             </div>
           </div>
           <div style={{ backgroundColor: 'var(--c-canvas)', padding: '14px', borderRadius: '8px', border: '1px solid var(--c-border-subtle)' }}>
             <div style={{ fontSize: '11px', color: 'var(--c-text-light)' }}>Cấp độ an toàn EWG</div>
             <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-safe-green)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-              1 - 2 (Lành tính)
+              {ingredient.ewg || 'Chưa công bố'}
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
               <span>KẾT HỢP HOÀN HẢO VỚI:</span>
             </div>
             <div style={{ fontSize: '12.5px', color: 'var(--c-primary)', lineHeight: 1.5 }}>
-              {ingredient.bestWith || 'Hyaluronic Acid, B5 Panthenol, Ceramide và Kem chống nắng phổ rộng.'}
+              {ingredient.bestWith || 'Chưa có thông tin phối hợp trong dữ liệu hoạt chất.'}
             </div>
           </div>
 
@@ -137,7 +137,7 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
               <span>CẦN LƯU Ý KHI DÙNG VỚI:</span>
             </div>
             <div style={{ fontSize: '12.5px', color: 'var(--c-primary)', lineHeight: 1.5 }}>
-              {ingredient.cautionWith || 'Tránh dùng chung cùng thời điểm với AHA nồng độ cao hoặc cồn khô làm rát da.'}
+              {ingredient.cautionWith || 'Chưa có lưu ý phối hợp trong dữ liệu hoạt chất.'}
             </div>
           </div>
         </div>

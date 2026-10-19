@@ -1,3 +1,4 @@
+import '../profile/customer_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
@@ -18,9 +19,11 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
+  bool _placing = false;
   String _paymentMethod = 'VIETQR'; // 'VIETQR' (BANK) | 'COD'
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
+  late final TextEditingController _emailController;
   late final TextEditingController _addressController;
   late final TextEditingController _wardController;
   late final TextEditingController _districtController;
@@ -32,12 +35,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.initState();
     final auth = context.read<AuthProvider>();
     final user = auth.currentUser;
+    final delivery = StorageService.getDeliveryDetails();
     _nameController = TextEditingController(text: user?.fullName ?? '');
     _phoneController = TextEditingController(text: user?.phone ?? '');
-    _addressController = TextEditingController(text: StorageService.getDeliveryAddress());
-    _wardController = TextEditingController(text: 'Phường Bến Nghé');
-    _districtController = TextEditingController(text: 'Quận 1');
-    _cityController = TextEditingController(text: 'TP. Hồ Chí Minh');
+    _emailController = TextEditingController(text: user?.email ?? '');
+    _addressController = TextEditingController(text: delivery['address'] ?? '');
+    _wardController = TextEditingController(text: delivery['ward'] ?? '');
+    _districtController = TextEditingController(
+      text: delivery['district'] ?? '',
+    );
+    _cityController = TextEditingController(text: delivery['city'] ?? '');
     _noteController = TextEditingController();
   }
 
@@ -45,6 +52,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _addressController.dispose();
     _wardController.dispose();
     _districtController.dispose();
@@ -58,7 +66,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final cart = context.watch<CartProvider>();
 
     return Scaffold(
-      backgroundColor: HasakiColors.canvas,
+      backgroundColor: HasakiColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Xác Nhận Đơn Hàng'),
         backgroundColor: HasakiColors.primary,
@@ -68,11 +76,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (context.read<AuthProvider>().isAuthenticated)
+              OutlinedButton(
+                onPressed: () async {
+                  final selected = await Navigator.push<Map<String, dynamic>>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CustomerAccountScreen(
+                        area: 'addresses',
+                        selectAddress: true,
+                      ),
+                    ),
+                  );
+                  if (selected == null || !mounted) return;
+                  _nameController.text = '${selected['recipientName'] ?? ''}';
+                  _phoneController.text = '${selected['phone'] ?? ''}';
+                  _addressController.text = '${selected['address'] ?? ''}';
+                  _wardController.text = '${selected['ward'] ?? ''}';
+                  _districtController.text = '${selected['district'] ?? ''}';
+                  _cityController.text = '${selected['city'] ?? ''}';
+                },
+                child: const Text('Chọn từ sổ địa chỉ'),
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email nhận thông báo (không bắt buộc)',
+                ),
+              ),
+            ),
             // 1. Delivery Information Form
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: HasakiColors.borderSubtle),
               ),
@@ -81,9 +121,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.location_on, color: HasakiColors.primary, size: 20),
+                      Icon(
+                        Icons.location_on,
+                        color: HasakiColors.primary,
+                        size: 20,
+                      ),
                       SizedBox(width: 8),
-                      Text('Thông tin giao hàng (Giao 2H)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                      Text(
+                        'Thông tin giao hàng',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(color: HasakiColors.borderSubtle, height: 16),
@@ -118,7 +168,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         child: TextField(
                           controller: _wardController,
                           decoration: const InputDecoration(
-                            labelText: 'Phường/Xã',
+                            labelText: 'Phường/Xã *',
                             isDense: true,
                           ),
                         ),
@@ -128,7 +178,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         child: TextField(
                           controller: _districtController,
                           decoration: const InputDecoration(
-                            labelText: 'Quận/Huyện',
+                            labelText: 'Quận/Huyện *',
                             isDense: true,
                           ),
                         ),
@@ -139,7 +189,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   TextField(
                     controller: _cityController,
                     decoration: const InputDecoration(
-                      labelText: 'Tỉnh/Thành phố',
+                      labelText: 'Tỉnh/Thành phố *',
                       isDense: true,
                     ),
                   ),
@@ -152,14 +202,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: HasakiColors.borderSubtle),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Sản phẩm đã chọn (${cart.cart.items.where((i) => i.isSelected).length}):', style: HasakiTypography.titleMedium),
+                  Text(
+                    'Sản phẩm đã chọn (${cart.cart.items.where((i) => i.isSelected).length}):',
+                    style: HasakiTypography.titleMedium,
+                  ),
                   const Divider(color: HasakiColors.borderSubtle, height: 16),
                   ...cart.cart.items.where((i) => i.isSelected).map((item) {
                     return Padding(
@@ -177,7 +230,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                           Text(
                             HasakiFormatters.formatCurrency(item.totalPrice),
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -190,7 +246,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
             // 3. Payment Method Selector
             Material(
-              color: Colors.white,
+              color: HasakiColors.getSurface(context),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding: const EdgeInsets.all(14),
@@ -201,48 +257,81 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Phương thức thanh toán:', style: HasakiTypography.titleMedium),
+                    Text(
+                      'Phương thức thanh toán:',
+                      style: HasakiTypography.titleMedium,
+                    ),
                     const SizedBox(height: 6),
                     RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Row(
-                      children: [
-                        Icon(Icons.qr_code_scanner, color: HasakiColors.primary, size: 20),
-                        SizedBox(width: 8),
-                        Text('Quét mã VietQR chuyển khoản (SePay)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
+                      contentPadding: EdgeInsets.zero,
+                      title: const Row(
+                        children: [
+                          Icon(
+                            Icons.qr_code_scanner,
+                            color: HasakiColors.primary,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Chuyển khoản VietQR',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: const Text(
+                        'Tự động xác nhận giao dịch • Khuyên dùng',
+                        style: TextStyle(
+                          color: HasakiColors.success,
+                          fontSize: 11,
+                        ),
+                      ),
+                      value: 'VIETQR',
+                      groupValue: _paymentMethod,
+                      activeColor: HasakiColors.primary,
+                      onChanged: (val) => setState(() => _paymentMethod = val!),
                     ),
-                    subtitle: const Text('Tự động xác nhận giao dịch • Khuyên dùng', style: TextStyle(color: HasakiColors.success, fontSize: 11)),
-                    value: 'VIETQR',
-                    groupValue: _paymentMethod,
-                    activeColor: HasakiColors.primary,
-                    onChanged: (val) => setState(() => _paymentMethod = val!),
-                  ),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Row(
-                      children: [
-                        Icon(Icons.payments_outlined, color: HasakiColors.textMuted, size: 20),
-                        SizedBox(width: 8),
-                        Text('Thanh toán khi nhận hàng (COD)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Row(
+                        children: [
+                          Icon(
+                            Icons.payments_outlined,
+                            color: HasakiColors.textMuted,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Thanh toán khi nhận hàng (COD)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      value: 'COD',
+                      groupValue: _paymentMethod,
+                      activeColor: HasakiColors.primary,
+                      onChanged: (val) => setState(() => _paymentMethod = val!),
                     ),
-                    value: 'COD',
-                    groupValue: _paymentMethod,
-                    activeColor: HasakiColors.primary,
-                    onChanged: (val) => setState(() => _paymentMethod = val!),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          // 4. Order Note Input
-          Container(
+            // 4. Order Note Input
+            Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: HasakiColors.borderSubtle),
               ),
@@ -260,27 +349,52 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: HasakiColors.borderSubtle),
               ),
               child: Column(
                 children: [
-                  _buildCostRow('Tạm tính:', HasakiFormatters.formatCurrency(cart.selectedSubtotal)),
+                  _buildCostRow(
+                    'Tạm tính:',
+                    HasakiFormatters.formatCurrency(cart.selectedSubtotal),
+                  ),
                   const SizedBox(height: 6),
-                  _buildCostRow('Phí vận chuyển 2H:', HasakiFormatters.formatCurrency(cart.shippingFee)),
+                  _buildCostRow(
+                    'Phí vận chuyển:',
+                    cart.hasShippingPolicy
+                        ? HasakiFormatters.formatCurrency(cart.shippingFee)
+                        : 'Chưa xác định',
+                  ),
                   if (cart.voucherDiscount > 0) ...[
                     const SizedBox(height: 6),
-                    _buildCostRow('Giảm giá voucher:', '-${HasakiFormatters.formatCurrency(cart.voucherDiscount)}', isDiscount: true),
+                    _buildCostRow(
+                      'Giảm giá voucher:',
+                      '-${HasakiFormatters.formatCurrency(cart.voucherDiscount)}',
+                      isDiscount: true,
+                    ),
                   ],
                   const Divider(color: HasakiColors.borderSubtle, height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Tổng thanh toán:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
-                      Text(
-                        HasakiFormatters.formatCurrency(cart.finalTotal),
-                        style: HasakiTypography.priceLarge,
+                      const Expanded(
+                        child: Text(
+                          'Tổng dự kiến:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          cart.hasShippingPolicy
+                              ? HasakiFormatters.formatCurrency(cart.finalTotal)
+                              : 'Chưa xác định',
+                          style: HasakiTypography.priceLarge,
+                          textAlign: TextAlign.right,
+                        ),
                       ),
                     ],
                   ),
@@ -288,60 +402,145 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            const Text(
+              'Số tiền cuối cùng và ưu đãi hội viên được xác nhận khi tạo đơn hàng.',
+            ),
+            const SizedBox(height: 12),
 
             // Place Order Button
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () async {
-                  if (_nameController.text.trim().isEmpty ||
-                      _phoneController.text.trim().isEmpty ||
-                      _addressController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng'),
-                        backgroundColor: HasakiColors.dealRed,
-                      ),
-                    );
-                    return;
-                  }
+                onPressed: _placing || cart.isApplyingVoucher
+                    ? null
+                    : () async {
+                        if (_nameController.text.trim().isEmpty ||
+                            _phoneController.text.trim().isEmpty ||
+                            _addressController.text.trim().isEmpty ||
+                            _wardController.text.trim().isEmpty ||
+                            _cityController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Vui lòng điền đầy đủ họ tên, số điện thoại, địa chỉ, phường/xã, quận/huyện và tỉnh/thành phố',
+                              ),
+                              backgroundColor: HasakiColors.dealRed,
+                            ),
+                          );
+                          return;
+                        }
 
-                  final request = CheckoutRequest(
-                    sessionId: !StorageService.isLoggedIn ? StorageService.getGuestSessionId() : null,
-                    customerName: _nameController.text.trim(),
-                    customerPhone: _phoneController.text.trim(),
-                    shippingAddress: _addressController.text.trim(),
-                    ward: _wardController.text.trim().isNotEmpty ? _wardController.text.trim() : 'Phường Bến Nghé',
-                    district: _districtController.text.trim().isNotEmpty ? _districtController.text.trim() : 'Quận 1',
-                    city: _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : 'TP. Hồ Chí Minh',
-                    paymentMethod: _paymentMethod == 'VIETQR' ? 'BANK' : 'COD',
-                    notes: _noteController.text.trim(),
-                    voucherCode: cart.appliedVoucherCode,
-                  );
+                        if (!RegExp(
+                          r'^(0|\+84)[35789][0-9]{8}$',
+                        ).hasMatch(_phoneController.text.trim())) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Số điện thoại không hợp lệ'),
+                            ),
+                          );
+                          return;
+                        }
+                        if (!cart.allItemsSelected) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Vui lòng chọn tất cả sản phẩm trong giỏ để đặt hàng.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        setState(() => _placing = true);
+                        try {
+                          await cart.fetchShippingPolicy();
+                          if (!mounted || !context.mounted) return;
+                          if (!cart.hasShippingPolicy ||
+                              !await cart.revalidateVoucher()) {
+                            if (!mounted || !context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  cart.shippingError ??
+                                      cart.voucherError ??
+                                      'Giỏ hàng đã thay đổi. Vui lòng kiểm tra lại.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          if (!mounted || !context.mounted) return;
 
-                  final createdOrder = await context.read<OrderProvider>().checkout(request);
+                          final request = CheckoutRequest(
+                            sessionId: !StorageService.isLoggedIn
+                                ? StorageService.getGuestSessionId()
+                                : null,
+                            customerName: _nameController.text.trim(),
+                            customerPhone: _phoneController.text.trim(),
+                            customerEmail: _emailController.text.trim().isEmpty
+                                ? null
+                                : _emailController.text.trim(),
+                            shippingAddress: _addressController.text.trim(),
+                            ward: _wardController.text.trim(),
+                            district: _districtController.text.trim(),
+                            city: _cityController.text.trim(),
+                            paymentMethod: _paymentMethod == 'VIETQR'
+                                ? 'BANK'
+                                : 'COD',
+                            notes: _noteController.text.trim(),
+                            voucherCode: cart.appliedVoucherCode,
+                          );
 
-                  if (createdOrder != null) {
-                    StorageService.setDeliveryAddress(_addressController.text.trim());
-                    cart.clearCart();
+                          final createdOrder = await context
+                              .read<OrderProvider>()
+                              .checkout(request);
+                          if (!mounted || !context.mounted) return;
 
-                    if (_paymentMethod == 'VIETQR') {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => VietQrPaymentScreen(order: createdOrder),
-                        ),
-                      );
-                    } else {
-                      _showSuccessDialog(context, createdOrder.orderCode);
-                    }
-                  }
-                },
+                          if (createdOrder != null) {
+                            await StorageService.setDeliveryDetails({
+                              'address': _addressController.text.trim(),
+                              'ward': _wardController.text.trim(),
+                              'district': _districtController.text.trim(),
+                              'city': _cityController.text.trim(),
+                            });
+                            await cart.fetchCart();
+                            if (!mounted || !context.mounted) return;
+
+                            if (_paymentMethod == 'VIETQR') {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      VietQrPaymentScreen(order: createdOrder),
+                                ),
+                              );
+                            } else {
+                              _showSuccessDialog(context, createdOrder);
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  context.read<OrderProvider>().errorMessage ??
+                                      'Không thể tạo đơn hàng',
+                                ),
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (mounted) setState(() => _placing = false);
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: HasakiColors.dealRed,
                 ),
-                child: const Text('ĐẶT HÀNG NGAY', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
+                child: Text(
+                  _placing ? 'ĐANG XÁC NHẬN...' : 'ĐẶT HÀNG NGAY',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ),
             ),
           ],
@@ -354,19 +553,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: HasakiTypography.bodySmall),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: isDiscount ? HasakiColors.success : HasakiColors.textMain,
+        Expanded(child: Text(label, style: HasakiTypography.bodySmall)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: isDiscount
+                  ? HasakiColors.success
+                  : HasakiColors.getTextMain(context),
+            ),
           ),
         ),
       ],
     );
   }
 
-  void _showSuccessDialog(BuildContext context, String orderCode) {
+  void _showSuccessDialog(BuildContext context, OrderResponse order) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -378,14 +583,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Text('Đặt Hàng Thành Công!'),
           ],
         ),
-        content: Text('Mã đơn hàng: $orderCode. BeautyShop sẽ đóng gói và giao nhanh trong 2 giờ.'),
+        content: Text(
+          'Mã đơn hàng: ${order.orderCode}. Tổng thanh toán: ${HasakiFormatters.formatCurrency(order.totalAmount)}. Bạn có thể theo dõi trạng thái trong lịch sử đơn hàng.',
+        ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            child: const Text('HOÀN TẤT', style: TextStyle(color: HasakiColors.primary, fontWeight: FontWeight.w800)),
+            child: const Text(
+              'HOÀN TẤT',
+              style: TextStyle(
+                color: HasakiColors.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),

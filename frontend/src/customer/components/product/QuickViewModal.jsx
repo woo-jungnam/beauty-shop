@@ -6,6 +6,7 @@ import { apiClient } from '../../../shared/api/client';
 import { ENDPOINTS } from '../../../shared/api/endpoints';
 import { useCustomerDialog } from '../ui/useCustomerDialog';
 import { recordProductView } from '../../utils/productInteractions';
+import { activeVariants, chooseVariant, isClearanceProduct, knownCount, knownNumber, productPath, variantPrice } from '../../utils/productSelection';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -13,7 +14,8 @@ const formatCurrency = (val) => {
 
 export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
   const { addItem, isLoading } = useCustomerCart();
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
+  const [detailAttempt, setDetailAttempt] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const [activeProduct, setActiveProduct] = useState(product);
@@ -23,13 +25,18 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
   const addPendingRef = useRef(false);
   const dialogRef = useRef(null);
   const productRef = useRef(product?.id);
+  const retrySelection = useRef(null);
   useEffect(() => { productRef.current = product?.id; }, [product?.id]);
   useCustomerDialog(isOpen && !!activeProduct, dialogRef, onClose);
 
   useEffect(() => {
     if (!isOpen || !product?.id) return;
     setActiveProduct(product);
-    setSelectedVariantIndex(0);
+    const retry = retrySelection.current;
+    const requestedId = retry?.productId === product.id ? retry.variantId
+      : isClearanceProduct(product) ? product.clearanceVariant?.id ?? '' : undefined;
+    retrySelection.current = null;
+    setSelectedVariantId(requestedId ?? null);
     setQuantity(1);
     setJustAdded(false);
     setDetailLoading(true);
@@ -40,12 +47,13 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
       try {
         const res = await apiClient.get(ENDPOINTS.CATALOG.PUBLIC_PRODUCT_DETAIL(product.id), { signal: controller.signal });
         const data = res?.data || res;
-        if (!controller.signal.aborted && Number(data?.id) === Number(product.id)) {
+        if (res?.success === false || Number(data?.id) !== Number(product.id)) throw new Error('Invalid product response');
+        if (!controller.signal.aborted) {
           setActiveProduct(data);
+          setSelectedVariantId(requestedId ?? chooseVariant(data)?.id ?? null);
           recordProductView(data.id);
         }
       } catch {
-        // The cart boundary resolves incomplete SKUs and reports a shared Vietnamese error.
         if (!controller.signal.aborted) setDetailFailed(true);
       } finally {
         if (!controller.signal.aborted) setDetailLoading(false);
@@ -53,23 +61,32 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
     };
     fetchDetail();
     return () => controller.abort();
-  }, [isOpen, product]);
+  }, [isOpen, product, detailAttempt]);
 
   if (!isOpen || !activeProduct) return null;
 
-  const variants = (activeProduct.variants || []).filter((variant) => variant.isActive === true && !variant.isDeleted
-    && Number.isSafeInteger(Number(variant.id)) && Number(variant.id) > 0
-    && typeof variant.sku === 'string' && variant.sku.trim().length > 0);
-
-  const currentVariant = variants[selectedVariantIndex] || variants[0];
-  const price = Number(currentVariant?.discountPrice ?? currentVariant?.price ?? activeProduct.minPrice ?? activeProduct.basePrice ?? 0);
-  const originalPrice = Number(currentVariant?.originalPrice ?? currentVariant?.price ?? price);
-  const discountPercent = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+  const variants = activeVariants(activeProduct).filter(variant => typeof variant.sku === 'string' && variant.sku.trim());
+  const currentVariant = variants.find(variant => String(variant.id) === String(selectedVariantId)) || null;
+  const price = variantPrice(currentVariant);
+  const originalPrice = knownNumber(currentVariant?.price);
+  const discountPercent = price != null && originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+  const stock = knownCount(currentVariant?.stockQuantity);
+  const rawRating = knownNumber(activeProduct.averageRating);
+  const rating = rawRating !== null && rawRating <= 5 ? rawRating : null;
+  const reviewCount = knownCount(activeProduct.totalReviews ?? activeProduct.reviewCount);
+  const unavailable = !currentVariant || price == null || stock === 0 || activeProduct.status && activeProduct.status !== 'ACTIVE';
+  const ready = !detailLoading && !detailFailed && Number(activeProduct.id) === Number(product?.id);
+  const canBuy = ready && !unavailable && Number.isSafeInteger(quantity) && quantity > 0 && (stock == null || quantity <= stock);
 
   const imageUrl = resolveProductImage(activeProduct);
 
+  const reloadDetail = () => {
+    retrySelection.current = { productId: product.id, variantId: selectedVariantId };
+    setDetailAttempt(value => value + 1);
+  };
+
   const handleAddToCart = async () => {
-    if (addPendingRef.current || isLoading || detailLoading || Number(activeProduct.id) !== Number(product?.id)) return;
+    if (addPendingRef.current || isLoading || !canBuy) return;
     addPendingRef.current = true;
     setIsAdding(true);
     setJustAdded(false);
@@ -160,7 +177,7 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
             alt={product.name}
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&w=600&q=80';
+              e.currentTarget.src = resolveProductImage();
             }}
             style={{
               width: '100%',
@@ -234,30 +251,49 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
 
             {/* Rating Stars */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', gap: '2px', color: '#F59E0B' }}>
+              <div style={{ display: 'flex', gap: '2px' }}>
                 {[1, 2, 3, 4, 5].map(s => (
-                  <Star key={s} size={14} fill="#F59E0B" color="#F59E0B" />
+                  <Star
+                    key={s}
+                    size={14}
+                    fill={rating !== null && s <= Math.round(rating) ? '#F59E0B' : 'transparent'}
+                    color={rating !== null && s <= Math.round(rating) ? '#F59E0B' : '#D1D5DB'}
+                  />
                 ))}
               </div>
-              <span style={{ fontWeight: 700, color: '#1F2937' }}>5.0</span>
-              <span style={{ color: 'var(--c-text-light)' }}>(Đánh giá chính hãng)</span>
+              {rating !== null && reviewCount !== 0 ? (
+                <>
+                  <span style={{ fontWeight: 700, color: '#1F2937' }}>{rating.toFixed(1)}</span>
+                  <span style={{ color: 'var(--c-text-light)' }}>({reviewCount} lượt đánh giá)</span>
+                </>
+              ) : (
+                <span style={{ color: 'var(--c-text-light)' }}>
+                  {reviewCount === null ? 'Chưa có dữ liệu đánh giá' : 'Chưa có đánh giá'}
+                </span>
+              )}
             </div>
 
             {/* Price Row */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
               <span style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-deal-red, #E11D48)', fontFamily: 'var(--font-mono)' }}>
-                {formatCurrency(price)}
+                {price == null ? 'Chưa xác minh giá bán' : formatCurrency(price)}
               </span>
-              {originalPrice > price && (
+              {price != null && originalPrice > price && (
                 <span style={{ fontSize: '13px', color: '#9CA3AF', textDecoration: 'line-through', fontFamily: 'var(--font-mono)' }}>
                   {formatCurrency(originalPrice)}
                 </span>
               )}
             </div>
 
+            {detailLoading ? <p role="status">Đang tải phân loại…</p> : detailFailed ? (
+              <div role="alert"><p>Chưa tải được phân loại. Vui lòng thử lại.</p><button type="button" className="btn-luxury-outline" onClick={reloadDetail}>Thử lại phân loại</button></div>
+            ) : unavailable ? (
+              <div role="alert"><p>Phân loại đã chọn không còn khả dụng. Vui lòng tải lại hoặc chọn phân loại khác.</p><button type="button" className="btn-luxury-outline" onClick={reloadDetail}>Tải lại phân loại</button></div>
+            ) : <p role="status">{stock == null ? 'Tồn kho chưa xác minh' : `Còn ${stock} sản phẩm khả dụng`}</p>}
+
             {/* Description Snippet */}
             <p style={{ fontSize: '13px', color: 'var(--c-text-muted)', lineHeight: 1.55, margin: '0 0 18px 0' }}>
-              {product.shortDescription || 'Sản phẩm chính hãng có kiểm định độ tinh khiết hoạt chất, giúp phục hồi và bảo vệ hàng rào sinh học của làn da.'}
+              {activeProduct.shortDescription || activeProduct.description || 'Mô tả sản phẩm đang được cập nhật.'}
             </p>
 
             {/* Volume / Variant Selector */}
@@ -266,17 +302,16 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
                 Chọn phân loại:
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {!variants.length && <span style={{ fontSize: '12px', color: 'var(--c-text-muted)' }}>{detailLoading ? 'Đang tải phân loại…' : detailFailed ? 'Chưa tải được phân loại. Mở trang chi tiết để kiểm tra.' : 'Chưa có phân loại đang bán với mã SKU hợp lệ.'}</span>}
                 {variants.map((v, idx) => {
-                  const isSelected = selectedVariantIndex === idx;
+                  const isSelected = String(selectedVariantId) === String(v.id);
                   const label = v.volumeMl ? `${v.volumeMl}ml` : (v.sku || `Phân loại ${idx + 1}`);
                   return (
                     <button
                       key={v.id || idx}
                       type="button"
-                      disabled={isAdding}
+                      disabled={isAdding || !ready}
                       aria-pressed={isSelected}
-                      onClick={() => { setSelectedVariantIndex(idx); setQuantity(1); }}
+                      onClick={() => { setSelectedVariantId(v.id); setQuantity(1); setJustAdded(false); }}
                       style={{
                         padding: '6px 14px',
                         fontSize: '12px',
@@ -330,7 +365,7 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
                 <button
                   type="button"
                   aria-label="Tăng số lượng"
-                  disabled={isAdding || !currentVariant || (currentVariant.stockQuantity != null && quantity >= currentVariant.stockQuantity)}
+                  disabled={isAdding || !ready || unavailable || (stock != null && quantity >= stock)}
                   onClick={() => setQuantity(prev => prev + 1)}
                   style={{
                     width: '32px',
@@ -355,7 +390,7 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
             <button
               type="button"
               onClick={handleAddToCart}
-              disabled={isAdding || isLoading || detailLoading || !currentVariant || currentVariant.stockQuantity === 0 || Number(activeProduct.id) !== Number(product?.id)}
+              disabled={isAdding || isLoading || !canBuy}
               aria-busy={isAdding}
               className="btn-luxury-primary"
               style={{ width: '100%', padding: '12px', fontSize: '13px', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -368,7 +403,7 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
               ) : (
                 <>
                   <ShoppingBag size={16} />
-                  <span>{isAdding ? 'Đang thêm vào giỏ…' : `Thêm Vào Giỏ Hàng • ${formatCurrency(price * quantity)}`}</span>
+                  <span>{isAdding ? 'Đang thêm vào giỏ…' : !canBuy ? 'Thêm Vào Giỏ Hàng · Chưa khả dụng' : `Thêm Vào Giỏ Hàng • ${formatCurrency(price * quantity)}`}</span>
                 </>
               )}
             </button>
@@ -376,7 +411,7 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
             <button
               onClick={() => {
                 onClose();
-                onNavigate(`product/${product.id}`);
+                onNavigate(productPath(product, selectedVariantId ?? (isClearanceProduct(product) ? product.clearanceVariant?.id ?? '' : undefined)));
               }}
               style={{
                 width: '100%',

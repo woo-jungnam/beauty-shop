@@ -14,7 +14,7 @@ from app.schemas.chat import ChatRequest
 from app.api.chat import chat_endpoint
 
 DATASET_PATH = BASE_DIR / "evaluation" / "benchmark_dataset.json"
-REPORT_MD_PATH = BASE_DIR / "evaluation" / "benchmark_report.md"
+REPORT_MD_PATH = BASE_DIR.parent.parent / "docs" / "ai" / "benchmarks" / "benchmark_chatbot_rag_42_testcases.md"
 RESULTS_JSON_PATH = BASE_DIR / "evaluation" / "benchmark_results.json"
 
 async def call_chat_with_retry(request: ChatRequest, retries: int = 6) -> Any:

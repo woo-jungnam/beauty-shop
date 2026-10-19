@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
 })
 @ActiveProfiles("test")
 class SpaConcurrencyIntegrityIntegrationTest {
+    @org.junit.jupiter.api.BeforeEach void operationalTables() { SpaOperationalJdbcFixture.ensure(dataSource); }
     @Autowired UserRepository users;
     @Autowired RoleRepository roles;
     @Autowired StaffRepository staffs;
@@ -79,8 +80,9 @@ class SpaConcurrencyIntegrityIntegrationTest {
     User user(String roleName) {
         Role role = roles.findByName(roleName).orElseGet(() -> roles.save(Role.builder().name(roleName).build()));
         String suffix = UUID.randomUUID().toString();
-        return users.save(User.builder().username(suffix).email(suffix + "@example.test").fullName("Concurrency fixture")
-                .roles(List.of(role)).build());
+        User user=User.builder().username(suffix).email(suffix + "@example.test").fullName("Concurrency fixture").roles(List.of(role)).build();
+        if("ROLE_STAFF".equals(roleName)) user.setStaffPermissions(new HashSet<>(List.of("SPA_RECEPTION","SPA_EXECUTION")));
+        return users.save(user);
     }
 
     Fixture fixture() {
@@ -137,6 +139,15 @@ class SpaConcurrencyIntegrityIntegrationTest {
     void await(CountDownLatch latch) {
         try { if (!latch.await(10, TimeUnit.SECONDS)) throw new AssertionError("Concurrent operation did not reach its barrier"); }
         catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new AssertionError(failure); }
+    }
+
+    void awaitBookingReservation(CountDownLatch reserved, Future<?> booking) throws Exception {
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
+        while(!reserved.await(100,TimeUnit.MILLISECONDS)) {
+            // Surface the original reservation failure instead of disguising it as a lock/barrier timeout.
+            if(booking.isDone()) booking.get();
+            if(System.nanoTime()>deadline) fail("Booking did not reserve its interval before testing the conflicting shift deletion");
+        }
     }
 
     @Test
@@ -197,7 +208,7 @@ class SpaConcurrencyIntegrityIntegrationTest {
                 assertReadCommitted(); var response = appointments.bookAppointment(booking(fixture, fixture.firstStaffId(), LocalTime.of(10, 0), null));
                 bookedInsideTransaction.countDown(); await(releaseCommit); return response;
             })));
-            await(bookedInsideTransaction);
+            awaitBookingReservation(bookedInsideTransaction,booking);
             var deletion = executor.submit(() -> attempt(() -> as(fixture.admin(), () -> tx(() -> {
                 assertReadCommitted(); deletionStarted.countDown(); administration.deleteSchedule(fixture.firstStaffId(), fixture.firstShiftId()); return true;
             }))));

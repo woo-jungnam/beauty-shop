@@ -1,3 +1,4 @@
+import '../core/storage/storage_service.dart';
 import 'package:flutter/material.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
@@ -5,37 +6,83 @@ import '../core/network/api_response.dart';
 import '../data/models/order_model.dart';
 
 class OrderProvider extends ChangeNotifier {
-  final ApiClient _apiClient = ApiClient();
+  final ApiClient _apiClient;
 
   List<OrderResponse> _orders = [];
   bool _isLoading = false;
   String? _errorMessage;
+  int _page = 0;
+  bool _hasMore = false;
+  bool get hasMore => _hasMore;
+  Future<void> loadMore() => fetchOrders(append: true);
 
   List<OrderResponse> get orders => _orders;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  OrderProvider() {
-    fetchOrders();
+  OrderProvider({ApiClient? apiClient, bool loadOnCreate = true})
+    : _apiClient = apiClient ?? ApiClient() {
+    StorageService.authCleared.addListener(_clearSessionOrders);
+    if (loadOnCreate) fetchOrders();
   }
 
-  Future<void> fetchOrders() async {
+  void _clearSessionOrders() {
+    _orders = [];
+    _page = 0;
+    _hasMore = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    StorageService.authCleared.removeListener(_clearSessionOrders);
+    super.dispose();
+  }
+
+  Future<void> fetchOrders({bool append = false}) async {
+    if (_isLoading) return;
+    final requestedPage = append ? _page + 1 : 0;
+    final ownerToken = StorageService.getAccessToken();
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
+      if (!StorageService.isLoggedIn) {
+        final ids = StorageService.getGuestOrderIds();
+        final selected = ids.skip(requestedPage * 20).take(20);
+        final details = <OrderResponse>[];
+        for (final id in selected) {
+          final result = await _apiClient.get<OrderResponse>(
+            '${ApiConstants.orderDetail}$id',
+            fromJsonT: (json) =>
+                OrderResponse.fromJson(json as Map<String, dynamic>),
+          );
+          if (result.data != null) details.add(result.data!);
+        }
+        if (ownerToken != StorageService.getAccessToken()) return;
+        _orders = append ? [..._orders, ...details] : details;
+        _page = requestedPage;
+        _hasMore = ids.length > (requestedPage + 1) * 20;
+        return;
+      }
       final response = await _apiClient.get<PageResponse<OrderResponse>>(
         ApiConstants.myOrders,
-        queryParameters: {'page': 0, 'size': 50, 'sort': 'id,desc'},
+        queryParameters: {'page': requestedPage, 'size': 20, 'sort': 'id,desc'},
         fromJsonT: (json) => PageResponse.fromJson(
           json as Map<String, dynamic>,
           (item) => OrderResponse.fromJson(item as Map<String, dynamic>),
         ),
       );
 
+      if (ownerToken != StorageService.getAccessToken()) return;
       if (response.isSuccess && response.data != null) {
-        _orders = response.data!.content;
+        _orders = append
+            ? [..._orders, ...response.data!.content]
+            : response.data!.content;
+        _page = requestedPage;
+        _hasMore = response.data!.content.length == 20;
       }
     } catch (e) {
       _errorMessage = 'Không thể tải lịch sử đơn hàng';
@@ -55,11 +102,14 @@ class OrderProvider extends ChangeNotifier {
         ApiConstants.checkout,
         data: request.toJson(),
         headers: {'Idempotency-Key': request.idempotencyKey},
-        fromJsonT: (json) => OrderResponse.fromJson(json as Map<String, dynamic>),
+        fromJsonT: (json) =>
+            OrderResponse.fromJson(json as Map<String, dynamic>),
       );
 
       if (response.isSuccess && response.data != null) {
         final createdOrder = response.data!;
+        if (!StorageService.isLoggedIn)
+          await StorageService.rememberGuestOrder(createdOrder.id);
         _orders.insert(0, createdOrder);
         _isLoading = false;
         notifyListeners();
@@ -85,7 +135,8 @@ class OrderProvider extends ChangeNotifier {
     try {
       final response = await _apiClient.get<OrderResponse>(
         '${ApiConstants.orderDetail}$orderId',
-        fromJsonT: (json) => OrderResponse.fromJson(json as Map<String, dynamic>),
+        fromJsonT: (json) =>
+            OrderResponse.fromJson(json as Map<String, dynamic>),
       );
       if (response.isSuccess && response.data != null) {
         final updated = response.data!;

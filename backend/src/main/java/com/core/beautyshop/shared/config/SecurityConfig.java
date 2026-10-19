@@ -79,6 +79,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/**",
+                                "/api/v1/newsletter/subscriptions",
                                 "/api/v1/payment/sepay-webhook",
                                 "/api/v1/test/public",
                                 "/api/v1/system-configs/public/**",
@@ -87,6 +88,7 @@ public class SecurityConfig {
                                 "/api/v1/chatbot/health",
                                 "/api/v1/chatbot/openapi.json"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/search-by-image").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/categories/**",
@@ -94,13 +96,20 @@ public class SecurityConfig {
                                 "/api/v1/attributes/**",
                                 "/api/v1/tags/**",
                                 "/api/v1/spa/services/**",
+                                "/api/v1/spa/business-calendar",
+                                "/api/v1/spa/financial-policy",
+                                "/api/v1/spa/treatment-templates",
+                                "/api/v1/spa/treatment-templates/**",
                                 "/api/v1/reviews/**",
                                 "/api/v1/banners/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/orders/*/payment-subscription").permitAll()
+                        .requestMatchers("/api/v1/orders/*/returns").permitAll()
                         .requestMatchers(
                                 "/api/v1/cart/**",
-                                "/api/v1/orders/checkout"
+                                "/api/v1/orders/checkout",
+                                "/api/v1/promotions/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/admin/orders/**",

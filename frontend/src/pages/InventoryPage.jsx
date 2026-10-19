@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { InventoryRecallPanel } from '../features/commerce/AdminCommercePanels';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Boxes,
   AlertTriangle,
@@ -67,6 +68,8 @@ const getDaysUntilExpiration = (expDate) => {
 
 export const InventoryPage = () => {
   const [activeTab, setActiveTab] = useState('ledger');
+  const inboundKey = useRef(crypto.randomUUID());
+  const transferKey = useRef(crypto.randomUUID());
   const [loading, setLoading] = useState(false);
 
   // Sổ cái biến động kho
@@ -276,7 +279,8 @@ export const InventoryPage = () => {
         minQuantity: parseInt(inboundMinQty, 10) || 0,
         maxQuantity: inboundMaxQty ? parseInt(inboundMaxQty, 10) : undefined,
       };
-      await apiClient.post(ENDPOINTS.INVENTORY.WAREHOUSE_RECEIPTS(selectedWarehouseId), payload);
+      await apiClient.post(ENDPOINTS.INVENTORY.WAREHOUSE_RECEIPTS(selectedWarehouseId), payload, { headers: { 'Idempotency-Key': inboundKey.current } });
+      inboundKey.current = crypto.randomUUID();
       setInboundModalOpen(false);
       fetchWarehouseStocks(selectedWarehouseId);
     } catch (err) {
@@ -348,7 +352,8 @@ export const InventoryPage = () => {
         targetWarehouseId: parseInt(targetWhId, 10),
         quantity: parseInt(transferQuantity, 10),
         reason: transferReason.trim(),
-      });
+      }, { headers: { 'Idempotency-Key': transferKey.current } });
+      transferKey.current = crypto.randomUUID();
       setTransferModalOpen(false);
       fetchWarehouseStocks(selectedWarehouseId);
     } catch (err) {
@@ -626,6 +631,7 @@ export const InventoryPage = () => {
       </div>
 
       {/* Danh sách Tab */}
+      <InventoryRecallPanel />
       <div className="tabs-header">
         <button
           className={`tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}

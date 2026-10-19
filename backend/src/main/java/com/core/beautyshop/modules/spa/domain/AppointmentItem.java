@@ -41,6 +41,9 @@ public class AppointmentItem extends Base {
     @JoinColumn(name = "ticket_id")
     private UserServiceTicket ticket;
 
+    @Column(name = "treatment_session_item_id")
+    private Long treatmentSessionItemId;
+
     @Column(name = "price", precision = 10, scale = 2)
     private BigDecimal price;
 

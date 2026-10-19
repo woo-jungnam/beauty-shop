@@ -9,6 +9,7 @@ import { useCustomerCart } from '../stores/customerCartStore';
 import { useCustomerDialog } from '../components/ui/useCustomerDialog';
 import { ProductCard } from '../components/product/ProductCard';
 import { ProductReviews } from './product-detail/ProductReviews';
+import { knownCount, knownNumber, variantPrice } from '../utils/productSelection';
 import { activeVariants, chooseVariant, detailError, IMAGE_TYPES, productGallery, SKIN_LABELS, skinName, textList, unitPriceReference, unwrap, variantChoiceLabels, variantLabel } from './product-detail/detailUtils';
 
 const SECTIONS = [ ['product-overview', 'Thông tin sản phẩm'], ['product-ingredients', 'Thành phần & INCI'], ['product-usage', 'Hướng dẫn sử dụng'], ['product-reviews', 'Đánh giá & bình luận'] ];
@@ -19,9 +20,9 @@ const track = (productId, actionType) => {
   catch { /* Analytics must not change the result of a purchase or product load. */ }
 };
 
-export const ProductDetailPage = props => <ProductDetailContent key={props.productId} {...props} />;
+export const ProductDetailPage = props => <ProductDetailContent key={JSON.stringify([props.productId, props.requestedVariantId ?? null])} {...props} />;
 
-const ProductDetailContent = ({ productId, onNavigate }) => {
+const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => {
   const { isAuthenticated } = useAuth();
   const { addItem, cartError, isLoading: cartBusy, clearCartError, setCartOpen } = useCustomerCart();
   const [product, setProduct] = useState(null);
@@ -56,12 +57,14 @@ const ProductDetailContent = ({ productId, onNavigate }) => {
     const controller = new AbortController();
     generation.current += 1;
     clearCartError();
+    setLoading(true); setLoadError(null);
+    const selection = attempt > 0 ? variantId : requestedVariantId;
     const fetch = async () => {
       try {
         const data = unwrap(await apiClient.get(ENDPOINTS.CATALOG.PUBLIC_PRODUCT_DETAIL(productId), { signal: controller.signal }));
         if (controller.signal.aborted) return;
         if (!data || String(data.id) !== String(productId) || !data.name) throw new Error('Dữ liệu sản phẩm chưa hợp lệ. Vui lòng tải lại.');
-        setProduct(data); setVariantId(String(chooseVariant(data)?.id || ''));
+        setProduct(data); setVariantId(String(chooseVariant(data, selection)?.id ?? selection ?? ''));
         track(data.id, 'VIEW');
       } catch (err) {
         if (!controller.signal.aborted) setLoadError({ notFound: (err.status || err.response?.status) === 404,
@@ -70,7 +73,7 @@ const ProductDetailContent = ({ productId, onNavigate }) => {
     };
     fetch();
     return () => { controller.abort(); generation.current += 1; };
-  }, [productId, attempt, clearCartError]);
+  }, [productId, requestedVariantId, attempt, clearCartError]);
   useEffect(() => {
     const controller = new AbortController();
     if (!loadedProductId) return;
@@ -122,17 +125,16 @@ const ProductDetailContent = ({ productId, onNavigate }) => {
   const variants = activeVariants(readyProduct);
   const variantChoices = variantChoiceLabels(variants);
   const selectedVariant = variants.find(variant => String(variant.id) === variantId) || null;
-  const rawPrice = selectedVariant?.discountPrice ?? selectedVariant?.price;
-  const price = rawPrice != null && Number.isFinite(Number(rawPrice)) && Number(rawPrice) >= 0 ? Number(rawPrice) : null;
-  const original = Number(selectedVariant?.originalPrice ?? selectedVariant?.price ?? price);
+  const price = variantPrice(selectedVariant);
+  const original = knownNumber(selectedVariant?.price);
   const discount = price != null && original > price ? Math.round((original - price) / original * 100) : 0;
-  const stock = selectedVariant?.stockQuantity != null && Number.isInteger(Number(selectedVariant.stockQuantity)) && Number(selectedVariant.stockQuantity) >= 0 ? Number(selectedVariant.stockQuantity) : null;
+  const stock = knownCount(selectedVariant?.stockQuantity);
   const validVariant = Boolean(selectedVariant && typeof selectedVariant.sku === 'string' && selectedVariant.sku.trim() && price != null);
   const amount = Number(quantity);
   const validQuantity = quantity !== '' && Number.isSafeInteger(amount) && amount > 0 && (stock == null || amount <= stock);
   const purchasable = validVariant && stock !== 0 && validQuantity && (!readyProduct?.status || readyProduct.status === 'ACTIVE');
   const purchase = async buyNow => {
-    if (addLock.current || cartBusy || !purchasable) return;
+    if (addLock.current || loading || cartBusy || !purchasable) return;
     addLock.current = true; setAdding(true); setPurchaseResult(null); clearCartError();
     const requestGeneration = generation.current;
     const purchasedProduct = readyProduct;
@@ -180,8 +182,9 @@ const ProductDetailContent = ({ productId, onNavigate }) => {
   const reference = unitPriceReference(selectedVariant, price);
   const attrs = (readyProduct.attributeValues || []).filter(attribute => attribute.productVariantId == null || String(attribute.productVariantId) === String(selectedVariant?.id));
   const formula = value => value == null ? 'Chưa công bố' : value ? 'Có trong công thức được công bố' : 'Không có theo dữ liệu công bố';
-  const buyDisabled = adding || cartBusy || !purchasable;
-  const stockLabel = !selectedVariant ? 'Chưa có SKU đang hoạt động' : !validVariant ? 'Phân loại chưa đủ thông tin để đặt mua' : stock === 0 ? 'Phân loại này đã hết hàng' : stock == null ? 'Tồn kho chưa xác minh · Hệ thống sẽ kiểm tra khi thêm giỏ' : `Còn ${stock} sản phẩm khả dụng`;
+  const buyDisabled = loading || adding || cartBusy || !purchasable;
+  const missingSelection = requestedVariantId != null && !selectedVariant;
+  const stockLabel = missingSelection ? 'Phân loại trong đường dẫn không còn khả dụng. Không tự đổi sang SKU khác.' : !selectedVariant ? 'Chưa có SKU đang hoạt động' : !validVariant ? 'Phân loại chưa đủ thông tin để đặt mua' : stock === 0 ? 'Phân loại này đã hết hàng' : stock == null ? 'Tồn kho chưa xác minh · Hệ thống sẽ kiểm tra khi thêm giỏ' : `Còn ${stock} sản phẩm khả dụng`;
 
   return <div ref={pageRef} className="customer-container product-detail-page pd-page" style={{ '--pd-header-height': `${headerHeight}px` }}>
     <nav className="pd-breadcrumb" aria-label="Đường dẫn sản phẩm"><a href="#/" onClick={event => { event.preventDefault(); onNavigate(''); }}>Trang chủ</a><ChevronRight size={12} /><a href="#/products" onClick={event => { event.preventDefault(); onNavigate('products'); }}>Sản phẩm</a>{categories[0]?.id && <><ChevronRight size={12} /><a href={`#/products?categoryId=${categories[0].id}`} onClick={event => { event.preventDefault(); onNavigate(`products?categoryId=${categories[0].id}`); }}>{categories[0].name}</a></>}<ChevronRight size={12} /><span aria-current="page">{readyProduct.name}</span></nav>
@@ -195,7 +198,8 @@ const ProductDetailContent = ({ productId, onNavigate }) => {
         <div className="pd-price"><strong>{price == null ? 'Chưa xác minh giá bán' : formatCurrency(price)}</strong>{discount > 0 && <del>{formatCurrency(original)}</del>}</div>{reference && <p className="pd-unit-price">Tham khảo: {formatCurrency(reference.value)} / 100 {reference.unit} · Không phải giá bán</p>}
         {readyProduct.shortDescription && <p className="pd-lead">{readyProduct.shortDescription}</p>}
         <div className="pd-variants"><span className="pd-label">Chọn phân loại</span>{variants.length ? <div role="group" aria-label="Phân loại sản phẩm">{variants.map(variant => <button type="button" key={variant.id} aria-pressed={String(variant.id) === variantId} disabled={adding} onClick={() => changeVariant(variant.id)}>{variantChoices.get(String(variant.id))}{String(variant.id) === variantId && <Check size={14} />}</button>)}</div> : <p className="pd-muted">Sản phẩm chưa có phân loại đang kinh doanh.</p>}</div>
-        <div className={`pd-stock ${stock === 0 || !validVariant ? 'unavailable' : stock == null ? 'unknown' : ''}`}><i />{stockLabel}</div>
+        <div role={missingSelection || stock === 0 ? 'alert' : undefined} className={`pd-stock ${stock === 0 || !validVariant ? 'unavailable' : stock == null ? 'unknown' : ''}`}><i />{stockLabel}</div>
+        {(missingSelection || stock === 0) && <button type="button" className="pd-text-button" onClick={reloadProduct}>Tải lại phân loại đã chọn</button>}
         <div className="pd-quantity-row"><label htmlFor="pd-quantity">Số lượng</label><div className="pd-quantity-control"><button type="button" aria-label="Giảm số lượng" disabled={adding || amount <= 1} onClick={() => setQuantity(String(Math.max(1, Number.isInteger(amount) ? amount - 1 : 1)))}><Minus size={15} /></button><input id="pd-quantity" type="number" min={1} max={stock ?? undefined} step={1} inputMode="numeric" value={quantity} disabled={adding} aria-invalid={!validQuantity} onChange={event => { setQuantity(event.target.value); setPurchaseResult(null); }} /><button type="button" aria-label="Tăng số lượng" disabled={adding || (stock != null && amount >= stock)} onClick={() => setQuantity(String(Math.min(stock ?? Number.MAX_SAFE_INTEGER, Number.isInteger(amount) && amount > 0 ? amount + 1 : 1)))}><Plus size={15} /></button></div>{!validQuantity && <span className="pd-quantity-error">Nhập số nguyên dương{stock != null ? `, tối đa ${stock}` : ''}.</span>}</div>
         <div className="pd-purchase-actions"><button type="button" className="btn-luxury-outline" disabled={buyDisabled} aria-busy={adding || undefined} onClick={() => purchase(false)}>{adding ? <Loader2 size={17} className="animate-spin" /> : <ShoppingBag size={17} />}Thêm vào giỏ hàng</button><button type="button" className="btn-luxury-primary" disabled={buyDisabled} onClick={() => purchase(true)}>Mua ngay <ArrowRight size={16} /></button></div>
         {purchaseResult && <div className={`pd-purchase-feedback ${purchaseResult.success ? 'is-success' : 'is-error'}`} role={purchaseResult.success ? 'status' : 'alert'}>{purchaseResult.success ? purchaseResult.message : cartError || purchaseResult.message}</div>}

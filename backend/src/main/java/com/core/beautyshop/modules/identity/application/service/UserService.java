@@ -22,7 +22,6 @@ public interface UserService {
 
     void reverseLoyaltyPoints(Long userId, Long orderId);
 
-    void addLoyaltyPoints(Long userId, Long orderId, int pointsToAdd);
     UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason);
     UserProfileResponse updateRoles(Long userId, java.util.List<Long> roleIds);
     com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse resetPassword(Long userId);

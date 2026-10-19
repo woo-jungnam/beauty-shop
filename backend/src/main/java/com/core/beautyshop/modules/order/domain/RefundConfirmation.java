@@ -10,4 +10,6 @@ public class RefundConfirmation {
     @Column(name = "confirmed_at", nullable = false) private java.time.Instant confirmedAt = java.time.Instant.now();
     @Column(name = "confirmed_by_user_id") private Long confirmedByUserId;
     @Column(name = "approval_reason", length = 250) private String approvalReason;
+    @Column(name = "refund_kind",nullable=false,length=30) private String refundKind="FULL";
+    @Column(name = "product_return_id") private Long productReturnId;
 }

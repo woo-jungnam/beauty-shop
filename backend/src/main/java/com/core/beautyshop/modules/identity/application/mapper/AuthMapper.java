@@ -24,6 +24,7 @@ public class AuthMapper {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .roles(roles)
+                .permissions(permissions(user))
                 .build();
     }
 
@@ -47,9 +48,16 @@ public class AuthMapper {
                 .gender(user.getGender())
                 .dateOfBirth(user.getDateOfBirth())
                 .roles(roles)
+                .permissions(permissions(user))
                 .membershipTier(user.getMembershipTier())
                 .loyaltyPoints(user.getLoyaltyPoints())
                 .status(user.getStatus())
                 .build();
+    }
+
+    private List<String> permissions(User user) {
+        if(user.getRoles()!=null && user.getRoles().stream().anyMatch(r->"ROLE_ADMIN".equals(r.getName())))
+            return com.core.beautyshop.modules.identity.api.StaffPermissionService.KNOWN;
+        return user.getStaffPermissions()==null ? List.of() : user.getStaffPermissions().stream().sorted().toList();
     }
 }

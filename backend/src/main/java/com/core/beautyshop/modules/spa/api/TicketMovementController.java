@@ -21,7 +21,18 @@ public class TicketMovementController {
     private final UserServiceTicketRepository tickets;
     private final TicketSessionMovementRepository movements;
     private final SpaAccessService access;
-    @Operation(summary = "Phân trang sổ lượt và điều chỉnh của vé", description = "Chủ vé hoặc ADMIN/STAFF/SPA_RECEPTION, không cấp quyền cho therapist chỉ vì được giao item. Vé phải chưa xóa. Sắp xếp ID giảm dần, page=0/size mặc định 20; phân biệt RESERVE/REDEEM/RELEASE/FORFEIT/EXTEND/COMPENSATE/LEGACY_ADJUSTMENT. Actor/item/service có thể null cho thao tác hệ thống, số dư lịch sử hoặc gia hạn; FORFEIT không chứng minh dịch vụ đã thực hiện hoặc đã thu phí tiền.")
+    private final SpaServiceRefundRepository refunds;
+    public record RefundHistory(java.math.BigDecimal amount, String reference, String reason, java.time.Instant createdAt) {}
+    @GetMapping("/{id}/refunds") @PreAuthorize("isAuthenticated()") @Transactional(readOnly=true)
+    public ApiResponse<java.util.List<RefundHistory>> refunds(@PathVariable Long id) {
+        var ticket = tickets.findById(id).filter(t -> !Boolean.TRUE.equals(t.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+        if (!ticket.getUserId().equals(SecurityUtils.getCurrentUserId()) && !access.canManageReception())
+            throw new AccessDeniedException("You cannot view this ticket");
+        return ApiResponse.success(refunds.findByTicketIdOrderByIdDesc(id).stream()
+                .map(r -> new RefundHistory(r.getAmount(), r.getReference(), r.getReason(), r.getCreatedAt())).toList());
+    }
+    @Operation(summary = "Phân trang sổ lượt và điều chỉnh của vé", description = "Chủ vé hoặc ADMIN/STAFF/SPA_RECEPTION, không cấp quyền cho therapist chỉ vì được giao item. Vé phải chưa xóa. Sắp xếp ID giảm dần, page=0/size mặc định 20; phân biệt RESERVE/REDEEM/RELEASE/FORFEIT/EXTEND/COMPENSATE/REFUND_CLOSE/LEGACY_ADJUSTMENT. Actor/item/service có thể null cho thao tác hệ thống, số dư lịch sử hoặc gia hạn; FORFEIT không chứng minh dịch vụ đã thực hiện hoặc đã thu phí tiền.")
     @GetMapping("/{id}/movements") @PreAuthorize("isAuthenticated()") @Transactional(readOnly=true)
     public ApiResponse<PageResponse<TicketSessionMovement>> history(@PathVariable Long id,
             @ParameterObject @org.springframework.data.web.PageableDefault(size=20) Pageable pageable) {

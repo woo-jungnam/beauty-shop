@@ -5,6 +5,11 @@ import com.core.beautyshop.modules.order.api.dto.CreateSpaPackageOrderCommand;
 import com.core.beautyshop.modules.order.api.dto.SpaPackageOrderResult;
 
 public interface OrderFacade {
+    com.core.beautyshop.modules.order.api.dto.SpaRefundBalance lockSpaRefundBalance(Long orderId);
+    void confirmSpaServiceRefund(Long orderId, BigDecimal amount, String reference, String reason);
+    com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult applySpaVisitAdvance(Long appointmentId, BigDecimal amount, String reference);
+    void confirmTreatmentRefund(Long orderId, BigDecimal amount, String reference, String reason);
+    void confirmTreatmentRefund(java.util.List<Long> orderIds, BigDecimal amount, String reference, String reason);
     BigDecimal getConfirmedRefundAmount(java.time.Instant from, java.time.Instant to);
     java.util.Optional<java.time.Instant> findPaidAtForUser(Long orderId, Long userId);
     java.util.Optional<String> findPaymentState(String orderNumber);

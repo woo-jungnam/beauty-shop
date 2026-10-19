@@ -27,7 +27,8 @@ public class LoyaltyPointAward extends Base {
     @Column(name = "user_id", nullable = false, updatable = false)
     private Long userId;
 
-    @Column(name = "points", nullable = false, updatable = false)
+    @lombok.Setter
+    @Column(name = "points", nullable = false)
     private Integer points;
 
     @lombok.Setter

@@ -14,6 +14,8 @@ import {
   Tag as TagIcon,
   BookOpen,
   RefreshCw,
+  Search,
+  X,
 } from 'lucide-react';
 import { apiClient, uploadFile } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -111,6 +113,11 @@ export const ProductsPage = () => {
   const [catDesc, setCatDesc] = useState('');
   const [catParentId, setCatParentId] = useState('');
   const [catOrder, setCatOrder] = useState('0');
+  const [catImageUrl, setCatImageUrl] = useState('');
+  const [catIsActive, setCatIsActive] = useState(true);
+  const [catUploading, setCatUploading] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
+  const [catParentFilter, setCatParentFilter] = useState('ALL');
   const [catSubmitting, setCatSubmitting] = useState(false);
 
   // ==========================================
@@ -537,7 +544,7 @@ export const ProductsPage = () => {
         color: varColor.trim() || undefined,
         barcode: varBarcode.trim() || undefined,
         isDefault: editingVariant ? Boolean(editingVariant.isDefault) : variantList.length === 0,
-        isActive: true,
+        isActive: editingVariant ? editingVariant.isActive : true,
       };
       if (editingVariant && editingVariant.id) {
         await apiClient.put(ENDPOINTS.CATALOG.VARIANT_DETAIL(selectedProductForVariants.id, editingVariant.id), payload);
@@ -575,6 +582,8 @@ export const ProductsPage = () => {
     setCatDesc('');
     setCatParentId('');
     setCatOrder('0');
+    setCatImageUrl('');
+    setCatIsActive(true);
     setCategoryModalOpen(true);
   };
 
@@ -585,6 +594,8 @@ export const ProductsPage = () => {
     setCatDesc(cat.description || '');
     setCatParentId(cat.parentId ? String(cat.parentId) : '');
     setCatOrder(String(cat.displayOrder || '0'));
+    setCatImageUrl(cat.imageUrl || '');
+    setCatIsActive(cat.isActive !== false);
     setCategoryModalOpen(true);
   };
 
@@ -596,9 +607,10 @@ export const ProductsPage = () => {
         name: catName.trim(),
         slug: slugify(catSlug || catName),
         description: catDesc.trim(),
-        parentId: catParentId ? parseInt(catParentId, 10) : undefined,
+        imageUrl: catImageUrl.trim() || undefined,
+        parentId: catParentId ? parseInt(catParentId, 10) : (editingCategory ? null : undefined),
         displayOrder: parseInt(catOrder, 10) || 0,
-        isPublished: true,
+        isActive: catIsActive,
       };
       if (editingCategory) {
         await apiClient.put(`${ENDPOINTS.CATALOG.CATEGORIES}/${editingCategory.id}`, payload);
@@ -1309,10 +1321,81 @@ export const ProductsPage = () => {
   ];
 
   const categoryColumns = [
-    { header: 'ID', accessor: 'id', width: '70px' },
-    { header: 'Tên danh mục', accessor: (row) => <strong style={{ color: 'var(--text-main)' }}>{row.name}</strong> },
-    { header: 'Đường dẫn Slug', accessor: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>/{row.slug}</span> },
-    { header: 'Thứ tự hiển thị', accessor: 'displayOrder', width: '120px', align: 'center' },
+    { header: 'ID', accessor: 'id', width: '60px' },
+    {
+      header: 'Ảnh',
+      accessor: (row) =>
+        row.imageUrl ? (
+          <img
+            src={resolveMediaUrl(row.imageUrl)}
+            alt={row.name}
+            style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}
+          />
+        ) : (
+          <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'var(--bg-subtle, #f3f4f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)' }}>
+            <FolderTree size={18} color="var(--text-muted)" />
+          </div>
+        ),
+      render: (row) =>
+        row.imageUrl ? (
+          <img
+            src={resolveMediaUrl(row.imageUrl)}
+            alt={row.name}
+            style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}
+          />
+        ) : (
+          <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'var(--bg-subtle, #f3f4f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)' }}>
+            <FolderTree size={18} color="var(--text-muted)" />
+          </div>
+        ),
+      width: '65px',
+    },
+    {
+      header: 'Tên danh mục',
+      accessor: (row) => (
+        <div>
+          <strong style={{ color: 'var(--text-main)', display: 'block', fontSize: '13px' }}>{row.name}</strong>
+          {row.description && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {row.description}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: 'Danh mục cha',
+      accessor: (row) => (
+        row.parentName ? (
+          <Badge variant="outline">{row.parentName}</Badge>
+        ) : (
+          <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Gốc</span>
+        )
+      ),
+      width: '140px',
+    },
+    {
+      header: 'Đường dẫn Slug',
+      accessor: (row) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--color-primary-600, #2563eb)' }}>
+          /{row.slug}
+        </span>
+      ),
+      width: '160px',
+    },
+    { header: 'Thứ tự', accessor: 'displayOrder', width: '70px', align: 'center' },
+    {
+      header: 'Trạng thái',
+      accessor: (row) => (
+        row.isActive === false ? (
+          <Badge variant="danger">Tạm ẩn</Badge>
+        ) : (
+          <Badge variant="success">Hoạt động</Badge>
+        )
+      ),
+      align: 'center',
+      width: '110px',
+    },
     {
       header: 'Thao tác',
       accessor: (row) => (
@@ -1322,7 +1405,7 @@ export const ProductsPage = () => {
         </div>
       ),
       align: 'right',
-      width: '120px',
+      width: '100px',
     },
   ];
 
@@ -1538,16 +1621,57 @@ export const ProductsPage = () => {
       )}
 
       {/* TAB CONTENT: CATEGORIES */}
-      {activeTab === 'categories' && (
-        <div className="card">
-          <DataTable
-            columns={categoryColumns}
-            data={categories}
-            loading={false}
-            emptyMessage="Chưa có danh mục nào."
-          />
-        </div>
-      )}
+      {activeTab === 'categories' && (() => {
+        const filtered = categories.filter((c) => {
+          const matchText = !catSearch.trim() ||
+            c.name.toLowerCase().includes(catSearch.trim().toLowerCase()) ||
+            c.slug.toLowerCase().includes(catSearch.trim().toLowerCase());
+          if (!matchText) return false;
+          if (catParentFilter === 'ROOT') return !c.parentId;
+          if (catParentFilter === 'CHILD') return !!c.parentId;
+          if (catParentFilter !== 'ALL') return String(c.parentId) === catParentFilter;
+          return true;
+        });
+
+        const rootCount = categories.filter((c) => !c.parentId).length;
+        const childCount = categories.length - rootCount;
+
+        return (
+          <div className="card">
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: '240px', flex: 1, maxWidth: '360px' }}>
+                  <Input
+                    placeholder="Tìm kiếm danh mục theo tên, slug..."
+                    value={catSearch}
+                    onChange={(e) => setCatSearch(e.target.value)}
+                  />
+                </div>
+                <div style={{ width: '200px' }}>
+                  <Select
+                    value={catParentFilter}
+                    onChange={(e) => setCatParentFilter(e.target.value)}
+                    options={[
+                      { value: 'ALL', label: `Tất cả (${categories.length})` },
+                      { value: 'ROOT', label: `Chỉ danh mục gốc (${rootCount})` },
+                      { value: 'CHILD', label: `Chỉ danh mục con (${childCount})` },
+                    ]}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <Badge variant="outline">Hiển thị {filtered.length} / {categories.length} danh mục</Badge>
+              </div>
+            </div>
+            <DataTable
+              columns={categoryColumns}
+              data={filtered}
+              loading={false}
+              emptyMessage="Chưa có danh mục nào phù hợp với bộ lọc tìm kiếm."
+            />
+          </div>
+        );
+      })()}
 
       {/* TAB CONTENT: BRANDS */}
       {activeTab === 'brands' && (
@@ -1880,21 +2004,148 @@ export const ProductsPage = () => {
       <Modal
         isOpen={categoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
-        title={editingCategory ? 'Cập nhật danh mục' : 'Thêm danh mục mới'}
-        maxWidth="500px"
+        title={editingCategory ? `Cập nhật danh mục: ${editingCategory.name}` : 'Thêm danh mục mới'}
+        maxWidth="520px"
       >
         <form onSubmit={handleSubmitCategory}>
-          <Input label="Tên danh mục *" value={catName} onChange={(e) => setCatName(e.target.value)} required />
+          <Input
+            label="Tên danh mục *"
+            value={catName}
+            onChange={(e) => {
+              setCatName(e.target.value);
+              if (!editingCategory && !catSlug) {
+                setCatSlug(slugify(e.target.value));
+              }
+            }}
+            required
+            placeholder="Ví dụ: Chăm sóc da mặt, Kem chống nắng..."
+          />
+
           <div style={{ marginTop: '12px' }}>
-            <Input label="Đường dẫn Slug (tự tạo nếu để trống)" value={catSlug} onChange={(e) => setCatSlug(e.target.value)} />
+            <Input
+              label="Đường dẫn Slug (tự tạo nếu để trống)"
+              value={catSlug}
+              onChange={(e) => setCatSlug(e.target.value)}
+              placeholder="cham-soc-da-mat"
+            />
           </div>
+
           <div style={{ marginTop: '12px' }}>
-            <Input label="Thứ tự hiển thị" type="number" value={catOrder} onChange={(e) => setCatOrder(e.target.value)} />
+            <Select
+              label="Danh mục cha"
+              value={catParentId}
+              onChange={(e) => setCatParentId(e.target.value)}
+              options={[
+                { value: '', label: '-- Danh mục gốc (không có cha) --' },
+                ...categories
+                  .filter((c) => !editingCategory || c.id !== editingCategory.id)
+                  .map((c) => ({ value: String(c.id), label: `${c.parentId ? '— ' : ''}${c.name}` })),
+              ]}
+              helperText="Chọn danh mục cấp trên hoặc để trống nếu là danh mục chính"
+            />
           </div>
+
+          <div style={{ marginTop: '12px' }}>
+            <label className="form-label">Hình ảnh danh mục</label>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ flex: 1 }}>
+                <Input
+                  label=""
+                  value={catImageUrl}
+                  onChange={(e) => setCatImageUrl(e.target.value)}
+                  placeholder="URL ảnh hoặc tải tệp từ máy..."
+                />
+              </div>
+              {catImageUrl && (
+                <div style={{ flexShrink: 0, position: 'relative' }}>
+                  <img
+                    src={resolveMediaUrl(catImageUrl)}
+                    alt="Preview"
+                    style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}
+                  />
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="file"
+                accept="image/*"
+                id="cat-image-file"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setCatUploading(true);
+                  try {
+                    const data = await uploadFile(ENDPOINTS.CATALOG.MEDIA_UPLOAD, file);
+                    const url = data?.url || data?.publicUrl;
+                    if (url) setCatImageUrl(url);
+                  } catch (err) {
+                    alert(err.message || 'Lỗi tải ảnh danh mục');
+                  } finally {
+                    setCatUploading(false);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                icon={Upload}
+                loading={catUploading}
+                onClick={() => document.getElementById('cat-image-file')?.click()}
+              >
+                Tải ảnh từ máy
+              </Button>
+              {catImageUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  icon={X}
+                  onClick={() => setCatImageUrl('')}
+                  style={{ color: 'var(--color-danger-600, #dc2626)' }}
+                >
+                  Xóa ảnh
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+            <Input
+              label="Thứ tự hiển thị"
+              type="number"
+              value={catOrder}
+              onChange={(e) => setCatOrder(e.target.value)}
+              helperText="Số nhỏ hơn sẽ đứng trước"
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', marginTop: '6px' }}>
+              <label className="form-label" style={{ marginBottom: '6px' }}>Trạng thái</label>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+                <input
+                  type="checkbox"
+                  checked={catIsActive}
+                  onChange={(e) => setCatIsActive(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary-600, #2563eb)' }}
+                />
+                <span>Kích hoạt hiển thị</span>
+              </label>
+            </div>
+          </div>
+
           <div style={{ marginTop: '12px' }}>
             <label className="form-label">Mô tả danh mục</label>
-            <textarea className="form-textarea" rows={3} value={catDesc} onChange={(e) => setCatDesc(e.target.value)} />
+            <textarea
+              className="form-textarea"
+              rows={3}
+              value={catDesc}
+              onChange={(e) => setCatDesc(e.target.value)}
+              placeholder="Mô tả tóm tắt về nhóm sản phẩm này..."
+            />
           </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setCategoryModalOpen(false)}>Hủy</Button>
             <Button variant="primary" type="submit" loading={catSubmitting}>Lưu danh mục</Button>

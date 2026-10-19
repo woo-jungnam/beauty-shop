@@ -30,12 +30,25 @@ class CartItem {
       id: (json['id'] as num?)?.toInt() ?? 0,
       productId: (json['productId'] as num?)?.toInt() ?? 0,
       variantId: (json['variantId'] as num?)?.toInt() ?? 0,
-      productName: json['productName']?.toString() ?? json['variantName']?.toString() ?? json['sku']?.toString() ?? 'Sản phẩm',
-      variantName: json['variantName']?.toString() ?? json['sku']?.toString() ?? 'Tiêu chuẩn',
-      thumbnailUrl: json['imageUrl']?.toString() ?? json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
+      productName:
+          json['productName']?.toString() ??
+          json['variantName']?.toString() ??
+          json['sku']?.toString() ??
+          'Sản phẩm',
+      variantName:
+          json['variantName']?.toString() ??
+          json['sku']?.toString() ??
+          'Tiêu chuẩn',
+      thumbnailUrl:
+          json['imageUrl']?.toString() ??
+          json['thumbnailUrl']?.toString() ??
+          json['image']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      originalPrice: (json['originalPrice'] as num?)?.toDouble() ?? (json['price'] as num?)?.toDouble() ?? 0.0,
-      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      originalPrice:
+          (json['originalPrice'] as num?)?.toDouble() ??
+          (json['price'] as num?)?.toDouble() ??
+          0.0,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       isSelected: true,
     );
   }
@@ -68,9 +81,10 @@ class CartResponse {
     }
 
     final sub = (json['subtotal'] as num?)?.toDouble() ?? calculatedSubtotal;
-    final shipping = sub > 249000 ? 0.0 : ((json['shippingFee'] as num?)?.toDouble() ?? 25000.0);
+    final shipping = (json['shippingFee'] as num?)?.toDouble() ?? 0.0;
     final disc = (json['discountAmount'] as num?)?.toDouble() ?? 0.0;
-    final tot = (json['totalAmount'] as num?)?.toDouble() ?? (sub + shipping - disc);
+    final tot =
+        (json['totalAmount'] as num?)?.toDouble() ?? (sub + shipping - disc);
 
     return CartResponse(
       items: parsedItems,

@@ -16,6 +16,16 @@ public class PaymentFacadeImpl implements PaymentFacade {
     private final PaymentStrategyFactory paymentStrategyFactory;
     private final com.core.beautyshop.modules.payment.domain.PaymentTransactionRepository transactions;
 
+    @Override @org.springframework.transaction.annotation.Transactional
+    public boolean recordCarrierRemittance(String orderNumber,java.math.BigDecimal amount,String reference,String reason,Long actor) {
+        var prior=transactions.findByReferenceCode(reference);
+        if(prior.isPresent()) {
+            if(!prior.get().getOrderNumber().equals(orderNumber)||prior.get().getAmount().compareTo(amount)!=0||!"COD".equals(prior.get().getGateway())) throw new com.core.beautyshop.shared.exception.BusinessException("Settlement reference conflicts");
+            return false;
+        }
+        transactions.saveAndFlush(com.core.beautyshop.modules.payment.domain.PaymentTransaction.builder().orderNumber(orderNumber).referenceCode(reference).gateway("COD").transferType("in").amount(amount).status(com.core.beautyshop.modules.payment.domain.enums.TransactionStatus.SUCCESS).rawPayload("{\"source\":\"CARRIER_REMITTANCE\",\"receivedBy\":"+actor+"}").content(reason).build());return true;
+    }
+
     @Override
     @org.springframework.transaction.annotation.Transactional
     public boolean recordCashCollection(String orderNumber, java.math.BigDecimal amount, String receiptKey, Long receivedBy) {

@@ -22,9 +22,9 @@ import java.util.*;
 /** Documentation follows method authorization and the public routes in SecurityConfig. */
 @Component
 public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, GlobalOpenApiCustomizer {
-    private static final List<String> MODULE_ORDER = List.of("identity", "catalog", "cart", "order", "payment", "spa", "crm", "inventory", "procurement", "promotion", "review", "dashboard", "system", "chatbot");
-    private static final List<String> PUBLIC_GET_PREFIXES = List.of("/api/v1/products", "/api/v1/categories", "/api/v1/brands", "/api/v1/attributes", "/api/v1/tags", "/api/v1/spa/services", "/api/v1/reviews");
-    private static final Set<String> PUBLIC_ROUTES = Set.of("/api/v1/test/public", "/api/v1/chatbot/chat", "/api/v1/chatbot/chat/stream", "/api/v1/chatbot/health", "/api/v1/chatbot/openapi.json");
+    private static final List<String> MODULE_ORDER = List.of("identity", "notification", "catalog", "cart", "order", "payment", "spa", "crm", "inventory", "procurement", "promotion", "review", "dashboard", "system", "chatbot");
+    private static final List<String> PUBLIC_GET_PREFIXES = List.of("/api/v1/products", "/api/v1/categories", "/api/v1/brands", "/api/v1/attributes", "/api/v1/tags", "/api/v1/spa/services", "/api/v1/spa/treatment-templates", "/api/v1/banners", "/api/v1/system-configs/public", "/api/v1/reviews");
+    private static final Set<String> PUBLIC_ROUTES = Set.of("/api/v1/test/public", "/api/v1/chatbot/chat", "/api/v1/chatbot/chat/stream", "/api/v1/chatbot/health", "/api/v1/chatbot/openapi.json", "/api/v1/newsletter/subscriptions", "/api/v1/spa/business-calendar", "/api/v1/spa/financial-policy");
 
     @Override
     public Operation customize(Operation operation, HandlerMethod handler) {
@@ -40,7 +40,7 @@ public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, Gl
             mode = "bearer";
             operation.setSecurity(List.of(new SecurityRequirement().addList("bearerAuth")));
             operation.addExtension("x-method-authorization", authorization.value());
-        } else if (path.startsWith("/api/v1/cart") || path.equals("/api/v1/orders/checkout") || (get && path.matches("/api/v1/orders/[^/]+"))) {
+        } else if (path.startsWith("/api/v1/cart") || path.equals("/api/v1/orders/checkout") || (get && path.matches("/api/v1/orders/[^/]+(?:/payment-subscription)?")) || path.matches("/api/v1/orders/[^/]+/returns")) {
             mode = "optional-bearer";
             operation.setSecurity(List.of(new SecurityRequirement(), new SecurityRequirement().addList("bearerAuth")));
         } else if (path.startsWith("/api/v1/auth/") || PUBLIC_ROUTES.contains(path) || (get && PUBLIC_GET_PREFIXES.stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/")))) {
@@ -52,6 +52,13 @@ public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, Gl
         }
         operation.addExtension("x-access-mode", mode);
         operation.addExtension("x-module", module(handler.getBeanType()));
+        String verb=mapping==null || mapping.method().length==0 ? "GET" : mapping.method()[0].name();
+        String permission=com.core.beautyshop.shared.security.StaffPermissionInterceptor.requiredPermission(path,verb);
+        if(permission!=null)operation.addExtension("x-staff-permission",permission);
+        if(operation.getSummary()==null || operation.getSummary().isBlank()) {
+            String action=switch(verb){case "GET" -> "Tra cứu";case "DELETE" -> "Xóa";case "PUT","PATCH" -> "Cập nhật";default -> "Thực hiện";};
+            operation.setSummary(action+" "+path);
+        }
         if (get && path.equals("/api/v1/products/search") && operation.getParameters() != null) {
             // @NotNull rejects explicitly blank pagination values; field defaults allow omitted parameters.
             // Springdoc otherwise interprets those validation constraints as required query parameters.
@@ -121,7 +128,7 @@ public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, Gl
         PreAuthorize authorization = authorization(method, method.getDeclaringClass());
         String path = path(method.getDeclaringClass(), method);
         boolean staffServiceAction = path.matches("/api/v1/spa/appointments/[^/]+/(care-summary|preparation/items/[^/]+/(acknowledge-warnings|override)|follow-up-instructions/items/[^/]+)");
-        return path.startsWith("/api/v1/admin/") || staffServiceAction
+        return path.startsWith("/api/v1/admin/") || path.startsWith("/api/v1/staff/") || staffServiceAction
                 || (authorization != null && authorization.value().contains("ADMIN"));
     }
 

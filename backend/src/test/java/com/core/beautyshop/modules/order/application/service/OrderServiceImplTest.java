@@ -61,11 +61,24 @@ class OrderServiceImplTest {
     @Mock private PaymentFacade paymentFacade;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private com.core.beautyshop.modules.promotion.api.PromotionFacade promotionFacade;
+    @Mock private com.core.beautyshop.modules.spa.api.TreatmentOrderPolicy treatmentOrderPolicy;
     @org.mockito.Spy private com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @InjectMocks private OrderServiceImpl orderService;
 
     @AfterEach void clearSecurity() { SecurityContextHolder.clearContext(); }
+
+    @Test void paidTreatmentCannotBypassCourseCancellationThroughGenericOrderStatus() {
+        Order order = Order.builder().servicePackageId(5L).paidAt(java.time.Instant.now()).status(OrderStatus.PROCESSING).build();
+        order.setId(9L);
+        when(orderRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
+        when(treatmentOrderPolicy.requiresTreatmentWorkflow(9L)).thenReturn(true);
+        UpdateOrderStatusRequest command = new UpdateOrderStatusRequest(); command.setStatus(OrderStatus.CANCELLED); command.setNotes("Attempt generic cancellation");
+        assertThrows(com.core.beautyshop.shared.exception.BusinessException.class, () -> orderService.updateOrderStatus(9L, command));
+        assertEquals(OrderStatus.PROCESSING, order.getStatus());
+        org.mockito.Mockito.verify(eventPublisher, org.mockito.Mockito.never()).publishEvent(any(Object.class));
+        org.mockito.Mockito.verify(orderRepository, org.mockito.Mockito.never()).save(any(Order.class));
+    }
 
     @Test
     void myOrdersUsesVisibleCustomerHistoryOnly() {

@@ -4,7 +4,6 @@ import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.catalog.domain.ProductVariantRepository;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
-import com.core.beautyshop.shared.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
@@ -13,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -22,14 +20,6 @@ public class CatalogFacadeImpl implements CatalogFacade {
 
     private final ProductVariantRepository productVariantRepository;
     private final com.core.beautyshop.modules.catalog.domain.ProductRepository productRepository;
-
-    @Override
-    public Optional<ProductVariantSummaryDto> findVariantSummaryById(Long variantId) {
-        if (variantId == null) {
-            return Optional.empty();
-        }
-        return productVariantRepository.findVariantSummaryByIdDto(variantId);
-    }
 
     @Override
     public ProductVariantSummaryDto getVariantSummaryById(Long variantId) {
@@ -76,40 +66,6 @@ public class CatalogFacadeImpl implements CatalogFacade {
             return false;
         }
         return productVariantRepository.findByIdAndIsDeletedFalse(variantId).isPresent();
-    }
-
-    @Override
-    @Transactional
-    @Caching(evict = {
-            @CacheEvict(value = "products_page", allEntries = true),
-            @CacheEvict(value = "product_detail", allEntries = true)
-    })
-    public void applyDiscountPrice(Long variantId, java.math.BigDecimal discountPrice) {
-        if (variantId != null) {
-            productVariantRepository.findByIdForUpdate(variantId).ifPresent(variant -> {
-                if (discountPrice != null
-                        && (discountPrice.signum() < 0 || discountPrice.compareTo(variant.getPrice()) > 0)) {
-                    throw new BusinessException("Giá khuyến mãi phải nằm trong khoảng từ 0 đến giá gốc");
-                }
-                variant.setDiscountPrice(discountPrice);
-                productVariantRepository.save(variant);
-            });
-        }
-    }
-
-    @Override
-    @Transactional
-    @Caching(evict = {
-            @CacheEvict(value = "products_page", allEntries = true),
-            @CacheEvict(value = "product_detail", allEntries = true)
-    })
-    public void deactivateVariant(Long variantId) {
-        if (variantId != null) {
-            productVariantRepository.findByIdForUpdate(variantId).ifPresent(variant -> {
-                variant.setIsActive(false);
-                productVariantRepository.save(variant);
-            });
-        }
     }
 
     @Override

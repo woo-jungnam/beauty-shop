@@ -11,7 +11,7 @@ const split = (text) => text.split('\0').filter(Boolean);
 const findings = new Set();
 const sensitive = /(?:^|\/)(?:\.env(?:\..+)?|\.npmrc|\.netrc|credentials[^/]*\.json|[^/]*service-account[^/]*\.json)$|\.(?:env|pem|key|p12|pfx|jks|keystore|har|sql|sqlite|db)$/i;
 const generated = /(?:^|\/)(?:node_modules|dist|dist-ssr|artifacts|test-results|customer-test-results|e2e-report|\.auth|coverage)(?:\/|$)|\.log$/i;
-const textExtensions = new Set(['.js', '.jsx', '.ts', '.tsx', '.json', '.md', '.html', '.css', '.yml', '.yaml', '.txt', '.xml', '.properties', '.conf', '.svg', '.mjs', '.sh', '.ps1']);
+const textExtensions = new Set(['.js', '.jsx', '.ts', '.tsx', '.json', '.md', '.html', '.css', '.yml', '.yaml', '.txt', '.xml', '.properties', '.conf', '.sql', '.svg', '.mjs', '.sh', '.ps1']);
 const patterns = [
   ['private-key', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
   ['github-token', /\b(?:gh[pousr]_[A-Za-z0-9_]{30,}|github_pat_[A-Za-z0-9_]{30,})\b/],
@@ -28,7 +28,9 @@ function inspect(scope, path, text) {
   });
 }
 function inspectPath(scope, path) {
-  if (sensitive.test(path) && !path.endsWith('/.env.example') && path !== '.env.example') report(scope, path, 'sensitive-file');
+  // Versioned schema migrations are source code; database dumps remain blocked.
+  const migration = /^backend\/src\/main\/resources\/db\/migration\/V[0-9]+__[A-Za-z0-9_]+\.sql$/.test(path);
+  if (sensitive.test(path) && !migration && !path.endsWith('/.env.example') && path !== '.env.example') report(scope, path, 'sensitive-file');
   if (generated.test(path)) report(scope, path, 'generated-or-private-artifact');
 }
 function isText(path) {

@@ -9,11 +9,15 @@ import 'package:beautyshop_mobile/data/models/spa_model.dart';
 import 'package:beautyshop_mobile/providers/spa_provider.dart';
 import 'package:beautyshop_mobile/providers/auth_provider.dart';
 import 'package:beautyshop_mobile/presentation/screens/auth/login_screen.dart';
+import '../../widgets/catalog_state.dart';
+import '../treatments/treatment_hub_screen.dart';
 
 class SpaBookingScreen extends StatefulWidget {
   final SpaService service;
+  final int? ticketId;
 
-  const SpaBookingScreen({Key? key, required this.service}) : super(key: key);
+  const SpaBookingScreen({Key? key, required this.service, this.ticketId})
+    : super(key: key);
 
   @override
   State<SpaBookingScreen> createState() => _SpaBookingScreenState();
@@ -27,15 +31,60 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
 
   List<String> _availableSlots = [];
   bool _loadingSlots = false;
+  String? _slotsError;
+  int _slotsRevision = 0;
+  Map<String, dynamic>? _financialPolicy;
+  bool _financialAccepted = false;
+  int? _ticketId;
+  String? _policyError;
+  bool get _requiresFinancialAcceptance => [
+    'depositAmount',
+    'cancellationFee',
+    'noShowFee',
+  ].any((key) => (num.tryParse('${_financialPolicy?[key] ?? 0}') ?? 0) > 0);
+
+  Future<void> _loadFinancialPolicy() async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/api/v1/spa/financial-policy',
+        fromJsonT: (json) => Map<String, dynamic>.from(json as Map),
+      );
+      if (!mounted) return;
+      if (!response.isSuccess || response.data == null)
+        throw StateError('Missing policy');
+      setState(() {
+        _financialPolicy = response.data;
+        _policyError = null;
+      });
+    } catch (_) {
+      if (mounted)
+        setState(
+          () => _policyError =
+              'Không tải được chính sách cọc. Thử lại trước khi đặt.',
+        );
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _fetchAvailableSlots();
+    _ticketId = widget.ticketId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && context.read<AuthProvider>().isAuthenticated)
+        context.read<SpaProvider>().fetchMyTickets();
+    });
+    _loadFinancialPolicy();
+    if (!widget.service.isTreatmentCourse) _fetchAvailableSlots();
   }
 
   Future<void> _fetchAvailableSlots() async {
-    setState(() => _loadingSlots = true);
+    final revision = ++_slotsRevision;
+    setState(() {
+      _loadingSlots = true;
+      _slotsError = null;
+      _availableSlots = [];
+      _selectedTime = '';
+    });
     final dateStr =
         '${_selectedDate.year.toString().padLeft(4, '0')}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
     try {
@@ -44,10 +93,19 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
         queryParameters: {'date': dateStr},
         fromJsonT: (json) {
           final list = json as List<dynamic>? ?? [];
-          return list.map((e) => e.toString().length >= 5 ? e.toString().substring(0, 5) : e.toString()).toList();
+          return list
+              .map(
+                (e) => e.toString().length >= 5
+                    ? e.toString().substring(0, 5)
+                    : e.toString(),
+              )
+              .toList();
         },
       );
-      if (response.isSuccess && response.data != null && response.data!.isNotEmpty) {
+      if (!mounted || revision != _slotsRevision) return;
+      if (!response.isSuccess || response.data == null)
+        throw StateError('Missing slots');
+      if (response.data!.isNotEmpty) {
         setState(() {
           _availableSlots = response.data!;
           if (!_availableSlots.contains(_selectedTime)) {
@@ -61,12 +119,15 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
         });
       }
     } catch (_) {
+      if (!mounted || revision != _slotsRevision) return;
       setState(() {
+        _slotsError = 'Không thể tải khung giờ trống. Vui lòng thử lại.';
         _availableSlots = [];
         _selectedTime = '';
       });
     } finally {
-      if (mounted) setState(() => _loadingSlots = false);
+      if (mounted && revision == _slotsRevision)
+        setState(() => _loadingSlots = false);
     }
   }
 
@@ -78,8 +139,33 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final spa = context.watch<SpaProvider>();
+    final eligible = spa.myTickets
+        .where(
+          (t) =>
+              t.isValid &&
+              t.benefitType != 'TREATMENT_COURSE' &&
+              (t.remainingByService[widget.service.id] ?? 0) > 0,
+        )
+        .toList();
+    final selectedTicket = eligible.any((t) => t.id == _ticketId)
+        ? _ticketId
+        : null;
+    if (widget.service.isTreatmentCourse)
+      return Scaffold(
+        appBar: AppBar(title: const Text('Điều trị theo lộ trình')),
+        body: Center(
+          child: FilledButton(
+            onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const TreatmentHubScreen()),
+            ),
+            child: const Text('Chọn lộ trình trước khi đặt từng buổi'),
+          ),
+        ),
+      );
     return Scaffold(
-      backgroundColor: HasakiColors.canvas,
+      backgroundColor: HasakiColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Đặt Lịch Hẹn Spa & Làm Đẹp'),
         backgroundColor: HasakiColors.primary,
@@ -93,7 +179,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: HasakiColors.borderSubtle),
               ),
@@ -106,7 +192,11 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       color: HasakiColors.primaryLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.spa, color: HasakiColors.primary, size: 28),
+                    child: const Icon(
+                      Icons.spa,
+                      color: HasakiColors.primary,
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -115,11 +205,17 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       children: [
                         Text(
                           widget.service.name,
-                          style: HasakiTypography.titleMedium.copyWith(fontWeight: FontWeight.w800),
+                          style: HasakiTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          HasakiFormatters.formatCurrency(widget.service.price),
+                          selectedTicket != null
+                              ? 'Dùng lượt đã mua — không tính lại phí dịch vụ'
+                              : HasakiFormatters.formatCurrency(
+                                  widget.service.price,
+                                ),
                           style: HasakiTypography.priceMedium,
                         ),
                       ],
@@ -130,24 +226,64 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
             ),
             const SizedBox(height: 16),
 
+            if (context.watch<AuthProvider>().isAuthenticated) ...[
+              if (spa.loadingTickets) const LinearProgressIndicator(),
+              if (spa.ticketsError != null)
+                TextButton(
+                  onPressed: () => spa.fetchMyTickets(),
+                  child: Text('${spa.ticketsError} · Thử tải vé'),
+                ),
+              DropdownButtonFormField<int>(
+                key: ValueKey('ticket-$selectedTicket-${eligible.length}'),
+                initialValue: selectedTicket,
+                decoration: const InputDecoration(
+                  labelText: 'Vé sử dụng cho dịch vụ này',
+                ),
+                items: [
+                  const DropdownMenuItem<int>(
+                    value: null,
+                    child: Text('Thanh toán dịch vụ lẻ tại quầy'),
+                  ),
+                  ...eligible.map(
+                    (t) => DropdownMenuItem<int>(
+                      value: t.id,
+                      child: Text(
+                        'Vé #${t.id} · Còn ${t.remainingByService[widget.service.id]} lượt',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: (id) => setState(() => _ticketId = id),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Clinic Location
             _buildSectionTitle('1. Cơ sở điều trị:'),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: HasakiColors.border),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.location_on, color: HasakiColors.primary, size: 20),
+                  Icon(
+                    Icons.location_on,
+                    color: HasakiColors.primary,
+                    size: 20,
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'BeautyShop Clinic & Spa (123 Đồng Khởi, Q.1, TP.HCM)',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      'Chưa cập nhật địa điểm cung cấp dịch vụ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -163,7 +299,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                   context: context,
                   initialDate: _selectedDate,
                   firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 30)),
+                  lastDate: DateTime(2100),
                 );
                 if (picked != null) {
                   setState(() => _selectedDate = picked);
@@ -171,17 +307,27 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                 }
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: HasakiColors.getSurface(context),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: HasakiColors.border),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(HasakiFormatters.formatDate(_selectedDate), style: HasakiTypography.bodyMedium),
-                    const Icon(Icons.calendar_today, size: 18, color: HasakiColors.primary),
+                    Text(
+                      HasakiFormatters.formatDate(_selectedDate),
+                      style: HasakiTypography.bodyMedium,
+                    ),
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 18,
+                      color: HasakiColors.primary,
+                    ),
                   ],
                 ),
               ),
@@ -197,6 +343,8 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                   child: CircularProgressIndicator(color: HasakiColors.primary),
                 ),
               )
+            else if (_slotsError != null)
+              CatalogState(message: _slotsError!, onRetry: _fetchAvailableSlots)
             else if (_availableSlots.isEmpty)
               Container(
                 width: double.infinity,
@@ -223,13 +371,21 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     selected: isSelected,
                     onSelected: (_) => setState(() => _selectedTime = slot),
                     selectedColor: HasakiColors.primaryLight,
-                    backgroundColor: Colors.white,
+                    backgroundColor: HasakiColors.getSurface(context),
                     labelStyle: TextStyle(
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                      color: isSelected ? HasakiColors.primary : HasakiColors.textMain,
+                      fontWeight: isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: isSelected
+                          ? HasakiColors.primary
+                          : HasakiColors.getTextMain(context),
                     ),
-                    side: BorderSide(color: isSelected ? HasakiColors.primary : HasakiColors.border),
+                    side: BorderSide(
+                      color: isSelected
+                          ? HasakiColors.primary
+                          : HasakiColors.border,
+                    ),
                   );
                 }).toList(),
               ),
@@ -247,14 +403,46 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
             const SizedBox(height: 24),
 
             // Submit Button
+            if (_policyError != null) ...[
+              Text(_policyError!),
+              TextButton(
+                onPressed: _loadFinancialPolicy,
+                child: const Text('Tải lại chính sách'),
+              ),
+            ],
+            if (_financialPolicy != null && _requiresFinancialAcceptance)
+              CheckboxListTile(
+                value: _financialAccepted,
+                onChanged: (value) =>
+                    setState(() => _financialAccepted = value ?? false),
+                title: const Text('Đồng ý chính sách cọc, hủy và vắng hẹn'),
+                subtitle: Text(
+                  'Phiên bản ${_financialPolicy!['version']}: cọc tối đa ${_financialPolicy!['depositAmount']} VND; phí hủy sau hạn ${_financialPolicy!['cancellationFee']} VND; phí vắng hẹn ${_financialPolicy!['noShowFee']} VND. Nộp cọc tại Spa để xác nhận lịch; cọc trừ hóa đơn hoặc hoàn sau đối soát.',
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
                 onPressed: () async {
+                  if (_financialPolicy == null ||
+                      (_requiresFinancialAcceptance && !_financialAccepted)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Cần tải và xác nhận chính sách cọc trước khi đặt.',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
                   if (_selectedTime.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Vui lòng chọn khung giờ trống khả dụng.')),
+                      const SnackBar(
+                        content: Text(
+                          'Vui lòng chọn khung giờ trống khả dụng.',
+                        ),
+                      ),
                     );
                     return;
                   }
@@ -266,19 +454,26 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       builder: (ctx) => AlertDialog(
                         title: const Row(
                           children: [
-                            Icon(Icons.lock_outline, color: HasakiColors.primary),
+                            Icon(
+                              Icons.lock_outline,
+                              color: HasakiColors.primary,
+                            ),
                             SizedBox(width: 8),
                             Text('Yêu cầu đăng nhập'),
                           ],
                         ),
-                        content: const Text('Bạn cần đăng nhập tài khoản BeautyShop để xác nhận và quản lý lịch hẹn Spa & Làm Đẹp.'),
+                        content: const Text(
+                          'Bạn cần đăng nhập tài khoản BeautyShop để xác nhận và quản lý lịch hẹn Spa & Làm Đẹp.',
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
                             child: const Text('Để sau'),
                           ),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: HasakiColors.primary),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: HasakiColors.primary,
+                            ),
                             onPressed: () => Navigator.pop(ctx, true),
                             child: const Text('Đăng nhập ngay'),
                           ),
@@ -286,27 +481,49 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       ),
                     );
                     if (proceed == true) {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
                     }
                     return;
                   }
 
-                  final success = await context.read<SpaProvider>().bookAppointment(
+                  if (_ticketId != null && selectedTicket == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Vé đã chọn chưa khả dụng. Tải lại vé hoặc chủ động chọn thanh toán dịch vụ lẻ.',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  final success = await context
+                      .read<SpaProvider>()
+                      .bookAppointment(
                         serviceId: widget.service.id,
+                        ticketId: selectedTicket,
                         serviceName: widget.service.name,
                         date: _selectedDate,
                         timeSlot: _selectedTime,
                         notes: _noteController.text,
+                        acceptedFinancialPolicy: _financialAccepted,
+                        financialPolicyVersion:
+                            (_financialPolicy!['version'] as num).toInt(),
                       );
 
-                  if (!mounted) return;
+                  if (!mounted || !context.mounted) return;
                   if (success) {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Row(
                           children: [
-                            Icon(Icons.check_circle, color: HasakiColors.success),
+                            Icon(
+                              Icons.check_circle,
+                              color: HasakiColors.success,
+                            ),
                             SizedBox(width: 8),
                             Text('Đặt Lịch Thành Công!'),
                           ],
@@ -326,7 +543,9 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       ),
                     );
                   } else {
-                    final err = context.read<SpaProvider>().errorMessage ?? 'Không thể đặt lịch hẹn lúc này';
+                    final err =
+                        context.read<SpaProvider>().errorMessage ??
+                        'Không thể đặt lịch hẹn lúc này';
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(err),
@@ -349,7 +568,10 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: HasakiTypography.titleMedium.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700),
+        style: HasakiTypography.titleMedium.copyWith(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

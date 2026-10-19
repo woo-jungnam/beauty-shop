@@ -17,7 +17,7 @@ public class PaymentWebhookProcessor {
     private final OrderFacade orders;
     private final PaymentTransactionRepository transactions;
     private final ObjectMapper mapper;
-    @Value("${sepay.bank.account-number:0902588750}")
+    @Value("${sepay.bank.account-number}")
     private String accountNumber;
     private static final Pattern ORDER = Pattern.compile("\\bORD-?([A-Z0-9]{32}|[A-Z0-9]{8})\\b");
 
@@ -39,7 +39,13 @@ public class PaymentWebhookProcessor {
             if (tx.getStatus() != TransactionStatus.IGNORED || !"UNKNOWN".equals(tx.getOrderNumber())
                     || !"SEPAY".equals(tx.getGateway())) return;
             SePayWebhookRequest original;
-            try { original = mapper.readValue(tx.getRawPayload(), SePayWebhookRequest.class); }
+            try {
+                var stored=mapper.readTree(tx.getRawPayload());
+                // Some JDBC JSON implementations return a quoted JSON document. Unwrap the stored value once.
+                if(stored!=null&&stored.isTextual())stored=mapper.readTree(stored.asText());
+                if(stored==null||!stored.isObject())throw new IllegalArgumentException("Stored webhook must contain a JSON object");
+                original=mapper.treeToValue(stored,SePayWebhookRequest.class);
+            }
             catch (com.fasterxml.jackson.core.JsonProcessingException exception) { throw new IllegalArgumentException("Invalid stored webhook", exception); }
             settle(original, tx);
             return;
@@ -75,7 +81,7 @@ public class PaymentWebhookProcessor {
         String state = orders.findPaymentState(orderNumber).orElse("NOT_FOUND");
         tx.setStatus(switch (state) {
             case "NOT_FOUND" -> TransactionStatus.ORDER_NOT_FOUND;
-            case "CANCELLED", "RETURNED", "REFUNDED_VISIT" -> TransactionStatus.CANCELLED_ORDER_RECEIVED;
+            case "CANCELLED", "RETURNED", "RETURN_TO_SENDER", "REFUNDED_VISIT" -> TransactionStatus.CANCELLED_ORDER_RECEIVED;
             default -> paid ? TransactionStatus.SUCCESS : TransactionStatus.PARTIALLY_PAID;
         });
     }

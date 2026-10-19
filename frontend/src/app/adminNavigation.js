@@ -95,6 +95,14 @@ export const ADMIN_SECTIONS = [
         keywords: "crm customer hồ sơ chăm sóc khách",
       },
       {
+        id: 'treatments',
+        label: 'Lộ trình điều trị',
+        description: 'Mẫu theo buổi, hồ sơ, điều chỉnh & phê duyệt',
+        icon: ClipboardList,
+        role: 'ROLE_STAFF',
+        keywords: 'treatment lộ trình điều trị buổi tiến độ tiếp nhận phiên bản gia hạn hoàn tiền',
+      },
+      {
         id: "vouchers",
         label: "Khuyến mãi",
         description: "Ưu đãi & mã giảm giá",
@@ -134,7 +142,10 @@ export const ADMIN_SECTIONS = [
   },
 ];
 
-export const getAdminSections = (roles = []) => {
+const TAB_PERMISSIONS = { dashboard: 'REPORTS', orders: 'ORDERS', products: 'CATALOG', inventory: 'INVENTORY', procurement: 'PROCUREMENT',
+  'spa-reception': 'SPA_RECEPTION', spa: 'SPA_RECEPTION', treatments: ['SPA_RECEPTION', 'SPA_EXECUTION'], crm: 'CRM', vouchers: 'CATALOG', reviews: 'CATALOG' };
+
+export const getAdminSections = (roles = [], permissions = []) => {
   const isAdmin = roles.includes("ROLE_ADMIN") || roles.includes("ADMIN");
   return ADMIN_SECTIONS.map((section) => ({
     ...section,
@@ -142,6 +153,7 @@ export const getAdminSections = (roles = []) => {
       (item) =>
         isAdmin ||
         (item.role &&
+          (Array.isArray(TAB_PERMISSIONS[item.id]) ? TAB_PERMISSIONS[item.id].some(permission => permissions.includes(permission)) : permissions.includes(TAB_PERMISSIONS[item.id])) &&
           (Array.isArray(item.role)
             ? item.role.some((r) => roles.includes(r))
             : roles.includes(item.role))),

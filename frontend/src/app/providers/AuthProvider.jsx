@@ -23,6 +23,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     window.addEventListener('auth:logout', handleLogoutEvent);
+    const onProfileUpdated = () => verifySession();
+    window.addEventListener('auth:profile-updated', onProfileUpdated);
 
     // Initial check: if token exists, fetch current user profile
     const verifySession = async () => {
@@ -48,6 +50,7 @@ export const AuthProvider = ({ children }) => {
 
     return () => {
       window.removeEventListener('auth:logout', handleLogoutEvent);
+      window.removeEventListener('auth:profile-updated', onProfileUpdated);
     };
   }, [token]);
 
@@ -80,6 +83,7 @@ export const AuthProvider = ({ children }) => {
       email: data.email,
       fullName: data.fullName,
       roles: data.roles,
+      permissions: data.permissions || [],
     };
     localStorage.setItem('beautyshop_admin_user', JSON.stringify(sessionUser));
 
@@ -103,6 +107,7 @@ export const AuthProvider = ({ children }) => {
         email: data.email,
         fullName: data.fullName,
         roles: data.roles,
+        permissions: data.permissions || [],
       };
       localStorage.setItem('beautyshop_admin_user', JSON.stringify(sessionUser));
       setToken(data.accessToken);
@@ -140,8 +145,15 @@ export const AuthProvider = ({ children }) => {
       'ROLE_ADMIN', 'ADMIN',
       'ROLE_STAFF', 'STAFF'
     ].includes(r)) ?? false,
-    isSpaReception: user?.roles?.some((r) => ['ROLE_STAFF', 'STAFF', 'ROLE_ADMIN', 'ADMIN'].includes(r)) ?? false,
-    isSpaTherapist: user?.roles?.some((r) => ['ROLE_STAFF', 'STAFF'].includes(r)) ?? false,
+    isSpaReception: (user?.roles?.some(r => ['ROLE_ADMIN', 'ADMIN'].includes(r)) || user?.permissions?.includes('SPA_RECEPTION')) ?? false,
+    isSpaTherapist: (user?.roles?.some(r => ['ROLE_ADMIN', 'ADMIN'].includes(r)) || user?.permissions?.includes('SPA_EXECUTION')) ?? false,
+    refreshProfile: async () => {
+      const response = await apiClient.get(ENDPOINTS.AUTH.PROFILE);
+      const profile = response.data || response;
+      setUser(profile);
+      localStorage.setItem('beautyshop_admin_user', JSON.stringify(profile));
+      return profile;
+    },
     login,
     register,
     logout,

@@ -9,14 +9,24 @@ import java.math.BigDecimal;
 @Component @RequiredArgsConstructor
 public class IdentityOrderEventListener {
     private final UserService userService;
+    private final com.core.beautyshop.modules.identity.application.service.LoyaltyReconciliationService loyalty;
     @EventListener
     public void handleOrderDelivered(OrderEvents.OrderDeliveredEvent event) {
         if (event.getUserId() == null || event.getTotalAmount() == null) return;
-        int points = event.getTotalAmount().divideToIntegralValue(BigDecimal.valueOf(10000)).intValueExact();
-        if (points > 0) userService.addLoyaltyPoints(event.getUserId(), event.getOrderId(), points);
+        loyalty.reconcile(event.getOrderId(),event.getUserId(),event.getTotalAmount());
     }
     @EventListener
     public void handleOrderReturned(OrderEvents.OrderReturnedEvent event) {
         if (event.getUserId() != null) userService.reverseLoyaltyPoints(event.getUserId(), event.getOrderId());
+    }
+    @EventListener public void financialChange(OrderEvents.OrderFinancialAdjustmentEvent event){
+        loyalty.reconcile(event.orderId(),event.userId(),event.netEligibleAmount());
+    }
+    @EventListener public void spaProgress(com.core.beautyshop.modules.identity.api.event.LoyaltyEvents.EligibleSpendChanged event){
+        loyalty.reconcile(event.orderId(),event.userId(),event.eligibleAmount());
+    }
+    @EventListener public void paidVisit(OrderEvents.OrderPaidEvent event){
+        if(event.getUserId()==null || event.getServicePackageId()!=null)return;
+        loyalty.reconcile(event.getOrderId(),event.getUserId(),event.getTotalAmount());
     }
 }

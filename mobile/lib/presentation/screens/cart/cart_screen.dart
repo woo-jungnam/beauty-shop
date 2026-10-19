@@ -6,6 +6,7 @@ import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
 import 'package:beautyshop_mobile/providers/cart_provider.dart';
 import 'package:beautyshop_mobile/presentation/screens/checkout/checkout_screen.dart';
+import '../../widgets/catalog_state.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -26,7 +27,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.canvas,
+      backgroundColor: HasakiColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Giỏ Hàng Của Bạn'),
         backgroundColor: HasakiColors.primary,
@@ -34,16 +35,33 @@ class _CartScreenState extends State<CartScreen> {
       ),
       body: Consumer<CartProvider>(
         builder: (context, cart, _) {
+          if (cart.isLoading && cart.cart.items.isEmpty)
+            return const Center(child: CircularProgressIndicator());
+          if (cart.errorMessage != null && cart.cart.items.isEmpty)
+            return CatalogState(
+              message: cart.errorMessage!,
+              onRetry: cart.fetchCart,
+            );
           if (cart.cart.items.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.remove_shopping_cart_outlined, size: 64, color: HasakiColors.textLight),
+                  const Icon(
+                    Icons.remove_shopping_cart_outlined,
+                    size: 64,
+                    color: HasakiColors.textLight,
+                  ),
                   const SizedBox(height: 12),
-                  Text('Giỏ hàng chưa có sản phẩm', style: HasakiTypography.titleMedium),
+                  Text(
+                    'Giỏ hàng chưa có sản phẩm',
+                    style: HasakiTypography.titleMedium,
+                  ),
                   const SizedBox(height: 8),
-                  Text('Khám phá hàng ngàn mỹ phẩm chính hãng tại BeautyShop', style: HasakiTypography.bodySmall),
+                  Text(
+                    'Khám phá hàng ngàn mỹ phẩm chính hãng tại BeautyShop',
+                    style: HasakiTypography.bodySmall,
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(context),
@@ -59,19 +77,40 @@ class _CartScreenState extends State<CartScreen> {
               // 1. Freeship 2H Progress Banner
               Container(
                 color: HasakiColors.primaryLight,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.local_shipping_outlined, color: HasakiColors.primary, size: 18),
+                    const Icon(
+                      Icons.local_shipping_outlined,
+                      color: HasakiColors.primary,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        cart.selectedSubtotal >= 249000
-                            ? 'Bạn đã đủ điều kiện Miễn Phí Vận Chuyển 2H!'
-                            : 'Mua thêm ${HasakiFormatters.formatCurrency(249000 - cart.selectedSubtotal)} để nhận Freeship',
-                        style: const TextStyle(fontSize: 11.5, color: HasakiColors.primaryDark, fontWeight: FontWeight.w700),
+                        !cart.hasShippingPolicy
+                            ? cart.shippingError ??
+                                  'Đang tải chính sách vận chuyển...'
+                            : cart.selectedSubtotal >=
+                                  cart.freeShippingThreshold!
+                            ? 'Bạn đã đủ điều kiện miễn phí vận chuyển!'
+                            : 'Mua thêm ${HasakiFormatters.formatCurrency(cart.freeShippingThreshold! - cart.selectedSubtotal)} để nhận Freeship',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: HasakiColors.primaryDark,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
+                    if (cart.shippingError != null)
+                      IconButton(
+                        tooltip: 'Thử lại',
+                        onPressed: cart.fetchShippingPolicy,
+                        icon: const Icon(Icons.refresh),
+                      ),
                   ],
                 ),
               ),
@@ -91,16 +130,22 @@ class _CartScreenState extends State<CartScreen> {
 
               // 3. Voucher Promo Code Box
               Container(
-                color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                color: HasakiColors.getSurface(context),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _voucherController,
                         decoration: InputDecoration(
-                          hintText: 'Nhập mã giảm giá (VD: BEAUTY100)',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          hintText: 'Nhập mã giảm giá',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           suffixIcon: cart.appliedVoucherCode != null
                               ? IconButton(
                                   icon: const Icon(Icons.close, size: 16),
@@ -115,20 +160,37 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: () {
-                        final success = cart.applyVoucher(_voucherController.text);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(success ? 'Áp dụng mã giảm giá thành công!' : 'Mã giảm giá không hợp lệ'),
-                            backgroundColor: success ? HasakiColors.primary : HasakiColors.dealRed,
-                          ),
-                        );
-                      },
+                      onPressed: cart.isApplyingVoucher
+                          ? null
+                          : () async {
+                              final success = await cart.applyVoucher(
+                                _voucherController.text,
+                              );
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    success
+                                        ? 'Áp dụng mã giảm giá thành công!'
+                                        : cart.voucherError ??
+                                              'Giỏ hàng đã thay đổi. Vui lòng áp dụng lại mã.',
+                                  ),
+                                  backgroundColor: success
+                                      ? HasakiColors.primary
+                                      : HasakiColors.dealRed,
+                                ),
+                              );
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: HasakiColors.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
-                      child: const Text('Áp dụng'),
+                      child: Text(
+                        cart.isApplyingVoucher ? 'Đang kiểm tra' : 'Áp dụng',
+                      ),
                     ),
                   ],
                 ),
@@ -138,7 +200,7 @@ class _CartScreenState extends State<CartScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: HasakiColors.getSurface(context),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.06),
@@ -156,15 +218,31 @@ class _CartScreenState extends State<CartScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Tổng thanh toán:', style: TextStyle(fontSize: 11.5, color: HasakiColors.textMuted)),
+                            const Text(
+                              'Tổng dự kiến:',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: HasakiColors.textMuted,
+                              ),
+                            ),
                             Text(
-                              HasakiFormatters.formatCurrency(cart.finalTotal),
-                              style: HasakiTypography.priceLarge.copyWith(fontSize: 18),
+                              cart.hasShippingPolicy
+                                  ? HasakiFormatters.formatCurrency(
+                                      cart.finalTotal,
+                                    )
+                                  : 'Chưa xác định phí giao hàng',
+                              style: HasakiTypography.priceLarge.copyWith(
+                                fontSize: 18,
+                              ),
                             ),
                             if (cart.voucherDiscount > 0)
                               Text(
                                 'Tiết kiệm: ${HasakiFormatters.formatCurrency(cart.voucherDiscount)}',
-                                style: const TextStyle(fontSize: 11, color: HasakiColors.success, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: HasakiColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                           ],
                         ),
@@ -172,17 +250,35 @@ class _CartScreenState extends State<CartScreen> {
 
                       // Checkout Button
                       ElevatedButton(
-                        onPressed: cart.selectedSubtotal > 0
+                        onPressed:
+                            cart.cart.items.any((item) => item.isSelected) &&
+                                cart.hasShippingPolicy &&
+                                !cart.isApplyingVoucher
                             ? () {
+                                if (!cart.allItemsSelected) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Vui lòng chọn tất cả sản phẩm trong giỏ để đặt hàng.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+                                  MaterialPageRoute(
+                                    builder: (_) => const CheckoutScreen(),
+                                  ),
                                 );
                               }
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: HasakiColors.dealRed,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
                         ),
                         child: Text(
                           'MUA HÀNG (${cart.cart.items.where((i) => i.isSelected).length})',
@@ -200,11 +296,15 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCartItemCard(BuildContext context, dynamic item, CartProvider cart) {
+  Widget _buildCartItemCard(
+    BuildContext context,
+    dynamic item,
+    CartProvider cart,
+  ) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HasakiColors.getSurface(context),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: HasakiColors.borderSubtle),
       ),
@@ -228,7 +328,8 @@ class _CartScreenState extends State<CartScreen> {
                   ? CachedNetworkImage(
                       imageUrl: item.thumbnailUrl!,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(color: HasakiColors.canvas),
+                      errorWidget: (_, __, ___) =>
+                          Container(color: HasakiColors.canvas),
                     )
                   : Container(color: HasakiColors.canvas),
             ),
@@ -242,7 +343,9 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 Text(
                   item.productName,
-                  style: HasakiTypography.bodySmall.copyWith(fontWeight: FontWeight.w700),
+                  style: HasakiTypography.bodySmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -250,7 +353,9 @@ class _CartScreenState extends State<CartScreen> {
                   const SizedBox(height: 2),
                   Text(
                     'Phân loại: ${item.variantName}',
-                    style: HasakiTypography.caption.copyWith(color: HasakiColors.textMuted),
+                    style: HasakiTypography.caption.copyWith(
+                      color: HasakiColors.textMuted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 6),
@@ -261,7 +366,9 @@ class _CartScreenState extends State<CartScreen> {
                   children: [
                     Text(
                       HasakiFormatters.formatCurrency(item.price),
-                      style: HasakiTypography.priceMedium.copyWith(fontSize: 14),
+                      style: HasakiTypography.priceMedium.copyWith(
+                        fontSize: 14,
+                      ),
                     ),
 
                     // Quantity Stepper [-] 1 [+]
@@ -273,21 +380,46 @@ class _CartScreenState extends State<CartScreen> {
                       child: Row(
                         children: [
                           InkWell(
-                            onTap: () => cart.updateQuantity(item.id, item.quantity - 1),
+                            onTap: () =>
+                                cart.updateQuantity(item.id, item.quantity - 1),
                             child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              child: Text('-', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                '-',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text('${item.quantity}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              '${item.quantity}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           InkWell(
-                            onTap: () => cart.updateQuantity(item.id, item.quantity + 1),
+                            onTap: () =>
+                                cart.updateQuantity(item.id, item.quantity + 1),
                             child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              child: Text('+', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                '+',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ],

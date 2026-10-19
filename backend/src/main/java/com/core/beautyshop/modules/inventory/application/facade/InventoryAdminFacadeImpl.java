@@ -14,6 +14,21 @@ import java.time.LocalDate;
 public class InventoryAdminFacadeImpl implements InventoryAdminFacade {
     private final WarehouseStockService service;
     private final com.core.beautyshop.modules.inventory.domain.WarehouseRepository warehouses;
+    private final com.core.beautyshop.modules.inventory.application.service.InventoryBatchService batches;
+    private final com.core.beautyshop.modules.inventory.application.service.InventoryLedgerService ledger;
+
+    @Override @org.springframework.transaction.annotation.Transactional
+    public Long receiveBatch(Long warehouseId,Long variantId,int quantity,BigDecimal cost,String batchCode,LocalDate expiry,String reference) {
+        WarehouseStockRequest request=new WarehouseStockRequest();request.setProductVariantId(variantId);request.setQuantity(quantity);request.setCostPrice(cost);request.setBatchCode(batchCode);request.setExpirationDate(expiry);
+        return service.receiveStock(warehouseId,request,"PURCHASE_RECEIPT",reference).getId();
+    }
+    @Override @org.springframework.transaction.annotation.Transactional
+    public void returnToSupplier(Long warehouseId,Long variantId,String batchCode,int quantity,String reference) {
+        batches.lockWarehouse(warehouseId);var stock=batches.lockBatch(warehouseId,variantId,batchCode).orElseThrow(()->new com.core.beautyshop.shared.exception.BusinessException("Supplier return batch not found"));
+        if(quantity<=0||quantity>stock.getQuantity()-stock.getReservedQuantity())throw new com.core.beautyshop.shared.exception.BusinessException("Supplier return exceeds available unreserved stock");
+        int before=stock.getQuantity();stock.setQuantity(before-quantity);
+        ledger.record(stock,com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.SUPPLIER_RETURN,-quantity,before,stock.getQuantity(),"SUPPLIER_RETURN",reference,"Goods returned to supplier");
+    }
 
     @Override
     @org.springframework.transaction.annotation.Transactional(readOnly = true)

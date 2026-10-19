@@ -14,6 +14,7 @@ import com.core.beautyshop.modules.catalog.domain.Category;
 import com.core.beautyshop.modules.catalog.domain.ProductTag;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
+import com.core.beautyshop.shared.time.BusinessTime;
 import com.core.beautyshop.modules.inventory.api.dto.ExpiringVariantStockDto;
 import com.core.beautyshop.shared.exception.BusinessException;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -98,67 +102,83 @@ class ProductServiceImplTest {
 
     @Test
     void getExpiringSoonProductsReturnsEmptyWhenNoExpiringStocks() {
-        when(inventoryFacade.getExpiringVariantStocks(90, 32)).thenReturn(List.of());
-
-        List<ProductListResponse> result = productService.getExpiringSoonProducts(90, 8);
-
-        assertTrue(result.isEmpty());
+        LocalDate today = BusinessTime.today();
+        when(inventoryFacade.getExpiringVariantStocks(today, 90, 0, 100)).thenReturn(List.of());
+        assertTrue(productService.getExpiringSoonProducts(90, 8).isEmpty());
         verify(productVariantRepository, never()).findActiveVariantsWithProductAndBrandByIds(any());
     }
 
     @Test
-    void getExpiringSoonProductsDeduplicatesByProductAndSortsByEarliestExpirationDate() {
-        LocalDate dateIn20Days = LocalDate.now().plusDays(20);
-        LocalDate dateIn30Days = LocalDate.now().plusDays(30);
-        LocalDate dateIn10Days = LocalDate.now().plusDays(10);
-
-        // Product 1 has two variants (v1 expires in 20 days, v2 expires in 30 days)
-        // Product 2 has one variant (v3 expires in 10 days)
-        ExpiringVariantStockDto stockV1 = ExpiringVariantStockDto.builder()
-                .variantId(1L).earliestExpirationDate(dateIn20Days).availableQuantity(50).build();
-        ExpiringVariantStockDto stockV2 = ExpiringVariantStockDto.builder()
-                .variantId(2L).earliestExpirationDate(dateIn30Days).availableQuantity(30).build();
-        ExpiringVariantStockDto stockV3 = ExpiringVariantStockDto.builder()
-                .variantId(3L).earliestExpirationDate(dateIn10Days).availableQuantity(20).build();
-
-        when(inventoryFacade.getExpiringVariantStocks(60, 16))
-                .thenReturn(List.of(stockV3, stockV1, stockV2));
-
-        Brand brand = Brand.builder().name("Test Brand").build();
-        brand.setId(10L);
-
-        Product prod1 = Product.builder().name("Product 1").slug("prod-1").status(ProductStatus.ACTIVE).brand(brand).totalSold(100L).build();
-        prod1.setId(101L);
-
-        Product prod2 = Product.builder().name("Product 2").slug("prod-2").status(ProductStatus.ACTIVE).brand(brand).totalSold(50L).build();
-        prod2.setId(102L);
-
-        ProductVariant v1 = ProductVariant.builder().product(prod1).price(new BigDecimal("100000")).discountPrice(new BigDecimal("80000")).build();
-        v1.setId(1L);
-
-        ProductVariant v2 = ProductVariant.builder().product(prod1).price(new BigDecimal("120000")).discountPrice(new BigDecimal("90000")).build();
-        v2.setId(2L);
-
-        ProductVariant v3 = ProductVariant.builder().product(prod2).price(new BigDecimal("200000")).build();
-        v3.setId(3L);
-
+    void clearanceKeepsExactDiscountedSkuAndDeduplicatesByEarliestDate() {
+        LocalDate today = BusinessTime.today();
+        var first = clearanceVariant(1L, 101L, "80000");
+        var later = clearanceVariant(2L, 101L, "70000");
+        var earliest = clearanceVariant(3L, 102L, "0");
+        var noDiscount = clearanceVariant(4L, 103L, null);
+        var stocks = List.of(stock(4L, today.plusDays(31), 50), stock(3L, today.plusDays(40), 20),
+                stock(1L, today.plusDays(50), 50), stock(2L, today.plusDays(60), 30));
+        when(inventoryFacade.getExpiringVariantStocks(today, 90, 0, 100)).thenReturn(stocks);
         when(productVariantRepository.findActiveVariantsWithProductAndBrandByIds(any()))
-                .thenReturn(List.of(v1, v2, v3));
+                .thenReturn(List.of(first, later, earliest, noDiscount));
+        when(inventoryFacade.getAvailableQuantity(1L, today)).thenReturn(70);
+        when(inventoryFacade.getAvailableQuantity(3L, today)).thenReturn(20);
 
-        List<ProductListResponse> result = productService.getExpiringSoonProducts(60, 4);
-
-        assertEquals(2, result.size());
-        // Earliest expiration date first: prod2 (in 10 days) before prod1 (in 20 days)
-        assertEquals(102L, result.get(0).getId());
-        assertEquals(dateIn10Days, result.get(0).getEarliestExpirationDate());
-        assertEquals(10, result.get(0).getDaysRemaining());
-        assertEquals(20, result.get(0).getClearanceStock());
-
-        assertEquals(101L, result.get(1).getId());
-        assertEquals(dateIn20Days, result.get(1).getEarliestExpirationDate());
-        assertEquals(20, result.get(1).getDaysRemaining());
-        assertEquals(50, result.get(1).getClearanceStock());
+        var result = productService.getExpiringSoonProducts(90, 4);
+        assertEquals(List.of(102L, 101L), result.stream().map(ProductListResponse::getId).toList());
+        assertEquals(3L, result.get(0).getClearanceVariant().getId());
+        assertEquals(BigDecimal.ZERO, result.get(0).getMinPrice());
+        assertEquals(40, result.get(0).getDaysRemaining());
+        assertEquals(1L, result.get(1).getClearanceVariant().getId());
         assertEquals(new BigDecimal("80000"), result.get(1).getMinPrice());
+        assertEquals(result.get(1).getMinPrice(), result.get(1).getMaxPrice());
+        assertEquals(new BigDecimal("100000"), result.get(1).getClearanceVariant().getPrice());
+        assertEquals(70, result.get(1).getClearanceVariant().getStockQuantity());
+        assertEquals(50, result.get(1).getClearanceStock());
+        assertEquals(new BigDecimal("80000"), first.getDiscountPrice());
+        assertEquals(null, noDiscount.getDiscountPrice());
+    }
+
+    @Test
+    void clearanceRejectsUnsafeAndOutOfWindowLotsAndInvalidAdminDiscounts() {
+        LocalDate today = BusinessTime.today();
+        var stocks = List.of(stock(1L, today.plusDays(30), 5), stock(2L, today.plusDays(31), 5),
+                stock(3L, today.plusDays(90), 5), stock(4L, today.plusDays(91), 5), stock(5L, null, 5),
+                stock(6L, today.plusDays(50), 5), stock(7L, today.plusDays(51), 5));
+        when(inventoryFacade.getExpiringVariantStocks(today, 90, 0, 100)).thenReturn(stocks);
+        when(productVariantRepository.findActiveVariantsWithProductAndBrandByIds(any())).thenReturn(List.of(
+                clearanceVariant(1L, 101L, "80000"), clearanceVariant(2L, 102L, "80000"), clearanceVariant(3L, 103L, "80000"),
+                clearanceVariant(4L, 104L, "80000"), clearanceVariant(5L, 105L, "80000"),
+                clearanceVariant(6L, 106L, "100000"), clearanceVariant(7L, 107L, "-1")));
+        assertEquals(List.of(102L, 103L), productService.getExpiringSoonProducts(999, 8).stream().map(ProductListResponse::getId).toList());
+    }
+
+    @Test
+    void clearanceReadsNextPageAfterHundredNonDiscountedCandidates() {
+        LocalDate today = BusinessTime.today();
+        var firstPage = IntStream.rangeClosed(1, 100).mapToObj(id -> stock((long) id, today.plusDays(31), 1)).toList();
+        var variants = IntStream.rangeClosed(1, 100).mapToObj(id -> clearanceVariant((long) id, 1000L + id, null)).toList();
+        var valid = clearanceVariant(101L, 5000L, "80000");
+        when(inventoryFacade.getExpiringVariantStocks(today, 90, 0, 100)).thenReturn(firstPage);
+        when(inventoryFacade.getExpiringVariantStocks(today, 90, 1, 100)).thenReturn(List.of(stock(101L, today.plusDays(32), 1)));
+        when(productVariantRepository.findActiveVariantsWithProductAndBrandByIds(any()))
+                .thenReturn(variants).thenReturn(List.of(valid));
+        var result = productService.getExpiringSoonProducts(90, 1);
+        assertEquals(1, result.size());
+        assertEquals(101L, result.getFirst().getClearanceVariant().getId());
+        verify(inventoryFacade).getExpiringVariantStocks(today, 90, 1, 100);
+    }
+
+    private ExpiringVariantStockDto stock(Long variantId, LocalDate expiry, int quantity) {
+        return ExpiringVariantStockDto.builder().variantId(variantId).earliestExpirationDate(expiry).availableQuantity(quantity).build();
+    }
+
+    private ProductVariant clearanceVariant(Long variantId, Long productId, String discount) {
+        Product product = Product.builder().name("Product " + productId).slug("prod-" + productId).totalSold(productId).build();
+        product.setId(productId);
+        ProductVariant variant = ProductVariant.builder().product(product).sku("SKU-" + variantId).variantName("Variant " + variantId)
+                .price(new BigDecimal("100000")).discountPrice(discount == null ? null : new BigDecimal(discount)).build();
+        variant.setId(variantId);
+        return variant;
     }
 
     private CreateProductRequest requestWithVariants(CreateProductRequest.VariantRequest... variants) {

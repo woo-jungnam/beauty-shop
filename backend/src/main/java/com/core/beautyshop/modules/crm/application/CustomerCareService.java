@@ -25,6 +25,8 @@ public class CustomerCareService {
     private final JdbcTemplate jdbc;
     private final CustomerCareNoteRepository notes;
     private final com.core.beautyshop.modules.identity.api.IdentityFacade identity;
+    @org.springframework.beans.factory.annotation.Autowired
+    private CrmWorkService work;
 
     @Transactional
     public CustomerView createCustomer(String fullName, String phone) {
@@ -33,8 +35,8 @@ public class CustomerCareService {
     private static final String CUSTOMER_COLUMNS = """
         SELECT u.id,u.username,u.full_name,u.email,u.phone,u.membership_tier,u.loyalty_points,u.status,
           (SELECT COUNT(*) FROM orders o WHERE o.user_id=u.id AND o.is_deleted=false) order_count,
-          (SELECT COALESCE(SUM(o.paid_amount),0) FROM orders o
-             WHERE o.user_id=u.id AND o.is_deleted=false AND o.payment_status='PAID') lifetime_value,
+          (SELECT COALESCE(SUM(GREATEST(o.paid_amount-o.refunded_amount,0)),0) FROM orders o
+             WHERE o.user_id=u.id AND o.is_deleted=false) lifetime_value,
           (SELECT COUNT(*) FROM appointments a WHERE a.user_id=u.id AND a.is_deleted=false) appointment_count
         FROM users u
         """;
@@ -101,7 +103,9 @@ public class CustomerCareService {
         CustomerCareNote note = CustomerCareNote.builder().userId(userId).noteType(type)
                 .content(command.content().trim()).skinProfile(command.skinProfile()).allergies(command.allergies())
                 .contraindications(command.contraindications()).followUpAt(command.followUpAt()).build();
-        return view(notes.save(note));
+        CustomerCareNote saved = notes.save(note);
+        work.fromNote(saved);
+        return view(saved);
     }
 
     private PageRequest paging(int page, int size) {
@@ -126,7 +130,7 @@ public class CustomerCareService {
     }
     @Schema(name = "CrmCustomerView", description = "Thông tin khách và tổng hợp hoạt động; không kèm private care notes")
     public record CustomerView(Long id,String username,String fullName,String email,String phone,String membershipTier,Integer loyaltyPoints,String status,long orderCount,
-            @Schema(description = "Tổng paidAmount của orders hiện có paymentStatus=PAID, chưa trừ refunds; không phải lợi nhuận") BigDecimal lifetimeValue,long appointmentCount) {}
+            @Schema(description = "Tổng tiền thực thu trừ tiền đã xác nhận hoàn, không phải doanh thu thực hiện hoặc lợi nhuận") BigDecimal lifetimeValue,long appointmentCount) {}
     @Schema(name = "CrmCareNoteCommand", description = "Ghi chú nội bộ ADMIN/CS_STAFF; followUpAt chỉ lưu dữ liệu, không tự gửi email")
     public record NoteCommand(@Schema(description = "Thiếu/null dùng GENERAL, không trắng", maxLength = 30, example = "GENERAL") String noteType,
             @Schema(requiredMode = Schema.RequiredMode.REQUIRED, minLength = 1, maxLength = 10000, example = "Nội dung trao đổi chăm sóc với khách") String content,

@@ -76,7 +76,7 @@ async function mockDetail(page, options = {}) {
     if (options.brokenImages) return route.fulfill({ status: 404, body: '' });
     return route.fulfill({ contentType: 'image/svg+xml', body: artwork });
   });
-  await page.route('**/api/**', async (route) => {
+  await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -194,11 +194,27 @@ test('ProductCard thêm giỏ thất bại không hiện trạng thái đã thê
   const api = await mockDetail(page, { cartFailure: true, cartFailureStatus: 503 });
   await page.goto('/#/products');
   const card = page.locator('.product-card-resolved').filter({ has: page.getByRole('link', { name: baseProduct.name, exact: true }) });
+  await expect(card, `Page errors: ${api.pageErrors.join('; ')}`).toBeVisible();
   await card.getByRole('button', { name: `Thêm ${baseProduct.name} vào giỏ`, exact: true }).click();
   await expect(page.locator('.customer-cart-error')).toContainText('Không đủ hàng');
   await expect(card.getByText(/đã thêm/i)).toHaveCount(0);
   await expect(page.getByRole('dialog', { name: /Giỏ Hàng Của Bạn/ })).toHaveCount(0);
   expect(api.cartRequests).toHaveLength(1);
+});
+
+test('ProductCard and QuickView use neutral placeholders when actual product images fail', async ({ page }) => {
+  const api = await mockDetail(page, { brokenImages: true });
+  await page.goto('/');
+  const card = page.locator('.product-card-resolved').first();
+  await expect(card, `Page errors: ${api.pageErrors.join('; ')}`).toBeVisible();
+  await expect(card.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml,/);
+  await expect(card.locator('img')).not.toHaveAttribute('src', /unsplash|picsum/);
+  await card.getByTitle('Xem nhanh chi tiết').click();
+  const quickView = page.getByRole('dialog', { name: baseProduct.name, exact: true });
+  await expect(quickView).toBeVisible();
+  await expect(quickView.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml,/);
+  await expect(quickView.locator('img')).not.toHaveAttribute('src', /unsplash|picsum/);
+  expect(api.pageErrors).toEqual([]);
 });
 
 test('QuickView giữ dialog khi thêm giỏ thất bại và hiển thị lỗi dùng chung', async ({ page }) => {

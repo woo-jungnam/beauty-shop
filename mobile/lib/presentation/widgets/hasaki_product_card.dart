@@ -1,3 +1,4 @@
+import 'customer_wishlist_button.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
@@ -45,33 +46,54 @@ class HasakiProductCard extends StatelessWidget {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(8),
+                  ),
                   child: AspectRatio(
                     aspectRatio: 1.0,
-                    child: product.thumbnailUrl != null && product.thumbnailUrl!.isNotEmpty
+                    child:
+                        product.thumbnailUrl != null &&
+                            product.thumbnailUrl!.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: product.thumbnailUrl!,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(color: HasakiColors.canvas),
+                            placeholder: (_, __) =>
+                                Container(color: HasakiColors.canvas),
                             errorWidget: (_, __, ___) => Container(
                               color: HasakiColors.canvas,
-                              child: const Icon(Icons.spa_outlined, color: HasakiColors.textLight, size: 36),
+                              child: const Icon(
+                                Icons.spa_outlined,
+                                color: HasakiColors.textLight,
+                                size: 36,
+                              ),
                             ),
                           )
                         : Container(
                             color: HasakiColors.canvas,
-                            child: const Icon(Icons.spa_outlined, color: HasakiColors.textLight, size: 36),
+                            child: const Icon(
+                              Icons.spa_outlined,
+                              color: HasakiColors.textLight,
+                              size: 36,
+                            ),
                           ),
                   ),
                 ),
 
                 // Discount Badge (Hasaki Deal Red)
+                Positioned(
+                  top: 2,
+                  right: 2,
+                  child: CustomerWishlistButton(productId: product.id),
+                ),
                 if (hasDiscount)
                   Positioned(
                     top: 4,
                     left: 4,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: HasakiColors.dealRed,
                         borderRadius: BorderRadius.circular(3),
@@ -93,7 +115,10 @@ class HasakiProductCard extends StatelessWidget {
                     bottom: 4,
                     left: 4,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: HasakiColors.primary,
                         borderRadius: BorderRadius.circular(3),
@@ -104,7 +129,7 @@ class HasakiProductCard extends StatelessWidget {
                           Icon(Icons.verified, color: Colors.white, size: 8),
                           SizedBox(width: 2),
                           Text(
-                            'Chính Hãng',
+                            'Nổi bật',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 8,
@@ -131,7 +156,8 @@ class HasakiProductCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Brand Name
-                        if (product.brandName != null && product.brandName!.isNotEmpty)
+                        if (product.brandName != null &&
+                            product.brandName!.isNotEmpty)
                           Text(
                             product.brandName!.toUpperCase(),
                             style: HasakiTypography.caption.copyWith(
@@ -158,13 +184,32 @@ class HasakiProductCard extends StatelessWidget {
 
                         const SizedBox(height: 1),
 
-                        // Rating & Sold
-                        Row(
+                        if (product.clearanceVariant != null)
+                          Text(
+                            'HSD ${product.earliestExpirationDate?.toIso8601String().split('T').first ?? 'chưa rõ'} · còn ${product.clearanceStock ?? 0}',
+                            maxLines: 2,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: HasakiColors.textMuted,
+                            ),
+                          ),
+
+                        // Rating & sold figures come from the catalog response.
+                        Wrap(
+                          spacing: 3,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            const Icon(Icons.star, color: HasakiColors.star, size: 9.5),
+                            if (product.totalReviews > 0)
+                              const Icon(
+                                Icons.star,
+                                color: HasakiColors.star,
+                                size: 9.5,
+                              ),
                             const SizedBox(width: 2),
                             Text(
-                              product.averageRating.toStringAsFixed(1),
+                              product.totalReviews > 0
+                                  ? product.averageRating.toStringAsFixed(1)
+                                  : 'Chưa có đánh giá',
                               style: TextStyle(
                                 color: HasakiColors.getTextMain(context),
                                 fontWeight: FontWeight.w700,
@@ -173,7 +218,9 @@ class HasakiProductCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 3),
                             Text(
-                              '(${product.totalSold > 0 ? product.totalSold : 12})',
+                              product.totalSold > 0
+                                  ? 'Đã bán ${product.totalSold}'
+                                  : '',
                               style: const TextStyle(
                                 color: HasakiColors.textLight,
                                 fontSize: 8.5,
@@ -194,7 +241,9 @@ class HasakiProductCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                HasakiFormatters.formatCurrency(product.displayPrice),
+                                HasakiFormatters.formatCurrency(
+                                  product.displayPrice,
+                                ),
                                 style: HasakiTypography.priceMedium.copyWith(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,
@@ -203,10 +252,11 @@ class HasakiProductCard extends StatelessWidget {
                               ),
                               if (hasDiscount)
                                 Text(
-                                  HasakiFormatters.formatCurrency(product.basePrice),
-                                  style: HasakiTypography.priceStrikethrough.copyWith(
-                                    fontSize: 9,
+                                  HasakiFormatters.formatCurrency(
+                                    product.basePrice,
                                   ),
+                                  style: HasakiTypography.priceStrikethrough
+                                      .copyWith(fontSize: 9),
                                   maxLines: 1,
                                 ),
                             ],
@@ -223,7 +273,9 @@ class HasakiProductCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: HasakiColors.primaryLight,
                               borderRadius: BorderRadius.circular(11),
-                              border: Border.all(color: HasakiColors.primarySoft),
+                              border: Border.all(
+                                color: HasakiColors.primarySoft,
+                              ),
                             ),
                             child: const Icon(
                               Icons.add_shopping_cart,

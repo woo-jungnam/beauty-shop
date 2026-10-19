@@ -32,6 +32,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+data/image-search/
+data/model-cache/
 
 # Testing cache
 .pytest_cache/

@@ -1,3 +1,4 @@
+import '../profile/customer_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
@@ -29,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: HasakiColors.getSurface(context),
       appBar: AppBar(
         title: const Text('Đăng Nhập Tài Khoản'),
         backgroundColor: HasakiColors.primary,
@@ -48,20 +49,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: HasakiColors.primaryLight,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.spa, color: HasakiColors.primary, size: 36),
+                child: const Icon(
+                  Icons.spa,
+                  color: HasakiColors.primary,
+                  size: 36,
+                ),
               ),
             ),
             const SizedBox(height: 16),
             Center(
               child: Text(
                 'BEAUTYSHOP',
-                style: HasakiTypography.headlineMedium.copyWith(color: HasakiColors.primary, letterSpacing: 1),
+                style: HasakiTypography.headlineMedium.copyWith(
+                  color: HasakiColors.primary,
+                  letterSpacing: 1,
+                ),
               ),
             ),
             Center(
               child: Text(
                 'Mỹ phẩm chính hãng & Spa làm đẹp cao cấp',
-                style: HasakiTypography.caption.copyWith(color: HasakiColors.textMuted),
+                style: HasakiTypography.caption.copyWith(
+                  color: HasakiColors.textMuted,
+                ),
               ),
             ),
             const SizedBox(height: 30),
@@ -77,16 +87,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: HasakiColors.dealRed, size: 18),
+                    const Icon(
+                      Icons.error_outline,
+                      color: HasakiColors.dealRed,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(auth.errorMessage!, style: const TextStyle(color: HasakiColors.dealRed, fontSize: 12)),
+                      child: Text(
+                        auth.errorMessage!,
+                        style: const TextStyle(
+                          color: HasakiColors.dealRed,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
 
-            Text('Tên đăng nhập / Email:', style: HasakiTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Tên đăng nhập / Email:',
+              style: HasakiTypography.bodySmall.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 6),
             TextField(
               controller: _usernameController,
@@ -97,7 +122,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
 
-            Text('Mật khẩu:', style: HasakiTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Mật khẩu:',
+              style: HasakiTypography.bodySmall.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 6),
             TextField(
               controller: _passwordController,
@@ -106,8 +136,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 prefixIcon: const Icon(Icons.lock_outline, size: 20),
                 hintText: 'Nhập mật khẩu',
                 suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 18),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    size: 18,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
             ),
@@ -133,18 +167,35 @@ class _LoginScreenState extends State<LoginScreen> {
                     : const Text('ĐĂNG NHẬP'),
               ),
             ),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PasswordRecoveryScreen(),
+                ),
+              ),
+              child: const Text('Quên mật khẩu?'),
+            ),
             const SizedBox(height: 20),
 
             Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Chưa có tài khoản? ', style: TextStyle(fontSize: 13, color: HasakiColors.textMuted)),
+                  const Text(
+                    'Chưa có tài khoản? ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: HasakiColors.textMuted,
+                    ),
+                  ),
                   InkWell(
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen(),
+                        ),
                       );
                     },
                     child: Text(

@@ -14,7 +14,9 @@ import { spaErrorMessage } from '../shared/utils/spaMessages';
 import { appointmentCode, asList, canCheckInToday, canFinish, facilityState, KANBAN_COLUMNS, localInstant, normalizePhone, SPA_STATUS, spaTime, unwrap } from './spa-reception/receptionUtils';
 import { useReceptionData } from './spa-reception/useReceptionData';
 import { WalkInDrawer } from './spa-reception/WalkInDrawer';
+import { TreatmentAppointmentDialog } from '../features/treatments/TreatmentAppointmentDialog';
 import './spa-reception/spa-reception.css';
+
 
 const Status = ({ appointment }) => <span className={`reception-status ${SPA_STATUS[appointment.status]?.tone || 'neutral'}`}>
   {appointment.status === 'CONFIRMED' ? appointment.checkedInAt ? 'Đã check-in' : 'Chưa check-in' : SPA_STATUS[appointment.status]?.label || 'Chưa xác định'}
@@ -48,11 +50,11 @@ const AssignDialog = ({ appointment, checkIn, onClose, onAssign }) => {
         try { await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointment.id)); }
         catch (err) { onAssign('Đã phân ca và xác nhận lịch. ' + spaErrorMessage(err, 'Chưa check-in được khách. Vui lòng kiểm tra lịch và thử lại.'), 'warning'); onClose(); return; }
       }
-      onAssign(checkIn ? 'Đã phân ca và check-in khách.' : 'Đã phân ca KTV và xác nhận lịch.'); onClose();
+      onAssign(checkIn ? 'Đã phân ca và check-in khách.' : (appointment.status === 'CONFIRMED' ? 'Đã cập nhật chuyên viên KTV.' : 'Đã phân ca KTV và xác nhận lịch.')); onClose();
     } catch (err) { setError(spaErrorMessage(err, 'Chưa phân ca được. Vui lòng kiểm tra lịch làm việc của KTV.')); }
     finally { submitting.current = false; setBusy(false); }
   };
-  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Phân ca & check-in' : 'Phân ca KTV nhanh'} className="reception-dialog">
+  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Phân ca & check-in' : (appointment.status === 'CONFIRMED' ? 'Đổi chuyên viên' : 'Phân ca KTV nhanh')} className="reception-dialog">
     <form className="reception-form" onSubmit={submit}>
       <p><strong>{appointment.customerName}</strong> · {appointmentCode(appointment)}<br /><small className="reception-muted">{formatDate(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</small></p>
       {error && <div role="alert" className="reception-notice error">{error}</div>}
@@ -61,7 +63,7 @@ const AssignDialog = ({ appointment, checkIn, onClose, onAssign }) => {
           { value: '', label: choices[item.id] ? 'Chọn KTV đủ chuyên môn' : 'Đang tải KTV…' }, ...(choices[item.id] || []).map(staff => ({ value: String(staff.id), label: `${staff.fullName}${staff.specialty ? ' · ' + staff.specialty : ''}` })),
         ]} />)}
       <p className="reception-muted">Hệ thống kiểm tra ca làm việc và lịch trùng khi xác nhận phân ca.</p>
-      <Button type="submit" loading={busy} disabled={(appointment.items || []).some(item => !choices[item.id] || !assignments[item.id])}>{checkIn ? 'Xác nhận & check-in' : 'Xác nhận phân ca'}</Button>
+      <Button type="submit" loading={busy} disabled={(appointment.items || []).some(item => !choices[item.id] || !assignments[item.id])}>{checkIn ? 'Xác nhận & check-in' : (appointment.status === 'CONFIRMED' ? 'Lưu thay đổi chuyên viên' : 'Xác nhận phân ca')}</Button>
     </form>
   </Modal>;
 };
@@ -77,11 +79,21 @@ export const SpaReceptionPage = () => {
   const [page, setPage] = useState(0);
   const [walkIn, setWalkIn] = useState(null);
   const [checkout, setCheckout] = useState(null);
-  const [finish, setFinish] = useState(null);
+  const [workspaceId, setWorkspaceId] = useState(null);
   const [assign, setAssign] = useState(null);
   const [edit, setEdit] = useState(null);
   const [editForm, setEditForm] = useState({ date: '', time: '', note: '' });
   const [editError, setEditError] = useState('');
+  const [editSlots,setEditSlots]=useState([]),[editSlotsLoading,setEditSlotsLoading]=useState(false);
+  useEffect(()=>{
+    if(edit?.type!=='reschedule'||!editForm.date)return;
+    const controller=new AbortController();setEditSlots([]);setEditSlotsLoading(true);
+    apiClient.get(`/api/v1/appointments/${edit.appointment.id}/available-slots?date=${editForm.date}`,{signal:controller.signal})
+      .then(r=>{if(!controller.signal.aborted)setEditSlots(asList(r).map(s=>String(s).slice(0,5)));})
+      .catch(e=>{if(!controller.signal.aborted)setEditError(spaErrorMessage(e,'Chưa tải được giờ trống.'));})
+      .finally(()=>{if(!controller.signal.aborted)setEditSlotsLoading(false);});
+    return()=>controller.abort();
+  },[edit?.appointment?.id,edit?.type,editForm.date]);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [ticketPhone, setTicketPhone] = useState('');
   const [ticketResult, setTicketResult] = useState(null);
@@ -126,12 +138,36 @@ export const SpaReceptionPage = () => {
   };
   const complete = appointment => run(`finish-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), {
     status: 'COMPLETED', notes: 'Lễ tân xác nhận khách đã hoàn tất ca chăm sóc.',
-  }), 'Đã hoàn tất ca. Có thể đối soát và thu ngân.', response => { setFinish(null); setCheckout(unwrap(response) || { ...appointment, status: 'COMPLETED' }); });
+  }), 'Đã hoàn tất ca. Có thể đối soát và thu ngân.', response => { setCheckout(unwrap(response) || { ...appointment, status: 'COMPLETED' }); });
+  const rescheduleDuration = useMemo(() => {
+    if (!edit?.appointment?.startTime || !edit?.appointment?.endTime) return 60;
+    const [sh, sm] = edit.appointment.startTime.slice(0, 5).split(':').map(Number);
+    const [eh, em] = edit.appointment.endTime.slice(0, 5).split(':').map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    return diff > 0 ? diff : 60;
+  }, [edit?.appointment]);
+
+  const rescheduleEstimatedEnd = useMemo(() => {
+    if (!editForm.time) return '';
+    const [h, m] = editForm.time.slice(0, 5).split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return '';
+    const total = h * 60 + m + rescheduleDuration;
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  }, [editForm.time, rescheduleDuration]);
+
+  const rescheduleExceedsClosing = useMemo(() => {
+    return editSlotsLoading || !editSlots.includes(editForm.time);
+  }, [editSlotsLoading,editSlots,editForm.time]);
+
   const openEdit = (appointment, type) => { setEdit({ appointment, type }); setEditForm({ date: appointment.appointmentDate, time: appointment.startTime?.slice(0, 5) || '09:00', note: '' }); setEditError(''); };
   const submitEdit = async event => {
     event.preventDefault();
     if (actionLock.current) return;
     if (edit.type === 'no-show' && !editForm.note.trim()) { setEditError('Vui lòng nhập lý do khách vắng mặt.'); return; }
+    if (edit.type === 'reschedule' && rescheduleExceedsClosing) {
+      setEditError('Chọn một giờ khả dụng theo ca trực, tài nguyên và giờ hoạt động của ngày mới.');
+      return;
+    }
     actionLock.current = true; setBusy('edit'); setEditError('');
     try {
       if (edit.type === 'reschedule') await apiClient.put(ENDPOINTS.SPA.RESCHEDULE_APPOINTMENT(edit.appointment.id), { appointmentDate: editForm.date, startTime: `${editForm.time}:00`, notes: editForm.note.trim() });
@@ -155,14 +191,16 @@ export const SpaReceptionPage = () => {
     finally { setTicketLoading(false); }
   };
   const actions = appointment => <div className="reception-card-actions">
+    <Button size="sm" variant="outline" onClick={() => setWorkspaceId(appointment.id)}>Chuẩn bị / thực hiện / chăm sóc</Button>
     {['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now)} loading={busy === `check-${appointment.id}`} onClick={() => checkIn(appointment)}><Check size={15} /> Check-in ngay</Button>}
     {appointment.status === 'PENDING' && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Phân ca KTV</Button>}
     {appointment.status === 'CONFIRMED' && appointment.checkedInAt && <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now) || localInstant(appointment.appointmentDate, appointment.startTime) - 3600000 > now.getTime()} loading={busy === `start-${appointment.id}`}
       onClick={() => run(`start-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'IN_PROGRESS', notes: 'Lễ tân bắt đầu ca chăm sóc.' }), 'Đã bắt đầu ca chăm sóc.')}><ArrowRight size={15} /> Bắt đầu ca</Button>}
-    {appointment.status === 'IN_PROGRESS' && <Button size="sm" disabled={Boolean(busy)} loading={busy === `finish-${appointment.id}`} onClick={() => canFinish(appointment) ? complete(appointment) : setFinish(appointment)}>Hoàn tất & thu ngân</Button>}
+    {appointment.status === 'IN_PROGRESS' && <Button size="sm" disabled={Boolean(busy)} loading={busy === `finish-${appointment.id}`} onClick={() => canFinish(appointment) ? complete(appointment) : setWorkspaceId(appointment.id)}>Hoàn tất & thu ngân</Button>}
     {appointment.status === 'COMPLETED' && <Button size="sm" onClick={() => setCheckout(appointment)}>Mở thu ngân <ArrowRight size={15} /></Button>}
     {['PENDING', 'CONFIRMED'].includes(appointment.status) && <details className="reception-more"><summary aria-label={`Thao tác khác cho ${appointmentCode(appointment)}`}><MoreHorizontal size={18} /></summary><div>
       <button type="button" onClick={() => openEdit(appointment, 'reschedule')}>Đổi lịch hẹn</button>
+      {appointment.status === 'CONFIRMED' && <button type="button" onClick={() => setAssign({ appointment, checkIn: false })}>Đổi chuyên viên</button>}
       {appointment.status === 'CONFIRMED' && <button type="button" onClick={() => openEdit(appointment, 'no-show')}>Ghi nhận vắng mặt</button>}
     </div></details>}
   </div>;
@@ -174,8 +212,9 @@ export const SpaReceptionPage = () => {
     { key: 'actions', header: 'Thao tác', render: actions },
   ];
   return <div className="spa-reception-page">
+    {workspaceId && <TreatmentAppointmentDialog appointmentId={workspaceId} role="staff" onClose={() => setWorkspaceId(null)} onSaved={afterAction} />}
     <header className="reception-header"><div className="reception-brand"><span><Sparkles size={22} /></span><div><strong>BeautyShop <em>Atelier Spa</em></strong><small>KHÔNG GIAN CHĂM SÓC · QUẦY LỄ TÂN</small></div></div>
-      <div className="reception-user"><span><strong>{user?.fullName || user?.username || 'Lễ tân'}</strong><small>{spaTime(now)} · {formatDate(today)}</small></span><a href="#/staff">Ca KTV</a>{user?.roles?.includes('ROLE_ADMIN') && <a href="#/admin/spa">Quản trị Spa</a>}<Button variant="ghost" size="sm" onClick={logout} aria-label="Đăng xuất"><LogOut size={17} /></Button></div>
+      <div className="reception-user"><span><strong>{user?.fullName || user?.username || 'Lễ tân'}</strong><small>{spaTime(now)} · {formatDate(today)}</small></span><a href="#/staff/treatments">Lộ trình điều trị</a><a href="#/staff">Ca KTV</a>{user?.roles?.includes('ROLE_ADMIN') && <a href="#/admin/spa">Quản trị Spa</a>}<Button variant="ghost" size="sm" onClick={logout} aria-label="Đăng xuất"><LogOut size={17} /></Button></div>
     </header>
     <main className="reception-main">
       <div className="reception-title-row"><div><span className="reception-eyebrow">ĐIỀU PHỐI & TIẾP ĐÓN</span><h1>Quầy lễ tân Spa</h1><p>Mỗi lượt đón khách, một trải nghiệm chăm sóc trọn vẹn.</p></div><div className="reception-top-actions"><Button variant="outline" onClick={() => { setTicketOpen(true); setTicketError(''); setTicketResult(null); }}><Ticket size={17} /> Tra cứu vé</Button><Button onClick={() => setWalkIn({ facilityId: '' })} disabled={!data.services.length}><Plus size={18} /> Đón khách vãng lai</Button></div></div>
@@ -218,9 +257,40 @@ export const SpaReceptionPage = () => {
     </main>
     {walkIn && <WalkInDrawer services={data.services} facilities={data.facilities} facilityId={walkIn.facilityId} onClose={() => setWalkIn(null)} onBooked={afterAction} />}
     {assign && <AssignDialog {...assign} onClose={() => setAssign(null)} onAssign={afterAction} />}
-    {finish && <Modal isOpen onClose={() => { if (!busy) setFinish(null); }} title="Xác nhận hoàn tất ca chăm sóc" className="reception-dialog"><div className="reception-form"><p><strong>{finish.customerName}</strong> · {appointmentCode(finish)}</p><p>Một số dịch vụ chưa có kết quả cuối cùng. Khi xác nhận hoàn tất, hệ thống ghi nhận các dịch vụ còn lại đã thực hiện và đối soát lượt vé tương ứng.</p><ul>{(finish.items || []).filter(item => !['PERFORMED', 'SKIPPED', 'LEGACY_FINALIZED'].includes(item.executionStatus)).map(item => <li key={item.id}>{item.serviceName}{item.ticketId ? ' · Sử dụng vé liệu trình' : ''}</li>)}</ul><p className="reception-muted">Nếu khách chưa làm đủ dịch vụ, mở ca KTV để ghi nhận đúng kết quả từng dịch vụ trước.</p><a href="#/staff" className="reception-staff-link">Mở ca KTV <ArrowRight size={14} /></a><Button loading={busy === `finish-${finish.id}`} onClick={() => complete(finish)}>Xác nhận đã thực hiện đủ & hoàn tất</Button></div></Modal>}
     {checkout && <Modal isOpen onClose={() => setCheckout(null)} title="Thu ngân tại quầy" maxWidth="660px" className="reception-dialog"><SpaVisitCheckout key={checkout.id} appointment={checkout} onUpdated={data.refresh} /></Modal>}
-    {edit && <Modal isOpen onClose={() => { if (!busy) setEdit(null); }} title={edit.type === 'reschedule' ? 'Đổi lịch hẹn' : 'Ghi nhận khách vắng mặt'} className="reception-dialog"><form className="reception-form" onSubmit={submitEdit}><p><strong>{edit.appointment.customerName}</strong> · {appointmentCode(edit.appointment)}</p>{editError && <div role="alert" className="reception-notice error">{editError}</div>}{edit.type === 'reschedule' && <div className="drawer-grid"><Input label="Ngày hẹn mới" type="date" required min={today} value={editForm.date} onChange={event => setEditForm(previous => ({ ...previous, date: event.target.value }))} /><Input label="Giờ hẹn mới" type="time" required min="08:00" max="19:30" step={1800} value={editForm.time} onChange={event => setEditForm(previous => ({ ...previous, time: event.target.value }))} /></div>}<Input label={edit.type === 'reschedule' ? 'Ghi chú đổi lịch' : 'Lý do khách vắng mặt'} required={edit.type === 'no-show'} maxLength={500} value={editForm.note} onChange={event => setEditForm(previous => ({ ...previous, note: event.target.value }))} /><Button type="submit" loading={busy === 'edit'}>Xác nhận {edit.type === 'reschedule' ? 'đổi lịch' : 'vắng mặt'}</Button></form></Modal>}
+    {edit && <Modal isOpen onClose={() => { if (!busy) setEdit(null); }} title={edit.type === 'reschedule' ? 'Đổi lịch hẹn' : 'Ghi nhận khách vắng mặt'} className="reception-dialog"><form className="reception-form" onSubmit={submitEdit}><p><strong>{edit.appointment.customerName}</strong> · {appointmentCode(edit.appointment)}</p>{editError && <div role="alert" className="reception-notice error">{editError}</div>}{edit.type === 'reschedule' && <>
+      <div className="reception-reschedule-summary">
+        <div><strong>Lịch hiện tại:</strong> {edit.appointment.startTime?.slice(0, 5)}–{edit.appointment.endTime?.slice(0, 5)} · {formatDate(edit.appointment.appointmentDate)} ({rescheduleDuration} phút)</div>
+        <div><strong>Dịch vụ:</strong> {(edit.appointment.items || []).map(item => `${item.serviceName}${item.staffName ? ` (${item.staffName})` : ''}`).join(', ')}</div>
+      </div>
+      <div className="drawer-grid"><Input label="Ngày hẹn mới" type="date" required min={today} value={editForm.date} onChange={event => setEditForm(previous => ({ ...previous, date: event.target.value }))} /><Select label="Giờ hẹn mới" required value={editSlots.includes(editForm.time)?editForm.time:''} onChange={event => setEditForm(previous => ({ ...previous, time: event.target.value }))} options={[{value:'',label:editSlotsLoading?'Đang kiểm tra giờ trống…':'Chọn giờ khả dụng'},...editSlots.map(slot=>({value:slot,label:slot}))]} /></div>
+      <div className="reception-time-preset-row">
+        <small className="reception-muted">Khung giờ gợi ý:</small>
+        <div className="reception-time-presets">
+          {editSlots.map(slot => (
+            <button
+              key={slot}
+              type="button"
+              className="reception-time-chip"
+              aria-pressed={editForm.time === slot}
+              onClick={() => setEditForm(previous => ({ ...previous, time: slot }))}
+            >
+              {slot}
+            </button>
+          ))}
+        </div>
+      </div>
+      {rescheduleEstimatedEnd && (
+        <div className={`reception-preview-time ${rescheduleExceedsClosing ? 'warning' : ''}`}>
+          <Clock3 size={14} />
+          <span>
+            {rescheduleExceedsClosing
+              ? 'Khung giờ này chưa khả dụng. Chọn giờ trống theo lịch cơ sở.'
+              : `Dự kiến mới: ${editForm.time}–${rescheduleEstimatedEnd} · ${formatDate(editForm.date)}`}
+          </span>
+        </div>
+      )}
+    </>}<Input label={edit.type === 'reschedule' ? 'Ghi chú đổi lịch' : 'Lý do khách vắng mặt'} required={edit.type === 'no-show'} maxLength={500} value={editForm.note} onChange={event => setEditForm(previous => ({ ...previous, note: event.target.value }))} /><Button type="submit" loading={busy === 'edit'} disabled={edit.type === 'reschedule' && rescheduleExceedsClosing}>Xác nhận {edit.type === 'reschedule' ? 'đổi lịch' : 'vắng mặt'}</Button></form></Modal>}
     {ticketOpen && <Modal isOpen onClose={() => { if (!ticketLoading) setTicketOpen(false); }} title="Tra cứu vé liệu trình" className="reception-dialog"><form className="reception-form" onSubmit={lookupTickets}><Input label="SĐT khách cần tra cứu vé" type="tel" required value={ticketPhone} onChange={event => setTicketPhone(event.target.value)} /><Button type="submit" loading={ticketLoading}><Search size={16} /> Tra cứu vé của khách</Button></form>{ticketError && <p role="alert" className="reception-notice error">{ticketError}</p>}{ticketResult && <div className="reception-ticket-list"><h4>{ticketResult.customer.fullName}</h4>{ticketResult.tickets.map(ticket => <div key={ticket.id}><strong>{ticket.packageName}</strong><p>Còn {ticket.remainingSessions} buổi · Đã dùng {ticket.usedSessions || 0} · Đang giữ {ticket.reservedSessions || 0}</p><small>{ticket.status === 'ACTIVE' ? 'Đang hoạt động' : ticket.status === 'EXPIRED' ? 'Đã hết hạn' : 'Không còn khả dụng'}{ticket.expiryDate ? ` · Hạn ${formatDate(ticket.expiryDate)}` : ' · Không giới hạn thời gian'}</small></div>)}{!ticketResult.tickets.length && <p>Khách chưa có vé liệu trình.</p>}</div>}</Modal>}
   </div>;
 };

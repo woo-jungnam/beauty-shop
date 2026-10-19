@@ -15,6 +15,9 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from Voucher v where v.id = :id and v.isDeleted = false")
     Optional<Voucher> findByIdForUpdate(@Param("id") Long id);
+    @Query("select v from Voucher v where upper(v.code) = upper(:code) and v.isDeleted = false")
+    Optional<Voucher> findByCodeAndIsDeletedFalse(@Param("code") String code);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from Voucher v where upper(v.code) = upper(:code) and v.isDeleted = false")
     Optional<Voucher> findByCodeForUpdate(@Param("code") String code);

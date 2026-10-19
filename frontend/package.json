@@ -10,6 +10,8 @@
     "security:check": "node security-check.mjs",
     "security:history": "node security-check.mjs --history",
     "test:spa": "node src/shared/api/__tests__/spaStaffIntegration.check.js",
+    "test:treatments": "node --test src/features/treatments/treatmentModel.test.mjs",
+    "test:e2e:treatments": "playwright test e2e/treatment-courses.spec.js",
     "preview": "vite preview",
     "test:e2e": "npx playwright test",
     "test:e2e:report": "npx playwright show-report e2e-report"

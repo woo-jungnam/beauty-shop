@@ -86,6 +86,14 @@ class ProductSearchIntegrationTest {
                 .quarantinedQuantity(quarantined).expirationDate(expiration).build());
     }
     void available(ProductVariant variant) { stock(variant, warehouse(), 3, 1, 0, null); }
+    void makeCatalogSellable() {
+        // Taxonomy/sort tests need real stock; inventory tests supply their own explicit lots.
+        for (Product product : products.findAll().stream().filter(row -> row.getName().startsWith(prefix)).toList()) {
+            var rows = variants.findByProductIdAndIsDeletedFalse(product.getId());
+            if (rows.isEmpty()) rows = List.of(variant(product, "100", null));
+            for (var sku : rows) available(sku);
+        }
+    }
     MockHttpServletRequestBuilder search() { return get("/api/v1/products/search").param("keyword", prefix); }
     JsonNode page(MockHttpServletRequestBuilder request) throws Exception {
         entities.flush(); entities.clear();
@@ -105,18 +113,22 @@ class ProductSearchIntegrationTest {
     }
     String idList(Long... values) { return String.join(",", Arrays.stream(values).map(String::valueOf).toList()); }
 
-    @Test void anonymousSearchAllowsEmptyCriteriaAndNoSkuButAlwaysHidesInactiveAndDeletedProducts() throws Exception {
-        Product visible = product("No SKU yet");
+    @Test void anonymousSearchHidesNoSkuAndUnsafeStockUnlessExplicitlySearchingUnavailable() throws Exception {
+        Product visible = product("Available"); available(variant(visible, "100", null));
+        Product noSku = product("No SKU yet");
+        Product nearExpiry = product("Only thirty days");
+        stock(variant(nearExpiry, "100", null), warehouse(), 5, 0, 0, com.core.beautyshop.shared.time.BusinessTime.today().plusDays(30));
         Product inactive = product("Inactive"); inactive.setStatus(ProductStatus.INACTIVE);
         Product deleted = product("Deleted"); deleted.setIsDeleted(true);
         exactly(page(search()), visible);
+        exactly(page(search().param("inStock", "false")), noSku, nearExpiry);
         JsonNode emptyCriteria = page(get("/api/v1/products/search").param("sort", "id,desc"));
         assertTrue(ids(emptyCriteria).contains(visible.getId()));
         assertFalse(ids(emptyCriteria).contains(inactive.getId()));
         assertFalse(ids(emptyCriteria).contains(deleted.getId()));
         assertEquals(0, emptyCriteria.path("page").asInt()); assertEquals(20, emptyCriteria.path("size").asInt());
         Brand onlyBrand = brand();
-        Product blankKeyword = product("Blank keyword"); blankKeyword.setBrand(onlyBrand);
+        Product blankKeyword = product("Blank keyword"); blankKeyword.setBrand(onlyBrand); available(variant(blankKeyword, "100", null));
         exactly(page(get("/api/v1/products/search").param("keyword", "   ").param("brandId", onlyBrand.getId().toString())), blankKeyword);
     }
 
@@ -125,6 +137,7 @@ class ProductSearchIntegrationTest {
             String token = prefix + literal + "literal";
             Product match = product("Placeholder"); match.setName(token);
             Product decoy = product("Decoy"); decoy.setName(prefix + "Xliteral");
+            available(variant(match, "100", null)); available(variant(decoy, "100", null));
             exactly(page(get("/api/v1/products/search").param("keyword", token)), match);
         }
     }
@@ -155,6 +168,7 @@ class ProductSearchIntegrationTest {
         product("Deleted brand").setBrand(deletedBrand);
         Ingredient deletedIngredient = ingredient(); deletedIngredient.setInciName(needle); deletedIngredient.setIsDeleted(true); attachIngredient(product("Deleted ingredient keyword"), deletedIngredient);
         ProductTag deletedTag = tag(); deletedTag.setName(needle + "Deleted"); deletedTag.setIsDeleted(true); product("Deleted tag keyword").setTags(new ArrayList<>(List.of(deletedTag)));
+        makeCatalogSellable();
         exactly(page(get("/api/v1/products/search").param("keyword", "  " + needle.toUpperCase(Locale.ROOT) + "  ")),
                 byName, bySlug, byDescription, byBrand, bySku, byBarcode, byVariantName,
                 byFullDescription, byIngredientsText, byActivesSummary, byIngredientName, byInci, byIngredientSlug, byTagName, byTagSlug);
@@ -187,7 +201,7 @@ class ProductSearchIntegrationTest {
     }
 
     @Test void inventoryFilterAggregatesSellableLotsAndExcludesReservedQuarantineExpiryAndHiddenWarehouses() throws Exception {
-        LocalDate today = jdbc.queryForObject("SELECT CURRENT_DATE", LocalDate.class);
+        LocalDate today = com.core.beautyshop.shared.time.BusinessTime.today();
         Product available = product("Available in multiple lots"); ProductVariant availableSku = variant(available, "100", null);
         Warehouse open = warehouse(); stock(availableSku, open, 2, 2, 0, today.plusDays(10)); stock(availableSku, open, 2, 1, 0, null);
         Product reserved = product("Fully reserved"); stock(variant(reserved, "100", null), warehouse(), 3, 3, 0, null);
@@ -216,6 +230,7 @@ class ProductSearchIntegrationTest {
         Product wrongCategory = product("Wrong category"); wrongCategory.setBrand(b1); wrongCategory.setCategories(new ArrayList<>(List.of(excludedCategory))); wrongCategory.setTags(new ArrayList<>(List.of(t1)));
         attachIngredient(wrongCategory, i1); attachConcern(wrongCategory, sc1);
         Product missingTag = product("No tag"); missingTag.setBrand(b1); missingTag.setCategories(new ArrayList<>(List.of(c1))); attachIngredient(missingTag, i1); attachConcern(missingTag, sc1);
+        makeCatalogSellable();
         MockHttpServletRequestBuilder request = dimensionRequest(b1, b2, c1, c2, t1, t2, i1, i2, sc1, sc2);
         JsonNode firstPage = page(request.param("page", "0").param("size", "1").param("sort", "name,asc"));
         assertEquals(List.of(first.getId()), ids(firstPage)); assertEquals(2, firstPage.path("totalElements").asLong());
@@ -237,6 +252,7 @@ class ProductSearchIntegrationTest {
         Product noCategory = product("Serum other category"); noCategory.setBrand(b1); noCategory.setCategories(new ArrayList<>(List.of(otherCategory))); variant(noCategory, "100", null);
         Product tooExpensive = product("Serum expensive"); tooExpensive.setBrand(b2); tooExpensive.setCategories(new ArrayList<>(List.of(c2))); variant(tooExpensive, "300", null);
         Product wrongSkin = product("Serum dry"); wrongSkin.setBrand(b2); wrongSkin.setCategories(new ArrayList<>(List.of(c2))); wrongSkin.setSkinType(SkinType.DRY); variant(wrongSkin, "100", null);
+        makeCatalogSellable();
         exactly(page(get("/api/v1/products/search").param("keyword", prefix + " Serum")
                 .param("brandIds", b1.getId().toString(), b2.getId().toString(), b1.getId().toString())
                 .param("categoryIds", idList(c1.getId(), c2.getId(), c2.getId()))
@@ -257,6 +273,7 @@ class ProductSearchIntegrationTest {
         for (Product product : List.of(first, second, structured, both, cleanser, deletedIngredient)) {
             product.setBrand(selectedBrand); product.setCategories(new ArrayList<>(List.of(selectedCategory))); variant(product, "100", null);
         }
+        makeCatalogSellable();
         JsonNode matches = page(get("/api/v1/products/search").param("keyword", prefix + " Serum")
                 .param("brandIds", selectedBrand.getId().toString()).param("categoryIds", selectedCategory.getId().toString())
                 .param("activeIngredients", " niacinamide ", "ceramide").param("maxPrice", "100"));
@@ -270,6 +287,7 @@ class ProductSearchIntegrationTest {
         }
         Product literal = product("Literal ingredient"); literal.setIngredients("active_%");
         product("Decoy ingredient").setIngredients("activeXX");
+        makeCatalogSellable();
         exactly(page(search().param("activeIngredients", "active_%")), literal);
     }
 
@@ -288,6 +306,7 @@ class ProductSearchIntegrationTest {
         product("Fragrance").setHasFragrance(true);
         product("Alcohol").setHasAlcohol(true);
         product("Partial origin").setOriginCountry("France Overseas");
+        makeCatalogSellable();
         exactly(page(search().param("productType", "PRODUCT").param("skinType", "OILY").param("targetGender", "UNISEX")
                 .param("minRating", "4.5").param("isFeatured", "true").param("hasFragrance", "false").param("hasAlcohol", "false").param("originCountry", "  fRaNcE  ")), matching);
     }
@@ -306,6 +325,7 @@ class ProductSearchIntegrationTest {
         Product blockedSensitive = product("All skin with sensitive warning"); blockedSensitive.setSkinType(SkinType.ALL_SKIN);
         compatibility.saveAndFlush(ProductSkinCompatibility.builder().product(blockedSensitive).skinType(sensitive).isRecommended(false).contraindicationReason("Stored sensitive-skin warning").build());
         product("Wrong legacy skin").setSkinType(SkinType.DRY);
+        makeCatalogSellable();
         exactly(page(search().param("skinType", "OILY")), legacyAll, legacyOily, canonical, blockedSensitive);
         exactly(page(search().param("skinType", "ALL_SKIN")), legacyAll);
     }
@@ -325,6 +345,7 @@ class ProductSearchIntegrationTest {
         Category parent = category(), child = category(); child.setParentCategory(parent);
         Product direct = product("Parent category"); direct.setCategories(new ArrayList<>(List.of(parent)));
         product("Child category").setCategories(new ArrayList<>(List.of(child)));
+        makeCatalogSellable();
         exactly(page(search().param("categoryId", parent.getId().toString())), direct);
     }
 
@@ -332,7 +353,8 @@ class ProductSearchIntegrationTest {
         Product first = product("Alpha"); variant(first, "150", "80"); variant(first, "150", null); first.setAverageRating(5.0); first.setTotalSold(20L);
         Product second = product("Beta"); variant(second, "100", null); second.setAverageRating(4.0); second.setTotalSold(10L);
         Product third = product("Gamma"); variant(third, "100", null); variant(third, "120", null); third.setAverageRating(4.0); third.setTotalSold(10L);
-        Product fourth = product("Delta no SKU"); fourth.setAverageRating(0.0); fourth.setTotalSold(0L);
+        Product fourth = product("Delta free SKU"); variant(fourth, "0", null); fourth.setAverageRating(0.0); fourth.setTotalSold(0L);
+        makeCatalogSellable();
         entities.flush();
         for (Product item : List.of(first, second, third, fourth)) jdbc.update("UPDATE products SET created_at='2026-01-01 00:00:00', updated_at='2026-01-01 00:00:00' WHERE id=?", item.getId());
         return List.of(first, second, third, fourth);
@@ -368,6 +390,8 @@ class ProductSearchIntegrationTest {
         Product free = product("Free after catalog discount"); variant(free, "100.00", "0.00");
         Product maximum = product("Maximum price"); variant(maximum, "9999999999.99", null);
         product("No price SKU");
+        available(variants.findByProductIdAndIsDeletedFalse(free.getId()).getFirst());
+        available(variants.findByProductIdAndIsDeletedFalse(maximum.getId()).getFirst());
         exactly(page(search().param("minPrice", "0").param("maxPrice", "0.00").param("onSale", "true")), free);
         JsonNode result = page(search().param("minPrice", "9999999999.99").param("maxPrice", "9999999999.99"));
         exactly(result, maximum);
@@ -397,6 +421,7 @@ class ProductSearchIntegrationTest {
             mvc.perform(get("/api/v1/products/search").param(invalid[0], invalid[1])).andExpect(status().isBadRequest());
         }
         Product visible = product("Visible"); Product privateProduct = product("Private"); privateProduct.setStatus(ProductStatus.INACTIVE);
+        makeCatalogSellable();
         exactly(page(search().param("status", "INACTIVE")), visible);
     }
 }

@@ -16,7 +16,8 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
 
     @Query("SELECT DISTINCT s FROM Staff s JOIN FETCH s.skills skill JOIN FETCH skill.service service " +
             "WHERE service.id = :serviceId AND s.isActive = true AND s.isDeleted = false " +
-            "AND skill.isDeleted = false AND service.isActive = true AND service.isDeleted = false")
+            "AND skill.isDeleted = false AND service.isActive = true AND service.isDeleted = false " +
+            "AND (service.requiresCertification = false OR (skill.isCertified = true AND (skill.certifiedUntil IS NULL OR skill.certifiedUntil >= CURRENT_DATE)))")
     List<Staff> findQualifiedActiveStaff(@Param("serviceId") Long serviceId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

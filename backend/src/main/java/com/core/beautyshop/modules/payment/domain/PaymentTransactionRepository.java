@@ -9,6 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<PaymentTransaction> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select t from PaymentTransaction t where t.id=:id")
+    Optional<PaymentTransaction> findByIdForUpdate(Long id);
 
     boolean existsByReferenceCode(String referenceCode);
 

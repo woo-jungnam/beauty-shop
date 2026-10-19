@@ -8,5 +8,7 @@ public enum InventoryTransactionType {
     ADJUSTMENT,
     DISPOSAL,
     TRANSFER_OUT,
-    TRANSFER_IN
+    TRANSFER_IN,
+    CONSUMPTION,
+    SUPPLIER_RETURN
 }

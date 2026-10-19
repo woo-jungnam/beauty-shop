@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Data
 @Schema(description = "Đặt yêu cầu PENDING cho chính tài khoản hiện tại; giờ Việt Nam, không có customerId hoặc idempotency key")
 public class BookAppointmentRequest {
+    private Boolean acceptedFinancialPolicy;
+    private Integer financialPolicyVersion;
     
     @NotNull(message = "Ngày hẹn không được để trống")
     @FutureOrPresent(message = "Ngày hẹn phải từ hôm nay trở đi")

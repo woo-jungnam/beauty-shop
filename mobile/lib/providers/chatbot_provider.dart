@@ -5,7 +5,10 @@ import '../data/models/chat_model.dart';
 import '../data/models/product_model.dart';
 
 class ChatbotProvider extends ChangeNotifier {
-  final ApiClient _apiClient = ApiClient();
+  final ApiClient _apiClient;
+
+  ChatbotProvider({ApiClient? apiClient})
+    : _apiClient = apiClient ?? ApiClient();
 
   final List<ChatMessage> _messages = [
     ChatMessage.bot(
@@ -48,15 +51,24 @@ class ChatbotProvider extends ChangeNotifier {
         switch (event['type']) {
           case 'token':
             answer += event['content']?.toString() ?? '';
-            _messages[botMessageIndex] = ChatMessage.bot(answer, products: suggestions.isNotEmpty ? suggestions : null);
+            _messages[botMessageIndex] = ChatMessage.bot(
+              answer,
+              products: suggestions.isNotEmpty ? suggestions : null,
+            );
             notifyListeners();
             break;
           case 'metadata':
             if (event['products'] is List) {
               suggestions = (event['products'] as List)
-                  .map((item) => ProductItem.fromJson(item as Map<String, dynamic>))
+                  .map(
+                    (item) =>
+                        ProductItem.fromJson(item as Map<String, dynamic>),
+                  )
                   .toList();
-              _messages[botMessageIndex] = ChatMessage.bot(answer, products: suggestions);
+              _messages[botMessageIndex] = ChatMessage.bot(
+                answer,
+                products: suggestions,
+              );
               notifyListeners();
             }
             break;
@@ -72,29 +84,39 @@ class ChatbotProvider extends ChangeNotifier {
         throw StateError('Empty stream response');
       }
     } catch (_) {
-      // Fallback regular POST or local response
+      // Retry through the non-streaming API; never invent an answer.
       try {
         final fallbackRes = await _apiClient.post(
           ApiConstants.chat,
           data: {'sessionId': _sessionId, 'message': cleanText},
         );
         final raw = fallbackRes.data;
-        if (raw is Map) {
-          final replyText = raw['response'] ?? raw['text'] ?? raw['answer'] ?? raw['message'] ?? '';
+        if (fallbackRes.isSuccess && raw is Map) {
+          final replyText =
+              raw['response'] ??
+              raw['text'] ??
+              raw['answer'] ??
+              raw['message'] ??
+              '';
+          if (replyText.toString().trim().isEmpty)
+            throw StateError('Empty reply');
           if (raw['products'] is List) {
             suggestions = (raw['products'] as List)
                 .map((p) => ProductItem.fromJson(p as Map<String, dynamic>))
                 .toList();
           }
-          _messages[botMessageIndex] = ChatMessage.bot(replyText.toString(), products: suggestions.isNotEmpty ? suggestions : null);
+          _messages[botMessageIndex] = ChatMessage.bot(
+            replyText.toString(),
+            products: suggestions.isNotEmpty ? suggestions : null,
+          );
         } else {
           _messages[botMessageIndex] = ChatMessage.bot(
-            'Dạ, đối với tình trạng da này, bạn nên ưu tiên làm sạch dịu nhẹ với sữa rửa mặt chuẩn pH 5.5, cấp ẩm phục hồi với Panthenol B5 và bảo vệ da tuyệt đối bằng kem chống nắng phổ rộng.',
+            'Không thể kết nối trợ lý AI. Vui lòng thử gửi lại tin nhắn.',
           );
         }
       } catch (_) {
         _messages[botMessageIndex] = ChatMessage.bot(
-          'Dạ, đối với tình trạng da này, bạn nên ưu tiên làm sạch dịu nhẹ với sữa rửa mặt chuẩn pH 5.5, cấp ẩm phục hồi với Panthenol B5 và bảo vệ da tuyệt đối bằng kem chống nắng phổ rộng.',
+          'Không thể kết nối trợ lý AI. Vui lòng thử gửi lại tin nhắn.',
         );
       }
     }

@@ -133,11 +133,16 @@ public class FacilitySchedulingService {
 
     @Transactional(readOnly = true)
     public boolean hasAvailability(Long serviceId, LocalDate date, LocalTime start, LocalTime end) {
+        return hasAvailability(serviceId, date, start, end, null);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasAvailability(Long serviceId, LocalDate date, LocalTime start, LocalTime end, Long excludedAppointmentId) {
         requireInterval(date, start, end);
         List<Facility> candidates = facilities.findByIsDeletedFalseOrderByIdAsc();
         for (var requirement : requirements.findByServiceIdAndIsDeletedFalseOrderByResourceTypeAsc(serviceId)) {
             long free = candidates.stream().filter(f -> requirement.getResourceType().equals(f.getType()))
-                    .mapToLong(f -> available(f, date, start, end, occupancy.outstanding(f.getId(), null))).sum();
+                    .mapToLong(f -> available(f, date, start, end, occupancy.outstanding(f.getId(), excludedAppointmentId))).sum();
             if (free < requirement.getUnits()) return false;
         }
         return true;

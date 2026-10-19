@@ -13,6 +13,7 @@ public class PurchaseOrderItem extends Base {
     @Column(name = "product_variant_id", nullable = false) private Long productVariantId;
     @Column(nullable = false) private Integer quantity;
     @Column(name = "received_quantity", nullable = false) @Builder.Default private Integer receivedQuantity = 0;
+    @Column(name = "returned_quantity",nullable=false) @Builder.Default private Integer returnedQuantity=0;
     @Column(name = "unit_cost", nullable = false, precision = 12, scale = 2) private BigDecimal unitCost;
     @Column(name = "batch_code", length = 100) private String batchCode;
     @Column(name = "expiration_date") private LocalDate expirationDate;

@@ -37,10 +37,10 @@ public class ProductListResponse implements Serializable {
     @Schema(description = "URL ảnh thu nhỏ thumbnail", example = "https://cdn.beautyshop.com/products/lrp-thumb.png")
     private String thumbnailUrl;
 
-    @Schema(description = "Giá nhỏ nhất dùng discountPrice nếu có, nếu không dùng price của SKU active chưa xóa (VND); 0 nếu không có SKU", example = "380000")
+    @Schema(description = "Giá hiệu lực nhỏ nhất của SKU đủ điều kiện lọc và còn tồn an toàn (VND); inStock=false dùng SKU active chưa xóa. Clearance bằng giá giảm admin của clearanceVariant.", example = "380000")
     private BigDecimal minPrice;
 
-    @Schema(description = "Giá lớn nhất dùng discountPrice nếu có, nếu không dùng price của SKU active chưa xóa (VND)", example = "480000")
+    @Schema(description = "Giá hiệu lực lớn nhất của cùng tập SKU đủ điều kiện như minPrice (VND); clearance bằng minPrice, không dùng để giấu giá gốc.", example = "480000")
     private BigDecimal maxPrice;
 
     @Schema(description = "Trạng thái hiển thị", example = "ACTIVE")
@@ -73,8 +73,11 @@ public class ProductListResponse implements Serializable {
     @Schema(description = "Số ngày còn lại đến hạn sử dụng", example = "45")
     private Integer daysRemaining;
 
-    @Schema(description = "Số lượng hàng cận date còn khả dụng", example = "25")
+    @Schema(description = "Số lượng khả dụng tại lúc tải của clearanceVariant trong dải 31–thresholdDays; không cam kết giữ một lô cụ thể khi checkout", example = "25")
     private Integer clearanceStock;
+
+    @Schema(description = "SKU xả kho chính xác: price là giá gốc, discountPrice là giá admin hợp lệ, stockQuantity là tổng tồn an toàn; null ngoài clearance")
+    private ProductResponse.VariantResponse clearanceVariant;
 
     // JPQL Constructor for ProductRepository (15 args)
     public ProductListResponse(Long id, String name, String slug, String shortDescription,

@@ -1,14 +1,19 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
+  // Also fires when token refresh expires outside AuthProvider.
+  static final ValueNotifier<int> authCleared = ValueNotifier<int>(0);
   static const String _keyAccessToken = 'auth_access_token';
   static const String _keyRefreshToken = 'auth_refresh_token';
   static const String _keyGuestSessionId = 'guest_session_id';
   static const String _keyUserData = 'auth_user_data';
   static const String _keyBaseUrl = 'custom_base_url';
   static const String _keyDeliveryAddress = 'delivery_address';
+  static const String _keyDeliveryDetails = 'delivery_details';
   static const String _keyThemeMode = 'theme_mode';
 
   static SharedPreferences? _prefs;
@@ -53,14 +58,16 @@ class StorageService {
   static Future<void> saveToken(String token) async => setAccessToken(token);
   static Future<String?> getToken() async => _accessToken;
 
-  static bool get isLoggedIn => _accessToken != null && _accessToken!.isNotEmpty;
+  static bool get isLoggedIn =>
+      _accessToken != null && _accessToken!.isNotEmpty;
 
   static Future<void> clearAuth() async {
+    _accessToken = null;
+    _refreshToken = null;
+    authCleared.value++;
     await _secureStorage.delete(key: _keyAccessToken);
     await _secureStorage.delete(key: _keyRefreshToken);
     await _prefs?.remove(_keyUserData);
-    _accessToken = null;
-    _refreshToken = null;
   }
 
   // Guest Session ID
@@ -69,7 +76,8 @@ class StorageService {
     if (id == null || id.isEmpty) {
       final random = Random.secure();
       final values = List<int>.generate(16, (i) => random.nextInt(256));
-      id = 'guest-${DateTime.now().millisecondsSinceEpoch}-${values.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
+      id =
+          'guest-${DateTime.now().millisecondsSinceEpoch}-${values.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
       _prefs?.setString(_keyGuestSessionId, id);
     }
     return id;
@@ -89,13 +97,78 @@ class StorageService {
 
   static String? getBaseUrl() => _prefs?.getString(_keyBaseUrl);
 
+  // Local checkout drafts are scoped to the account or current guest session.
+  static String _deliveryKey(String base) {
+    try {
+      final raw = _prefs?.getString(_keyUserData);
+      final user = raw == null ? null : jsonDecode(raw);
+      final owner = isLoggedIn && user is Map
+          ? 'user-${user['id'] ?? user['username']}'
+          : getGuestSessionId();
+      return '$base:$owner';
+    } catch (_) {
+      return '$base:${getGuestSessionId()}';
+    }
+  }
+
   // Delivery Address
   static Future<void> setDeliveryAddress(String address) async {
-    await _prefs?.setString(_keyDeliveryAddress, address);
+    await _prefs?.setString(_deliveryKey(_keyDeliveryAddress), address);
   }
 
   static String getDeliveryAddress() {
-    return _prefs?.getString(_keyDeliveryAddress) ?? '123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh';
+    return _prefs?.getString(_deliveryKey(_keyDeliveryAddress)) ?? '';
+  }
+
+  static Map<String, String> getDeliveryDetails() {
+    final raw = _prefs?.getString(_deliveryKey(_keyDeliveryDetails));
+    if (raw == null) return {'address': getDeliveryAddress()};
+    try {
+      return (jsonDecode(raw) as Map<String, dynamic>).map(
+        (key, value) => MapEntry(key, value.toString()),
+      );
+    } catch (_) {
+      return {'address': getDeliveryAddress()};
+    }
+  }
+
+  static Future<void> setDeliveryDetails(Map<String, String> details) async {
+    await _prefs?.setString(
+      _deliveryKey(_keyDeliveryDetails),
+      jsonEncode(details),
+    );
+    await setDeliveryAddress(details['address'] ?? '');
+  }
+
+  static String getFullDeliveryAddress() =>
+      ['address', 'ward', 'district', 'city']
+          .map((key) => getDeliveryDetails()[key] ?? '')
+          .where((part) => part.isNotEmpty)
+          .join(', ');
+
+  static List<int> getGuestOrderIds() {
+    try {
+      final raw = _prefs?.getString('guest-orders:${getGuestSessionId()}');
+      return raw == null
+          ? []
+          : (jsonDecode(raw) as List)
+                .whereType<num>()
+                .map((id) => id.toInt())
+                .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> rememberGuestOrder(int id) async {
+    final ids = [
+      id,
+      ...getGuestOrderIds().where((value) => value != id),
+    ].take(100).toList();
+    await _prefs?.setString(
+      'guest-orders:${getGuestSessionId()}',
+      jsonEncode(ids),
+    );
   }
 
   // Theme Mode ('system', 'light', 'dark')

@@ -1,3 +1,4 @@
+import { CommerceOperationsPanel } from '../features/commerce/AdminCommercePanels';
 import React, { useState, useEffect } from 'react';
 import {
   Search,
@@ -121,7 +122,7 @@ export const OrdersPage = () => {
         status: targetStatus,
         carrierName: targetStatus === 'SHIPPED' ? carrierName : undefined,
         trackingCode: targetStatus === 'SHIPPED' ? trackingCode : undefined,
-        notes: targetStatus === 'CANCELLED' ? cancelReason.trim() : undefined,
+        notes: ['CANCELLED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'].includes(targetStatus) ? cancelReason.trim() : undefined,
       });
       setStatusModalOpen(false);
       fetchOrders(page);
@@ -134,7 +135,7 @@ export const OrdersPage = () => {
 
   const handleOpenRefundModal = (order) => {
     setSelectedOrder(order);
-    setRefundAmount(order.paidAmount ? String(order.paidAmount) : String(order.totalAmount || '0'));
+    setRefundAmount(String(Math.max(0, Number(order.paidAmount || 0) - Number(order.refundedAmount || 0))));
     setRefundReference(`REF-${order.orderCode || order.id}-${Date.now().toString().slice(-6)}`);
     setRefundReason('Hoàn tiền theo yêu cầu hủy / trả hàng');
     setErrorMessage('');
@@ -151,6 +152,7 @@ export const OrdersPage = () => {
       await apiClient.post(ENDPOINTS.ORDERS.CONFIRM_REFUND(selectedOrder.id), {
         reference: refundReference.trim() || `REF-${selectedOrder.id}-${Date.now()}`,
         amount: parseFloat(refundAmount),
+        approvalReason: refundReason.trim(),
       });
       setRefundModalOpen(false);
       fetchOrders(page);
@@ -302,6 +304,7 @@ export const OrdersPage = () => {
         </Button>
       </div>
 
+      <CommerceOperationsPanel orders={orders} onChanged={() => fetchOrders(page)} />
       {/* Filter Control Bar */}
       <div
         className="card"
@@ -330,6 +333,8 @@ export const OrdersPage = () => {
             <option value="PENDING">Chờ xác nhận</option>
             <option value="CONFIRMED">Đã xác nhận</option>
             <option value="PROCESSING">Đang chuẩn bị hàng</option>
+            <option value="DELIVERY_FAILED">Giao không thành công</option>
+            <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
             <option value="SHIPPED">Đang giao hàng</option>
             <option value="DELIVERED">Đã giao thành công</option>
             <option value="CANCELLED">Đã hủy đơn</option>
@@ -554,6 +559,8 @@ export const OrdersPage = () => {
           >
             <option value="CONFIRMED">Xác nhận đơn hàng</option>
             <option value="PROCESSING">Chuyển sang chuẩn bị hàng</option>
+            <option value="DELIVERY_FAILED">Giao không thành công</option>
+            <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
             <option value="SHIPPED">Xuất kho bàn giao vận chuyển</option>
             <option value="DELIVERED">Xác nhận giao thành công</option>
             <option value="CANCELLED">Hủy đơn hàng</option>
@@ -579,7 +586,7 @@ export const OrdersPage = () => {
             </div>
           )}
 
-          {targetStatus === 'CANCELLED' && (
+          {['CANCELLED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'].includes(targetStatus) && (
             <div style={{ marginTop: '12px' }}>
               <Input
                 label="Lý do hủy đơn hàng"

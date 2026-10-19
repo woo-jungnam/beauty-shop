@@ -42,4 +42,5 @@ public class AuthResponse {
 
     @Schema(description = "Danh sách quyền hạn / vai trò", example = "[\"ROLE_CUSTOMER\"]")
     private List<String> roles;
+    private List<String> permissions;
 }

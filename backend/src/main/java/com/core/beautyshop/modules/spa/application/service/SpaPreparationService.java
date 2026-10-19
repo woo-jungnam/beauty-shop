@@ -160,7 +160,7 @@ public class SpaPreparationService {
     @Transactional(readOnly = true)
     public List<ItemPreparation> preparation(Long appointmentId) {
         Appointment appointment = appointment(appointmentId, false);
-        access.requireCanViewAppointment(appointment);
+        access.requireCanViewPreparation(appointment);
         return appointment.getItems().stream().filter(item -> !Boolean.TRUE.equals(item.getIsDeleted()))
                 .map(this::itemPreparation).toList();
     }
@@ -168,8 +168,7 @@ public class SpaPreparationService {
     @Transactional
     public FormResponse submit(Long appointmentId, Long requirementId, ResponseCommand command) {
         Appointment appointment = appointment(appointmentId, true);
-        if ((!access.hasRole("CUSTOMER") && !access.hasRole("USER"))
-                || !Objects.equals(appointment.getUserId(), SecurityUtils.getCurrentUserId())) {
+        if (!Objects.equals(appointment.getUserId(), SecurityUtils.getCurrentUserId())) {
             throw new AccessDeniedException("Chỉ khách hàng của lịch hẹn mới có quyền gửi biểu mẫu khảo sát");
         }
         requirePreparationOpen(appointment);
@@ -205,7 +204,7 @@ public class SpaPreparationService {
 
     @Transactional
     public OverrideEvidence override(Long appointmentId, Long itemId, OverrideCommand command) {
-        requireManager();
+        if (!access.hasRole("ADMIN")) throw new AccessDeniedException("Chỉ quản trị viên được duyệt ngoại lệ đồng ý và chuẩn bị");
         Appointment appointment = appointment(appointmentId, true);
         requirePreparationOpen(appointment);
         requireItemPreparationOpen(item(appointment, itemId));

@@ -19,11 +19,56 @@ import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-@Service @RequiredArgsConstructor
+@Service
 public class SpaVisitOrderService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationEventPublisher events;
     private final OrderRepository orders;
     private final PaymentFacade payments;
     private final jakarta.persistence.EntityManager entities;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public SpaVisitOrderService(OrderRepository orders, PaymentFacade payments, jakarta.persistence.EntityManager entities,
+                                org.springframework.jdbc.core.JdbcTemplate jdbc, com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade) {
+        this.orders = orders;
+        this.payments = payments;
+        this.entities = entities;
+        this.jdbc = jdbc;
+        this.identityFacade = identityFacade;
+    }
+
+    public SpaVisitOrderService(OrderRepository orders, PaymentFacade payments, jakarta.persistence.EntityManager entities,
+                                org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        this(orders, payments, entities, jdbc, null);
+    }
+
+    /** Allocate existing confirmed Spa receipts; no new cash or bank movement is manufactured. */
+    @Transactional
+    public SpaVisitInvoiceResult applyAdvance(Long appointmentId,BigDecimal amount,String reference) {
+        if(amount==null || amount.signum()<=0 || amount.stripTrailingZeros().scale()>0 || reference==null || reference.isBlank() || reference.length()>128)
+            throw new BusinessException("Số cọc phân bổ và mã tham chiếu không hợp lệ");
+        Long id=orders.findIdByAppointmentId(appointmentId).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy hóa đơn Spa"));
+        Order invoice=orders.findByIdForUpdate(id).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy hóa đơn Spa"));
+        entities.refresh(invoice,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        var previous=jdbc.query("SELECT order_id,amount FROM spa_invoice_advances WHERE reference=?",(rs,n)->Map.entry(rs.getLong(1),rs.getBigDecimal(2)),reference);
+        if(!previous.isEmpty()) {
+            if(!previous.getFirst().getKey().equals(id) || previous.getFirst().getValue().compareTo(amount)!=0) throw new BusinessException("Mã phân bổ cọc đã được sử dụng khác nội dung");
+            return result(invoice);
+        }
+        if(invoice.getRefundedAmount().signum()>0 || amount.compareTo(invoice.getTotalAmount().subtract(invoice.getPaidAmount()).max(BigDecimal.ZERO))>0)
+            throw new BusinessException("Cọc phân bổ vượt số còn thiếu hoặc hóa đơn đã hoàn");
+        jdbc.update("INSERT INTO spa_invoice_advances(reference,order_id,amount) VALUES(?,?,?)",reference,id,amount);
+        invoice.setPaidAmount(invoice.getPaidAmount().add(amount));
+        if(invoice.getPaidAmount().compareTo(invoice.getTotalAmount())>=0) {
+            invoice.setPaymentStatus(PaymentStatus.PAID); if(invoice.getPaidAt()==null) invoice.setPaidAt(Instant.now().truncatedTo(ChronoUnit.MICROS));
+        }
+        invoice.getStatusHistories().add(OrderStatusHistory.builder().order(invoice).status(OrderStatus.COMPLETED).notes("Confirmed Spa advance allocated; reference="+reference+"; amount="+amount).build());
+        orders.save(invoice);
+        events.publishEvent(new com.core.beautyshop.modules.identity.api.event.LoyaltyEvents.EligibleSpendChanged(invoice.getId(),invoice.getUserId(),invoice.getTotalAmount()));
+        return result(invoice);
+    }
 
     /** Caller holds the appointment write lock for the lifetime of this transaction. */
     @Transactional
@@ -44,7 +89,17 @@ public class SpaVisitOrderService {
             return result(invoice);
         }
         BigDecimal subtotal = command.items().stream().map(SpaVisitCharge::unitPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal total = subtotal.setScale(0, RoundingMode.HALF_UP);
+        BigDecimal membershipDiscount = BigDecimal.ZERO;
+        if (command.userId() != null && identityFacade != null) {
+            var userSummary = identityFacade.getUserSummaryById(command.userId());
+            Integer discountPercentage = userSummary != null ? userSummary.getMembershipDiscountPercentage() : null;
+            if (discountPercentage != null && discountPercentage > 0) {
+                BigDecimal discountPercent = BigDecimal.valueOf(discountPercentage).divide(BigDecimal.valueOf(100));
+                membershipDiscount = subtotal.multiply(discountPercent).setScale(0, RoundingMode.HALF_UP);
+            }
+        }
+        BigDecimal discountAmount = membershipDiscount.min(subtotal);
+        BigDecimal total = subtotal.subtract(discountAmount).max(BigDecimal.ZERO).setScale(0, RoundingMode.HALF_UP);
         if (total.compareTo(new BigDecimal("9999999999")) > 0) throw new BusinessException("Số tiền trên hóa đơn vượt quá giới hạn cho phép");
         Order invoice = Order.builder().orderNumber("ORD-" + UUID.randomUUID().toString().replace("-", "").toUpperCase())
                 .appointmentId(command.appointmentId()).userId(command.userId()).checkoutKey(key).checkoutHash(hash)
@@ -52,7 +107,7 @@ public class SpaVisitOrderService {
                 .shippingAddress("SPA_VISIT").paymentMethod(command.paymentMethod()).status(OrderStatus.COMPLETED)
                 .paymentStatus(total.signum() == 0 ? PaymentStatus.PAID : PaymentStatus.PENDING)
                 .paidAt(total.signum() == 0 ? Instant.now().truncatedTo(ChronoUnit.MICROS) : null)
-                .subTotal(subtotal).totalAmount(total).shippingFee(BigDecimal.ZERO).discountAmount(BigDecimal.ZERO)
+                .subTotal(subtotal).totalAmount(total).shippingFee(BigDecimal.ZERO).discountAmount(discountAmount)
                 .paidAmount(BigDecimal.ZERO).notes(command.notes()).items(new ArrayList<>())
                 .spaVisitItems(new ArrayList<>()).statusHistories(new ArrayList<>()).build();
         for (SpaVisitCharge item : command.items()) invoice.getSpaVisitItems().add(SpaVisitInvoiceItem.builder().order(invoice)
@@ -98,6 +153,7 @@ public class SpaVisitOrderService {
         invoice.getStatusHistories().add(OrderStatusHistory.builder().order(invoice).status(OrderStatus.COMPLETED)
                 .notes("Cash receipt recorded; amount=" + amount + "; cashier=" + SecurityUtils.getCurrentUserId()).build());
         orders.save(invoice);
+        events.publishEvent(new com.core.beautyshop.modules.identity.api.event.LoyaltyEvents.EligibleSpendChanged(invoice.getId(),invoice.getUserId(),invoice.getTotalAmount()));
         return result(invoice);
     }
 

@@ -18,6 +18,7 @@ public class SpaPackageOrderResult {
     Long orderId;
     String orderNumber;
     Long servicePackageId;
+    String spaBenefitType;
     @Schema(description = "Nghĩa vụ nguyên VND, tổng cuối làm tròn HALF_UP")
     BigDecimal totalAmount;
     OrderStatus status;

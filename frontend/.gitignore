@@ -2,7 +2,6 @@
 .env
 .env.*
 !.env.example
-!.env.production
 *.env
 
 # Credentials and local data

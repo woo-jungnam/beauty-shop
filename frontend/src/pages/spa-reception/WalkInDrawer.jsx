@@ -19,6 +19,8 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
   const [tickets, setTickets] = useState([]);
   const [ticketError, setTicketError] = useState('');
   const [error, setError] = useState('');
+  const [financialPolicy,setFinancialPolicy]=useState(null),[financialAccepted,setFinancialAccepted]=useState(false);
+  useEffect(()=>{apiClient.get('/api/v1/spa/financial-policy').then(r=>setFinancialPolicy(unwrap(r))).catch(e=>setError(e.message));},[]);
   const [busy, setBusy] = useState(false);
   const [createdAppointment, setCreatedAppointment] = useState(null);
   const [uncertainBooking, setUncertainBooking] = useState(false);
@@ -89,6 +91,9 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
     let appointment;
     let bookingAttempted = false;
     try {
+      if(!financialPolicy) throw new Error('Cần tải chính sách tài chính trước khi đặt lịch.');
+      if([financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&!financialAccepted)
+        throw new Error('Cần thông báo và ghi nhận khách đồng ý chính sách cọc/phí trước khi đặt.');
       let customerId = form.customerId;
       if (!customerId) {
         const customer = unwrap(await apiClient.post(ENDPOINTS.CRM.CUSTOMERS, { fullName: form.customerName.trim(), phone: normalizePhone(form.phone) }));
@@ -98,6 +103,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
       bookingAttempted = true;
       appointment = unwrap(await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, {
         targetUserId: Number(customerId), appointmentDate: form.appointmentDate, startTime: form.startTime,
+        acceptedFinancialPolicy:financialAccepted,financialPolicyVersion:financialPolicy.version,
         notes: `[Tiếp đón tại quầy] ${form.notes.trim()}`.trim(),
         items: [{ serviceId: Number(form.serviceId), ...(form.staffId ? { staffId: Number(form.staffId) } : {}),
           ...(form.facilityId ? { facilityId: Number(form.facilityId) } : {}), ...(form.ticketId ? { ticketId: Number(form.ticketId) } : {}) }],
@@ -127,6 +133,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
   return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title="Đón khách tại quầy" className="reception-dialog" presentation="drawer" maxWidth="580px">
     <form onSubmit={submit} className="walkin-form">
       <p className="reception-muted">Tra cứu khách, chọn dịch vụ và chuẩn bị ca chăm sóc.</p>
+      {financialPolicy&&[financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&<label><input type="checkbox" checked={financialAccepted} onChange={e=>setFinancialAccepted(e.target.checked)}/>Đã thông báo và ghi nhận khách đồng ý chính sách {financialPolicy.version}: cọc tối đa {formatCurrency(financialPolicy.depositAmount)}, phí hủy sau hạn {formatCurrency(financialPolicy.cancellationFee)}, phí vắng hẹn {formatCurrency(financialPolicy.noShowFee)}. Thu cọc trước khi xác nhận lịch.</label>}
       {error && <div className="reception-notice error" role="alert">{error}</div>}
       <fieldset disabled={busy || Boolean(createdAppointment) || uncertainBooking}>
         <div className="drawer-step"><span>01</span><h4><UserRound size={17} /> Hồ sơ khách hàng</h4></div>
@@ -143,7 +150,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
         <Select label="Dịch vụ" required value={form.serviceId} onChange={event => { update('serviceId', event.target.value); update('ticketId', ''); update('staffId', ''); }}
           options={[{ value: '', label: 'Chọn dịch vụ' }, ...services.map(item => ({ value: String(item.id), label: `${item.name} · ${formatCurrency(item.basePrice ?? item.price)}` }))]} />
         <div className="drawer-grid"><Input label="Ngày hẹn" type="date" required min={getVietnamDateString()} value={form.appointmentDate} onChange={event => update('appointmentDate', event.target.value)} />
-          <Input label="Giờ bắt đầu" type="time" required min="08:00" max="19:30" step={1800} value={form.startTime.slice(0, 5)} onChange={event => update('startTime', `${event.target.value}:00`)} /></div>
+          <Input label="Giờ bắt đầu" type="time" required step={60} value={form.startTime.slice(0, 5)} onChange={event => update('startTime', `${event.target.value}:00`)} /></div>
         <Select label="Phòng / giường ưu tiên" value={form.facilityId} onChange={event => update('facilityId', event.target.value)} options={[
           { value: '', label: 'Hệ thống tự xếp tài nguyên phù hợp' }, ...facilities.filter(item => item.active !== false).map(item => ({ value: String(item.id), label: item.name })),
         ]} />

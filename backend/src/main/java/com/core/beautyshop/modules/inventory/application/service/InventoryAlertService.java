@@ -22,7 +22,7 @@ public class InventoryAlertService {
     @Transactional(readOnly = true)
     public List<StockAlert> expiringSoon(int days) {
         if (days < 0 || days > 365) throw new IllegalArgumentException("Số ngày cảnh báo phải từ 0 đến 365 ngày");
-        LocalDate today = LocalDate.now();
+        LocalDate today = com.core.beautyshop.shared.time.BusinessTime.today();
         return map(repository.findExpiringSoon(today, today.plusDays(days)));
     }
     @Transactional(readOnly = true)

@@ -34,11 +34,23 @@ class ProductReviewServiceTest {
         when(catalog.productExistsById(7L)).thenReturn(true);
         when(reviews.save(any(ProductReview.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var result = service.create(new ProductReviewService.ReviewCommand(7L, null, 5, "Title", "Comment only"));
+        var result = service.create(new ProductReviewService.ReviewCommand(7L, null, null, "Title", "Comment only"));
 
         assertNull(result.orderId());
         assertNull(result.rating());
         assertFalse(result.isVerifiedPurchase());
+        verifyNoInteractions(orders);
+    }
+
+    @Test
+    void starsWithoutAnOrderAreRejectedInsteadOfSilentlyDiscarded() {
+        asCustomer(3L);
+        when(catalog.productExistsById(7L)).thenReturn(true);
+
+        assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
+                () -> service.create(new ProductReviewService.ReviewCommand(7L, null, 5, null, "Comment")));
+
+        verify(reviews, never()).save(any());
         verifyNoInteractions(orders);
     }
 

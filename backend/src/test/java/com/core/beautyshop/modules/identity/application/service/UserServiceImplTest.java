@@ -8,7 +8,6 @@ import com.core.beautyshop.modules.identity.domain.UserRepository;
 import com.core.beautyshop.modules.identity.domain.enums.MembershipTier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,38 +30,52 @@ class UserServiceImplTest {
     @InjectMocks private UserServiceImpl userService;
 
     @Test
-    void addsPointsWhileHoldingUserLockAndRecordsOrderAward() {
+    void reversesLoyaltyPointsAndUpdatesTier() {
         User user = User.builder()
                 .username("customer")
                 .fullName("Customer")
-                .loyaltyPoints(990)
-                .membershipTier(MembershipTier.MEMBER)
+                .loyaltyPoints(1010)
+                .membershipTier(MembershipTier.SILVER)
                 .build();
         user.setId(1L);
+
+        LoyaltyPointAward award = LoyaltyPointAward.builder()
+                .orderId(100L)
+                .userId(1L)
+                .points(20)
+                .reversed(false)
+                .build();
+
         when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
-        when(loyaltyPointAwardRepository.existsByOrderId(100L)).thenReturn(false);
+        when(loyaltyPointAwardRepository.findByOrderId(100L)).thenReturn(Optional.of(award));
 
-        userService.addLoyaltyPoints(1L, 100L, 20);
+        userService.reverseLoyaltyPoints(1L, 100L);
 
-        assertEquals(1010, user.getLoyaltyPoints());
-        assertEquals(MembershipTier.SILVER, user.getMembershipTier());
+        assertEquals(990, user.getLoyaltyPoints());
+        assertEquals(MembershipTier.MEMBER, user.getMembershipTier());
+        assertTrue(award.isReversed());
+        verify(loyaltyPointAwardRepository).save(award);
         verify(userRepository).save(user);
-        ArgumentCaptor<LoyaltyPointAward> captor = ArgumentCaptor.forClass(LoyaltyPointAward.class);
-        verify(loyaltyPointAwardRepository).save(captor.capture());
-        assertEquals(100L, captor.getValue().getOrderId());
-        assertEquals(20, captor.getValue().getPoints());
     }
 
     @Test
-    void ignoresDuplicateAwardForSameOrder() {
+    void ignoresAlreadyReversedLoyaltyAward() {
         User user = User.builder().username("customer").fullName("Customer").loyaltyPoints(100).build();
-        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
-        when(loyaltyPointAwardRepository.existsByOrderId(100L)).thenReturn(true);
+        user.setId(1L);
 
-        userService.addLoyaltyPoints(1L, 100L, 20);
+        LoyaltyPointAward award = LoyaltyPointAward.builder()
+                .orderId(100L)
+                .userId(1L)
+                .points(20)
+                .reversed(true)
+                .build();
+
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        when(loyaltyPointAwardRepository.findByOrderId(100L)).thenReturn(Optional.of(award));
+
+        userService.reverseLoyaltyPoints(1L, 100L);
 
         assertEquals(100, user.getLoyaltyPoints());
         verify(userRepository, never()).save(any());
-        verify(loyaltyPointAwardRepository, never()).save(any());
     }
 }

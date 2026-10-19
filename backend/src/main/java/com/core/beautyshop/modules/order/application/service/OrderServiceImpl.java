@@ -55,6 +55,8 @@ public class OrderServiceImpl implements OrderService {
     private final ObjectMapper objectMapper;
     private final PromotionFacade promotionFacade;
     private final com.core.beautyshop.shared.config.SystemConfigService systemConfigService;
+    private final com.core.beautyshop.modules.spa.api.TreatmentOrderPolicy treatmentOrderPolicy;
+    private final ProductReturnService productReturns;
 
     @org.springframework.beans.factory.annotation.Value("${app.order.payment-timeout-minutes:30}")
     private long paymentTimeoutMinutes = 30;
@@ -292,12 +294,17 @@ public class OrderServiceImpl implements OrderService {
         OrderStatus previousStatus = order.getStatus();
         OrderStatus newStatus = request.getStatus();
 
+        if (newStatus == OrderStatus.CANCELLED && order.getServicePackageId() != null && order.getPaidAt() != null
+                && treatmentOrderPolicy.requiresTreatmentWorkflow(order.getId()))
+            throw new BusinessException("Please cancel and refund this paid treatment through its course workflow");
+
         if (order.getAppointmentId() != null)
             throw new BusinessException("Hóa đơn dịch vụ Spa tại quầy không có quy trình giao hàng hay vận chuyển");
         if (order.getServicePackageId() != null && (newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.RETURNED))
             throw new BusinessException("Đơn hàng gói Spa không áp dụng giao nhận hay hoàn trả như hàng vật lý");
 
         validateStatusTransition(previousStatus, newStatus);
+        if(newStatus==OrderStatus.RETURNED&&productReturns!=null)productReturns.ensureWholeReturnAllowed(order.getId());
         if (previousStatus == newStatus) return orderMapper.toOrderResponse(order);
 
         if (newStatus == OrderStatus.SHIPPED) {
@@ -322,16 +329,16 @@ public class OrderServiceImpl implements OrderService {
                 && order.getPaymentStatus() != com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID) {
             throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán trước khi giao hàng");
         }
-        if (newStatus == OrderStatus.DELIVERED
-                && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.COD) {
-            BigDecimal remaining = order.getTotalAmount().subtract(order.getPaidAmount()).max(BigDecimal.ZERO);
-            paymentFacade.recordCodCollection(order.getOrderNumber(), remaining);
-            // Delivery confirms cash collection only for the outstanding balance; preserve prior transfers/excess.
-            order.setPaidAmount(order.getPaidAmount().max(order.getTotalAmount()));
-            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID);
-            if (order.getPaidAt() == null) order.setPaidAt(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+        if (newStatus == OrderStatus.SHIPPED) {
+            for (var item : order.getItems()) {
+                inventoryFacade.validateForDispatch(order.getOrderNumber(), item.getProductVariantId(), item.getQuantity());
+                inventoryFacade.deductStock(order.getOrderNumber(), item.getProductVariantId(), item.getQuantity());
+            }
         }
-        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED)
+        if (newStatus == OrderStatus.DELIVERED && order.getDeliveredAt() == null) order.setDeliveredAt(java.time.Instant.now());
+        if ((newStatus == OrderStatus.DELIVERY_FAILED || newStatus == OrderStatus.RETURN_TO_SENDER)
+                && (request.getNotes() == null || request.getNotes().isBlank())) throw new BusinessException("Delivery exception reason required");
+        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED || newStatus == OrderStatus.RETURN_TO_SENDER)
                 && order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
             order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.REFUND_PENDING);
         }
@@ -346,7 +353,7 @@ public class OrderServiceImpl implements OrderService {
             publishOrderDeliveredEvent(order);
         }
 
-        if (newStatus == OrderStatus.RETURNED && previousStatus != OrderStatus.RETURNED) {
+        if ((newStatus == OrderStatus.RETURNED && previousStatus != OrderStatus.RETURNED) || (newStatus == OrderStatus.RETURN_TO_SENDER && previousStatus != OrderStatus.RETURN_TO_SENDER)) {
             publishOrderReturnedEvent(order);
         }
 
@@ -386,6 +393,9 @@ public class OrderServiceImpl implements OrderService {
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new BusinessException("Chỉ những đơn hàng ở trạng thái CHỜ XỬ LÝ mới có thể bị hủy");
         }
+
+        if (order.getServicePackageId() != null && order.getPaidAt() != null && treatmentOrderPolicy.requiresTreatmentWorkflow(order.getId()))
+            throw new BusinessException("Please cancel and refund this paid treatment through its course workflow");
 
         OrderStatus previousStatus = order.getStatus();
         order.setStatus(OrderStatus.CANCELLED);
@@ -590,7 +600,9 @@ public class OrderServiceImpl implements OrderService {
         boolean valid = switch (to) {
             case CONFIRMED -> from == OrderStatus.PENDING;
             case PROCESSING -> from == OrderStatus.CONFIRMED || from == OrderStatus.PENDING;
-            case SHIPPED -> from == OrderStatus.PROCESSING;
+            case SHIPPED -> from == OrderStatus.PROCESSING || from == OrderStatus.DELIVERY_FAILED;
+            case DELIVERY_FAILED -> from == OrderStatus.SHIPPED;
+            case RETURN_TO_SENDER -> from == OrderStatus.SHIPPED || from == OrderStatus.DELIVERY_FAILED;
             case DELIVERED -> from == OrderStatus.SHIPPED;
             case CANCELLED -> from == OrderStatus.PENDING || from == OrderStatus.CONFIRMED || from == OrderStatus.PROCESSING;
             case RETURNED -> from == OrderStatus.DELIVERED;

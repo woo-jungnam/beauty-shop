@@ -1,3 +1,4 @@
+import { AddressBook } from '../components/account/AccountTools';
 import React, { useState } from 'react';
 import {
   ShieldCheck,
@@ -7,7 +8,9 @@ import {
   ArrowLeft,
   Lock,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Tag,
+  X,
 } from 'lucide-react';
 import { useCustomerCart } from '../stores/customerCartStore';
 import { useAuth } from '../../app/providers/AuthProvider';
@@ -27,18 +30,60 @@ export const CheckoutPage = ({ onNavigate }) => {
     shippingFee,
     isFreeShipping,
     totalAmount,
-    clearCart
+    clearCart,
+    applyVoucher,
+    removeVoucher,
   } = useCustomerCart();
 
   const { user, isAuthenticated } = useAuth();
+
+  const tierDiscountPercent = {
+    SILVER: 5,
+    GOLD: 10,
+    PLATINUM: 15,
+  }[user?.membershipTier] || 0;
+
+  const membershipDiscount = (isAuthenticated && tierDiscountPercent > 0 && subtotal > 0)
+    ? Math.round(subtotal * (tierDiscountPercent / 100))
+    : 0;
+
+  const finalTotalAmount = Math.max(0, subtotal + shippingFee - discountAmount - membershipDiscount);
+
+  const [inputVoucher, setInputVoucher] = useState('');
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherSuccess, setVoucherSuccess] = useState('');
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+
+  const handleApplyVoucher = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!inputVoucher.trim()) return;
+    setIsApplyingVoucher(true);
+    setVoucherError('');
+    setVoucherSuccess('');
+    try {
+      const res = await applyVoucher(inputVoucher.trim(), subtotal);
+      setInputVoucher('');
+      setVoucherSuccess(res?.message || 'Áp dụng mã giảm giá thành công!');
+    } catch (err) {
+      setVoucherError(err.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    removeVoucher();
+    setVoucherSuccess('');
+    setVoucherError('');
+  };
 
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     phone: user?.phoneNumber || user?.phone || '',
     email: user?.email || '',
-    city: 'TP. Hồ Chí Minh',
-    district: 'Quận 1',
-    ward: 'Phường Bến Nghé',
+    city: '',
+    district: '',
+    ward: '',
     address: '',
     note: '',
     paymentMethod: 'BANK', // 'BANK' (VietQR / SePay) or 'COD' (Tiền mặt)
@@ -64,7 +109,7 @@ export const CheckoutPage = ({ onNavigate }) => {
     setErrorMessage(null);
 
     // 1. Validation
-    if (!formData.fullName.trim() || !formData.phone.trim() || !formData.address.trim()) {
+    if (!formData.fullName.trim() || !formData.phone.trim() || !formData.address.trim() || !formData.city.trim() || !formData.ward.trim()) {
       setErrorMessage('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng.');
       return;
     }
@@ -118,6 +163,7 @@ export const CheckoutPage = ({ onNavigate }) => {
         sessionId: sessionId,
         customerName: formData.fullName.trim(),
         customerPhone: formData.phone.trim(),
+        customerEmail: formData.email.trim() || null,
         shippingAddress: formData.address.trim(),
         ward: formData.ward.trim(),
         district: formData.district.trim(),
@@ -143,6 +189,7 @@ export const CheckoutPage = ({ onNavigate }) => {
 
       // 5. Store completed order information for OrderSuccessPage
       sessionStorage.setItem('last_created_order', JSON.stringify(orderData));
+      if (!user) { try { const key = `beautyshop_guest_orders:${sessionId}`; const previous = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify([{ id: orderData.id, orderNumber: orderData.orderNumber }, ...previous.filter(row => row.id !== orderData.id)].slice(0, 100))); } catch { /* Order is still accessible from the current confirmation. */ } }
 
       // 6. Clear local cart
       clearCart();
@@ -276,6 +323,7 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
             </div>
 
+            {user && <details className="account-card"><summary>Chọn hoặc quản lý địa chỉ đã lưu</summary><AddressBook onSelect={row => setFormData(current => ({ ...current, fullName: row.recipientName, phone: row.phone, address: row.address, ward: row.ward, district: row.district || '', city: row.city }))} /></details>}
             {/* Section 2: Shipping Address */}
             <div style={{
               backgroundColor: '#FFFFFF',
@@ -290,58 +338,38 @@ export const CheckoutPage = ({ onNavigate }) => {
               <div className="customer-address-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
                 <div>
                   <label htmlFor="checkout-city" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>TỈNH / THÀNH *</label>
-                  <select
+                  <input
                     id="checkout-city"
                     name="address-level1"
                     autoComplete="address-level1"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
-                  >
-                    <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                    <option value="Hà Nội">Hà Nội</option>
-                    <option value="Đà Nẵng">Đà Nẵng</option>
-                    <option value="Cần Thơ">Cần Thơ</option>
-                    <option value="Hải Phòng">Hải Phòng</option>
-                  </select>
+                   required maxLength={100} />
                 </div>
 
                 <div>
-                  <label htmlFor="checkout-district" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>QUẬN / HUYỆN *</label>
-                  <select
+                  <label htmlFor="checkout-district" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>QUẬN / HUYỆN (NẾU CÓ)</label>
+                  <input
                     id="checkout-district"
                     name="address-level2"
                     autoComplete="address-level2"
                     value={formData.district}
                     onChange={(e) => setFormData({ ...formData, district: e.target.value })}
                     style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
-                  >
-                    <option value="Quận 1">Quận 1</option>
-                    <option value="Quận 3">Quận 3</option>
-                    <option value="Quận 7">Quận 7</option>
-                    <option value="Bình Thạnh">Bình Thạnh</option>
-                    <option value="Phú Nhuận">Phú Nhuận</option>
-                    <option value="Hoàn Kiếm">Hoàn Kiếm</option>
-                    <option value="Ba Đình">Ba Đình</option>
-                  </select>
+                   maxLength={100} />
                 </div>
 
                 <div>
                   <label htmlFor="checkout-ward" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>PHƯỜNG / XÃ *</label>
-                  <select
+                  <input
                     id="checkout-ward"
                     name="address-level3"
                     autoComplete="address-level3"
                     value={formData.ward}
                     onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
                     style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
-                  >
-                    <option value="Phường Bến Nghé">Phường Bến Nghé</option>
-                    <option value="Phường Bến Thành">Phường Bến Thành</option>
-                    <option value="Phường Đa Kao">Phường Đa Kao</option>
-                    <option value="Phường Tân Định">Phường Tân Định</option>
-                    <option value="Phường Tràng Tiền">Phường Tràng Tiền</option>
-                  </select>
+                   required maxLength={100} />
                 </div>
               </div>
 
@@ -489,6 +517,151 @@ export const CheckoutPage = ({ onNavigate }) => {
               ))}
             </div>
 
+            {/* Voucher Section */}
+            <div style={{
+              borderTop: '1px solid var(--c-border-subtle)',
+              paddingTop: '16px',
+              marginBottom: '16px'
+            }}>
+              <label style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: 'var(--c-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '8px'
+              }}>
+                <Tag size={14} color="var(--c-gold)" />
+                MÃ GIẢM GIÁ / VOUCHER
+              </label>
+
+              {voucher ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--c-gold-light)',
+                  border: '1px dashed var(--c-gold)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '13px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--c-text-gold)' }}>
+                    <Check size={16} color="var(--c-safe-green)" />
+                    <div>
+                      <div>Mã: <strong style={{ letterSpacing: '0.5px' }}>{voucher.code}</strong></div>
+                      <div style={{ fontSize: '11px', color: 'var(--c-safe-green)', fontWeight: 600 }}>
+                        Đã giảm {formatCurrency(discountAmount)}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveVoucher}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--c-danger-red, #dc2626)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}
+                    title="Gỡ mã giảm giá"
+                  >
+                    <X size={14} /> Gỡ bỏ
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Nhập mã voucher (vd: WELCOME10)..."
+                      value={inputVoucher}
+                      onChange={(e) => {
+                        setInputVoucher(e.target.value.toUpperCase());
+                        setVoucherError('');
+                        setVoucherSuccess('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleApplyVoucher(e);
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '9px 12px',
+                        fontSize: '13px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: voucherError ? '1px solid var(--c-danger-red, #dc2626)' : '1px solid var(--c-border)',
+                        outline: 'none',
+                        textTransform: 'uppercase',
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={isApplyingVoucher || !inputVoucher.trim()}
+                      onClick={handleApplyVoucher}
+                      style={{
+                        padding: '9px 16px',
+                        backgroundColor: inputVoucher.trim() ? 'var(--c-primary)' : 'var(--c-border)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: inputVoucher.trim() && !isApplyingVoucher ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s ease',
+                        opacity: isApplyingVoucher ? 0.75 : 1
+                      }}
+                    >
+                      {isApplyingVoucher ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    </button>
+                  </div>
+
+                  {voucherError && (
+                    <div style={{
+                      color: 'var(--c-danger-red, #dc2626)',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      marginTop: '2px'
+                    }}>
+                      <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                      <span>{voucherError}</span>
+                    </div>
+                  )}
+
+                  {voucherSuccess && (
+                    <div style={{
+                      color: 'var(--c-safe-green, #16a34a)',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      marginTop: '2px'
+                    }}>
+                      <Check size={13} style={{ flexShrink: 0 }} />
+                      <span>{voucherSuccess}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Calculations Breakdown */}
             <div style={{ borderTop: '1px solid var(--c-border-subtle)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-text-muted)' }}>
@@ -497,8 +670,14 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
               {discountAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-safe-green)' }}>
-                  <span>Voucher giảm giá</span>
-                  <span style={{ fontFamily: 'var(--font-mono)' }}>-{formatCurrency(discountAmount)}</span>
+                  <span>Voucher giảm giá {voucher?.code ? `(${voucher.code})` : ''}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+              {membershipDiscount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-safe-green)' }}>
+                  <span>Ưu đãi hạng {user?.membershipTier} (-{tierDiscountPercent}%)</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>-{formatCurrency(membershipDiscount)}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-text-muted)' }}>
@@ -519,7 +698,7 @@ export const CheckoutPage = ({ onNavigate }) => {
               }}>
                 <span>Tổng cộng</span>
                 <span style={{ color: 'var(--c-gold-hover)', fontFamily: 'var(--font-mono)' }}>
-                  {formatCurrency(totalAmount)}
+                  {formatCurrency(finalTotalAmount)}
                 </span>
               </div>
             </div>

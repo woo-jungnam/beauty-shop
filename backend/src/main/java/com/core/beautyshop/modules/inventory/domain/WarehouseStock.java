@@ -70,4 +70,11 @@ public class WarehouseStock extends Base {
     @Column(name = "cost_price", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal costPrice = BigDecimal.ZERO;
+
+    @Column(name = "is_blocked", nullable = false)
+    @Builder.Default
+    private Boolean isBlocked = false;
+
+    @Column(name = "block_reason", length = 500)
+    private String blockReason;
 }

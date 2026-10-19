@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/catalog_state.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
@@ -7,6 +8,8 @@ import 'package:beautyshop_mobile/core/utils/formatters.dart';
 import 'package:beautyshop_mobile/providers/spa_provider.dart';
 import 'package:beautyshop_mobile/data/models/spa_model.dart';
 import 'package:beautyshop_mobile/presentation/screens/spa/spa_booking_screen.dart';
+import '../treatments/treatment_hub_screen.dart';
+import 'service_packages_screen.dart';
 
 class SpaScreen extends StatelessWidget {
   const SpaScreen({Key? key}) : super(key: key);
@@ -14,11 +17,21 @@ class SpaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.canvas,
+      backgroundColor: HasakiColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('BeautyShop Spa & Thư Giãn'),
         backgroundColor: HasakiColors.primary,
         elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TreatmentHubScreen()),
+            ),
+            icon: const Icon(Icons.route_outlined),
+            tooltip: 'Điều trị theo lộ trình',
+          ),
+        ],
       ),
       body: Consumer<SpaProvider>(
         builder: (context, provider, _) {
@@ -27,27 +40,65 @@ class SpaScreen extends StatelessWidget {
               // 1. Spa Guarantee Header Banner
               Container(
                 color: HasakiColors.primaryDark,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 child: const Row(
                   children: [
-                    Icon(Icons.spa_outlined, color: HasakiColors.gold, size: 20),
+                    Icon(
+                      Icons.spa_outlined,
+                      color: HasakiColors.gold,
+                      size: 20,
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Chuyên viên thẩm mỹ tận tâm & tư vấn chăm sóc da chuyên sâu',
-                        style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
+              ListTile(
+                leading: const Icon(Icons.confirmation_number_outlined),
+                title: const Text('Gói dịch vụ nhiều lượt'),
+                subtitle: const Text('Xem quyền lợi, hạn dùng và mua gói'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ServicePackagesScreen(),
+                  ),
+                ),
+              ),
               // 2. Filter Category Chips
+              ListTile(
+                leading: const Icon(Icons.route_outlined),
+                title: const Text('Điều trị theo lộ trình'),
+                subtitle: const Text(
+                  'Mua kế hoạch nhiều buổi và theo dõi tiến độ',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TreatmentHubScreen()),
+                ),
+              ),
               Container(
-                color: Colors.white,
+                color: HasakiColors.getSurface(context),
                 height: 48,
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   scrollDirection: Axis.horizontal,
                   itemCount: provider.categories.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
@@ -60,14 +111,20 @@ class SpaScreen extends StatelessWidget {
                       selected: isSelected,
                       onSelected: (_) => provider.setCategory(cat),
                       selectedColor: HasakiColors.primaryLight,
-                      backgroundColor: HasakiColors.canvas,
+                      backgroundColor: HasakiColors.getCanvas(context),
                       labelStyle: TextStyle(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? HasakiColors.primary : HasakiColors.textMain,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: isSelected
+                            ? HasakiColors.primary
+                            : HasakiColors.getTextMain(context),
                       ),
                       side: BorderSide(
-                        color: isSelected ? HasakiColors.primary : HasakiColors.border,
+                        color: isSelected
+                            ? HasakiColors.primary
+                            : HasakiColors.border,
                       ),
                     );
                   },
@@ -76,15 +133,24 @@ class SpaScreen extends StatelessWidget {
 
               // 3. Spa Services List
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: provider.filteredServices.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final service = provider.filteredServices[index];
-                    return _buildServiceCard(context, service);
-                  },
-                ),
+                child: provider.servicesError != null
+                    ? CatalogState(
+                        message: provider.servicesError!,
+                        onRetry: provider.fetchServices,
+                      )
+                    : provider.filteredServices.isEmpty
+                    ? const CatalogState(
+                        message: 'Chưa có dịch vụ trong mục này',
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: provider.filteredServices.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final service = provider.filteredServices[index];
+                          return _buildServiceCard(context, service);
+                        },
+                      ),
               ),
             ],
           );
@@ -96,7 +162,7 @@ class SpaScreen extends StatelessWidget {
   Widget _buildServiceCard(BuildContext context, SpaService service) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HasakiColors.getSurface(context),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: HasakiColors.borderSubtle),
         boxShadow: [
@@ -114,14 +180,17 @@ class SpaScreen extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(10),
+                ),
                 child: AspectRatio(
                   aspectRatio: 2.2,
                   child: service.thumbnailUrl != null
                       ? CachedNetworkImage(
                           imageUrl: service.thumbnailUrl!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Container(color: HasakiColors.primaryLight),
+                          errorWidget: (_, __, ___) =>
+                              Container(color: HasakiColors.primaryLight),
                         )
                       : Container(color: HasakiColors.primaryLight),
                 ),
@@ -130,7 +199,10 @@ class SpaScreen extends StatelessWidget {
                 top: 8,
                 left: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.75),
                     borderRadius: BorderRadius.circular(4),
@@ -140,8 +212,14 @@ class SpaScreen extends StatelessWidget {
                       const Icon(Icons.schedule, color: Colors.white, size: 12),
                       const SizedBox(width: 4),
                       Text(
-                        '${service.durationMinutes} Phút',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                        service.durationMinutes > 0
+                            ? '${service.durationMinutes} Phút'
+                            : 'Chưa cập nhật thời lượng',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
@@ -159,8 +237,13 @@ class SpaScreen extends StatelessWidget {
                   service.name,
                   style: HasakiTypography.titleMedium.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: HasakiColors.textMain,
+                    color: HasakiColors.getTextMain(context),
                   ),
+                ),
+                Text(
+                  service.isTreatmentCourse
+                      ? 'Điều trị theo lộ trình'
+                      : 'Dịch vụ một lần',
                 ),
                 if (service.description != null) ...[
                   const SizedBox(height: 4),
@@ -189,7 +272,9 @@ class SpaScreen extends StatelessWidget {
                         ),
                         if (service.originalPrice != null)
                           Text(
-                            HasakiFormatters.formatCurrency(service.originalPrice),
+                            HasakiFormatters.formatCurrency(
+                              service.originalPrice,
+                            ),
                             style: HasakiTypography.priceStrikethrough,
                           ),
                       ],
@@ -199,15 +284,24 @@ class SpaScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => SpaBookingScreen(service: service),
+                            builder: (_) => service.isTreatmentCourse
+                                ? const TreatmentHubScreen()
+                                : SpaBookingScreen(service: service),
                           ),
                         );
                       },
                       icon: const Icon(Icons.calendar_month, size: 16),
-                      label: const Text('Đặt Lịch Hẹn'),
+                      label: Text(
+                        service.isTreatmentCourse
+                            ? 'Xem Lộ Trình'
+                            : 'Đặt Lịch Hẹn',
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: HasakiColors.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ],

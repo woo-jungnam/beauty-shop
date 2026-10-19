@@ -67,7 +67,7 @@ public class ProcurementService {
 
     @Transactional
     public PurchaseOrderView create(OrderCommand command) {
-        String orderNumber = "PO-" + LocalDate.now().toString().replace("-", "") + "-"
+        String orderNumber = "PO-" + com.core.beautyshop.shared.time.BusinessTime.today().toString().replace("-", "") + "-"
                 + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
         PurchaseOrder order = PurchaseOrder.builder().orderNumber(orderNumber).status(PurchaseOrder.Status.DRAFT).build();
         applyCommand(order, command);
@@ -87,7 +87,7 @@ public class ProcurementService {
                 || command.items() == null || command.items().isEmpty())
             throw new BusinessException("Nhà cung cấp, kho nhận và danh sách hàng hóa là bắt buộc");
         if (command.note() != null && command.note().length() > 500) throw new BusinessException("Ghi chú không được vượt quá 500 ký tự");
-        if (command.expectedDate() != null && command.expectedDate().isBefore(LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE))) {
+        if (command.expectedDate() != null && command.expectedDate().isBefore(com.core.beautyshop.shared.time.BusinessTime.today())) {
             throw new BusinessException("Ngày dự kiến giao hàng phải từ hôm nay trở đi");
         }
         Supplier supplier = suppliers.findById(command.supplierId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
@@ -101,7 +101,7 @@ public class ProcurementService {
                 throw new BusinessException("Mỗi mặt hàng nhập kho phải có biến thể hợp lệ, số lượng và giá vốn lớn hơn 0");
             catalog.getVariantSummaryForInventory(item.variantId());
             if (item.batchCode() != null && item.batchCode().trim().length() > 100) throw new BusinessException("Mã số lô hàng không được vượt quá 100 ký tự");
-            if (item.expirationDate() != null && !item.expirationDate().isAfter(LocalDate.now(com.core.beautyshop.modules.spa.application.service.SpaTimeRules.ZONE)))
+            if (item.expirationDate() != null && !item.expirationDate().isAfter(com.core.beautyshop.shared.time.BusinessTime.today()))
                 throw new BusinessException("Hạn sử dụng của hàng nhập kho phải ở trong tương lai");
             PurchaseOrderItem entity = PurchaseOrderItem.builder().purchaseOrder(order).productVariantId(item.variantId())
                     .quantity(item.quantity()).receivedQuantity(0).unitCost(item.unitCost()).batchCode(item.batchCode() == null ? "" : item.batchCode().trim())
@@ -153,7 +153,7 @@ public class ProcurementService {
     @Transactional
     public PurchaseOrderView cancel(Long id) {
         PurchaseOrder order = locked(id);
-        if (order.getStatus() == PurchaseOrder.Status.RECEIVED) throw new BusinessException("Không thể hủy đơn nhập hàng đã hoàn tất nhập kho");
+        if (order.getStatus() == PurchaseOrder.Status.RECEIVED || order.getStatus() == PurchaseOrder.Status.PARTIALLY_RECEIVED) throw new BusinessException("Không thể hủy đơn nhập hàng đã hoàn tất nhập kho");
         order.setStatus(PurchaseOrder.Status.CANCELLED); return orderView(order);
     }
 

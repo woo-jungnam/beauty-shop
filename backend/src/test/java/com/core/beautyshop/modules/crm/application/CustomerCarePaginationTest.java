@@ -14,12 +14,13 @@ import static org.mockito.Mockito.mock;
 
 class CustomerCarePaginationTest {
     private CustomerCareService service;
+    private JdbcTemplate jdbc;
 
     @BeforeEach
     void setup() {
-        JdbcTemplate jdbc = new JdbcTemplate(new DriverManagerDataSource("jdbc:h2:mem:crm_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", ""));
+        jdbc = new JdbcTemplate(new DriverManagerDataSource("jdbc:h2:mem:crm_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", ""));
         jdbc.execute("CREATE TABLE users(id BIGINT,username VARCHAR(100),full_name VARCHAR(100),email VARCHAR(100),phone VARCHAR(20),membership_tier VARCHAR(30),loyalty_points INT,status VARCHAR(20),is_deleted BOOLEAN)");
-        jdbc.execute("CREATE TABLE orders(id BIGINT,user_id BIGINT,paid_amount DECIMAL(14,2),payment_status VARCHAR(30),is_deleted BOOLEAN)");
+        jdbc.execute("CREATE TABLE orders(id BIGINT,user_id BIGINT,paid_amount DECIMAL(14,2),refunded_amount DECIMAL(14,2) DEFAULT 0,payment_status VARCHAR(30),is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE appointments(id BIGINT,user_id BIGINT,is_deleted BOOLEAN)");
         for (int index = 1; index <= 105; index++) {
             jdbc.update("INSERT INTO users VALUES (?,?,?,?,?,'BRONZE',0,'ACTIVE',false)", index, "customer" + index, "Customer " + index, "customer" + index + "@example.test", "0900000000");
@@ -39,6 +40,18 @@ class CustomerCarePaginationTest {
         assertThat(service.searchPage(null, 0, 20).getContent().get(0).id()).isEqualTo(105L);
         assertThat(service.search(null)).hasSize(100);
         assertThat(service.searchPage("%", 0, 20).getContent()).extracting(CustomerCareService.CustomerView::id).containsExactly(1L);
+    }
+
+    @Test
+    void lifetimeValueUsesNetReceiptsIncludingPartialPaymentsAndClampsOverRefundedRowsAtZero() {
+        jdbc.update("INSERT INTO orders(id,user_id,paid_amount,refunded_amount,payment_status,is_deleted) VALUES (1,1,100000,40000,'PAID',false)");
+        jdbc.update("INSERT INTO orders(id,user_id,paid_amount,refunded_amount,payment_status,is_deleted) VALUES (2,2,50000,0,'PENDING',false)");
+        jdbc.update("INSERT INTO orders(id,user_id,paid_amount,refunded_amount,payment_status,is_deleted) VALUES (3,3,0,1000,'REFUNDED',false)");
+        jdbc.update("INSERT INTO orders(id,user_id,paid_amount,refunded_amount,payment_status,is_deleted) VALUES (4,1,900000,0,'PAID',true)");
+        assertThat(service.getCustomer(1L).lifetimeValue()).isEqualByComparingTo("60000");
+        assertThat(service.getCustomer(2L).lifetimeValue()).isEqualByComparingTo("50000");
+        assertThat(service.getCustomer(3L).lifetimeValue()).isEqualByComparingTo("0");
+        assertThat(service.searchPage(null, 0, 2).getContent()).extracting(CustomerCareService.CustomerView::id).containsExactly(1L, 2L);
     }
 
     @Test

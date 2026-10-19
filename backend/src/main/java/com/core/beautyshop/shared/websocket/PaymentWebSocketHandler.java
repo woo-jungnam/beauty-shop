@@ -4,7 +4,6 @@ import com.core.beautyshop.modules.order.api.event.OrderEvents;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -13,7 +12,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -31,12 +29,14 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        URI uri = session.getUri();
-        if (uri == null) return;
-
-        Map<String, String> queryParams = parseQueryParams(uri.getQuery());
-        String orderCode = queryParams.get("orderCode");
-        String orderId = queryParams.get("orderId");
+        Object attribute = session.getAttributes().get("paymentScope");
+        if (!(attribute instanceof PaymentSubscriptionTokenService.Scope scope)
+                || !scope.expiresAt().isAfter(java.time.Instant.now())) {
+            try { session.close(CloseStatus.POLICY_VIOLATION); } catch (IOException ignored) {}
+            return;
+        }
+        String orderCode = scope.orderNumber();
+        String orderId = scope.orderId().toString();
 
         Set<String> registeredKeys = new HashSet<>();
         if (orderCode != null && !orderCode.isBlank()) {
@@ -90,7 +90,7 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
         log.info("WebSocket disconnected: sessionId={}, code={}", session.getId(), status.getCode());
     }
 
-    @EventListener
+    @org.springframework.transaction.event.TransactionalEventListener(phase = org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleOrderPaidEvent(OrderEvents.OrderPaidEvent event) {
         if (event == null) return;
         log.info("Received OrderPaidEvent for orderId={}, orderNumber={}, broadcasting via WebSocket",
@@ -131,6 +131,12 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
                 targetSessions.size(), orderNumber, orderId);
 
         for (WebSocketSession s : targetSessions) {
+            Object attribute = s.getAttributes().get("paymentScope");
+            if (!(attribute instanceof PaymentSubscriptionTokenService.Scope scope)
+                    || !scope.expiresAt().isAfter(java.time.Instant.now())) {
+                try { s.close(CloseStatus.POLICY_VIOLATION); } catch (IOException ignored) {}
+                continue;
+            }
             if (s.isOpen()) {
                 try {
                     s.sendMessage(message);
@@ -141,19 +147,4 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private Map<String, String> parseQueryParams(String query) {
-        Map<String, String> map = new HashMap<>();
-        if (query == null || query.isBlank()) return map;
-
-        String[] pairs = query.split("&");
-        for (String pair : pairs) {
-            String[] kv = pair.split("=");
-            if (kv.length == 2) {
-                map.put(kv[0].trim(), kv[1].trim());
-            } else if (kv.length == 1) {
-                map.put(kv[0].trim(), "");
-            }
-        }
-        return map;
-    }
 }

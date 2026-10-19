@@ -1,3 +1,4 @@
+import { ProfitabilityPanel, SpaPerformancePanel } from '../features/commerce/AdminCommercePanels';
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
@@ -1576,6 +1577,8 @@ export const DashboardPage = () => {
           </div>
         )}
       </section>
+      <ProfitabilityPanel />
+      <SpaPerformancePanel />
       <div className="atelier-dashboard-footnote">
         <span>
           <span className={`atelier-sync-dot ${loading ? "is-loading" : ""}`} />

@@ -19,12 +19,15 @@ public class AdminRecommendationController {
     private final SystemConfigService configs;
 
     @GetMapping("/status")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Xem trạng thái dịch vụ gợi ý sản phẩm")
     public ApiResponse<Map<String, Object>> status() { return ApiResponse.success(client.status()); }
 
     @GetMapping("/config")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Xem cấu hình gợi ý sản phẩm hiện tại")
     public ApiResponse<Map<String, Object>> config() { return ApiResponse.success(configs.getRecommendationConfig()); }
 
     @PutMapping("/config")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lưu và áp dụng cấu hình gợi ý sản phẩm")
     public ApiResponse<Map<String, Object>> update(@RequestBody Map<String, Object> values) {
         Map<String, Object> saved = configs.saveRecommendationConfig(values);
         boolean applied;
@@ -35,9 +38,11 @@ public class AdminRecommendationController {
     }
 
     @PostMapping("/refresh")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Yêu cầu làm mới dữ liệu gợi ý sản phẩm")
     public ApiResponse<Map<String, Object>> refresh() { return ApiResponse.success(client.refresh(), "Đã yêu cầu làm mới dữ liệu gợi ý"); }
 
     @GetMapping("/preview")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Xem thử kết quả và điểm gợi ý sản phẩm")
     public ApiResponse<Map<String, Object>> preview(@RequestParam(required=false) Long productId,
             @RequestParam(required=false) Long userId, @RequestParam(required=false) String sessionId,
             @RequestParam(defaultValue="8") int limit) {

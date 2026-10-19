@@ -9,6 +9,9 @@ import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { formatCurrency, formatDateTime } from '../shared/utils/formatters';
 import { RecommendationAdminPanel } from './RecommendationAdminPanel';
+import { PaymentExceptionPanel } from './PaymentExceptionPanel';
+
+const PUBLIC_CONFIG_KEYS = new Set(['store.address', 'store.hotline', 'store.email', 'shipping.free_threshold', 'shipping.default_fee', 'spa.opening_time', 'spa.closing_time']);
 
 const exportCsv = (name, rows) => {
   if (!rows.length) return;
@@ -33,6 +36,7 @@ export const OperationsPage = () => {
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newIsPublic, setNewIsPublic] = useState(false);
 
   // Chatbot Admin State
   const [chatbotStatus, setChatbotStatus] = useState(null);
@@ -125,8 +129,13 @@ export const OperationsPage = () => {
   useEffect(() => { load(); }, [tab]);
 
   const saveConfig = async (config) => {
-    await apiClient.put(ENDPOINTS.SYSTEM.CONFIG(config.configKey), { value: config.configValue });
-    load();
+    try {
+      const isPublic = config.isPublicDraft == null || config.isPublicDraft === Boolean(config.isPublic) ? null : config.isPublicDraft;
+      await apiClient.put(ENDPOINTS.SYSTEM.CONFIG(config.configKey), { value: config.configValue, isPublic });
+      load();
+    } catch (err) {
+      alert(err.message || 'Lỗi khi lưu cấu hình');
+    }
   };
 
   const handleCreateConfig = async (e) => {
@@ -136,11 +145,13 @@ export const OperationsPage = () => {
         key: newKey.trim(),
         value: newValue.trim(),
         description: newDesc.trim(),
+        isPublic: newIsPublic,
       });
       setConfigModalOpen(false);
       setNewKey('');
       setNewValue('');
       setNewDesc('');
+      setNewIsPublic(false);
       load();
     } catch (err) {
       alert(err.message || 'Lỗi khi tạo cấu hình');
@@ -215,6 +226,7 @@ export const OperationsPage = () => {
       ))}
     </div>
     {tab === 'recommendations' && <RecommendationAdminPanel />}
+    {tab === 'payments' && <PaymentExceptionPanel onChanged={load} />}
     {tab === 'chatbot' && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Card 1: Chatbot Service Health */}
@@ -361,8 +373,12 @@ export const OperationsPage = () => {
       <DataTable columns={tab === 'payments' ? paymentColumns : auditColumns} data={rows} loading={loading} />
     </div>}
     {tab === 'config' && <div className="card admin-config-list">
+      <p>Thông tin chân trang dùng các khóa <strong>store.address</strong>, <strong>store.hotline</strong>, <strong>store.email</strong>. Chỉ bật công khai cho giá trị bạn muốn khách xem trên website.</p>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Các khóa hỗ trợ công khai: {Array.from(PUBLIC_CONFIG_KEYS).join(', ')}.</p>
       {configs.map((config, index) => <div key={config.id} className="admin-config-row">
-        <div className="admin-config-details"><strong id={`admin-config-key-${config.id ?? index}`}>{config.configKey}</strong><div id={`admin-config-description-${config.id ?? index}`} style={{ fontSize: 12, color: 'var(--text-muted)' }}>{config.description}</div></div>
+        <div className="admin-config-details"><strong id={`admin-config-key-${config.id ?? index}`}>{config.configKey}</strong><div id={`admin-config-description-${config.id ?? index}`} style={{ fontSize: 12, color: 'var(--text-muted)' }}>{config.description}</div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 8 }}><input type="checkbox" aria-label={`Công khai trên website: ${config.configKey}`} checked={config.isPublicDraft ?? Boolean(config.isPublic)} disabled={!config.isPublic && !PUBLIC_CONFIG_KEYS.has(config.configKey)} onChange={(e) => setConfigs((current) => current.map((item, i) => i === index ? { ...item, isPublicDraft: e.target.checked } : item))} />Công khai trên website</label>
+        </div>
         <Input aria-labelledby={`admin-config-key-${config.id ?? index}`} aria-describedby={`admin-config-description-${config.id ?? index}`} value={config.configValue} onChange={(e) => setConfigs((current) => current.map((item, i) => i === index ? { ...item, configValue: e.target.value } : item))} />
         <Button size="sm" icon={Save} onClick={() => saveConfig(config)}>Lưu</Button>
         <Button size="sm" variant="danger" className="admin-config-delete" icon={Trash2} onClick={() => handleDeleteConfig(config.configKey)} title="Xóa cấu hình" aria-label={`Xóa cấu hình ${config.configKey}`} />
@@ -371,9 +387,11 @@ export const OperationsPage = () => {
 
     <Modal isOpen={configModalOpen} onClose={() => setConfigModalOpen(false)} title="Thêm cấu hình hệ thống">
       <form onSubmit={handleCreateConfig}>
-        <Input label="Khóa cấu hình (KEY) *" required value={newKey} onChange={(e) => setNewKey(e.target.value)} placeholder="Vd: revenue_target_monthly" />
+        <Input label="Khóa cấu hình (KEY) *" required value={newKey} onChange={(e) => { setNewKey(e.target.value); if (!PUBLIC_CONFIG_KEYS.has(e.target.value.trim())) setNewIsPublic(false); }} placeholder="Vd: store.address" />
         <Input label="Giá trị *" required value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="Vd: 500000000" />
         <Input label="Mô tả" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Mô tả mục đích cấu hình..." />
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}><input type="checkbox" checked={newIsPublic} disabled={!PUBLIC_CONFIG_KEYS.has(newKey.trim())} onChange={(e) => setNewIsPublic(e.target.checked)} />Công khai trên website</label>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Mặc định riêng tư. Hỗ trợ công khai thông tin cửa hàng, phí giao hàng và giờ phục vụ Spa.</p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
           <Button type="submit">Tạo cấu hình</Button>
         </div>

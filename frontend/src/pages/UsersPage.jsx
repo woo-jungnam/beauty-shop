@@ -31,9 +31,11 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { StaffPermissionEditor } from './StaffPermissionEditor';
 
 export const UsersPage = () => {
   const [activeTab, setActiveTab] = useState('users');
+  const [permissionUser, setPermissionUser] = useState(null);
 
   // --- USERS STATE ---
   const [users, setUsers] = useState([]);
@@ -380,6 +382,7 @@ export const UsersPage = () => {
           <Button variant="outline" size="sm" onClick={() => handleOpenRoles(row)} icon={KeyRound} title="Gán vai trò">
             Phân quyền
           </Button>
+          {(row.roles || []).includes('ROLE_STAFF') && <Button variant="outline" size="sm" onClick={() => setPermissionUser(row)}>Công việc</Button>}
           <Button
             variant="outline"
             size="sm"
@@ -417,6 +420,7 @@ export const UsersPage = () => {
       ),
       render: (row) => (
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
+          {(row.roles || []).includes('ROLE_STAFF') && <Button variant="outline" size="sm" onClick={() => setPermissionUser(row)}>Công việc</Button>}
           <Button variant="outline" size="sm" onClick={() => handleOpenRoles(row)} icon={KeyRound} title="Gán vai trò">
             Phân quyền
           </Button>
@@ -689,7 +693,7 @@ export const UsersPage = () => {
                 options={[
                   { label: 'Tất cả trạng thái', value: '' },
                   { label: 'Kích hoạt (ACTIVE)', value: 'ACTIVE' },
-                  { label: 'Tạm khóa (INACTIVE)', value: 'INACTIVE' },
+                  { label: 'Tạm ngưng (SUSPENDED)', value: 'SUSPENDED' },
                   { label: 'Cấm tài khoản (Khóa vĩnh viễn)', value: 'BLOCKED' },
                 ]}
               />
@@ -892,7 +896,7 @@ export const UsersPage = () => {
             onChange={(e) => setTargetStatus(e.target.value)}
           >
             <option value="ACTIVE">Kích hoạt bình thường (ACTIVE)</option>
-            <option value="INACTIVE">Tạm khóa tài khoản (INACTIVE)</option>
+            <option value="SUSPENDED">Tạm ngưng tài khoản (SUSPENDED)</option>
             <option value="BLOCKED">Cấm truy cập vĩnh viễn (BLOCKED)</option>
           </Select>
 
@@ -908,7 +912,7 @@ export const UsersPage = () => {
                 marginBottom: '10px',
               }}
             >
-              Chú ý: Khi chuyển sang INACTIVE hoặc BLOCKED, hệ thống sẽ tự động hủy toàn bộ phiên làm việc của người dùng này trên toàn bộ các thiết bị.
+              Khi chuyển sang SUSPENDED hoặc BLOCKED, hệ thống thu hồi toàn bộ phiên làm việc của tài khoản.
             </div>
           )}
 
@@ -979,6 +983,7 @@ export const UsersPage = () => {
         </form>
       </Modal>
 
+      {permissionUser && <StaffPermissionEditor user={permissionUser} onClose={() => setPermissionUser(null)} onSaved={() => fetchUsers(page)} />}
       {/* Reset Password Result Modal */}
       <Modal
         isOpen={resetModalOpen}

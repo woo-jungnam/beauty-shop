@@ -46,6 +46,7 @@ public class UserProfileResponse {
 
     @Schema(description = "Danh sách vai trò", example = "[\"ROLE_CUSTOMER\"]")
     private List<String> roles;
+    private List<String> permissions;
 
     @Schema(description = "Hạng thành viên (MEMBER, SILVER, GOLD, PLATINUM)", example = "GOLD")
     private com.core.beautyshop.modules.identity.domain.enums.MembershipTier membershipTier;

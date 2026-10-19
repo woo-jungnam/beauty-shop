@@ -19,6 +19,8 @@ public class BeautyServiceResponse {
     private Long id;
     private String name;
     private String slug;
+    private String serviceType;
+    private Boolean requiresCertification;
     private String shortDescription;
     private String description;
     @Schema(description = "Giá buổi lẻ VND chưa áp dụng vé", minimum = "0", example = "300000")
@@ -38,6 +40,8 @@ public class BeautyServiceResponse {
                 .id(entity.getId())
                 .name(entity.getName())
                 .slug(entity.getSlug())
+                .serviceType(entity.getServiceType() == null ? "SINGLE_SESSION" : entity.getServiceType())
+                .requiresCertification(entity.getRequiresCertification())
                 .shortDescription(entity.getShortDescription())
                 .description(entity.getDescription())
                 .basePrice(entity.getBasePrice())

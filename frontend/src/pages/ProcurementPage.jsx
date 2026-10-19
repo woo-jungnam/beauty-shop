@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { ProcurementOperationsPanel } from '../features/commerce/AdminCommercePanels';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Check, PackageCheck, Plus, RefreshCw, X } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -17,6 +18,9 @@ export const ProcurementPage = () => {
   const [tab, setTab] = useState('orders');
   const [suppliers, setSuppliers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [orderPage, setOrderPage] = useState(0);
+  const [orderPages, setOrderPages] = useState(1);
+  const [orderCount, setOrderCount] = useState(0);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -26,13 +30,13 @@ export const ProcurementPage = () => {
   const [supplierForm, setSupplierForm] = useState({ code: '', name: '', contactName: '', email: '', phone: '', address: '', taxCode: '', active: true });
   const [orderForm, setOrderForm] = useState({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setLoadError('');
     try {
       const [supplierResult, orderResult, warehouseResult] = await Promise.allSettled([
         apiClient.get(`${ENDPOINTS.PROCUREMENT.SUPPLIERS}?size=100`),
-        apiClient.get(`${ENDPOINTS.PROCUREMENT.ORDERS}?size=100&sort=createdAt,desc`),
+        apiClient.get(`${ENDPOINTS.PROCUREMENT.ORDERS}?page=${orderPage}&size=20&sort=createdAt,desc&sort=id,desc`),
         apiClient.get(ENDPOINTS.INVENTORY.WAREHOUSES),
       ]);
       const failures = [];
@@ -45,6 +49,8 @@ export const ProcurementPage = () => {
       if (orderResult.status === 'fulfilled') {
         const response = orderResult.value.data || orderResult.value;
         setOrders(response.content || []);
+        setOrderPages(response.totalPages || 1);
+        setOrderCount(response.totalElements || 0);
       } else {
         failures.push('phiếu mua hàng');
       }
@@ -59,8 +65,8 @@ export const ProcurementPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-  useEffect(() => { load(); }, []);
+  }, [orderPage]);
+  useEffect(() => { const fetchPage = async () => { await load(); }; fetchPage(); }, [load]);
 
   const handleOpenCreateSupplier = () => {
     setEditingSupplier(null);
@@ -114,7 +120,8 @@ export const ProcurementPage = () => {
     try {
       const payload = { ...orderForm, expectedDate: orderForm.expectedDate || null, supplierId: Number(orderForm.supplierId), warehouseId: Number(orderForm.warehouseId), items: orderForm.items.map((item) => ({ ...item, variantId: Number(item.variantId), quantity: Number(item.quantity), unitCost: Number(item.unitCost), expirationDate: item.expirationDate || null })) };
       await apiClient.post(ENDPOINTS.PROCUREMENT.ORDERS, payload);
-      setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] }); load();
+      setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] });
+      if (orderPage === 0) load(); else setOrderPage(0);
     } catch (err) {
       alert(err.message || 'Lỗi tạo phiếu mua hàng');
     }
@@ -130,6 +137,7 @@ export const ProcurementPage = () => {
   };
 
   const ORDER_STATUS_MAP = {
+    PARTIALLY_RECEIVED: { label: 'Đã nhận một phần', variant: 'info' },
     DRAFT: { label: 'Bản nháp', variant: 'warning' },
     APPROVED: { label: 'Đã duyệt', variant: 'info' },
     RECEIVED: { label: 'Đã nhập kho', variant: 'success' },
@@ -166,8 +174,9 @@ export const ProcurementPage = () => {
   return <div className="content-container">
     <div className="page-header"><div><h1 className="page-title">Nhà cung cấp & Mua hàng</h1><p className="page-subtitle">Kiểm soát phê duyệt, nhận hàng theo lô và cập nhật tồn kho</p></div><div style={{display:'flex',gap:8}}><Button variant="outline" icon={RefreshCw} onClick={load} loading={loading}>Làm mới</Button><Button icon={Plus} onClick={() => tab === 'orders' ? setOrderOpen(true) : handleOpenCreateSupplier()}>{tab === 'orders' ? 'Tạo phiếu mua' : 'Thêm nhà cung cấp'}</Button></div></div>
     {loadError && <AlertBanner type="danger" title="Không thể tải đầy đủ dữ liệu" message={loadError} action={<Button size="sm" variant="outline" onClick={load}>Thử lại</Button>} />}
+    <ProcurementOperationsPanel orders={orders} onChanged={load} />
     <div className="tabs-header"><button className={`tab-btn ${tab==='orders'?'active':''}`} onClick={() => setTab('orders')}>Phiếu mua hàng</button><button className={`tab-btn ${tab==='suppliers'?'active':''}`} onClick={() => setTab('suppliers')}>Nhà cung cấp</button></div>
-    <div className="card"><DataTable columns={tab === 'orders' ? orderColumns : supplierColumns} data={tab === 'orders' ? orders : suppliers} loading={loading} /></div>
+    <div className="card"><DataTable columns={tab === 'orders' ? orderColumns : supplierColumns} data={tab === 'orders' ? orders : suppliers} loading={loading} page={tab === 'orders' ? orderPage : 0} totalPages={tab === 'orders' ? orderPages : 1} totalElements={tab === 'orders' ? orderCount : suppliers.length} onPageChange={tab === 'orders' ? setOrderPage : undefined} /></div>
     <Modal isOpen={supplierOpen} onClose={() => setSupplierOpen(false)} title={editingSupplier ? "Cập nhật nhà cung cấp" : "Thêm nhà cung cấp"}><form onSubmit={saveSupplier}><div className="grid-2"><Input label="Mã *" required value={supplierForm.code} onChange={(e)=>setSupplierForm({...supplierForm,code:e.target.value})}/><Input label="Tên *" required value={supplierForm.name} onChange={(e)=>setSupplierForm({...supplierForm,name:e.target.value})}/><Input label="Người liên hệ" value={supplierForm.contactName} onChange={(e)=>setSupplierForm({...supplierForm,contactName:e.target.value})}/><Input label="Số điện thoại" value={supplierForm.phone} onChange={(e)=>setSupplierForm({...supplierForm,phone:e.target.value})}/><Input label="Email" type="email" value={supplierForm.email} onChange={(e)=>setSupplierForm({...supplierForm,email:e.target.value})}/><Input label="Mã số thuế" value={supplierForm.taxCode} onChange={(e)=>setSupplierForm({...supplierForm,taxCode:e.target.value})}/></div><Input label="Địa chỉ" value={supplierForm.address} onChange={(e)=>setSupplierForm({...supplierForm,address:e.target.value})}/><div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}><Button type="submit">Lưu nhà cung cấp</Button></div></form></Modal>
     <Modal isOpen={orderOpen} onClose={() => setOrderOpen(false)} title="Tạo phiếu mua hàng" maxWidth="760px"><form onSubmit={createOrder}><div className="grid-2"><Select label="Nhà cung cấp *" required value={orderForm.supplierId} onChange={(e)=>setOrderForm({...orderForm,supplierId:e.target.value})} options={suppliers.map((s)=>({label:`${s.code} - ${s.name}`,value:String(s.id)}))}/><Select label="Kho nhận *" required value={orderForm.warehouseId} onChange={(e)=>setOrderForm({...orderForm,warehouseId:e.target.value})} options={warehouses.map((w)=>({label:w.name,value:String(w.id)}))}/><Input label="Ngày dự kiến" type="date" value={orderForm.expectedDate} onChange={(e)=>setOrderForm({...orderForm,expectedDate:e.target.value})}/><Input label="Ghi chú" value={orderForm.note} onChange={(e)=>setOrderForm({...orderForm,note:e.target.value})}/></div><h4>Chi tiết hàng hóa</h4>{orderForm.items.map((item,index)=><div key={index} className="grid-3" style={{marginBottom:10}}><Input label="ID biến thể *" type="number" required value={item.variantId} onChange={(e)=>setOrderForm({...orderForm,items:orderForm.items.map((x,i)=>i===index?{...x,variantId:e.target.value}:x)})}/><Input label="Số lượng *" type="number" min="1" required value={item.quantity} onChange={(e)=>setOrderForm({...orderForm,items:orderForm.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/><Input label="Đơn giá vốn *" type="number" min="0" required value={item.unitCost} onChange={(e)=>setOrderForm({...orderForm,items:orderForm.items.map((x,i)=>i===index?{...x,unitCost:e.target.value}:x)})}/><Input label="Mã lô" value={item.batchCode} onChange={(e)=>setOrderForm({...orderForm,items:orderForm.items.map((x,i)=>i===index?{...x,batchCode:e.target.value}:x)})}/><Input label="Hạn dùng" type="date" value={item.expirationDate} onChange={(e)=>setOrderForm({...orderForm,items:orderForm.items.map((x,i)=>i===index?{...x,expirationDate:e.target.value}:x)})}/><Button type="button" variant="danger" onClick={()=>setOrderForm({...orderForm,items:orderForm.items.filter((_,i)=>i!==index)})}>Xóa dòng</Button></div>)}<Button type="button" variant="outline" onClick={()=>setOrderForm({...orderForm,items:[...orderForm.items,blankItem()]})}>+ Thêm dòng</Button><div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}><Button type="submit" disabled={!orderForm.items.length}>Tạo phiếu</Button></div></form></Modal>
   </div>;

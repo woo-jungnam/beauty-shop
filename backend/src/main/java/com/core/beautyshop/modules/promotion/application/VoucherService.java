@@ -93,6 +93,57 @@ public class VoucherService implements PromotionFacade {
         return new AppliedVoucher(voucher.getId(), voucher.getCode(), discount.min(orderAmount).max(BigDecimal.ZERO));
     }
 
+    @Transactional(readOnly = true)
+    public VoucherValidationResponse validateForCustomer(String code, Long userId, BigDecimal orderAmount) {
+        if (code == null || code.isBlank()) {
+            throw new BusinessException("Vui lòng nhập mã giảm giá");
+        }
+        if (userId == null) {
+            throw new BusinessException("Vui lòng đăng nhập tài khoản để áp dụng mã giảm giá");
+        }
+        if (orderAmount == null || orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Đơn hàng chưa có giá trị để áp dụng mã giảm giá");
+        }
+        Voucher voucher = voucherRepository.findByCodeAndIsDeletedFalse(normalize(code))
+                .orElseThrow(() -> new BusinessException("Mã giảm giá không tồn tại hoặc không hợp lệ"));
+        Instant now = Instant.now();
+        if (!Boolean.TRUE.equals(voucher.getIsActive()) || now.isBefore(voucher.getStartsAt()) || !now.isBefore(voucher.getEndsAt())) {
+            throw new BusinessException("Mã giảm giá chưa kích hoạt hoặc đã hết hạn sử dụng");
+        }
+        if (voucher.getUsageLimit() != null && voucher.getUsedCount() >= voucher.getUsageLimit()) {
+            throw new BusinessException("Mã giảm giá đã hết lượt sử dụng");
+        }
+        if (usageRepository.countByVoucherIdAndUserIdAndIsDeletedFalse(voucher.getId(), userId) >= voucher.getPerUserLimit()) {
+            throw new BusinessException("Bạn đã dùng hết số lượt cho phép của mã giảm giá này");
+        }
+        if (orderAmount.compareTo(voucher.getMinOrderAmount()) < 0) {
+            throw new BusinessException("Đơn hàng chưa đạt giá trị tối thiểu "
+                    + java.text.NumberFormat.getIntegerInstance().format(voucher.getMinOrderAmount())
+                    + " ₫ để áp dụng mã này");
+        }
+        BigDecimal discount = voucher.getDiscountType() == DiscountType.PERCENTAGE
+                ? orderAmount.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                : voucher.getDiscountValue();
+        if (voucher.getMaxDiscountAmount() != null) {
+            discount = discount.min(voucher.getMaxDiscountAmount());
+        }
+        BigDecimal finalDiscount = discount.min(orderAmount).max(BigDecimal.ZERO);
+        String message = voucher.getDiscountType() == DiscountType.PERCENTAGE
+                ? "Áp dụng giảm " + voucher.getDiscountValue() + "% thành công"
+                : "Áp dụng giảm " + java.text.NumberFormat.getIntegerInstance().format(finalDiscount) + " ₫ thành công";
+        return new VoucherValidationResponse(
+                voucher.getId(),
+                voucher.getCode(),
+                voucher.getName(),
+                finalDiscount,
+                voucher.getDiscountType(),
+                voucher.getDiscountValue(),
+                voucher.getMinOrderAmount(),
+                voucher.getMaxDiscountAmount(),
+                message
+        );
+    }
+
     @Override
     @Transactional
     public void redeem(AppliedVoucher applied, Long userId, Long orderId) {
@@ -197,4 +248,16 @@ public class VoucherService implements PromotionFacade {
                     voucher.getPerUserLimit(), voucher.getUsedCount(), voucher.getIsActive());
         }
     }
+
+    @Schema(description = "Kết quả kiểm tra mã voucher của khách hàng")
+    public record VoucherValidationResponse(
+            Long voucherId,
+            String code,
+            String name,
+            BigDecimal discountAmount,
+            DiscountType discountType,
+            BigDecimal discountValue,
+            BigDecimal minOrderAmount,
+            BigDecimal maxDiscountAmount,
+            String message) { }
 }

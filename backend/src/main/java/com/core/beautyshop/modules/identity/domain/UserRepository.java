@@ -14,6 +14,7 @@ public interface UserRepository extends JpaRepository<User, Long>, org.springfra
     Optional<User> findByUsername(String username);
 
     Optional<User> findByEmail(String email);
+    Optional<User> findByEmailIgnoreCase(String email);
 
     java.util.List<User> findByPhoneIn(java.util.Collection<String> phones);
 

@@ -49,6 +49,7 @@ class SpaPreparationServiceTest {
     private SpaNotificationWorkflow notifications;
     private OutboxService outbox;
     private TransactionTemplate transactions;
+    private java.util.Set<String> grantedPermissions=java.util.Set.of();
 
     @BeforeEach
     void setup() {
@@ -81,9 +82,13 @@ class SpaPreparationServiceTest {
         when(care.getCareNotes(10L)).thenReturn(List.of(new CustomerCareFacade.CareNote(1L, "ALLERGY", "Customer reports fragrance sensitivity",
                 null, "Fragrance", null, null, Instant.parse("2026-10-01T00:00:00Z"))));
         access = new SpaAccessService();
+        var permissions=mock(com.core.beautyshop.modules.identity.api.StaffPermissionService.class);
+        when(permissions.has(anyString())).thenAnswer(call -> grantedPermissions.contains(call.getArgument(0)));
+        ReflectionTestUtils.setField(access,"staffPermissions",permissions);
         preparation = new SpaPreparationService(jdbc, new ObjectMapper().findAndRegisterModules(), appointments, services, access, care);
         outbox = mock(OutboxService.class);
         notifications = new SpaNotificationWorkflow(jdbc, appointments, access, outbox);
+        ReflectionTestUtils.setField(notifications,"customerInbox",mock(com.core.beautyshop.modules.notification.api.CustomerNotificationFacade.class));
         login(30L, "ADMIN");
     }
 
@@ -158,6 +163,48 @@ class SpaPreparationServiceTest {
         login(20L, "SPA_THERAPIST");
         assertThatCode(() -> preparation.requireReadyForStart(item)).doesNotThrowAnyException();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spa_form_responses", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void consentBelongsToTheAppointmentOwnerRegardlessOfStaffOrAdminAccountRole() {
+        FormVersion form = preparation.createTemplate(form("Own appointment intake", "history"));
+        preparation.configureService(100L, new ServicePolicyCommand(false, List.of(form.id())));
+        preparation.snapshotRequirements(appointment);
+        Long requirement = preparation.preparation(300L).getFirst().forms().getFirst().id();
+        for (String role : List.of("STAFF", "ADMIN")) {
+            login(10L, role);
+            FormResponse response = preparation.submit(300L, requirement, new ResponseCommand(true, Map.of("history", "My own information")));
+            assertThat(response.customerId()).isEqualTo(10L);
+            assertThat(response.actorId()).isEqualTo(10L);
+        }
+        login(20L, "SPA_THERAPIST");
+        assertThatThrownBy(() -> preparation.submit(300L, requirement, new ResponseCommand(true, Map.of("history", "Someone else's information"))))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spa_form_responses", Integer.class)).isEqualTo(2);
+    }
+
+    @Test
+    void assignedReceptionWithoutExecutionCannotReadTreatmentResponsesOrAftercare() {
+        FormVersion form = preparation.createTemplate(form("Sensitive treatment intake", "history"));
+        preparation.configureService(100L, new ServicePolicyCommand(false, List.of(form.id())));
+        item.setTreatmentSessionItemId(90L);
+        preparation.snapshotRequirements(appointment);
+        Long requirement = preparation.preparation(300L).getFirst().forms().getFirst().id();
+        login(10L, "CUSTOMER");
+        preparation.submit(300L, requirement, new ResponseCommand(true, Map.of("history", "Private patient response")));
+        login(30L, "ADMIN"); item.setExecutionStatus(AppointmentItemExecutionStatus.PERFORMED);
+        notifications.addInstruction(300L, 200L, new SpaNotificationWorkflow.InstructionCommand("Private treatment aftercare", Instant.now()));
+        login(20L, "SPA_RECEPTION");
+        assertThat(access.isAssignedTechnician(appointment)).isTrue();
+        assertThatThrownBy(() -> preparation.preparation(300L)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> preparation.careSummary(300L)).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> notifications.instructions(300L)).isInstanceOf(AccessDeniedException.class);
+        login(10L, "CUSTOMER");
+        assertThat(preparation.preparation(300L).getFirst().forms().getFirst().latestResponse().answers()).containsEntry("history", "Private patient response");
+        assertThat(notifications.instructions(300L)).singleElement().satisfies(instruction -> assertThat(instruction.content()).isEqualTo("Private treatment aftercare"));
+        login(20L, "SPA_THERAPIST");
+        assertThat(preparation.preparation(300L)).hasSize(1);
+        assertThat(notifications.instructions(300L)).hasSize(1);
     }
 
     @Test
@@ -336,6 +383,13 @@ class SpaPreparationServiceTest {
     }
 
     private void login(Long id, String role) {
+        grantedPermissions=switch(role) {
+            case "SPA_THERAPIST" -> java.util.Set.of("SPA_EXECUTION");
+            case "SPA_RECEPTION" -> java.util.Set.of("SPA_RECEPTION");
+            case "CS_STAFF" -> java.util.Set.of("CRM");
+            default -> java.util.Set.of();
+        };
+        if(java.util.Set.of("SPA_THERAPIST","SPA_RECEPTION","CS_STAFF").contains(role)) role="STAFF";
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
         var principal = new UserDetailsImpl(id, "user" + id, "user" + id + "@example.test", "unused", authorities);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, authorities));

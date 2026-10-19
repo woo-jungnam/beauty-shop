@@ -42,6 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.jpa.properties.hibernate.jdbc.time_zone=UTC"})
 @AutoConfigureMockMvc @ActiveProfiles("test")
 class SpaVisitCheckoutIntegrityIntegrationTest {
+    @Autowired javax.sql.DataSource dataSource;
+    @org.junit.jupiter.api.BeforeEach void operationalTables() { SpaOperationalJdbcFixture.ensure(dataSource); }
     @Autowired UserRepository users;
     @Autowired RoleRepository roles;
     @Autowired BeautyServiceRepository services;
@@ -68,8 +70,9 @@ class SpaVisitCheckoutIntegrityIntegrationTest {
     User user(String roleName) {
         Role role = roles.findByName(roleName).orElseGet(() -> roles.save(Role.builder().name(roleName).build()));
         String unique = UUID.randomUUID().toString();
-        return users.save(User.builder().username(unique).email(unique + "@example.test").fullName("Visit customer")
-                .roles(List.of(role)).build());
+        User user=User.builder().username(unique).email(unique + "@example.test").fullName("Visit customer").roles(List.of(role)).build();
+        if("ROLE_STAFF".equals(roleName)) user.setStaffPermissions(new HashSet<>(List.of("SPA_RECEPTION")));
+        return users.save(user);
     }
     UsernamePasswordAuthenticationToken auth(User user) {
         var principal = UserDetailsImpl.build(user);

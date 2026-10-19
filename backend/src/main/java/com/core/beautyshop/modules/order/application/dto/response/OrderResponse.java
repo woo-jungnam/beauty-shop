@@ -28,6 +28,7 @@ public class OrderResponse {
 
     @Schema(description = "ID gói liệu trình Spa nếu đây là đơn mua gói")
     private Long servicePackageId;
+    private String spaBenefitType;
     @Schema(description = "ID appointment nếu là invoice buổi lẻ; status giữ COMPLETED độc lập với trạng thái thanh toán")
     private Long appointmentId;
     @Schema(description = "Snapshot mục PERFORMED không dùng vé của invoice Spa; tách khỏi items sản phẩm")
@@ -50,6 +51,8 @@ public class OrderResponse {
 
     @Schema(description = "Số điện thoại nhận hàng", example = "0987654321")
     private String customerPhone;
+    private String customerEmail;
+    private Instant deliveredAt;
 
     @Schema(description = "Địa chỉ giao hàng đầy đủ", example = "123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh")
     private String shippingAddress;

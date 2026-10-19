@@ -19,7 +19,8 @@ public class PurchaseOrder extends Base {
     @Column(length = 500) private String note;
     @Column(name = "approved_at") private Instant approvedAt;
     @Column(name = "received_at") private Instant receivedAt;
+    @Column(name = "paid_amount",nullable=false,precision=14,scale=2) @Builder.Default private BigDecimal paidAmount=BigDecimal.ZERO;
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true) @Builder.Default
     private List<PurchaseOrderItem> items = new ArrayList<>();
-    public enum Status { DRAFT, APPROVED, RECEIVED, CANCELLED }
+    public enum Status { DRAFT, APPROVED, PARTIALLY_RECEIVED, RECEIVED, CANCELLED }
 }

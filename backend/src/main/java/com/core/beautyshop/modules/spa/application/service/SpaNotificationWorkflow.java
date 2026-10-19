@@ -34,6 +34,8 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
     private final AppointmentRepository appointments;
     private final SpaAccessService access;
     private final OutboxService outbox;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerInbox;
 
     @Transactional
     public Instruction addInstruction(Long appointmentId, Long itemId, InstructionCommand command) {
@@ -65,7 +67,7 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
 
     @Transactional(readOnly = true)
     public List<Instruction> instructions(Long appointmentId) {
-        access.requireCanViewAppointment(load(appointmentId, false));
+        access.requireCanViewFollowUp(load(appointmentId, false));
         return jdbc.query("SELECT * FROM spa_follow_up_instructions WHERE appointment_id=? ORDER BY id DESC", this::instructionRow, appointmentId);
     }
 
@@ -78,6 +80,8 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
         String key = "REMINDER:" + appointmentId + ":" + appointment.getAppointmentDate() + ":" + appointment.getStartTime();
         if (dispatched(key)) return false;
         recordDispatch(key, appointment, SpaNotificationMessage.Kind.REMINDER, null, now);
+        customerInbox.publish(appointment.getUserId(),"spa:"+key,"SPA","Nhắc lịch hẹn Spa",
+                "Lịch hẹn của bạn vào "+appointment.getAppointmentDate()+" lúc "+appointment.getStartTime()+" (giờ Việt Nam)","profile?tab=appointments&appointment="+appointmentId);
         outbox.recordEvent("APPOINTMENT", appointmentId.toString(), TOPIC, appointmentId.toString(),
                 new SpaNotificationMessage(appointmentId, SpaNotificationMessage.Kind.REMINDER, appointment.getAppointmentDate(), appointment.getStartTime(), null));
         return true;
@@ -91,6 +95,8 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
         String key = "FOLLOW_UP:" + instructionId;
         if (dispatched(key)) return false;
         recordDispatch(key, appointment, SpaNotificationMessage.Kind.FOLLOW_UP, instructionId, now);
+        customerInbox.publish(appointment.getUserId(),"spa:"+key,"SPA","Có hướng dẫn chăm sóc sau buổi Spa",
+                "Mở chi tiết buổi hẹn để xem hướng dẫn đã được chuyên viên gửi.","profile?tab=appointments&appointment="+appointment.getId());
         outbox.recordEvent("APPOINTMENT", appointment.getId().toString(), TOPIC, appointment.getId().toString(),
                 new SpaNotificationMessage(appointment.getId(), SpaNotificationMessage.Kind.FOLLOW_UP, appointment.getAppointmentDate(), appointment.getStartTime(), instructionId));
         return true;

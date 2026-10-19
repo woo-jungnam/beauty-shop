@@ -23,7 +23,7 @@ abstract class AbstractAdminDashboardJdbcTest {
     @BeforeEach
     void schema() {
         jdbc = connect();
-        for (String table : List.of("orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
+        for (String table : List.of("payment_resolutions", "orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
         jdbc.execute("CREATE TABLE orders (id BIGINT PRIMARY KEY, created_at TIMESTAMP, paid_at TIMESTAMP, total_amount DECIMAL(14,2), paid_amount DECIMAL(14,2), status VARCHAR(30), payment_status VARCHAR(30), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE payment_transactions (id BIGINT PRIMARY KEY, created_at TIMESTAMP, amount DECIMAL(14,2), gateway VARCHAR(30), transfer_type VARCHAR(20), status VARCHAR(40))");
         jdbc.execute("CREATE TABLE refund_confirmations (id BIGINT PRIMARY KEY, confirmed_at TIMESTAMP, amount DECIMAL(14,2))");
@@ -34,6 +34,7 @@ abstract class AbstractAdminDashboardJdbcTest {
         jdbc.execute("CREATE TABLE staff_schedules (id BIGINT PRIMARY KEY, work_date DATE, start_time TIME, end_time TIME, status VARCHAR(30), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE appointments (id BIGINT PRIMARY KEY, appointment_date DATE, status VARCHAR(30), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE appointment_items (id BIGINT PRIMARY KEY, appointment_id BIGINT, staff_id BIGINT, start_time TIME, end_time TIME, is_deleted BOOLEAN, execution_status VARCHAR(30) DEFAULT 'PLANNED', actual_started_at TIMESTAMP NULL, actual_completed_at TIMESTAMP NULL)");
+        jdbc.execute("CREATE TABLE payment_resolutions (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
         service = new AdminDashboardService(jdbc);
     }
 
@@ -136,6 +137,12 @@ abstract class AbstractAdminDashboardJdbcTest {
         assertThrows(BusinessException.class, () -> service.revenue(time, time.plusSeconds(60), "year"));
         assertThrows(BusinessException.class, () -> service.spaOccupancy(LocalDate.of(2026, 10, 3), LocalDate.of(2026, 10, 2)));
         assertThrows(BusinessException.class, () -> service.spaOccupancy(LocalDate.MAX, LocalDate.MAX));
+    }
+
+    @Test void overviewIncludesActualRefundsOfUnassignedReceipts() {
+        jdbc.execute("INSERT INTO payment_resolutions VALUES (1,'REFUND',50,'2026-10-02 10:00:00'),(2,'MATCH',900,'2026-10-02 10:00:00')");
+        var report=service.overview(Instant.parse("2026-10-01T00:00:00Z"),Instant.parse("2026-10-03T00:00:00Z"));
+        assertMoney("50",report.refundedAmount());
     }
 
     void receipt(int id, String created, int amount, String gateway, String direction, String status) {

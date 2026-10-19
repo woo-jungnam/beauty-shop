@@ -20,6 +20,7 @@ public class OrderFactory {
                 .guestSessionId(userId == null ? request.getSessionId() : null)
                 .customerName(request.getCustomerName())
                 .customerPhone(request.getCustomerPhone())
+                .customerEmail(request.getCustomerEmail())
                 .shippingAddress(request.getShippingAddress())
                 .ward(request.getWard())
                 .district(request.getDistrict())

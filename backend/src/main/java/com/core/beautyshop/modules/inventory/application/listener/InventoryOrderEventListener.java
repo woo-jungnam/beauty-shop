@@ -14,6 +14,7 @@ public class InventoryOrderEventListener {
 
     private final InventoryFacade inventoryFacade;
 
+    @org.springframework.core.annotation.Order(1)
     @EventListener
     public void handleOrderCancelled(OrderEvents.OrderCancelledEvent event) {
         log.info("Handling OrderCancelledEvent for orderId={} with {} items",
@@ -31,16 +32,7 @@ public class InventoryOrderEventListener {
         log.info("Handling OrderPaidEvent in Inventory for orderId={}, orderNumber={} with {} items",
                 event.getOrderId(), event.getOrderNumber(), event.getItems() != null ? event.getItems().size() : 0);
 
-        if (event.getItems() != null && event.getOrderNumber() != null) {
-            for (OrderEvents.OrderItemSummary item : event.getItems()) {
-                try {
-                    inventoryFacade.deductStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
-                } catch (Exception e) {
-                    log.warn("Stock deduction on OrderPaid skipped or already processed for variant {}: {}",
-                            item.getVariantId(), e.getMessage());
-                }
-            }
-        }
+        // Money receipt does not prove dispatch. Keep the order's exact reservations until shipment.
     }
 
     @EventListener
@@ -50,11 +42,7 @@ public class InventoryOrderEventListener {
 
         if (event.getItems() != null) {
             for (OrderEvents.OrderItemSummary item : event.getItems()) {
-                try {
-                    inventoryFacade.deductStock(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
-                } catch (Exception e) {
-                    log.warn("Stock deduction on OrderDelivered skipped (likely deducted on payment): {}", e.getMessage());
-                }
+                inventoryFacade.validateDeliveredAllocation(event.getOrderNumber(), item.getVariantId(), item.getQuantity());
             }
         }
     }

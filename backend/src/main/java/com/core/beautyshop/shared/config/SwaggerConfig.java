@@ -61,7 +61,7 @@ public class SwaggerConfig {
     public GroupedOpenApi catalogApis() {
         return GroupedOpenApi.builder()
                 .group("03-catalog").displayName("03 · Sản phẩm, danh mục và hình ảnh")
-                .pathsToMatch("/api/v1/products/**", "/api/v1/categories/**", "/api/v1/brands/**", "/api/v1/tags/**", "/api/v1/attributes/**", "/api/v1/admin/products/**", "/api/v1/admin/ingredients/**", "/api/v1/admin/dermatology/**", "/api/v1/admin/media/**")
+                .pathsToMatch("/api/v1/products/**", "/api/v1/categories/**", "/api/v1/brands/**", "/api/v1/tags/**", "/api/v1/attributes/**", "/api/v1/admin/products/**", "/api/v1/admin/ingredients/**", "/api/v1/admin/dermatology/**", "/api/v1/admin/media/**", "/api/v1/banners/**", "/api/v1/admin/banners/**", "/api/v1/admin/recommendations/**")
                 .build();
     }
 
@@ -69,7 +69,7 @@ public class SwaggerConfig {
     public GroupedOpenApi identityApis() {
         return GroupedOpenApi.builder()
                 .group("02-identity").displayName("02 · Xác thực, tài khoản và vai trò")
-                .pathsToMatch("/api/v1/auth/**", "/api/v1/users/**", "/api/v1/roles/**", "/api/v1/test/**", "/api/v1/admin/users/**")
+                .pathsToMatch("/api/v1/auth/**", "/api/v1/users/**", "/api/v1/roles/**", "/api/v1/test/**", "/api/v1/admin/users/**", "/api/v1/newsletter/**")
                 .build();
     }
 
@@ -77,7 +77,7 @@ public class SwaggerConfig {
     public GroupedOpenApi orderCartApis() {
         return GroupedOpenApi.builder()
                 .group("04-orders").displayName("04 · Giỏ hàng, đơn hàng và hoàn tiền")
-                .pathsToMatch("/api/v1/orders/**", "/api/v1/cart/**", "/api/v1/admin/orders/**")
+                .pathsToMatch("/api/v1/orders/**", "/api/v1/cart/**", "/api/v1/admin/orders/**", "/api/v1/admin/commerce/**")
                 .build();
     }
 
@@ -101,7 +101,7 @@ public class SwaggerConfig {
     public GroupedOpenApi spaApis() {
         return GroupedOpenApi.builder()
                 .group("06-spa").displayName("06 · Spa, liệu trình và lịch hẹn")
-                .pathsToMatch("/api/v1/spa/**", "/api/v1/appointments/**", "/api/v1/admin/spa/**", "/api/v1/admin/staff/**", "/api/v1/admin/dashboard/spa-*")
+                .pathsToMatch("/api/v1/spa/**", "/api/v1/appointments/**", "/api/v1/admin/spa/**", "/api/v1/admin/staff/**", "/api/v1/staff/spa/**", "/api/v1/admin/dashboard/spa-*")
                 .build();
     }
 
@@ -117,7 +117,7 @@ public class SwaggerConfig {
     public GroupedOpenApi voucherApis() {
         return GroupedOpenApi.builder()
                 .group("09-promotions").displayName("09 · Khuyến mãi và voucher")
-                .pathsToMatch("/api/v1/admin/vouchers/**")
+                .pathsToMatch("/api/v1/admin/vouchers/**", "/api/v1/promotions/**")
                 .build();
     }
 
@@ -133,7 +133,7 @@ public class SwaggerConfig {
     public GroupedOpenApi systemOperationsApis() {
         return GroupedOpenApi.builder()
                 .group("11-operations").displayName("11 · Dashboard, cấu hình và kiểm toán")
-                .pathsToMatch("/api/v1/admin/system-configs/**", "/api/v1/admin/audit-logs/**", "/api/v1/admin/operational-alerts/**", "/api/v1/admin/dashboard/**")
+                .pathsToMatch("/api/v1/admin/system-configs/**", "/api/v1/system-configs/public/**", "/api/v1/admin/audit-logs/**", "/api/v1/admin/operational-alerts/**", "/api/v1/admin/dashboard/**")
                 .build();
     }
 

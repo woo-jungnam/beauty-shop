@@ -63,6 +63,11 @@ public class AdminStaffService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
         StaffServiceSkill skill = skillRepository.findByStaffIdAndServiceIdAndIsDeletedFalse(staffId, command.serviceId()).orElseGet(StaffServiceSkill::new);
         skill.setStaff(staff); skill.setService(service); skill.setIsCertified(Boolean.TRUE.equals(command.certified()));
+        skill.setCertifiedUntil(command.certifiedUntil());
+        if (Boolean.TRUE.equals(service.getRequiresCertification()) && appointments.findFutureAssignedItems(staffId, LocalDate.now(SpaTimeRules.ZONE)).stream()
+                .anyMatch(item -> item.getService().getId().equals(command.serviceId()) && (!Boolean.TRUE.equals(command.certified())
+                        || (command.certifiedUntil()!=null && command.certifiedUntil().isBefore(item.getAppointment().getAppointmentDate())))))
+            throw new BusinessException("Cần chuyển các lịch đã giao trước khi thu hồi hoặc rút ngắn hạn chứng nhận");
         skillRepository.save(skill);
         if (staff.getSkills() == null) staff.setSkills(new ArrayList<>());
         if (staff.getSkills().stream().noneMatch(value -> Objects.equals(value.getId(), skill.getId()))) staff.getSkills().add(skill);
@@ -131,15 +136,8 @@ public class AdminStaffService {
     private void requireAppointmentsCovered(Long staffId) {
         for (AppointmentItem item : appointments.findFutureAssignedItems(staffId, LocalDate.now(SpaTimeRules.ZONE))) {
             LocalDate date = item.getAppointment().getAppointmentDate();
-            if (scheduleRepository.hasScheduleOnDate(staffId, date)) {
-                if (!scheduleRepository.coversWorkingInterval(staffId, date, item.getStartTime(), item.getEndTime())) {
-                    throw new BusinessException("Thay đổi ca trực sẽ khiến lịch hẹn của khách nằm ngoài giờ làm việc");
-                }
-            } else {
-                if (item.getStartTime().isBefore(SpaTimeRules.OPEN) || item.getEndTime().isAfter(SpaTimeRules.CLOSE)) {
-                    throw new BusinessException("Thay đổi ca trực sẽ khiến lịch hẹn của khách nằm ngoài giờ làm việc");
-                }
-            }
+            if (!scheduleRepository.coversWorkingInterval(staffId, date, item.getStartTime(), item.getEndTime()))
+                throw new BusinessException("Thay đổi ca trực sẽ khiến lịch hẹn của khách không có ca làm việc bao quát");
         }
     }
 
@@ -148,16 +146,18 @@ public class AdminStaffService {
             String specialty, String bio, @Schema(description = "Thiếu/null là true cả khi cập nhật", example = "true") Boolean active) { }
     @Schema(name = "SpaStaffSkillCommand", description = "Gán kỹ năng; certified là thông tin ghi nhận, không thay role hoặc lịch ca")
     public record SkillCommand(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Dịch vụ chưa xóa", example = "1") Long serviceId,
-            @Schema(description = "Thiếu/null dùng false", example = "true") Boolean certified) { }
+            @Schema(description = "Thiếu/null dùng false", example = "true") Boolean certified, LocalDate certifiedUntil) {
+        public SkillCommand(Long serviceId,Boolean certified) { this(serviceId,certified,null); }
+    }
     @Schema(name = "SpaStaffSkillView", description = "Kỹ năng dịch vụ còn hiệu lực trên hồ sơ staff")
-    public record SkillView(Long serviceId, String serviceName, Boolean certified) { }
+    public record SkillView(Long serviceId, String serviceName, Boolean certified, LocalDate certifiedUntil) { }
     @Schema(name = "SpaStaffView", description = "Hồ sơ quản trị staff, tài khoản và kỹ năng; có thể inactive")
     public record StaffView(Long id, Long userId, String fullName, String specialty, String bio, Double rating, Integer totalReviews,
                             Boolean active, List<SkillView> skills) {
         static StaffView from(Staff staff, com.core.beautyshop.modules.identity.api.dto.UserSummaryDto user) {
             List<SkillView> skills = staff.getSkills() == null ? List.of() : staff.getSkills().stream()
                     .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
-                    .map(value -> new SkillView(value.getService().getId(), value.getService().getName(), value.getIsCertified())).toList();
+                    .map(value -> new SkillView(value.getService().getId(), value.getService().getName(), value.getIsCertified(), value.getCertifiedUntil())).toList();
             return new StaffView(staff.getId(), staff.getUserId(), user == null ? null : user.getFullName(), staff.getSpecialty(), staff.getBio(),
                     staff.getRating(), staff.getTotalReviews(), staff.getIsActive(), skills);
         }

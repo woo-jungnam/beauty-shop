@@ -19,8 +19,13 @@ public class UserServiceTicketResponse {
     private Long id;
     private Long userId;
     private Long packageId;
-    @Schema(description = "Tên gói catalog hiện tại, chưa là snapshot tên tại thời điểm mua")
+    @Schema(description = "Tên lúc mua; vé cũ thiếu snapshot dùng tên hiện tại và nameSnapshot=false")
     private String packageName;
+    private boolean nameSnapshot;
+    private String benefitType;
+    private Long treatmentCourseId;
+    private java.util.List<ServiceBalance> services;
+    public record ServiceBalance(Long serviceId, String serviceName, boolean nameSnapshot, int total, int used, int reserved, int available) {}
     private Long orderId;
     @Schema(description = "Tổng quyền lợi gồm bù lượt đã duyệt")
     private Integer totalSessions;
@@ -48,7 +53,15 @@ public class UserServiceTicketResponse {
                 .id(ticket.getId())
                 .userId(ticket.getUserId())
                 .packageId(ticket.getServicePackage() != null ? ticket.getServicePackage().getId() : null)
-                .packageName(ticket.getServicePackage() != null ? ticket.getServicePackage().getName() : null)
+                .packageName(ticket.getPackageNameSnapshot() != null ? ticket.getPackageNameSnapshot() : ticket.getServicePackage() != null ? ticket.getServicePackage().getName() : null)
+                .nameSnapshot(ticket.getPackageNameSnapshot() != null)
+                .benefitType(ticket.getServicePackage() != null && Boolean.TRUE.equals(ticket.getServicePackage().getTreatmentManaged()) ? "TREATMENT_COURSE" : "SERVICE_PACKAGE")
+                .treatmentCourseId(ticket.getTreatmentCourseId())
+                .services(ticket.getEntitlements().entrySet().stream().sorted(java.util.Map.Entry.comparingByKey()).map(entry -> {
+                    var e = entry.getValue(); String name = ticket.getServiceNames().get(entry.getKey());
+                    return new ServiceBalance(entry.getKey(), name != null ? name : "Dịch vụ #" + entry.getKey(), name != null,
+                            e.getTotal(), e.getUsed(), e.getReserved(), Math.max(0, e.available()));
+                }).toList())
                 .orderId(ticket.getOrderId())
                 .totalSessions(ticket.getTotalSessions())
                 .usedSessions(ticket.getUsedSessions()).reservedSessions(ticket.getReservedSessions()).expiryCheckMode(ticket.getExpiryCheckMode())

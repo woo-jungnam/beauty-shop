@@ -721,6 +721,7 @@ export const LoginPage = () => {
                       </>
                     )}
                   </button>
+                  <a href="#/recover-password" style={{ display: 'block', textAlign: 'center', marginTop: 14 }}>Quên mật khẩu?</a>
                 </form>
               </div>
             </div>

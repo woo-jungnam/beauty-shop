@@ -39,7 +39,7 @@ public class ProductController {
     private final ProductVariantService productVariantService;
     private final ProductImageService productImageService;
 
-    @Operation(summary = "Lấy danh sách tất cả sản phẩm (phân trang)", description = "API công khai. Chỉ sản phẩm ACTIVE chưa xóa; page bắt đầu từ 0, size mặc định 20. Gửi sort để chọn thứ tự; không khai báo sort mặc định.")
+    @Operation(summary = "Lấy danh sách tất cả sản phẩm (phân trang)", description = "API công khai. Chỉ sản phẩm ACTIVE chưa xóa có SKU còn tồn an toàn: HSD > ngày Việt Nam +30 hoặc HSD chưa có, lô/kho không bị khóa. Lọc trước phân trang; page bắt đầu 0, size mặc định 20. Trạng thái quản trị không bị tự thay đổi.")
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ProductListResponse>>> getAllProducts(
            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
@@ -121,10 +121,10 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(products));
     }
 
-    @Operation(summary = "Lấy danh sách sản phẩm xả kho cận date (Clearance / Flash Sale)", description = "API công khai. Lấy các sản phẩm có lô hàng sắp hết hạn trong vòng thresholdDays ngày (mặc định 90 ngày) theo nguyên tắc FEFO. Minh bạch hạn sử dụng (HSD), số ngày còn lại và số lượng tồn xả kho.")
+    @Operation(summary = "Lấy danh sách sản phẩm xả kho cận date (Clearance / Flash Sale)", description = "API công khai. Chỉ lô còn 31 đến thresholdDays ngày (tối đa 90), còn tồn unreserved, SKU active có giá khuyến mãi admin hợp lệ thấp hơn giá gốc. Không tự giảm 20%. clearanceVariant chỉ SKU được quảng bá; HSD và clearanceStock là số liệu lúc tải, không phải cam kết giữ lô. Sắp HSD sớm nhất rồi lượt bán/ID ổn định.")
     @GetMapping("/expiring-soon")
     public ResponseEntity<ApiResponse<List<ProductListResponse>>> getExpiringSoonProducts(
-            @Parameter(description = "Số ngày tối đa trước khi hết hạn (15 - 180)", example = "90") @RequestParam(defaultValue = "90") int thresholdDays,
+            @Parameter(description = "Số ngày tối đa, chuẩn hóa trong 31–90; mặc định 90", example = "90") @RequestParam(defaultValue = "90") int thresholdDays,
             @Parameter(description = "Số lượng sản phẩm tối đa (mặc định 8, tối đa 50)", example = "8") @RequestParam(defaultValue = "8") int limit) {
         List<ProductListResponse> products = productService.getExpiringSoonProducts(thresholdDays, limit);
         return ResponseEntity.ok(ApiResponse.success(products));

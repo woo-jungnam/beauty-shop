@@ -56,6 +56,10 @@ export const getOrderStatusBadge = (status) => {
       return { variant: 'info', text: 'Đã xác nhận' };
     case 'PROCESSING':
       return { variant: 'info', text: 'Đang xử lý' };
+    case 'DELIVERY_FAILED':
+      return { text: 'Giao không thành công', variant: 'warning' };
+    case 'RETURN_TO_SENDER':
+      return { text: 'Hàng hoàn về kho', variant: 'danger' };
     case 'SHIPPED':
       return { variant: 'default', text: 'Đang giao hàng' };
     case 'DELIVERED':
@@ -100,6 +104,10 @@ export const getAppointmentStatusText = (status) => {
 
 export const getTicketStatusBadge = (status) => {
   switch (status) {
+    case 'COMPLETED':
+      return { variant: 'default', text: 'Đã dùng hết' };
+    case 'REVOKED':
+      return { variant: 'danger', text: 'Đã thu hồi' };
     case 'ACTIVE':
       return { variant: 'success', text: 'Còn hiệu lực' };
     case 'EXPIRED':
@@ -140,12 +148,14 @@ export const getMembershipTierLabel = (tier) => {
   switch (tier) {
     case 'MEMBER':
       return 'Thành viên';
-    case 'BRONZE':
-      return 'Hạng Đồng';
     case 'SILVER':
       return 'Hạng Bạc';
     case 'GOLD':
       return 'Hạng Vàng';
+    case 'PLATINUM':
+      return 'Hạng Bạch kim';
+    case 'BRONZE':
+      return 'Hạng Đồng';
     case 'DIAMOND':
       return 'Hạng Kim cương';
     default:

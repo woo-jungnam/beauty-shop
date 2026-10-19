@@ -2,7 +2,10 @@ package com.core.beautyshop;
 
 import com.core.beautyshop.modules.cart.domain.*;
 import com.core.beautyshop.modules.catalog.domain.*;
+import com.core.beautyshop.modules.inventory.api.InventoryExpiryPolicy;
+import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.inventory.domain.*;
+import com.core.beautyshop.shared.time.BusinessTime;
 import com.core.beautyshop.modules.order.application.dto.request.*;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
 import com.core.beautyshop.modules.order.application.service.*;
@@ -13,6 +16,8 @@ import com.core.beautyshop.modules.payment.application.service.PaymentWebhookSer
 import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import com.core.beautyshop.shared.exception.BusinessException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,7 +31,7 @@ import java.util.concurrent.*;
 import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@SpringBootTest(properties="spring.datasource.url=jdbc:h2:mem:checkout_business_integrity;DB_CLOSE_DELAY=-1;MODE=MySQL")
 @ActiveProfiles("test")
 class CheckoutIntegrityIntegrationTest {
     @Autowired ProductRepository products;
@@ -34,6 +39,8 @@ class CheckoutIntegrityIntegrationTest {
     @Autowired WarehouseRepository warehouses;
     @Autowired WarehouseStockRepository stocks;
     @Autowired StockAllocationRepository allocations;
+    @Autowired InventoryFacade inventory;
+    @Autowired com.core.beautyshop.modules.inventory.application.service.SpaMaterialOptionsService materialOptions;
     @Autowired CartRepository carts;
     @Autowired CartItemRepository cartItems;
     @Autowired com.core.beautyshop.modules.cart.application.service.CartService cartService;
@@ -41,6 +48,29 @@ class CheckoutIntegrityIntegrationTest {
     @Autowired OrderService service;
     @Autowired OrderExpirationService expiration;
     @Autowired OrderRefundService refunds;
+    @Autowired OrderCodSettlementService codSettlements;
+    @Autowired ProductReturnService productReturns;
+    @Autowired com.core.beautyshop.modules.inventory.application.service.BatchRecallService batchRecalls;
+    @Autowired com.core.beautyshop.modules.inventory.application.service.InventoryConsumptionService consumptions;
+    @Autowired com.core.beautyshop.modules.procurement.application.ProcurementReceiptService procurementReceipts;
+    @Autowired com.core.beautyshop.modules.procurement.domain.PurchaseOrderRepository purchaseOrders;
+    @Autowired com.core.beautyshop.modules.procurement.domain.SupplierRepository suppliers;
+    @Autowired com.core.beautyshop.shared.config.SystemConfigService systemConfigs;
+    @Autowired com.core.beautyshop.shared.config.domain.SystemConfigRepository configRepository;
+    @Autowired javax.sql.DataSource dataSource;
+    private String previousShippingThreshold;
+    @BeforeEach void isolateFixtureShippingPolicy() {
+        SpaOperationalJdbcFixture.ensure(dataSource);
+        // These concurrency fixtures price a unit at 100 VND. Shipping is tested separately.
+        var previous=configRepository.findByConfigKeyAndIsDeletedFalse("shipping.free_threshold");
+        previousShippingThreshold=previous.map(com.core.beautyshop.shared.config.domain.SystemConfig::getConfigValue).orElse(null);
+        if(previous.isPresent())systemConfigs.update("shipping.free_threshold","0");
+        else systemConfigs.create("shipping.free_threshold","0","Isolated checkout integrity test policy","DECIMAL");
+    }
+    @AfterEach void restoreShippingPolicy() {
+        if(previousShippingThreshold==null)systemConfigs.delete("shipping.free_threshold");
+        else systemConfigs.update("shipping.free_threshold",previousShippingThreshold);
+    }
     @Autowired com.core.beautyshop.modules.inventory.application.service.WarehouseStockService warehouseStockService;
     @Autowired com.core.beautyshop.modules.inventory.application.service.WarehouseService warehouseService;
     @Autowired com.core.beautyshop.modules.inventory.application.service.StockInspectionService stockInspection;
@@ -66,7 +96,7 @@ class CheckoutIntegrityIntegrationTest {
                     .variantName("Default").price(BigDecimal.valueOf(100)).build());
             Warehouse warehouse = warehouses.save(Warehouse.builder().name("Test warehouse").code(suffix).build());
             WarehouseStock stock = stocks.save(WarehouseStock.builder().warehouse(warehouse).productVariantId(variant.getId())
-                    .batchCode(suffix).quantity(quantity).expirationDate(LocalDate.now().plusDays(30)).build());
+                    .batchCode(suffix).quantity(quantity).expirationDate(BusinessTime.today().plusDays(100)).build());
             Cart cart = Cart.builder().sessionId(suffix).items(new ArrayList<>()).build();
             cart.getItems().add(CartItem.builder().cart(cart).productVariantId(variant.getId()).quantity(1).build());
             carts.save(cart);
@@ -138,7 +168,8 @@ class CheckoutIntegrityIntegrationTest {
         status(order.getId(), OrderStatus.PROCESSING); status(order.getId(), OrderStatus.SHIPPED);
         concurrent(() -> { status(order.getId(), OrderStatus.DELIVERED); return true; });
         assertEquals(4, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
-        assertEquals(PaymentStatus.PAID, orders.findById(order.getId()).orElseThrow().getPaymentStatus());
+        assertEquals(PaymentStatus.PENDING, orders.findById(order.getId()).orElseThrow().getPaymentStatus());
+        asAdmin(() -> { codSettlements.confirm(order.getId(),new OrderCodSettlementService.Settlement(order.getTotalAmount(),"COD-"+UUID.randomUUID(),"Carrier remitted collected cash")); return true; });
         concurrent(() -> { status(order.getId(), OrderStatus.RETURNED); return true; });
         WarehouseStock stock = stocks.findById(fixture.stockId()).orElseThrow();
         assertEquals(4, stock.getQuantity()); assertEquals(1, stock.getQuarantinedQuantity());
@@ -219,7 +250,7 @@ class CheckoutIntegrityIntegrationTest {
         warehouseStockService.receiveStock(warehouseId, receipt(fixture.variantId(), batch, 4), "TEST_RECEIPT", "restore");
         var restored = stocks.findById(fixture.stockId()).orElseThrow();
         assertFalse(restored.getIsDeleted()); assertEquals(4, restored.getQuantity());
-        assertEquals(4, stocks.getTotalAvailableQuantityForVariant(fixture.variantId()));
+        assertEquals(4, stocks.getTotalAvailableQuantityForVariant(fixture.variantId(), InventoryExpiryPolicy.saleCutoff()));
     }
 
     @Test
@@ -231,7 +262,7 @@ class CheckoutIntegrityIntegrationTest {
         assertThrows(BusinessException.class, () -> warehouseService.deleteWarehouse(warehouseId));
 
         assertFalse(warehouses.findById(warehouseId).orElseThrow().getIsDeleted());
-        assertEquals(4, stocks.getTotalAvailableQuantityForVariant(fixture.variantId()));
+        assertEquals(4, stocks.getTotalAvailableQuantityForVariant(fixture.variantId(), InventoryExpiryPolicy.saleCutoff()));
         assertEquals(1, stocks.findById(fixture.stockId()).orElseThrow().getReservedQuantity());
         payments.processSePayWebhook(payment(order, UUID.randomUUID().toString()));
         status(order.getId(), OrderStatus.SHIPPED); status(order.getId(), OrderStatus.DELIVERED);
@@ -300,7 +331,7 @@ class CheckoutIntegrityIntegrationTest {
         }
         assertFalse(warehouses.findById(warehouseId).orElseThrow().getIsDeleted());
         assertEquals(2, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
-        assertEquals(2, stocks.getTotalAvailableQuantityForVariant(fixture.variantId()));
+        assertEquals(2, stocks.getTotalAvailableQuantityForVariant(fixture.variantId(), InventoryExpiryPolicy.saleCutoff()));
     }
 
     @Test
@@ -364,14 +395,19 @@ class CheckoutIntegrityIntegrationTest {
     }
 
     @Test
-    void codDeliveryRecordsOnlyRemainingCashAndPreservesExcessTransfersAndPaidAt() {
+    void codDeliveryWaitsForCarrierRemittanceAndPreservesExcessTransfersAndPaidAt() {
         Fixture fixture = fixture(5);
         OrderResponse response = service.checkout(null, request(fixture, PaymentMethod.COD));
         var webhook = payment(response, UUID.randomUUID().toString()); webhook.setTransferAmount(new BigDecimal("40"));
         payments.processSePayWebhook(webhook);
         status(response.getId(), OrderStatus.PROCESSING); status(response.getId(), OrderStatus.SHIPPED);
         status(response.getId(), OrderStatus.DELIVERED);
-        var cod = paymentTransactions.findByReferenceCode("COD-" + response.getOrderNumber()).orElseThrow();
+        assertEquals(PaymentStatus.PENDING,orders.findById(response.getId()).orElseThrow().getPaymentStatus());
+        assertTrue(paymentTransactions.findByReferenceCode("COD-" + response.getOrderNumber()).isEmpty());
+        String settlementReference="remit-"+UUID.randomUUID();
+        var command=new OrderCodSettlementService.Settlement(new BigDecimal("60"),settlementReference,"Carrier transferred actual COD collections");
+        asAdmin(()->{codSettlements.confirm(response.getId(),command);codSettlements.confirm(response.getId(),command);return true;});
+        var cod = paymentTransactions.findByReferenceCode("COD-SETTLED-" + settlementReference).orElseThrow();
         assertEquals(0, new BigDecimal("60").compareTo(cod.getAmount()));
         Instant paidAt = orders.findById(response.getId()).orElseThrow().getPaidAt();
         status(response.getId(), OrderStatus.DELIVERED);
@@ -406,6 +442,229 @@ class CheckoutIntegrityIntegrationTest {
                 principal, null, principal.getAuthorities()));
         try { return action.get(); }
         finally { org.springframework.security.core.context.SecurityContextHolder.clearContext(); }
+    }
+
+    <T> T asAdmin(Supplier<T> action) {
+        var principal=new com.core.beautyshop.shared.security.services.UserDetailsImpl(90000L,"commerce-admin","admin@example.test","unused",List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN")));
+        var context=org.springframework.security.core.context.SecurityContextHolder.getContext();context.setAuthentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal,null,principal.getAuthorities()));
+        try{return action.get();}finally{org.springframework.security.core.context.SecurityContextHolder.clearContext();}
+    }
+
+    @Test void paidBankCancellationRestoresItsReservationAndQueuesActualRefund() {
+        var fixture=fixture(5);var response=service.checkout(null,request(fixture,PaymentMethod.BANK));payments.processSePayWebhook(payment(response,UUID.randomUUID().toString()));
+        var c=new UpdateOrderStatusRequest();c.setStatus(OrderStatus.CANCELLED);c.setNotes("Customer requested cancellation before shipping");service.updateOrderStatus(response.getId(),c);
+        var stock=stocks.findById(fixture.stockId()).orElseThrow();assertEquals(5,stock.getQuantity());assertEquals(0,stock.getReservedQuantity());assertEquals(PaymentStatus.REFUND_PENDING,orders.findById(response.getId()).orElseThrow().getPaymentStatus());
+    }
+
+    @Test void bankReceiptPersistsEvenIfReservedBatchExpiresAndDispatchMustBeReallocated() {
+        var fixture=fixture(5);var response=service.checkout(null,request(fixture,PaymentMethod.BANK));
+        tx(()->{stocks.findById(fixture.stockId()).orElseThrow().setExpirationDate(LocalDate.now().minusDays(1));return true;});
+        payments.processSePayWebhook(payment(response,UUID.randomUUID().toString()));assertEquals(PaymentStatus.PAID,orders.findById(response.getId()).orElseThrow().getPaymentStatus());
+        assertThrows(BusinessException.class,()->status(response.getId(),OrderStatus.SHIPPED));assertEquals(OrderStatus.PROCESSING,orders.findById(response.getId()).orElseThrow().getStatus());
+    }
+
+    @Test void refusedCodDeliveryReturnsToQuarantineWithoutRecordingAnyReceipt() {
+        var fixture=fixture(5);var response=service.checkout(null,request(fixture,PaymentMethod.COD));status(response.getId(),OrderStatus.PROCESSING);status(response.getId(),OrderStatus.SHIPPED);
+        var c=new UpdateOrderStatusRequest();c.setStatus(OrderStatus.DELIVERY_FAILED);c.setNotes("Recipient refused delivery");service.updateOrderStatus(response.getId(),c);c.setStatus(OrderStatus.RETURN_TO_SENDER);service.updateOrderStatus(response.getId(),c);
+        var order=orders.findById(response.getId()).orElseThrow();assertEquals(0,order.getPaidAmount().signum());assertEquals(PaymentStatus.PENDING,order.getPaymentStatus());assertTrue(paymentTransactions.findByOrderNumberOrderByCreatedAtDesc(order.getOrderNumber(),org.springframework.data.domain.PageRequest.of(0,20)).isEmpty());
+        assertEquals(1,stocks.findById(fixture.stockId()).orElseThrow().getQuarantinedQuantity());
+    }
+
+    @Test void guestPartialReturnReservesPurchasedQuantityReceivesOnceAndRefundsOnlySelectedItem() {
+        var fixture=fixture(5);tx(()->{var cart=carts.findBySessionId(fixture.session()).orElseThrow();cart.getItems().getFirst().setQuantity(2);return true;});
+        var response=service.checkout(null,request(fixture,PaymentMethod.COD));status(response.getId(),OrderStatus.PROCESSING);status(response.getId(),OrderStatus.SHIPPED);status(response.getId(),OrderStatus.DELIVERED);
+        asAdmin(()->{codSettlements.confirm(response.getId(),new OrderCodSettlementService.Settlement(response.getTotalAmount(),"cod-"+UUID.randomUUID(),"Actual carrier remittance"));return true;});
+        var request=new ProductReturnService.Request("One sealed item was damaged",List.of(new ProductReturnService.Line(response.getItems().getFirst().getId(),1)),List.of("https://example.test/photo.jpg"));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,()->productReturns.request(response.getId(),"other-session",null,request));
+        var row=productReturns.request(response.getId(),fixture.session(),"return-1",request);assertEquals(row.id(),productReturns.request(response.getId(),fixture.session(),"return-1",request).id());
+        productReturns.decide(row.id(),new ProductReturnService.Decision(true,"Damaged item approved"));var receipt=new ProductReturnService.Confirmation("receipt-"+UUID.randomUUID(),"Goods physically received");productReturns.receive(row.id(),receipt);productReturns.receive(row.id(),receipt);
+        assertEquals(1,stocks.findById(fixture.stockId()).orElseThrow().getQuarantinedQuantity());
+        asAdmin(()->productReturns.refund(row.id(),new ProductReturnService.Confirmation("refund-"+UUID.randomUUID(),"Bank transfer completed")));
+        var order=orders.findById(response.getId()).orElseThrow();assertEquals(OrderStatus.DELIVERED,order.getStatus());assertEquals(0,row.refundAmount().compareTo(order.getRefundedAmount()));assertTrue(order.getRefundedAmount().compareTo(order.getPaidAmount())<0);
+        var extra=payment(response,UUID.randomUUID().toString());extra.setTransferAmount(new BigDecimal("50"));payments.processSePayWebhook(extra);
+        asAdmin(()->{productReturns.overpaymentRefund(response.getId(),new BigDecimal("50"),"excess-after-return-"+UUID.randomUUID(),"Actual return of extra transfer after RMA");return true;});
+        assertEquals(0,row.refundAmount().add(new BigDecimal("50")).compareTo(orders.findById(response.getId()).orElseThrow().getRefundedAmount()));
+        var add=new com.core.beautyshop.modules.cart.application.dto.request.AddToCartRequest();add.setSessionId(fixture.session());add.setVariantId(fixture.variantId());add.setQuantity(1);cartService.addToCart(null,add);
+        var replacementRequest=request(fixture,PaymentMethod.BANK);replacementRequest.setIdempotencyKey("replacement-"+UUID.randomUUID());var replacement=service.checkout(null,replacementRequest);
+        int beforeLink=stocks.findById(fixture.stockId()).orElseThrow().getQuantity();
+        var linked=asAdmin(()->productReturns.linkReplacement(row.id(),new ProductReturnService.Replacement(replacement.getId(),"Customer agreed to a separate replacement sale")));
+        assertEquals(replacement.getId(),linked.replacementOrderId());assertEquals(beforeLink,stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+    }
+
+    @Test void extraTransferCanBeRefundedWithoutCancellingFulfilledSale() {
+        var fixture=fixture(5);var response=service.checkout(null,request(fixture,PaymentMethod.BANK));var webhook=payment(response,UUID.randomUUID().toString());webhook.setTransferAmount(response.getTotalAmount().add(new BigDecimal("50")));payments.processSePayWebhook(webhook);
+        String reference="excess-"+UUID.randomUUID();asAdmin(()->{productReturns.overpaymentRefund(response.getId(),new BigDecimal("50"),reference,"Confirmed return of excess transfer");productReturns.overpaymentRefund(response.getId(),new BigDecimal("50"),reference,"Confirmed return of excess transfer");return true;});
+        var order=orders.findById(response.getId()).orElseThrow();assertEquals(OrderStatus.PROCESSING,order.getStatus());assertEquals(PaymentStatus.PAID,order.getPaymentStatus());assertEquals(0,new BigDecimal("50").compareTo(order.getRefundedAmount()));
+    }
+
+    @Test void recalledReservationCanBeReplacedWithoutSellingTheRecalledBatch() {
+        var fixture=fixture(5);var response=service.checkout(null,request(fixture,PaymentMethod.BANK));payments.processSePayWebhook(payment(response,UUID.randomUUID().toString()));
+        var original=stocks.findById(fixture.stockId()).orElseThrow();
+        batchRecalls.recall(new com.core.beautyshop.modules.inventory.application.service.BatchRecallService.Command("recall-"+UUID.randomUUID(),fixture.variantId(),original.getBatchCode(),"Supplier quality recall"));
+        assertThrows(BusinessException.class,()->status(response.getId(),OrderStatus.SHIPPED));
+        Long replacementId=tx(()->{var source=stocks.findById(fixture.stockId()).orElseThrow();return stocks.save(WarehouseStock.builder().warehouse(source.getWarehouse()).productVariantId(fixture.variantId()).batchCode("replacement-"+UUID.randomUUID()).quantity(4).expirationDate(LocalDate.now().plusYears(1)).costPrice(new BigDecimal("20")).build()).getId();});
+        productReturns.replaceAllocation(response.getId());status(response.getId(),OrderStatus.SHIPPED);
+        assertEquals(5,stocks.findById(fixture.stockId()).orElseThrow().getQuantity());assertEquals(0,stocks.findById(fixture.stockId()).orElseThrow().getReservedQuantity());assertEquals(3,stocks.findById(replacementId).orElseThrow().getQuantity());
+    }
+
+    @Test void actualSpaConsumptionUsesUnreservedStockAndSnapshotsBatchCostOnce() {
+        var fixture=fixture(5);Long warehouseId=tx(()->{var row=stocks.findById(fixture.stockId()).orElseThrow();row.setCostPrice(new BigDecimal("20"));return row.getWarehouse().getId();});
+        String ref="spa-use-"+UUID.randomUUID();var result=consumptions.consume(ref,fixture.variantId(),warehouseId,2);var replay=consumptions.consume(ref,fixture.variantId(),warehouseId,2);
+        assertEquals(result,replay);assertEquals(0,new BigDecimal("40").compareTo(result.totalCost()));assertEquals(fixture.stockId(),result.batches().getFirst().stockId());assertEquals(3,stocks.findById(fixture.stockId()).orElseThrow().getQuantity());assertThrows(BusinessException.class,()->consumptions.consume(ref,fixture.variantId(),warehouseId,1));
+    }
+
+    @Test
+    void retailAndSpaSkipUnsafeEarlierLotsOfTheSameSku() {
+        var fixture = fixture(5);
+        LocalDate today = BusinessTime.today();
+        Long safeId = tx(() -> {
+            var unsafe = stocks.findById(fixture.stockId()).orElseThrow();
+            unsafe.setExpirationDate(today.plusDays(20));
+            return stocks.save(WarehouseStock.builder().warehouse(unsafe.getWarehouse())
+                    .productVariantId(fixture.variantId()).batchCode("safe-" + UUID.randomUUID())
+                    .quantity(3).expirationDate(today.plusDays(100)).build()).getId();
+        });
+        assertEquals(3, inventory.getAvailableQuantity(fixture.variantId()));
+        assertEquals(List.of(safeId), tx(() -> stocks.findAvailableStocksByVariantIdFefo(
+                fixture.variantId(), InventoryExpiryPolicy.saleCutoff(today)).stream().map(WarehouseStock::getId).toList()));
+        var order = service.checkout(null, request(fixture, PaymentMethod.COD));
+        assertEquals(safeId, tx(() -> allocations.lockAllocations(order.getOrderNumber(), fixture.variantId()).getFirst().getStockId()));
+        Long warehouseId = tx(() -> stocks.findById(fixture.stockId()).orElseThrow().getWarehouse().getId());
+        assertEquals(2, materialOptions.list().stream().filter(option -> option.variantId().equals(fixture.variantId()))
+                .findFirst().orElseThrow().availableQuantity());
+        var usage = consumptions.consume("safe-spa-" + UUID.randomUUID(), fixture.variantId(), warehouseId, 2);
+        assertEquals(safeId, usage.batches().getFirst().stockId());
+        assertThrows(BusinessException.class, () -> consumptions.consume("unsafe-spa-" + UUID.randomUUID(), fixture.variantId(), warehouseId, 1));
+        assertEquals(5, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+        assertEquals(0, stocks.findById(fixture.stockId()).orElseThrow().getReservedQuantity());
+    }
+
+    @Test
+    void clearanceAggregationFiltersBoundariesBeforeStableDatabasePagination() {
+        LocalDate businessDate = LocalDate.of(2199, 1, 1);
+        var first = fixture(2); var second = fixture(3); var third = fixture(4);
+        var tooSoon = fixture(5); var tooLate = fixture(6); var undated = fixture(7);
+        tx(() -> {
+            stocks.findById(first.stockId()).orElseThrow().setExpirationDate(businessDate.plusDays(31));
+            stocks.findById(second.stockId()).orElseThrow().setExpirationDate(businessDate.plusDays(31));
+            stocks.findById(third.stockId()).orElseThrow().setExpirationDate(businessDate.plusDays(90));
+            stocks.findById(tooSoon.stockId()).orElseThrow().setExpirationDate(businessDate.plusDays(30));
+            stocks.findById(tooLate.stockId()).orElseThrow().setExpirationDate(businessDate.plusDays(91));
+            stocks.findById(undated.stockId()).orElseThrow().setExpirationDate(null);
+            return true;
+        });
+        var page0 = inventory.getExpiringVariantStocks(businessDate, 90, 0, 2);
+        var page1 = inventory.getExpiringVariantStocks(businessDate, 90, 1, 2);
+        assertEquals(List.of(first.variantId(), second.variantId()), page0.stream().map(row -> row.getVariantId()).toList());
+        assertEquals(List.of(third.variantId()), page1.stream().map(row -> row.getVariantId()).toList());
+        assertEquals(2, page0.getFirst().getAvailableQuantity());
+        assertEquals(businessDate.plusDays(31), page0.getFirst().getEarliestExpirationDate());
+        assertTrue(inventory.getExpiringVariantStocks(businessDate, 90, 2, 2).isEmpty());
+    }
+
+    @Test
+    void dispatchedAt31DaysCanBeDeliveredAt30DaysWithoutAnotherDeduction() {
+        var fixture = fixture(5); LocalDate day = LocalDate.of(2026, 10, 17);
+        tx(() -> { stocks.findById(fixture.stockId()).orElseThrow().setExpirationDate(day.plusDays(31)); return true; });
+        OrderResponse order;
+        try (var time = org.mockito.Mockito.mockStatic(BusinessTime.class)) {
+            time.when(BusinessTime::today).thenReturn(day);
+            order = service.checkout(null, request(fixture, PaymentMethod.COD));
+            status(order.getId(), OrderStatus.PROCESSING); status(order.getId(), OrderStatus.SHIPPED);
+            time.when(BusinessTime::today).thenReturn(day.plusDays(1));
+            status(order.getId(), OrderStatus.DELIVERED); status(order.getId(), OrderStatus.DELIVERED);
+        }
+        assertEquals(OrderStatus.DELIVERED, orders.findById(order.getId()).orElseThrow().getStatus());
+        assertEquals(4, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+        assertEquals(1, inventoryTransactions.findByWarehouseStockIdOrderByOccurredAtDesc(fixture.stockId(),
+                org.springframework.data.domain.PageRequest.of(0, 10)).stream()
+                .filter(row -> row.getTransactionType() == com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.SALE).count());
+    }
+
+    @Test
+    void legacyShippedReservationCannotBeDeductedByDeliveryConfirmation() {
+        var fixture = fixture(5); var order = service.checkout(null, request(fixture, PaymentMethod.COD));
+        tx(() -> { orders.findById(order.getId()).orElseThrow().setStatus(OrderStatus.SHIPPED); return true; });
+        assertThrows(BusinessException.class, () -> status(order.getId(), OrderStatus.DELIVERED));
+        assertEquals(OrderStatus.SHIPPED, orders.findById(order.getId()).orElseThrow().getStatus());
+        assertEquals(5, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+        assertEquals(1, stocks.findById(fixture.stockId()).orElseThrow().getReservedQuantity());
+    }
+
+    @Test
+    void replacementFailureRollsBackReleasedReservationAtTheCutoff() {
+        var fixture = fixture(5); LocalDate day = LocalDate.of(2026, 10, 17);
+        tx(() -> { stocks.findById(fixture.stockId()).orElseThrow().setExpirationDate(day.plusDays(31)); return true; });
+        try (var time = org.mockito.Mockito.mockStatic(BusinessTime.class)) {
+            time.when(BusinessTime::today).thenReturn(day);
+            var order = service.checkout(null, request(fixture, PaymentMethod.COD));
+            status(order.getId(), OrderStatus.PROCESSING);
+            time.when(BusinessTime::today).thenReturn(day.plusDays(1));
+            assertThrows(BusinessException.class, () -> status(order.getId(), OrderStatus.SHIPPED));
+            assertThrows(BusinessException.class, () -> productReturns.replaceAllocation(order.getId()));
+            assertEquals(1, stocks.findById(fixture.stockId()).orElseThrow().getReservedQuantity());
+            assertEquals(StockAllocation.Status.RESERVED, tx(() -> allocations.lockAllocations(order.getOrderNumber(), fixture.variantId()).getFirst().getStatus()));
+            assertEquals(OrderStatus.PROCESSING, orders.findById(order.getId()).orElseThrow().getStatus());
+        }
+    }
+
+    @Test
+    void inTransitFailedDeliveryCannotReplaceOrRedispatchAnUnsafeBatch() {
+        var fixture = fixture(5); var order = service.checkout(null, request(fixture, PaymentMethod.COD));
+        status(order.getId(), OrderStatus.PROCESSING); status(order.getId(), OrderStatus.SHIPPED);
+        var failure = new UpdateOrderStatusRequest(); failure.setStatus(OrderStatus.DELIVERY_FAILED); failure.setNotes("Recipient absent");
+        service.updateOrderStatus(order.getId(), failure);
+        tx(() -> { stocks.findById(fixture.stockId()).orElseThrow().setExpirationDate(BusinessTime.today().plusDays(30)); return true; });
+        assertThrows(BusinessException.class, () -> productReturns.replaceAllocation(order.getId()));
+        assertThrows(BusinessException.class, () -> status(order.getId(), OrderStatus.SHIPPED));
+        assertEquals(OrderStatus.DELIVERY_FAILED, orders.findById(order.getId()).orElseThrow().getStatus());
+        failure.setStatus(OrderStatus.RETURN_TO_SENDER); service.updateOrderStatus(order.getId(), failure);
+        assertEquals(4, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+        assertEquals(1, stocks.findById(fixture.stockId()).orElseThrow().getQuarantinedQuantity());
+    }
+
+    @Test
+    void paidFailedDeliveryCanBeRefundedAfterUnsafeStockReturnsToSender() {
+        var fixture = fixture(5); var order = service.checkout(null, request(fixture, PaymentMethod.BANK));
+        payments.processSePayWebhook(payment(order, UUID.randomUUID().toString()));
+        status(order.getId(), OrderStatus.SHIPPED);
+        var failure = new UpdateOrderStatusRequest(); failure.setStatus(OrderStatus.DELIVERY_FAILED); failure.setNotes("Recipient absent");
+        service.updateOrderStatus(order.getId(), failure);
+        tx(() -> { stocks.findById(fixture.stockId()).orElseThrow().setExpirationDate(BusinessTime.today().plusDays(30)); return true; });
+        assertThrows(BusinessException.class, () -> status(order.getId(), OrderStatus.SHIPPED));
+        failure.setStatus(OrderStatus.RETURN_TO_SENDER); service.updateOrderStatus(order.getId(), failure);
+        var request = new com.core.beautyshop.modules.order.application.dto.request.ConfirmRefundRequest(
+                "cutoff-refund-" + UUID.randomUUID(), order.getTotalAmount(), "Actual bank refund after carrier returned parcel");
+        asAdmin(() -> { refunds.confirm(order.getId(), request); refunds.confirm(order.getId(), request); return true; });
+        var saved = orders.findById(order.getId()).orElseThrow();
+        assertEquals(PaymentStatus.REFUNDED, saved.getPaymentStatus());
+        assertEquals(0, saved.getPaidAmount().compareTo(saved.getRefundedAmount()));
+        assertEquals(4, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+        assertEquals(1, stocks.findById(fixture.stockId()).orElseThrow().getQuarantinedQuantity());
+    }
+
+    @Test
+    void historicalSpaConsumptionReplaysAfterExpiryWithoutFurtherMutation() {
+        var fixture = fixture(5);
+        Long warehouseId = tx(() -> stocks.findById(fixture.stockId()).orElseThrow().getWarehouse().getId());
+        String reference = "historical-spa-" + UUID.randomUUID();
+        var first = consumptions.consume(reference, fixture.variantId(), warehouseId, 2);
+        tx(() -> { stocks.findById(fixture.stockId()).orElseThrow().setExpirationDate(BusinessTime.today().minusDays(1)); return true; });
+        assertEquals(first, consumptions.consume(reference, fixture.variantId(), warehouseId, 2));
+        assertEquals(3, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+        assertThrows(BusinessException.class, () -> consumptions.consume("new-spa-" + UUID.randomUUID(), fixture.variantId(), warehouseId, 1));
+    }
+
+    @Test void partialProcurementReceiptsSupplierReturnsAndCreditsReconcileToActualStock() {
+        var fixture=fixture(5);Long poId=tx(()->{var supplier=suppliers.save(com.core.beautyshop.modules.procurement.domain.Supplier.builder().code("SUP-"+UUID.randomUUID()).name("Supplier").build());var warehouse=stocks.findById(fixture.stockId()).orElseThrow().getWarehouse();var po=com.core.beautyshop.modules.procurement.domain.PurchaseOrder.builder().orderNumber("PO-"+UUID.randomUUID()).supplier(supplier).warehouseId(warehouse.getId()).status(com.core.beautyshop.modules.procurement.domain.PurchaseOrder.Status.APPROVED).totalAmount(new BigDecimal("70")).build();po.getItems().add(com.core.beautyshop.modules.procurement.domain.PurchaseOrderItem.builder().purchaseOrder(po).productVariantId(fixture.variantId()).quantity(10).unitCost(new BigDecimal("7")).batchCode("planned").build());return purchaseOrders.saveAndFlush(po).getId();});
+        Long itemId=tx(()->purchaseOrders.findById(poId).orElseThrow().getItems().getFirst().getId());String actualBatch="actual-"+UUID.randomUUID();
+        var line=new com.core.beautyshop.modules.procurement.application.ProcurementReceiptService.Line(itemId,3,actualBatch,LocalDate.now().plusYears(1));
+        var first=new com.core.beautyshop.modules.procurement.application.ProcurementReceiptService.Receipt("receive-"+UUID.randomUUID(),"Actual first shipment",List.of(line));procurementReceipts.receive(poId,first);procurementReceipts.receive(poId,first);
+        procurementReceipts.receive(poId,new com.core.beautyshop.modules.procurement.application.ProcurementReceiptService.Receipt("receive-"+UUID.randomUUID(),"Actual second shipment",List.of(line)));
+        assertEquals(com.core.beautyshop.modules.procurement.domain.PurchaseOrder.Status.PARTIALLY_RECEIVED,purchaseOrders.findById(poId).orElseThrow().getStatus());assertEquals(0,new BigDecimal("42").compareTo(procurementReceipts.financials(poId).dueAmount()));
+        procurementReceipts.payment(poId,new com.core.beautyshop.modules.procurement.application.ProcurementReceiptService.Payment("pay-"+UUID.randomUUID(),"Actual supplier bank transfer",new BigDecimal("30")),false);
+        var returned=new com.core.beautyshop.modules.procurement.application.ProcurementReceiptService.Line(itemId,2,actualBatch,null);var credit=procurementReceipts.supplierReturn(poId,new com.core.beautyshop.modules.procurement.application.ProcurementReceiptService.Receipt("return-"+UUID.randomUUID(),"Two damaged sealed units returned",List.of(returned)));
+        assertEquals(0,new BigDecimal("-2").compareTo(credit.dueAmount()));var settled=procurementReceipts.payment(poId,new com.core.beautyshop.modules.procurement.application.ProcurementReceiptService.Payment("recover-"+UUID.randomUUID(),"Supplier returned excess payment",new BigDecimal("2")),true);assertEquals(0,settled.dueAmount().signum());
     }
 
     @Test

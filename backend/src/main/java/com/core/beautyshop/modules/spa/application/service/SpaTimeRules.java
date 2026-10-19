@@ -27,9 +27,8 @@ public final class SpaTimeRules {
 
     public static LocalTime end(LocalTime start, BeautyService service) {
         long duration = durationMinutes(service);
-        if (start == null || start.isBefore(OPEN) || !start.isBefore(CLOSE)
-                || duration > Duration.between(start, CLOSE).toMinutes()) {
-            throw new BusinessException("Dịch vụ phải kết thúc trong khung giờ mở cửa");
+        if (start == null || duration >= Duration.between(start, LocalTime.MAX).toMinutes()+1) {
+            throw new BusinessException("Dịch vụ phải kết thúc trong cùng ngày");
         }
         return start.plusMinutes(duration);
     }

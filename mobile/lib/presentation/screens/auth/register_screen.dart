@@ -34,7 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: HasakiColors.getSurface(context),
       appBar: AppBar(
         title: const Text('Đăng Ký Tài Khoản'),
         backgroundColor: HasakiColors.primary,
@@ -44,20 +44,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tạo tài khoản BeautyClub', style: HasakiTypography.headlineMedium),
+            Text(
+              'Tạo tài khoản BeautyClub',
+              style: HasakiTypography.headlineMedium,
+            ),
             const SizedBox(height: 4),
-            Text('Nhận ngay voucher 100K và tích điểm đổi quà', style: HasakiTypography.bodySmall),
+            Text(
+              'Theo dõi đơn hàng và lịch hẹn của bạn',
+              style: HasakiTypography.bodySmall,
+            ),
             const SizedBox(height: 20),
 
-            _buildInputField('Họ và tên *', _fullNameController, Icons.badge_outlined, 'Nguyễn Văn A'),
+            _buildInputField(
+              'Họ và tên *',
+              _fullNameController,
+              Icons.badge_outlined,
+              'Nguyễn Văn A',
+            ),
             const SizedBox(height: 12),
-            _buildInputField('Email *', _emailController, Icons.email_outlined, 'email@domain.com'),
+            _buildInputField(
+              'Email *',
+              _emailController,
+              Icons.email_outlined,
+              'email@domain.com',
+            ),
             const SizedBox(height: 12),
-            _buildInputField('Số điện thoại *', _phoneController, Icons.phone_outlined, '0901234567'),
+            _buildInputField(
+              'Số điện thoại *',
+              _phoneController,
+              Icons.phone_outlined,
+              '0901234567',
+            ),
             const SizedBox(height: 12),
-            _buildInputField('Tên đăng nhập *', _usernameController, Icons.person_outline, 'nguyenvana'),
+            _buildInputField(
+              'Tên đăng nhập *',
+              _usernameController,
+              Icons.person_outline,
+              'nguyenvana',
+            ),
             const SizedBox(height: 12),
-            _buildInputField('Mật khẩu *', _passwordController, Icons.lock_outline, 'Tối thiểu 6 ký tự', obscure: true),
+            _buildInputField(
+              'Mật khẩu *',
+              _passwordController,
+              Icons.lock_outline,
+              'Tối thiểu 6 ký tự',
+              obscure: true,
+            ),
             const SizedBox(height: 24),
 
             SizedBox(
@@ -89,7 +121,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Đã có tài khoản? ', style: TextStyle(fontSize: 13, color: HasakiColors.textMuted)),
+                  const Text(
+                    'Đã có tài khoản? ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: HasakiColors.textMuted,
+                    ),
+                  ),
                   InkWell(
                     onTap: () {
                       Navigator.pushReplacement(
@@ -114,11 +152,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildInputField(String label, TextEditingController controller, IconData icon, String hint, {bool obscure = false}) {
+  Widget _buildInputField(
+    String label,
+    TextEditingController controller,
+    IconData icon,
+    String hint, {
+    bool obscure = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: HasakiTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+        Text(
+          label,
+          style: HasakiTypography.bodySmall.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const SizedBox(height: 4),
         TextField(
           controller: controller,

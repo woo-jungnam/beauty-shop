@@ -63,7 +63,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/beautyshop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:Sql@123456}
+    password: ${DB_PASSWORD}
     driver-class-name: ${DB_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     hikari:
       connection-init-sql: SET time_zone = '+00:00'
@@ -130,6 +130,10 @@ management:
       application: ${spring.application.name}
 
 app:
+  customer-url: ${CUSTOMER_APP_URL:http://localhost}
+  spa:
+    notifications:
+      enabled: ${SPA_NOTIFICATIONS_ENABLED:true}
   media:
     upload-dir: ${MEDIA_UPLOAD_DIR:uploads}
   cache:
@@ -154,11 +158,11 @@ jwt:
 
 sepay:
   webhook:
-    api-key: ${SEPAY_WEBHOOK_API_KEY:your-sepay-api-key-here}
+    api-key: ${SEPAY_WEBHOOK_API_KEY:}
   bank:
     name: ${SEPAY_BANK_NAME:MBBank}
     account-name: ${SEPAY_BANK_ACCOUNT_NAME:BEAUTYSHOP}
-    account-number: ${SEPAY_BANK_ACCOUNT_NUMBER:0902588750}
+    account-number: ${SEPAY_BANK_ACCOUNT_NUMBER}
     bin: ${SEPAY_BANK_BIN:970422}
 
 chatbot:
@@ -166,6 +170,11 @@ chatbot:
     url: ${CHATBOT_SERVICE_URL:http://localhost:8000}
     timeout-seconds: ${CHATBOT_TIMEOUT_SECONDS:60}
     max-concurrent-streams: ${CHATBOT_MAX_CONCURRENT_STREAMS:32}
+
+image-search:
+  enabled: ${IMAGE_SEARCH_ENABLED:false}
+  internal-token: ${IMAGE_SEARCH_INTERNAL_TOKEN:}
+  timeout-seconds: ${IMAGE_SEARCH_TIMEOUT_SECONDS:30}
 
 springdoc:
   default-produces-media-type: application/json

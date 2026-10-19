@@ -13,15 +13,28 @@ public class InventoryBatchService {
     private final WarehouseRepository warehouses;
     private final WarehouseStockRepository stocks;
     private final jakarta.persistence.EntityManager entities;
+    private final BatchRecallRepository recalls;
+
+    public void requireReceivable(Long variantId,String batchCode) {
+        // Serialize against recalls across every warehouse, including a new destination batch.
+        stocks.lockRecallBatches(variantId,normalizeBatchCode(batchCode));
+        if(!recalls.findByVariantIdAndBatchCodeAndActiveTrue(variantId,normalizeBatchCode(batchCode)).isEmpty())
+            throw new BusinessException("This batch is under active recall; resolve the recall before receiving sellable stock");
+    }
 
     public Warehouse lockWarehouse(Long id) {
+        Warehouse warehouse = lockWarehouseForHistory(id);
+        if (Boolean.TRUE.equals(warehouse.getIsDeleted()) || !Boolean.TRUE.equals(warehouse.getIsActive()))
+            throw new BusinessException("Kho hàng đã bị xóa hoặc ngưng hoạt động");
+        return warehouse;
+    }
+
+    public Warehouse lockWarehouseForHistory(Long id) {
         if (id == null) throw new BusinessException("Kho hàng là bắt buộc");
         Warehouse warehouse = warehouses.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho hàng: " + id));
         // Procurement validation may have loaded this warehouse before the lock was acquired.
         entities.refresh(warehouse, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-        if (Boolean.TRUE.equals(warehouse.getIsDeleted()) || !Boolean.TRUE.equals(warehouse.getIsActive()))
-            throw new BusinessException("Kho hàng đã bị xóa hoặc ngưng hoạt động");
         return warehouse;
     }
 

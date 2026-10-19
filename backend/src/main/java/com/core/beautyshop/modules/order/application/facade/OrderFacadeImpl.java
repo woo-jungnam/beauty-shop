@@ -28,8 +28,19 @@ import com.core.beautyshop.shared.exception.BusinessException;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class OrderFacadeImpl implements OrderFacade {
+    @Override
+    public com.core.beautyshop.modules.order.api.dto.SpaRefundBalance lockSpaRefundBalance(Long orderId) {
+        return orderRefunds.lockSpaBalance(orderId);
+    }
+    @Override
+    public void confirmSpaServiceRefund(Long orderId, BigDecimal amount, String reference, String reason) {
+        orderRefunds.confirmSpaServiceRefund(orderId, amount, reference, reason);
+    }
+    @Override
+    public com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult applySpaVisitAdvance(Long appointmentId,BigDecimal amount,String reference) {
+        return visits.applyAdvance(appointmentId,amount,reference);
+    }
 
     private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -37,6 +48,42 @@ public class OrderFacadeImpl implements OrderFacade {
     private final com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refunds;
     private final com.core.beautyshop.modules.order.application.service.OrderExpirationService expirationService;
     private final com.core.beautyshop.modules.order.application.service.SpaVisitOrderService visits;
+    private final com.core.beautyshop.modules.order.application.service.OrderRefundService orderRefunds;
+    private final com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public OrderFacadeImpl(OrderRepository orderRepository, ApplicationEventPublisher eventPublisher,
+                           PaymentFacade paymentFacade, com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refunds,
+                           com.core.beautyshop.modules.order.application.service.OrderExpirationService expirationService,
+                           com.core.beautyshop.modules.order.application.service.SpaVisitOrderService visits,
+                           com.core.beautyshop.modules.order.application.service.OrderRefundService orderRefunds,
+                           com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade) {
+        this.orderRepository = orderRepository;
+        this.eventPublisher = eventPublisher;
+        this.paymentFacade = paymentFacade;
+        this.refunds = refunds;
+        this.expirationService = expirationService;
+        this.visits = visits;
+        this.orderRefunds = orderRefunds;
+        this.identityFacade = identityFacade;
+    }
+
+    public OrderFacadeImpl(OrderRepository orderRepository, ApplicationEventPublisher eventPublisher,
+                           PaymentFacade paymentFacade, com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refunds,
+                           com.core.beautyshop.modules.order.application.service.OrderExpirationService expirationService,
+                           com.core.beautyshop.modules.order.application.service.SpaVisitOrderService visits,
+                           com.core.beautyshop.modules.order.application.service.OrderRefundService orderRefunds) {
+        this(orderRepository, eventPublisher, paymentFacade, refunds, expirationService, visits, orderRefunds, null);
+    }
+
+    @Override
+    public void confirmTreatmentRefund(Long orderId, BigDecimal amount, String reference, String reason) {
+        orderRefunds.confirmTreatmentRefund(orderId, amount, reference, reason);
+    }
+    @Override
+    public void confirmTreatmentRefund(List<Long> orderIds, BigDecimal amount, String reference, String reason) {
+        orderRefunds.confirmTreatmentRefund(orderIds, amount, reference, reason);
+    }
     @org.springframework.beans.factory.annotation.Value("${app.order.payment-timeout-minutes:30}")
     private long paymentTimeoutMinutes = 30;
 
@@ -93,23 +140,38 @@ public class OrderFacadeImpl implements OrderFacade {
             }
         }
 
+        BigDecimal subTotal = amount;
+        BigDecimal membershipDiscount = BigDecimal.ZERO;
+        if (command.getUserId() != null && identityFacade != null) {
+            var userSummary = identityFacade.getUserSummaryById(command.getUserId());
+            Integer discountPercentage = userSummary != null ? userSummary.getMembershipDiscountPercentage() : null;
+            if (discountPercentage != null && discountPercentage > 0) {
+                BigDecimal discountPercent = BigDecimal.valueOf(discountPercentage).divide(BigDecimal.valueOf(100));
+                membershipDiscount = subTotal.multiply(discountPercent).setScale(0, java.math.RoundingMode.HALF_UP);
+            }
+        }
+        BigDecimal discountAmount = membershipDiscount.min(subTotal);
+        BigDecimal total = subTotal.subtract(discountAmount).max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP);
+
         Order order = Order.builder()
                 .orderNumber("ORD-" + UUID.randomUUID().toString().replace("-", "").toUpperCase())
                 .checkoutKey(checkoutKey)
                 .checkoutHash(checkoutHash)
                 .userId(command.getUserId())
                 .servicePackageId(command.getServicePackageId())
+                .spaBenefitType(command.getBenefitType())
                 .customerName(defaultText(command.getCustomerName(), "Khách hàng Spa"))
                 .customerPhone(defaultText(command.getCustomerPhone(), "N/A"))
                 .shippingAddress("SPA_SERVICE")
                 .paymentMethod(PaymentMethod.BANK)
-                .paymentStatus(PaymentStatus.PENDING)
-                .paymentDeadline(java.time.Instant.now().plusSeconds(paymentTimeoutMinutes * 60))
-                .status(OrderStatus.PENDING)
-                .subTotal(amount)
+                .paymentStatus(total.signum() == 0 ? PaymentStatus.PAID : PaymentStatus.PENDING)
+                .paidAt(total.signum() == 0 ? java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS) : null)
+                .paymentDeadline(total.signum() == 0 ? null : java.time.Instant.now().plusSeconds(paymentTimeoutMinutes * 60))
+                .status(total.signum() == 0 ? OrderStatus.PROCESSING : OrderStatus.PENDING)
+                .subTotal(subTotal)
                 .shippingFee(BigDecimal.ZERO)
-                .discountAmount(BigDecimal.ZERO)
-                .totalAmount(amount)
+                .discountAmount(discountAmount)
+                .totalAmount(total)
                 .paidAmount(BigDecimal.ZERO)
                 .notes(command.getNotes())
                 .items(new ArrayList<>())
@@ -118,23 +180,26 @@ public class OrderFacadeImpl implements OrderFacade {
 
         order.getStatusHistories().add(OrderStatusHistory.builder()
                 .order(order)
-                .status(OrderStatus.PENDING)
+                .status(order.getStatus())
                 .notes("Tạo đơn thanh toán gói Spa: " + command.getPackageName())
                 .build());
 
         Order saved = orderRepository.save(order);
-        PaymentInstruction instruction = paymentFacade.processPayment(
-                PaymentMethod.BANK,
-                PaymentOrderDto.builder()
-                        .orderNumber(saved.getOrderNumber())
-                        .totalAmount(saved.getTotalAmount())
-                        .customerName(saved.getCustomerName())
-                        .build());
+        PaymentInstruction instruction = null;
+        if (saved.getTotalAmount().signum() > 0) {
+            instruction = paymentFacade.processPayment(
+                    PaymentMethod.BANK,
+                    PaymentOrderDto.builder()
+                            .orderNumber(saved.getOrderNumber())
+                            .totalAmount(saved.getTotalAmount())
+                            .customerName(saved.getCustomerName())
+                            .build());
+        }
 
         return SpaPackageOrderResult.builder()
                 .orderId(saved.getId())
                 .orderNumber(saved.getOrderNumber())
-                .servicePackageId(saved.getServicePackageId())
+                .servicePackageId(saved.getServicePackageId()).spaBenefitType(saved.getSpaBenefitType())
                 .totalAmount(saved.getTotalAmount())
                 .status(saved.getStatus())
                 .paymentMethod(saved.getPaymentMethod())
@@ -175,7 +240,7 @@ public class OrderFacadeImpl implements OrderFacade {
 
         boolean refundedVisit = order.getAppointmentId() != null && (order.getPaymentStatus() == PaymentStatus.REFUNDED
                 || order.getPaymentStatus() == PaymentStatus.REFUND_PENDING || order.getRefundedAmount().signum() > 0);
-        if (expiredNow || order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.RETURNED || refundedVisit) {
+        if (expiredNow || order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.RETURNED || order.getStatus() == OrderStatus.RETURN_TO_SENDER || refundedVisit) {
             order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
             order.getStatusHistories().add(OrderStatusHistory.builder()
                     .order(order)
@@ -295,7 +360,7 @@ public class OrderFacadeImpl implements OrderFacade {
         return SpaPackageOrderResult.builder()
                 .orderId(order.getId())
                 .orderNumber(order.getOrderNumber())
-                .servicePackageId(order.getServicePackageId())
+                .servicePackageId(order.getServicePackageId()).spaBenefitType(order.getSpaBenefitType())
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus())
                 .paymentMethod(order.getPaymentMethod())

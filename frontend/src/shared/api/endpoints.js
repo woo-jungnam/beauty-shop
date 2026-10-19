@@ -67,6 +67,7 @@ export const ENDPOINTS = {
 
   // Promotions & Vouchers
   VOUCHERS: {
+    VALIDATE: '/api/v1/promotions/validate',
     LIST: '/api/v1/admin/vouchers',
     DETAIL: (id) => `/api/v1/admin/vouchers/${id}`,
     CREATE: '/api/v1/admin/vouchers',

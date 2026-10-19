@@ -16,7 +16,8 @@ const NAV_LINKS = [
   { id: 'brands', label: 'Thương hiệu', route: 'products', dropdown: 'brands' },
   { id: 'deals', label: 'Ưu đãi hôm nay', route: 'products?filter=sale', Icon: Sparkles },
   { id: 'spa', label: 'Dịch vụ Spa', route: 'booking', dropdown: 'services' },
-  { id: 'orders', label: 'Tra cứu đơn hàng', route: 'profile?tab=orders', Icon: Package },
+  { id: 'treatments', label: 'Lộ trình điều trị', route: 'treatments', Icon: Calendar },
+  { id: 'orders', label: 'Tra cứu đơn hàng', route: 'order-lookup', Icon: Package },
 ];
 
 export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
@@ -155,7 +156,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
         </div>
         <div className="storefront-dropdown-grid">
           {items.slice(0, 18).map((item) => (
-            <a key={item.id} href={`#/${type === 'categories' ? categoryRoute(item) : type === 'brands' ? brandRoute(item) : `booking?serviceId=${item.id}`}`} onClick={() => { setOpenDropdown(null); setMobileOpen(false); }}>
+            <a key={item.id} href={`#/${type === 'categories' ? categoryRoute(item) : type === 'brands' ? brandRoute(item) : item.serviceType === 'TREATMENT_COURSE' ? 'treatments' : `booking?serviceId=${item.id}`}`} onClick={() => { setOpenDropdown(null); setMobileOpen(false); }}>
               {cleanDisplayName(item.name)} <ArrowRight size={13} aria-hidden="true" />
             </a>
           ))}
@@ -170,6 +171,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
       <div className="storefront-announcement">
         <div className="storefront-container">
           <span><ShieldCheck size={14} aria-hidden="true" /> Mỹ phẩm chính hãng · Chăm sóc da cùng BeautyShop</span>
+          {!isAuthenticated && <a href="#/recover-password">Quên mật khẩu?</a>}
           <a href="tel:18006324">Hỗ trợ: 1800 6324</a>
         </div>
       </div>
@@ -196,6 +198,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
         </div>
 
         <div className="storefront-actions">
+          <button type="button" className="storefront-action" onClick={() => navigate('image-search')}>Tìm bằng ảnh</button>
           <button type="button" className="storefront-booking" onClick={() => navigate('booking')}><Calendar size={18} /><span>Đặt lịch Spa</span></button>
           <button type="button" className="storefront-action storefront-cart" aria-label={`Giỏ hàng${totalItems > 0 ? `, ${totalItems} sản phẩm` : ''}`} onClick={() => { setMobileOpen(false); setOpenDropdown(null); setCartOpen(true); }}>
             <ShoppingBag size={21} /><span>Giỏ hàng</span>{totalItems > 0 && <b>{totalItems}</b>}

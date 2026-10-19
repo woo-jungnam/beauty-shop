@@ -91,6 +91,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .description(request.getDescription())
                 .imageUrl(request.getImageUrl())
                 .displayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0)
+                .isActive(request.getIsActive() == null || request.getIsActive())
                 .build();
 
         if (request.getParentId() != null) {

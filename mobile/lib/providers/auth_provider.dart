@@ -11,6 +11,7 @@ class AuthProvider extends ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  int _authGeneration = 0;
 
   User? get currentUser => _currentUser;
   bool get isAuthenticated => StorageService.isLoggedIn && _currentUser != null;
@@ -18,7 +19,23 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   AuthProvider() {
+    StorageService.authCleared.addListener(_onAuthCleared);
     _loadSavedUser();
+  }
+
+  void _onAuthCleared() {
+    _authGeneration++;
+    _currentUser = null;
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _authGeneration++;
+    StorageService.authCleared.removeListener(_onAuthCleared);
+    super.dispose();
   }
 
   Future<void> _loadSavedUser() async {
@@ -36,6 +53,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> login(String usernameOrEmail, String password) async {
+    final generation = ++_authGeneration;
+    _currentUser = null;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -44,9 +63,11 @@ class AuthProvider extends ChangeNotifier {
       final response = await _apiClient.post<AuthResponse>(
         ApiConstants.login,
         data: {'usernameOrEmail': usernameOrEmail.trim(), 'password': password},
-        fromJsonT: (json) => AuthResponse.fromJson(json as Map<String, dynamic>),
+        fromJsonT: (json) =>
+            AuthResponse.fromJson(json as Map<String, dynamic>),
       );
 
+      if (generation != _authGeneration) return false;
       if (response.isSuccess && response.data != null) {
         final auth = response.data!;
         await StorageService.setAccessToken(auth.accessToken);
@@ -94,6 +115,8 @@ class AuthProvider extends ChangeNotifier {
     required String username,
     required String password,
   }) async {
+    final generation = ++_authGeneration;
+    _currentUser = null;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -108,9 +131,11 @@ class AuthProvider extends ChangeNotifier {
           'username': username.trim(),
           'password': password,
         },
-        fromJsonT: (json) => AuthResponse.fromJson(json as Map<String, dynamic>),
+        fromJsonT: (json) =>
+            AuthResponse.fromJson(json as Map<String, dynamic>),
       );
 
+      if (generation != _authGeneration) return false;
       if (response.isSuccess && response.data != null) {
         final auth = response.data!;
         await StorageService.setAccessToken(auth.accessToken);
@@ -141,11 +166,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> fetchCurrentUser() async {
+    final generation = _authGeneration;
     try {
       final response = await _apiClient.get<User>(
         ApiConstants.currentUserProfile,
         fromJsonT: (json) => User.fromJson(json as Map<String, dynamic>),
       );
+      if (generation != _authGeneration) return;
       if (response.isSuccess && response.data != null) {
         _currentUser = response.data;
         await StorageService.saveUserData(jsonEncode(_currentUser!.toJson()));
@@ -155,6 +182,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    _authGeneration++;
+    _currentUser = null;
+    _isLoading = false;
+    notifyListeners();
     try {
       final refreshToken = StorageService.getRefreshToken();
       if (refreshToken != null && refreshToken.isNotEmpty) {

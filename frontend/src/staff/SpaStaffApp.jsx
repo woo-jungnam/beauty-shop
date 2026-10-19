@@ -36,14 +36,23 @@ import { ENDPOINTS } from '../shared/api/endpoints';
 import { formatCurrency, formatDate, getVietnamDateString } from '../shared/utils/formatters';
 import { useAuth } from '../app/providers/AuthProvider';
 import { SpaVisitCheckout } from '../shared/ui/SpaVisitCheckout';
+import { TreatmentWorkspace } from '../features/treatments/TreatmentWorkspace';
+import { TreatmentAppointmentDialog } from '../features/treatments/TreatmentAppointmentDialog';
+import { WalkInDrawer } from '../pages/spa-reception/WalkInDrawer';
 
 export const SpaStaffApp = ({ onSwitchToAdmin }) => {
-  const { user, logout, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('queue'); // queue | pos | walk-in | tickets | resources
+  const { user, logout, isAdmin, isSpaReception } = useAuth();
+  const [activeTab, setActiveTab] = useState(() => window.location.hash.includes('staff/treatments') ? 'treatments' : 'queue');
+  useEffect(() => {
+    const syncTreatmentRoute = () => { if (window.location.hash.includes('staff/treatments')) setActiveTab('treatments'); };
+    window.addEventListener('hashchange', syncTreatmentRoute);
+    return () => window.removeEventListener('hashchange', syncTreatmentRoute);
+  }, []);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Data states - 100% dynamically loaded from Database APIs
   const [appointments, setAppointments] = useState([]);
+  const [workspaceId, setWorkspaceId] = useState(null);
   const [services, setServices] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [facilitiesList, setFacilitiesList] = useState([]);
@@ -63,19 +72,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
   // POS Checkout State
   const [posSelectedApt, setPosSelectedApt] = useState(null);
 
-  // Walk-in form state
-  const [walkInForm, setWalkInForm] = useState({
-    customerName: '',
-    phone: '',
-    serviceId: '',
-    staffId: '',
-    appointmentDate: getVietnamDateString(),
-    startTime: '09:00:00',
-    notes: '',
-    autoCheckIn: true
-  });
-  const [walkInSubmitting, setWalkInSubmitting] = useState(false);
-
   // Ticket Lookup state
   const [ticketSearch, setTicketSearch] = useState('');
   const [ticketsData, setTicketsData] = useState([]);
@@ -87,6 +83,15 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
   const [rescheduleTime, setRescheduleTime] = useState('09:00:00');
   const [rescheduleNote, setRescheduleNote] = useState('');
   const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+  const [rescheduleSlots,setRescheduleSlots]=useState([]),[rescheduleSlotsLoading,setRescheduleSlotsLoading]=useState(false);
+  useEffect(()=>{
+    if(!rescheduleApt||!rescheduleDate)return;
+    const controller=new AbortController();setRescheduleSlots([]);setRescheduleSlotsLoading(true);
+    apiClient.get(`/api/v1/appointments/${rescheduleApt.id}/available-slots?date=${rescheduleDate}`,{signal:controller.signal}).then(response=>{
+      if(controller.signal.aborted)return;const body=response?.data??response;const slots=(Array.isArray(body)?body:[]).map(s=>String(s).slice(0,5));setRescheduleSlots(slots);
+    }).catch(error=>{if(!controller.signal.aborted)alert(error.message);}).finally(()=>{if(!controller.signal.aborted)setRescheduleSlotsLoading(false);});
+    return()=>controller.abort();
+  },[rescheduleApt?.id,rescheduleDate]);
 
   // Live Digital Clock
   useEffect(() => {
@@ -124,8 +129,8 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     try {
       const [srvRes, stfRes, facRes] = await Promise.allSettled([
         apiClient.get(ENDPOINTS.SPA.PUBLIC_SERVICES || '/api/v1/spa/services'),
-        apiClient.get(ENDPOINTS.SPA.STAFF || '/api/v1/admin/staff'),
-        apiClient.get(ENDPOINTS.SPA.FACILITIES || '/api/v1/admin/spa/facilities')
+        apiClient.get(isSpaReception ? (ENDPOINTS.SPA.STAFF || '/api/v1/admin/staff') : '/api/v1/spa/services/staff'),
+        isSpaReception ? apiClient.get(ENDPOINTS.SPA.FACILITIES || '/api/v1/admin/spa/facilities') : Promise.resolve([])
       ]);
 
       if (srvRes.status === 'fulfilled') {
@@ -199,7 +204,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     try {
       await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointmentId), {
         status: 'IN_PROGRESS',
-        notes: 'Tiếp đón quầy kích hoạt bắt đầu buổi trị liệu'
+        ...(isSpaReception ? { notes: 'Tiếp đón quầy kích hoạt bắt đầu buổi trị liệu' } : {})
       });
       fetchAppointments();
     } catch (e) {
@@ -209,20 +214,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
   // Action: Complete Treatment
   const handleCompleteAppointment = async (apt) => {
-    try {
-      await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(apt.id), {
-        status: 'COMPLETED',
-        notes: 'Tiếp đón ghi nhận hoàn tất dịch vụ'
-      });
-      fetchAppointments();
-
-      if (!apt.orderId) {
-        setPosSelectedApt(apt);
-        setActiveTab('pos');
-      }
-    } catch (e) {
-      alert(e.response?.data?.message || e.message || 'Không thể hoàn tất buổi hẹn');
-    }
+    setWorkspaceId(apt.id);
   };
 
   // Action: Assign Staff
@@ -261,6 +253,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
   const handleSaveReschedule = async (e) => {
     e.preventDefault();
     if (!rescheduleApt) return;
+    if(rescheduleSlotsLoading||!rescheduleSlots.includes(rescheduleTime.slice(0,5))) return;
     setRescheduleSubmitting(true);
     try {
       await apiClient.put(ENDPOINTS.SPA.RESCHEDULE_APPOINTMENT(rescheduleApt.id), {
@@ -301,62 +294,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
       fetchAppointments();
     } catch (err) {
       alert(err.response?.data?.message || err.message || 'Không thể đánh dấu No-show');
-    }
-  };
-
-  // Action: Walk-in Booking Submission
-  const handleWalkInBooking = async (e) => {
-    e.preventDefault();
-    setWalkInSubmitting(true);
-    try {
-      const payload = {
-        appointmentDate: walkInForm.appointmentDate,
-        startTime: walkInForm.startTime,
-        notes: `[Khách tiếp đón tại quầy] ${walkInForm.customerName} - ${walkInForm.phone}. ${walkInForm.notes || ''}`.trim(),
-        items: [
-          {
-            serviceId: Number(walkInForm.serviceId),
-            staffId: walkInForm.staffId ? Number(walkInForm.staffId) : null
-          }
-        ]
-      };
-
-      const res = await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, payload);
-      const created = res.data || res;
-
-      if (walkInForm.autoCheckIn && created?.id) {
-        try {
-          if (walkInForm.staffId) {
-            const assignMap = {};
-            if (created.items?.[0]?.id) {
-              assignMap[created.items[0].id] = Number(walkInForm.staffId);
-            }
-            await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(created.id), {
-              status: 'CONFIRMED',
-              staffAssignments: assignMap
-            });
-          }
-          await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(created.id));
-        } catch (_) {}
-      }
-
-      alert('Đã tiếp nhận và tạo lịch hẹn tại quầy thành công!');
-      setWalkInForm({
-        customerName: '',
-        phone: '',
-        serviceId: services[0]?.id ? String(services[0].id) : '',
-        staffId: '',
-        appointmentDate: getVietnamDateString(),
-        startTime: '09:00:00',
-        notes: '',
-        autoCheckIn: true
-      });
-      setActiveTab('queue');
-      fetchAppointments();
-    } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Lỗi tạo lịch hẹn tiếp đón');
-    } finally {
-      setWalkInSubmitting(false);
     }
   };
 
@@ -479,6 +416,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
           {/* Action Buttons - Flat */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <a href="#/treatments?tab=courses" style={{ color: '#FFFFFF', fontSize: 12, padding: '6px 12px' }}>Lộ trình của tôi</a>
             {typeof onSwitchToAdmin === 'function' && (
               <button
                 onClick={onSwitchToAdmin}
@@ -526,6 +464,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
       {/* 2. Navigation Tab Bar - Flat */}
       <nav className="spa-portal-nav">
+        <button className={`spa-nav-tab ${activeTab === 'treatments' ? 'active' : ''}`} onClick={() => setActiveTab('treatments')}><Stethoscope size={16} /><span>Hồ sơ lộ trình điều trị</span></button>
         <button
           className={`spa-nav-tab ${activeTab === 'queue' ? 'active' : ''}`}
           onClick={() => setActiveTab('queue')}
@@ -534,6 +473,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           <span>Sảnh Tiếp Đón & Check-in ({todayKPIs.total})</span>
         </button>
 
+        {isSpaReception && <>
         <button
           className={`spa-nav-tab ${activeTab === 'pos' ? 'active' : ''}`}
           onClick={() => {
@@ -570,10 +510,12 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           <Building2 size={16} />
           <span>Sơ Đồ Phòng Khám & KTV ({displayFacilities.length})</span>
         </button>
+        </>}
       </nav>
 
       {/* 3. Main Workspace */}
       <main className="spa-portal-main">
+        {activeTab === 'treatments' && <TreatmentWorkspace role={isAdmin ? 'admin' : 'staff'} />}
 
         {/* ================= TAB 1: SẢNH TIẾP ĐÓN & CHECK-IN ================= */}
         {activeTab === 'queue' && (
@@ -756,7 +698,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                             >
                               Xem tất cả ngày
                             </button>
-                            <button
+                            {isSpaReception && <button
                               type="button"
                               onClick={() => setActiveTab('walk-in')}
                               style={{
@@ -770,7 +712,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                               }}
                             >
                               Tiếp nhận khách vãng lai
-                            </button>
+                            </button>}
                           </div>
                         </div>
                       </td>
@@ -866,7 +808,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
-                              {apt.status === 'PENDING' && (
+                              {isSpaReception && apt.status === 'PENDING' && (
                                 <button
                                   onClick={async () => {
                                     let list = staffList;
@@ -898,7 +840,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                 </button>
                               )}
 
-                              {apt.status === 'CONFIRMED' && !isCheckedIn && (
+                              {isSpaReception && apt.status === 'CONFIRMED' && !isCheckedIn && (
                                 <button
                                   onClick={() => handleCheckIn(apt.id)}
                                   style={{
@@ -920,6 +862,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                 </button>
                               )}
 
+                              <button type="button" onClick={() => setWorkspaceId(apt.id)} style={{ padding: '6px 10px' }}>Chuẩn bị / thực hiện</button>
                               {apt.status === 'CONFIRMED' && isCheckedIn && (
                                 <button
                                   onClick={() => handleStartAppointment(apt.id)}
@@ -964,7 +907,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                 </button>
                               )}
 
-                              {apt.status === 'COMPLETED' && (
+                              {isSpaReception && apt.status === 'COMPLETED' && (
                                 <button
                                   onClick={() => {
                                     setPosSelectedApt(apt);
@@ -990,7 +933,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                               )}
 
                               {/* Secondary actions: Reschedule, No-show, Cancel */}
-                              {(apt.status === 'PENDING' || apt.status === 'CONFIRMED') && (
+                              {isSpaReception && (apt.status === 'PENDING' || apt.status === 'CONFIRMED') && (
                                 <button
                                   type="button"
                                   onClick={() => handleOpenReschedule(apt)}
@@ -1009,7 +952,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                 </button>
                               )}
 
-                              {apt.status === 'CONFIRMED' && !isCheckedIn && (
+                              {isSpaReception && apt.status === 'CONFIRMED' && !isCheckedIn && (
                                 <button
                                   type="button"
                                   onClick={() => handleMarkNoShow(apt)}
@@ -1028,7 +971,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                 </button>
                               )}
 
-                              {(apt.status === 'PENDING' || apt.status === 'CONFIRMED') && (
+                              {isSpaReception && (apt.status === 'PENDING' || apt.status === 'CONFIRMED') && (
                                 <button
                                   type="button"
                                   onClick={() => handleCancelAppointment(apt)}
@@ -1059,7 +1002,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
         )}
 
         {/* ================= TAB 2: THU NGÂN & HOÁ ĐƠN POS ================= */}
-        {activeTab === 'pos' && (
+        {isSpaReception && activeTab === 'pos' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(360px, 1fr)', gap: '20px' }}>
             {/* Left: Completed Pending Queue */}
             <div className="spa-card">
@@ -1134,152 +1077,10 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
         )}
 
         {/* ================= TAB 3: TIẾP NHẬN KHÁCH VÃNG LAI ================= */}
-        {activeTab === 'walk-in' && (
-          <div style={{ maxWidth: '680px', margin: '0 auto' }} className="spa-card">
-            <h2 style={{ fontSize: '16.5px', fontWeight: 700, margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Plus size={18} color="var(--sp-primary)" />
-              <span>Tiếp nhận khách vãng lai và đặt hẹn hotline</span>
-            </h2>
-            <p style={{ fontSize: '12.5px', color: 'var(--sp-text-muted)', margin: '0 0 16px 0' }}>
-              Tạo nhanh lịch hẹn cho khách đến trực tiếp quầy hoặc gọi điện hotline đặt dịch vụ.
-            </p>
-
-            <form onSubmit={handleWalkInBooking} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Họ tên khách hàng *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="Ví dụ: Lê Thị Mai"
-                    value={walkInForm.customerName}
-                    onChange={(e) => setWalkInForm({ ...walkInForm, customerName: e.target.value })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '13px', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Số điện thoại *</label>
-                  <input
-                    required
-                    type="tel"
-                    placeholder="Ví dụ: 0901234567"
-                    value={walkInForm.phone}
-                    onChange={(e) => setWalkInForm({ ...walkInForm, phone: e.target.value })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '13px', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Liệu trình dịch vụ *</label>
-                <select
-                  required
-                  value={walkInForm.serviceId}
-                  onChange={(e) => setWalkInForm({ ...walkInForm, serviceId: e.target.value })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '13px', outline: 'none' }}
-                >
-                  <option value="">-- Chọn dịch vụ chăm sóc da --</option>
-                  {services.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} - {formatCurrency(s.basePrice || s.price || 0)} ({s.durationMinutes || 60}p)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Chuyên viên phụ trách</label>
-                <select
-                  value={walkInForm.staffId}
-                  onChange={(e) => setWalkInForm({ ...walkInForm, staffId: e.target.value })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '13px', outline: 'none' }}
-                >
-                  <option value="">-- Lễ tân tự sắp xếp chuyên viên rảnh --</option>
-                  {staffList.map(st => (
-                    <option key={st.id} value={st.id}>
-                      {st.fullName || st.username || `KTV #${st.id}`} - {st.specialty || 'Chuyên viên da liễu'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Ngày thực hiện</label>
-                  <input
-                    type="date"
-                    value={walkInForm.appointmentDate}
-                    onChange={(e) => setWalkInForm({ ...walkInForm, appointmentDate: e.target.value })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '12.5px', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Giờ bắt đầu</label>
-                  <select
-                    value={walkInForm.startTime}
-                    onChange={(e) => setWalkInForm({ ...walkInForm, startTime: e.target.value })}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '12.5px', outline: 'none' }}
-                  >
-                    <option value="08:30:00">08:30</option>
-                    <option value="09:00:00">09:00</option>
-                    <option value="09:30:00">09:30</option>
-                    <option value="10:00:00">10:00</option>
-                    <option value="10:30:00">10:30</option>
-                    <option value="11:00:00">11:00</option>
-                    <option value="13:30:00">13:30</option>
-                    <option value="14:00:00">14:00</option>
-                    <option value="14:30:00">14:30</option>
-                    <option value="15:00:00">15:00</option>
-                    <option value="16:00:00">16:00</option>
-                    <option value="17:00:00">17:00</option>
-                    <option value="18:00:00">18:00</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Ghi chú da liễu</label>
-                <textarea
-                  rows={2}
-                  placeholder="Khách muốn chăm sóc da mụn, đang có bầu..."
-                  value={walkInForm.notes}
-                  onChange={(e) => setWalkInForm({ ...walkInForm, notes: e.target.value })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '12.5px', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer', padding: '8px 12px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                <input
-                  type="checkbox"
-                  checked={walkInForm.autoCheckIn}
-                  onChange={(e) => setWalkInForm({ ...walkInForm, autoCheckIn: e.target.checked })}
-                />
-                <span style={{ fontWeight: 600, color: '#166534' }}>Khách đang có mặt tại sảnh, tự động Check-in ngay</span>
-              </label>
-
-              <button
-                type="submit"
-                disabled={walkInSubmitting}
-                style={{
-                  padding: '11px',
-                  backgroundColor: 'var(--sp-primary)',
-                  color: '#FFF',
-                  border: 'none',
-                  borderRadius: 0,
-                  fontSize: '13.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  marginTop: '4px'
-                }}
-              >
-                {walkInSubmitting ? 'Đang tạo lịch...' : 'XÁC NHẬN TIẾP ĐÓN KHÁCH VÀO CA'}
-              </button>
-            </form>
-          </div>
-        )}
+        {isSpaReception && activeTab === 'walk-in' && <WalkInDrawer services={services} facilities={facilitiesList} onClose={() => setActiveTab('queue')} onBooked={() => { fetchAppointments(); }} />}
 
         {/* ================= TAB 4: TRA CỨU VÉ LIỆU TRÌNH ================= */}
-        {activeTab === 'tickets' && (
+        {isSpaReception && activeTab === 'tickets' && (
           <div className="spa-card">
             <h2 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Ticket size={16} color="var(--sp-primary)" />
@@ -1362,7 +1163,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
         )}
 
         {/* ================= TAB 5: SƠ ĐỒ PHÒNG & CA KTV ================= */}
-        {activeTab === 'resources' && (
+        {isSpaReception && activeTab === 'resources' && (
           <div>
             {/* Quick Room Status Counters - Flat */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
@@ -1609,7 +1410,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
       </main>
 
       {/* ================= MODAL: ASSIGN STAFF ================= */}
-      {selectedAptForAssign && (
+      {isSpaReception && selectedAptForAssign && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1667,7 +1468,8 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
       )}
 
       {/* ================= MODAL: RESCHEDULE ================= */}
-      {rescheduleApt && (
+      {workspaceId && <TreatmentAppointmentDialog appointmentId={workspaceId} role={isAdmin ? 'admin' : 'staff'} onClose={() => setWorkspaceId(null)} onSaved={fetchAppointments} />}
+      {isSpaReception && rescheduleApt && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1701,23 +1503,12 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Giờ bắt đầu mới *</label>
                 <select
-                  value={rescheduleTime}
+                  value={rescheduleSlots.includes(rescheduleTime.slice(0,5))?rescheduleTime.slice(0,5):''}
                   onChange={(e) => setRescheduleTime(e.target.value)}
                   style={{ width: '100%', padding: '7px 10px', borderRadius: 0, border: '1px solid var(--sp-border)', fontSize: '13px' }}
                 >
-                  <option value="08:30:00">08:30</option>
-                  <option value="09:00:00">09:00</option>
-                  <option value="09:30:00">09:30</option>
-                  <option value="10:00:00">10:00</option>
-                  <option value="10:30:00">10:30</option>
-                  <option value="11:00:00">11:00</option>
-                  <option value="13:30:00">13:30</option>
-                  <option value="14:00:00">14:00</option>
-                  <option value="14:30:00">14:30</option>
-                  <option value="15:00:00">15:00</option>
-                  <option value="16:00:00">16:00</option>
-                  <option value="17:00:00">17:00</option>
-                  <option value="18:00:00">18:00</option>
+                  <option value="">{rescheduleSlotsLoading?'Đang kiểm tra giờ trống…':'Chọn giờ khả dụng'}</option>
+                  {rescheduleSlots.map(slot=><option key={slot} value={slot}>{slot}</option>)}
                 </select>
               </div>
 
@@ -1742,7 +1533,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={rescheduleSubmitting}
+                  disabled={rescheduleSubmitting||rescheduleSlotsLoading||!rescheduleSlots.includes(rescheduleTime.slice(0,5))}
                   style={{ padding: '7px 14px', borderRadius: 0, backgroundColor: 'var(--sp-primary)', color: '#FFF', border: 'none', fontWeight: 600, cursor: 'pointer' }}
                 >
                   {rescheduleSubmitting ? 'Đang lưu...' : 'Xác nhận dời lịch'}

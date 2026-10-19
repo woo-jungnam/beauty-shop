@@ -40,10 +40,21 @@ public class AdminSpaCatalogService {
         serviceRepository.findBySlug(command.slug()).filter(found -> !Objects.equals(found.getId(), id))
                 .ifPresent(found -> { throw new BusinessException("Đường dẫn slug dịch vụ spa đã tồn tại"); });
         if (id != null && Boolean.FALSE.equals(command.active())) requireNoServiceObligations(id);
+        String previousType = entity.getServiceType() == null ? "SINGLE_SESSION" : entity.getServiceType();
+        if (id != null && command.serviceType() != null && !previousType.equals(command.serviceType())) {
+            requireNoServiceObligations(id);
+            if (packageRepository.countServiceReferences(id) > 0 || packageRepository.countTreatmentReferences(id) > 0)
+                throw new BusinessException("Dịch vụ đang được tham chiếu bởi gói hoặc mẫu điều trị. Hãy tạo dịch vụ mới thay vì đổi loại dịch vụ hiện có");
+        }
         entity.setName(command.name().trim()); entity.setSlug(command.slug().trim());
+        if (command.serviceType() != null && !Set.of("SINGLE_SESSION", "TREATMENT_COURSE").contains(command.serviceType())) {
+            throw new BusinessException("Invalid service type");
+        }
+        entity.setServiceType(command.serviceType() == null ? (entity.getServiceType() == null ? "SINGLE_SESSION" : entity.getServiceType()) : command.serviceType());
         entity.setShortDescription(command.shortDescription()); entity.setDescription(command.description());
         entity.setBasePrice(command.basePrice()); entity.setDurationMinutes(command.durationMinutes());
         entity.setPreparationTimeMinutes(command.preparationTimeMinutes() == null ? 15 : command.preparationTimeMinutes());
+        if (command.requiresCertification()!=null) entity.setRequiresCertification(command.requiresCertification());
         entity.setThumbnailUrl(command.thumbnailUrl()); entity.setIsActive(command.active() == null || command.active());
         entity.setCategory(command.categoryId() == null ? null : categoryRepository.findById(command.categoryId())
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
@@ -90,14 +101,16 @@ public class AdminSpaCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public List<ServicePackageResponse> packages() { return packageRepository.findAllAdminWithItems().stream().map(ServicePackageResponse::fromEntity).toList(); }
+    public List<ServicePackageResponse> packages() { return packageRepository.findAllAdminWithItems().stream()
+            .filter(pack -> !Boolean.TRUE.equals(pack.getTreatmentManaged())).map(ServicePackageResponse::fromEntity).toList(); }
     @Transactional(readOnly = true)
     public ServicePackageResponse packageDetail(Long id) {
         return packageRepository.findDetailByIdAndIsDeletedFalse(id)
+                .filter(pack -> !Boolean.TRUE.equals(pack.getTreatmentManaged()))
                 .map(ServicePackageResponse::fromEntity)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gói dịch vụ spa: " + id));
     }
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public ServicePackageResponse savePackage(Long id, PackageCommand command) {
         if (command == null || command.name() == null || command.name().isBlank() || command.price() == null
                 || command.price().compareTo(BigDecimal.ONE) < 0 || command.items() == null || command.items().isEmpty()) {
@@ -108,6 +121,11 @@ public class AdminSpaCatalogService {
         }
         ServicePackage entity = id == null ? new ServicePackage() : packageRepository.findByIdForUpdateAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gói dịch vụ spa: " + id));
+        if (Boolean.TRUE.equals(entity.getTreatmentManaged()))
+            throw new BusinessException("Quyền lợi lộ trình được quản lý qua phiên bản mẫu, không sửa trực tiếp gói thanh toán");
+        command.items().stream().map(PackageItemCommand::serviceId).filter(Objects::nonNull).distinct().sorted()
+                .forEach(serviceId -> serviceRepository.findByIdForUpdate(serviceId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa: " + serviceId)));
         entity.setName(command.name().trim()); entity.setDescription(command.description()); entity.setPrice(command.price());
         entity.setValidityDays(command.validityDays()); entity.setThumbnailUrl(command.thumbnailUrl());
         entity.setIsActive(command.active() == null || command.active());
@@ -116,14 +134,21 @@ public class AdminSpaCatalogService {
         for (PackageItemCommand item : command.items()) {
             if (item.quantity() == null || item.quantity() <= 0 || !seen.add(item.serviceId())) throw new BusinessException("Dịch vụ trong gói không hợp lệ hoặc bị trùng lặp");
             BeautyService service = getService(item.serviceId());
+            if ("TREATMENT_COURSE".equals(service.getServiceType()))
+                throw new BusinessException("Dịch vụ điều trị phải được mua theo lộ trình, không thêm vào gói lượt thông thường");
             if (!Boolean.TRUE.equals(service.getIsActive())) throw new BusinessException("Dịch vụ trong gói liệu trình hiện đang tạm ngưng hoạt động");
             entity.getItems().add(ServicePackageItem.builder().servicePackage(entity).service(service).quantity(item.quantity()).build());
         }
         return ServicePackageResponse.fromEntity(packageRepository.save(entity));
     }
     @Transactional
-    public void deletePackage(Long id) { ServicePackage entity = packageRepository.findByIdForUpdateAndIsDeletedFalse(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gói dịch vụ spa")); entity.setIsDeleted(true); entity.setIsActive(false); }
+    public void deletePackage(Long id) {
+        ServicePackage entity = packageRepository.findByIdForUpdateAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy gói dịch vụ spa"));
+        if (Boolean.TRUE.equals(entity.getTreatmentManaged()))
+            throw new BusinessException("Ngừng bán mẫu lộ trình thay vì xóa gói thanh toán của phiên bản");
+        entity.setIsDeleted(true); entity.setIsActive(false);
+    }
 
     private BeautyService getService(Long id) { return serviceRepository.findById(id).filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa: " + id)); }
@@ -153,7 +178,19 @@ public class AdminSpaCatalogService {
             @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "VND, có thể 0 cho dịch vụ miễn phí", minimum = "0", example = "300000") BigDecimal basePrice,
             @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Phút dự kiến, duration+preparation phải<=720", minimum = "1", example = "45") Integer durationMinutes,
             @Schema(description = "Phút chuẩn bị; thiếu/null mặc định 15", minimum = "0", example = "15") Integer preparationTimeMinutes,
-            String thumbnailUrl, @Schema(description = "Thiếu/null là true cả khi cập nhật; false bị guard nghĩa vụ", example = "true") Boolean active) { }
+            String thumbnailUrl, @Schema(description = "Thiếu/null là true cả khi cập nhật; false bị guard nghĩa vụ", example = "true") Boolean active, String serviceType, Boolean requiresCertification) {
+        public ServiceCommand(Long categoryId, String name, String slug, String shortDescription, String description,
+                              BigDecimal basePrice, Integer durationMinutes, Integer preparationTimeMinutes,
+                              String thumbnailUrl, Boolean active, String serviceType) {
+            this(categoryId,name,slug,shortDescription,description,basePrice,durationMinutes,preparationTimeMinutes,thumbnailUrl,active,serviceType,false);
+        }
+        public ServiceCommand(Long categoryId, String name, String slug, String shortDescription, String description,
+                              BigDecimal basePrice, Integer durationMinutes, Integer preparationTimeMinutes,
+                              String thumbnailUrl, Boolean active) {
+            this(categoryId, name, slug, shortDescription, description, basePrice, durationMinutes,
+                    preparationTimeMinutes, thumbnailUrl, active, null, false);
+        }
+    }
     @Schema(name = "SpaCategoryCommand", description = "Tạo/sửa danh mục Spa; active thiếu/null là true")
     public record CategoryCommand(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, minLength = 1) String name,
             @Schema(requiredMode = Schema.RequiredMode.REQUIRED, minLength = 1) String slug, String description, String thumbnailUrl, Boolean active) { }

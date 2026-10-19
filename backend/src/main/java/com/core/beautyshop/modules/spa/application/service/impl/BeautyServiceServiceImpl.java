@@ -36,6 +36,7 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
     private final IdentityFacade identityFacade;
     private final StaffScheduleRepository schedules;
     private final com.core.beautyshop.modules.spa.application.service.FacilitySchedulingService facilities;
+    private final com.core.beautyshop.modules.spa.application.service.SpaBusinessCalendarService calendar;
 
     @Override
     @Cacheable(value = "spa_services", key = "'all-active'")
@@ -100,14 +101,19 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
         if (date == null || date.isBefore(java.time.LocalDate.now(SpaTimeRules.ZONE))) {
             throw new BusinessException("Ngày hẹn không thể ở trong quá khứ");
         }
-        var qualifiedStaff = staffRepository.findQualifiedActiveStaff(serviceId);
+        var qualifiedStaff = staffRepository.findQualifiedActiveStaff(serviceId).stream().filter(person ->
+                !Boolean.TRUE.equals(service.getRequiresCertification()) || person.getSkills().stream().anyMatch(skill ->
+                        skill.getService().getId().equals(serviceId) && Boolean.TRUE.equals(skill.getIsCertified())
+                        && (skill.getCertifiedUntil()==null || !skill.getCertifiedUntil().isBefore(date)))).toList();
         if (staffId != null && qualifiedStaff.stream().noneMatch(staff -> staff.getId().equals(staffId))) {
             throw new BusinessException("Chuyên viên không có kỹ năng phù hợp cho dịch vụ này");
         }
         long duration = SpaTimeRules.durationMinutes(service);
         var result = new java.util.ArrayList<String>();
-        var slot = SpaTimeRules.OPEN;
-        var close = SpaTimeRules.CLOSE;
+        var hours = calendar.forDate(date);
+        if (hours.closed()) return List.of();
+        var slot = hours.opensAt();
+        var close = hours.closesAt();
         while (java.time.Duration.between(slot, close).toMinutes() >= duration) {
             var currentSlot = slot;
             var end = currentSlot.plusMinutes(duration);
@@ -117,7 +123,9 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
                     : qualifiedStaff.stream().anyMatch(staff -> isStaffAvailable(staff.getId(), date, currentSlot, end)));
             available = available && facilities.hasAvailability(serviceId, date, currentSlot, end);
             if (available) result.add(currentSlot.toString());
-            slot = slot.plusMinutes(30);
+            var next = slot.plusMinutes(30);
+            if (!next.isAfter(slot)) break;
+            slot = next;
         }
         return result;
     }
@@ -126,10 +134,6 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
         if (appointmentRepository.existsOverlappingAppointmentForStaff(staffId, date, start, end)) {
             return false;
         }
-        if (schedules.hasScheduleOnDate(staffId, date)) {
-            return schedules.coversWorkingInterval(staffId, date, start, end);
-        }
-        // If no explicit shift schedule is registered for this day, staff defaults to working standard store opening hours
-        return !start.isBefore(SpaTimeRules.OPEN) && !end.isAfter(SpaTimeRules.CLOSE);
+        return schedules.coversWorkingInterval(staffId, date, start, end);
     }
 }

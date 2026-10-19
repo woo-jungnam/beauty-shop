@@ -5,6 +5,8 @@ class User {
   final String? email;
   final String? phone;
   final String? role;
+  final List<String> roles;
+  final List<String> permissions;
   final String? avatarUrl;
   final String? membershipTier;
   final int rewardPoints;
@@ -16,22 +18,48 @@ class User {
     this.email,
     this.phone,
     this.role,
+    this.roles = const [],
+    this.permissions = const [],
     this.avatarUrl,
-    this.membershipTier = 'SILVER',
+    this.membershipTier,
     this.rewardPoints = 0,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    String roleName(dynamic value) => value is Map
+        ? (value['name'] ?? value['authority'] ?? value['role'] ?? '')
+              .toString()
+        : value?.toString() ?? '';
+    final allRoles = <String>{
+      if (json['role'] != null) roleName(json['role']),
+      if (json['roles'] is List) ...(json['roles'] as List).map(roleName),
+      if (json['authorities'] is List)
+        ...(json['authorities'] as List).map(roleName),
+    }..removeWhere((value) => value.isEmpty);
     return User(
       id: (json['id'] as num?)?.toInt() ?? 0,
       username: json['username']?.toString() ?? '',
-      fullName: json['fullName']?.toString() ?? json['name']?.toString() ?? 'Khách hàng',
+      fullName:
+          json['fullName']?.toString() ??
+          json['name']?.toString() ??
+          'Khách hàng',
       email: json['email']?.toString(),
       phone: json['phone']?.toString() ?? json['phoneNumber']?.toString(),
-      role: json['role']?.toString() ?? (json['roles'] is List && (json['roles'] as List).isNotEmpty ? json['roles'][0].toString() : 'CUSTOMER'),
+      role: allRoles.isEmpty ? 'ROLE_USER' : allRoles.first,
+      roles: allRoles.toList(growable: false),
+      permissions: json['permissions'] is List
+          ? (json['permissions'] as List)
+                .whereType<String>()
+                .map((value) => value.trim().toUpperCase())
+                .where((value) => value.isNotEmpty)
+                .toSet()
+                .toList(growable: false)
+          : const [],
       avatarUrl: json['avatarUrl']?.toString(),
-      membershipTier: json['membershipTier']?.toString() ?? 'SILVER',
-      rewardPoints: ((json['loyaltyPoints'] ?? json['rewardPoints']) as num?)?.toInt() ?? 0,
+      membershipTier: json['membershipTier']?.toString(),
+      rewardPoints:
+          ((json['loyaltyPoints'] ?? json['rewardPoints']) as num?)?.toInt() ??
+          0,
     );
   }
 
@@ -43,11 +71,25 @@ class User {
       'email': email,
       'phone': phone,
       'role': role,
+      'roles': roles,
+      'permissions': permissions,
       'avatarUrl': avatarUrl,
       'membershipTier': membershipTier,
       'rewardPoints': rewardPoints,
     };
   }
+
+  Set<String> get normalizedRoles => {...roles, if (role != null) role!}
+      .map((value) => value.toUpperCase().replaceFirst(RegExp(r'^ROLE_'), ''))
+      .map((value) => value == 'CUSTOMER' ? 'USER' : value)
+      .toSet();
+
+  bool get isAdmin => normalizedRoles.contains('ADMIN');
+  bool get isStaff => normalizedRoles.contains('STAFF');
+  bool hasPermission(String permission) =>
+      isAdmin || (isStaff && permissions.contains(permission));
+  bool get canOperateSpa =>
+      hasPermission('SPA_RECEPTION') || hasPermission('SPA_EXECUTION');
 }
 
 class AuthResponse {
@@ -64,7 +106,8 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    final token = json['accessToken']?.toString() ?? json['token']?.toString() ?? '';
+    final token =
+        json['accessToken']?.toString() ?? json['token']?.toString() ?? '';
     final refresh = json['refreshToken']?.toString();
     User? parsedUser;
     if (json['user'] != null && json['user'] is Map<String, dynamic>) {
