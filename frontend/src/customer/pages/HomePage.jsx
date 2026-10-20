@@ -26,10 +26,39 @@ import { ENDPOINTS } from '../../shared/api/endpoints';
 import { resolveMediaUrl } from '../../shared/utils/formatters';
 import { getGuestSessionId } from '../../shared/utils/session';
 import { useHomeSectionLimits } from '../components/ui/useHomeSectionLimits';
+import heroImage from '../../assets/hero.png';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 };
+
+const CATEGORY_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#FFF5F7"/><g fill="none" stroke="#D45D79" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><circle cx="200" cy="180" r="55"/><path d="M160 270c0-22 18-36 40-36s40 14 40 36"/></g><text x="200" y="325" text-anchor="middle" fill="#8C2A47" font-family="Arial,sans-serif" font-size="18" font-weight="600">Danh mục</text></svg>')}`;
+const BRAND_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#F9FAFB"/><g fill="none" stroke="#6B7280" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><rect x="120" y="140" width="160" height="120" rx="16"/><path d="M160 200h80"/></g><text x="200" y="310" text-anchor="middle" fill="#4B5563" font-family="Arial,sans-serif" font-size="18" font-weight="600">Thương hiệu</text></svg>')}`;
+const SPA_PLACEHOLDER = '/images/spa/facial-care.jpg';
+
+// Pure clean Brand Logo with elegant fallback for missing/broken URLs
+const BrandCardLogo = React.memo(({ brand, logoUrl }) => {
+  const [imgError, setImgError] = useState(false);
+  const isFallback = !logoUrl || logoUrl.includes('data:image/svg') || imgError;
+
+  if (isFallback) {
+    return (
+      <span className="brand-logo-text">
+        {brand?.name}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt={brand?.name || 'Thương hiệu'}
+      loading="lazy"
+      onError={() => setImgError(true)}
+      className="brand-logo-img"
+    />
+  );
+});
 
 export const HomePage = ({ onNavigate }) => {
   const homePageRef = useRef(null);
@@ -79,6 +108,42 @@ export const HomePage = ({ onNavigate }) => {
   // 4. Spa Service Category Filter State
   const [activeSpaCategory, setActiveSpaCategory] = useState('ALL');
 
+  // 3. Flash Sale: 6 products per tab, auto-switch every 5 seconds
+  const FLASH_PAGE_SIZE = 6;
+  const [currentFlashTab, setCurrentFlashTab] = useState(0);
+  const [isFlashHovered, setIsFlashHovered] = useState(false);
+
+  const totalFlashTabs = useMemo(() => {
+    return Math.max(1, Math.ceil(clearanceProducts.length / FLASH_PAGE_SIZE));
+  }, [clearanceProducts.length]);
+
+  useEffect(() => {
+    if (currentFlashTab >= totalFlashTabs) {
+      setCurrentFlashTab(0);
+    }
+  }, [totalFlashTabs, currentFlashTab]);
+
+  useEffect(() => {
+    if (totalFlashTabs <= 1 || isFlashHovered) return;
+    const timer = setInterval(() => {
+      setCurrentFlashTab(prev => (prev + 1) % totalFlashTabs);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [totalFlashTabs, isFlashHovered]);
+
+  const currentFlashProducts = useMemo(() => {
+    if (!clearanceProducts || clearanceProducts.length === 0) return [];
+    const start = currentFlashTab * FLASH_PAGE_SIZE;
+    return clearanceProducts.slice(start, start + FLASH_PAGE_SIZE);
+  }, [clearanceProducts, currentFlashTab]);
+
+  // Duplicate brands seamlessly for uninterrupted 60fps marquee loop (0% -> -50%)
+  const marqueeBrands = useMemo(() => {
+    if (!brands || brands.length === 0) return [];
+    const repeats = brands.length < 8 ? 4 : 2;
+    return Array.from({ length: repeats }, () => brands).flat();
+  }, [brands]);
+
   // Fetch dynamic catalog, categories and spa services from backend APIs
   useEffect(() => {
     let isMounted = true;
@@ -90,7 +155,7 @@ export const HomePage = ({ onNavigate }) => {
           apiClient.get('/api/v1/products?size=60'),
           apiClient.get('/api/v1/spa/services'),
           apiClient.get('/api/v1/categories'),
-          apiClient.get('/api/v1/brands?size=20'),
+          apiClient.get('/api/v1/brands?size=100'),
           apiClient.get('/api/v1/banners'),
           apiClient.get(`/api/v1/products/recommended-for-you?limit=8&sessionId=${encodeURIComponent(guestSessionId)}`)
         ]);
@@ -230,129 +295,31 @@ export const HomePage = ({ onNavigate }) => {
     return list;
   }, [categories, products.length]);
 
-  // Map category slug/name → curated skincare image (verified Unsplash IDs)
+  // Map category image from API, fallback to SVG placeholder
   const getCategoryImage = (cat) => {
-    const slug = (cat.slug || '').toLowerCase().replace(/_/g, '-');
-    const name = (cat.name || '').toLowerCase();
-
-    // Slug-based lookup (most precise — matches API slugs)
-    if (slug.includes('sua-rua-mat') || slug.includes('rua-mat'))
-      return 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('tay-trang') || slug.includes('lam-sach'))
-      return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('serum') || slug.includes('tinh-chat'))
-      return 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('chong-nang'))
-      return 'https://images.unsplash.com/photo-1599305090598-fe179d501227?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('duong-am') || slug.includes('kem-duong'))
-      return 'https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('toner') || slug.includes('nuoc-can-bang'))
-      return 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('mat-na'))
-      return 'https://images.unsplash.com/photo-1587940836072-62f459726a8a?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('trang-diem') || slug.includes('son-moi'))
-      return 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('cham-soc-toc') || slug.includes('toc'))
-      return 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('cham-soc-co-the') || slug.includes('co-the') || slug.includes('body'))
-      return 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('cham-soc-da-mat') || slug.includes('da-mat'))
-      return 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=500&q=75';
-    if (slug.includes('mun') || slug.includes('tri-mun'))
-      return 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=500&q=75';
-
-    // Vietnamese name-based fallback
-    if (name.includes('sữa rửa') || name.includes('rửa mặt'))
-      return 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('tẩy trang') || name.includes('làm sạch'))
-      return 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('serum') || name.includes('tinh chất'))
-      return 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('chống nắng'))
-      return 'https://images.unsplash.com/photo-1599305090598-fe179d501227?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('dưỡng ẩm') || name.includes('kem dưỡng') || name.includes('cấp ẩm'))
-      return 'https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('toner') || name.includes('nước cân bằng'))
-      return 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('mặt nạ'))
-      return 'https://images.unsplash.com/photo-1587940836072-62f459726a8a?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('trang điểm') || name.includes('son') || name.includes('môi'))
-      return 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('tóc') || name.includes('hair'))
-      return 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('cơ thể') || name.includes('body') || name.includes('tắm'))
-      return 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('mụn') || name.includes('trị mụn'))
-      return 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=500&q=75';
-    if (name.includes('chăm sóc') || name.includes('da mặt'))
-      return 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=500&q=75';
-
-    return 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=500&q=75';
+    const raw = cat?.imageUrl || cat?.thumbnailUrl || cat?.image;
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      return resolveMediaUrl(raw);
+    }
+    return CATEGORY_PLACEHOLDER;
   };
 
-  // Map spa service name/category → appropriate treatment image
+  // Map spa service thumbnail → appropriate treatment image
   const getSpaServiceImage = (service) => {
-    if (service.thumbnailUrl) return service.thumbnailUrl;
-    const name = (service.name || '').toLowerCase();
-    const cat = (service.categoryName || '').toLowerCase();
-
-    if (name.includes('aqua peel') || name.includes('làm sạch') || name.includes('peel') || cat.includes('làm sạch'))
-      return 'https://images.unsplash.com/photo-1570554520913-ce2a90ccc23b?auto=format&fit=crop&w=600&q=80';
-    if (name.includes('mụn') || name.includes('acne') || name.includes('bio-light') || name.includes('vi khuẩn'))
-      return 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=600&q=80';
-    if (name.includes('hiệu ứng ấm') || name.includes('nước') || name.includes('vitamin') || name.includes('niacinamide'))
-      return 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=600&q=80';
-    if (name.includes('hifu') || name.includes('nâng cơ') || name.includes('v-line') || name.includes('sắc nét'))
-      return 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80';
-    if (name.includes('galvanic') || name.includes('điện di') || name.includes('ion'))
-      return 'https://images.unsplash.com/photo-1600428877878-1a0fcc0ba376?auto=format&fit=crop&w=600&q=80';
-    if (name.includes('retinol') || name.includes('trẻ hóa') || name.includes('anti-aging') || cat.includes('nâng cơ'))
-      return 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=600&q=80';
-    if (name.includes('massage') || name.includes('thư giãn') || name.includes('body') || cat.includes('body'))
-      return 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80';
-    if (name.includes('collagen') || name.includes('ngọc trai') || name.includes('vip') || name.includes('hoàng gia'))
-      return 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80';
-    if (cat.includes('chăm sóc da') || cat.includes('điều trị'))
-      return 'https://images.unsplash.com/photo-1570554520913-ce2a90ccc23b?auto=format&fit=crop&w=600&q=80';
-
-    // Rotate through curated spa/clinic images by service ID
-    const spaPool = [
-      'https://images.unsplash.com/photo-1570554520913-ce2a90ccc23b?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1600428877878-1a0fcc0ba376?auto=format&fit=crop&w=600&q=80',
-    ];
-    return spaPool[(service.id || 0) % spaPool.length];
+    const raw = service?.thumbnailUrl || service?.imageUrl || service?.image;
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      return resolveMediaUrl(raw);
+    }
+    return SPA_PLACEHOLDER;
   };
 
-  // Map brand name → representative product image
+  // Map brand logo → representative image
   const getBrandImage = (brand) => {
-    if (brand.logoUrl) return resolveMediaUrl(brand.logoUrl);
-    const name = (brand.name || '').toLowerCase();
-    if (name.includes('la roche') || name.includes('laroche'))
-      return 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=300&q=75';
-    if (name.includes('cerave'))
-      return 'https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&w=300&q=75';
-    if (name.includes('paula') || name.includes('choice'))
-      return 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=300&q=75';
-    if (name.includes('skinceuticals') || name.includes('obagi'))
-      return 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=300&q=75';
-    if (name.includes('bioderma') || name.includes('avène') || name.includes('avene'))
-      return 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=300&q=75';
-    if (name.includes('cosrx') || name.includes('anua'))
-      return 'https://images.unsplash.com/photo-1587940836072-62f459726a8a?auto=format&fit=crop&w=300&q=75';
-    if (name.includes('vichy'))
-      return 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=300&q=75';
-    // Generic fallback palette
-    const fallbacks = [
-      'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=300&q=75',
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=300&q=75',
-      'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=300&q=75',
-      'https://images.unsplash.com/photo-1526045612212-70caf35c14df?auto=format&fit=crop&w=300&q=75',
-    ];
-    return fallbacks[(brand.id || 0) % fallbacks.length];
+    const raw = brand?.logoUrl || brand?.imageUrl || brand?.image;
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      return resolveMediaUrl(raw);
+    }
+    return BRAND_PLACEHOLDER;
   };
 
   const DEFAULT_HERO_SLIDES = [
@@ -367,7 +334,7 @@ export const HomePage = ({ onNavigate }) => {
       stat1: '100% Chính Hãng',
       stat2: 'FDA Chuẩn Y Khoa',
       stat3: '24/7 Tư Vấn Tận Tâm',
-      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
+      image: heroImage,
     },
     {
       badge: 'XẢ KHO CẬN DATE',
@@ -380,7 +347,7 @@ export const HomePage = ({ onNavigate }) => {
       stat1: '100% Minh Bạch HSD',
       stat2: '31–90 Ngày Hạn Dùng',
       stat3: 'Giá Tốt Trực Tiếp',
-      image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=1000&q=80',
+      image: heroImage,
     },
     {
       badge: 'CLINIC & SPA',
@@ -393,7 +360,7 @@ export const HomePage = ({ onNavigate }) => {
       stat1: '100% Bác Sĩ Da Liễu',
       stat2: 'FDA Chuẩn Y Khoa',
       stat3: 'Clinic Chuyên Sâu',
-      image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
+      image: '/images/spa/spa-ritual.jpg',
     }
   ];
 
@@ -404,7 +371,7 @@ export const HomePage = ({ onNavigate }) => {
       desc: 'Minh bạch hạn dùng, lô 31–90 ngày với giá ưu đãi trực tiếp.',
       cta: 'Săn deal',
       target: '#flash-sale',
-      image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=700&q=80',
+      image: heroImage,
       Icon: Flame
     },
     {
@@ -413,7 +380,7 @@ export const HomePage = ({ onNavigate }) => {
       desc: 'Đặt lịch Aqua Peel, điện di phục hồi và tư vấn routine cùng chuyên viên.',
       cta: 'Đặt lịch',
       target: 'booking',
-      image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=700&q=80',
+      image: '/images/spa/facial-care.jpg',
       Icon: Calendar
     }
   ];
@@ -433,7 +400,7 @@ export const HomePage = ({ onNavigate }) => {
           stat1: '100% Chính Hãng',
           stat2: 'FDA Chuẩn Y Khoa',
           stat3: '24/7 Tư Vấn Tận Tâm',
-          image: b.imageUrl,
+          image: resolveMediaUrl(b.imageUrl) || heroImage,
         }));
       }
     }
@@ -450,7 +417,7 @@ export const HomePage = ({ onNavigate }) => {
           desc: b.description || '',
           cta: b.ctaText || (idx === 0 ? 'Săn deal' : 'Đặt lịch'),
           target: b.targetUrl || (idx === 0 ? '#flash-sale' : 'booking'),
-          image: b.imageUrl,
+          image: resolveMediaUrl(b.imageUrl) || (idx === 0 ? heroImage : '/images/spa/facial-care.jpg'),
           Icon: idx === 0 ? Flame : Calendar
         }));
       }
@@ -928,7 +895,12 @@ export const HomePage = ({ onNavigate }) => {
       {/* =========================================================================
           3. FLASH SALE / HASAKI DEALS (SCARCITY & URGENCY MODULE)
           ========================================================================= */}
-      <section id="flash-sale" className="customer-container">
+      <section
+        id="flash-sale"
+        className="customer-container"
+        onMouseEnter={() => setIsFlashHovered(true)}
+        onMouseLeave={() => setIsFlashHovered(false)}
+      >
         <div style={{
           backgroundColor: '#FFFFFF',
           borderRadius: 'var(--radius-md, 6px)',
@@ -936,7 +908,7 @@ export const HomePage = ({ onNavigate }) => {
           padding: 'clamp(12px, 1.5vw, 20px)',
           boxShadow: 'var(--shadow-card)'
         }}>
-          {/* Flash Sale Header Bar - Hasaki Style */}
+          {/* Flash Sale Header Bar */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -973,14 +945,57 @@ export const HomePage = ({ onNavigate }) => {
               </span>
             </div>
 
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
-              Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
+                Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.
+              </p>
+
+              {totalFlashTabs > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="flash-tab-pills">
+                    {Array.from({ length: totalFlashTabs }, (_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`flash-tab-indicator ${currentFlashTab === idx ? 'is-active' : ''}`}
+                        onClick={() => setCurrentFlashTab(idx)}
+                        aria-label={`Chuyển đến nhóm ${idx + 1}`}
+                        title={`Nhóm ${idx + 1} (6 sản phẩm)`}
+                      />
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      type="button"
+                      className="carousel-nav-btn"
+                      style={{ width: '28px', height: '28px' }}
+                      onClick={() => setCurrentFlashTab(prev => (prev - 1 + totalFlashTabs) % totalFlashTabs)}
+                      aria-label="Nhóm sản phẩm trước"
+                      title="Nhóm trước"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="carousel-nav-btn"
+                      style={{ width: '28px', height: '28px' }}
+                      onClick={() => setCurrentFlashTab(prev => (prev + 1) % totalFlashTabs)}
+                      aria-label="Nhóm sản phẩm tiếp theo"
+                      title="Nhóm tiếp theo"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {clearanceLoading ? (
-            <div role="status" aria-label="Đang tải sản phẩm xả kho" className="flash-sale-grid">
-              {Array.from({ length: sectionLimits.deals }, (_, index) => <ProductCardSkeleton key={index} />)}
+            <div className="horizontal-carousel-wrapper">
+              <div role="status" aria-label="Đang tải sản phẩm xả kho" className="flash-sale-grid">
+                {Array.from({ length: 6 }, (_, index) => <ProductCardSkeleton key={index} />)}
+              </div>
             </div>
           ) : clearanceError ? (
             <div role="alert">
@@ -990,10 +1005,36 @@ export const HomePage = ({ onNavigate }) => {
           ) : clearanceProducts.length === 0 ? (
             <p role="status">Hiện chưa có sản phẩm xả kho đủ điều kiện.</p>
           ) : (
-            <div className="flash-sale-grid">
-              {clearanceProducts.slice(0, sectionLimits.deals).map(prod => (
-                <ProductCard key={prod.id} product={prod} onNavigate={onNavigate} onQuickView={setQuickViewProduct} />
-              ))}
+            <div className="horizontal-carousel-wrapper">
+              {totalFlashTabs > 1 && (
+                <button
+                  type="button"
+                  className="carousel-floating-btn prev"
+                  onClick={() => setCurrentFlashTab(prev => (prev - 1 + totalFlashTabs) % totalFlashTabs)}
+                  aria-label="Nhóm sản phẩm trước"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+              <div
+                key={`flash-tab-${currentFlashTab}`}
+                className="flash-sale-grid"
+                style={{ animation: 'fadeInFlashTab 0.35s ease' }}
+              >
+                {currentFlashProducts.map(prod => (
+                  <ProductCard key={prod.id} product={prod} onNavigate={onNavigate} onQuickView={setQuickViewProduct} />
+                ))}
+              </div>
+              {totalFlashTabs > 1 && (
+                <button
+                  type="button"
+                  className="carousel-floating-btn next"
+                  onClick={() => setCurrentFlashTab(prev => (prev + 1) % totalFlashTabs)}
+                  aria-label="Nhóm sản phẩm tiếp theo"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              )}
             </div>
           )}
           <p style={{ margin: '16px 0 0', fontSize: '12px', color: 'var(--c-text-muted)' }}>
@@ -1045,7 +1086,7 @@ export const HomePage = ({ onNavigate }) => {
       </section>
 
       {/* =========================================================================
-          THƯƠNG HIỆU ĐỐI TÁC CHÍNH HÃNG — HASAKI TOP BRANDS
+          THƯƠNG HIỆU ĐỐI TÁC CHÍNH HÃNG — HASAKI TOP BRANDS (CHỈ LOGO TỰ ĐỘNG TRƯỢT)
           ========================================================================= */}
       <section id="brand-partners" className="customer-container">
         <div className="section-header-editorial">
@@ -1054,47 +1095,34 @@ export const HomePage = ({ onNavigate }) => {
           </h2>
         </div>
 
-        <div className="brands-grid-12">
+        {/* Marquee Carousel Track (Chỉ logo tự động trượt mượt mà) */}
+        <div className="brands-marquee-wrapper">
           {loading ? (
-            Array.from({ length: sectionLimits.brands }, (_, n) => (
-              <div key={n} className="skeleton-shimmer home-brand-skeleton" />
-            ))
+            <div className="brands-marquee-track">
+              {Array.from({ length: 10 }, (_, n) => (
+                <div key={n} className="skeleton-shimmer home-brand-skeleton brand-logo-tile" />
+              ))}
+            </div>
           ) : (
-            brands.slice(0, sectionLimits.brands).map((brand) => (
-              <div
-                key={brand.id}
-                className="brand-partner-card"
-                onClick={() => onNavigate(`products?brandId=${brand.id}&search=${encodeURIComponent(brand.name)}`)}
-              >
-                <div className="brand-partner-media">
-                  <img
-                    src={getBrandImage(brand)}
-                    alt={brand.name}
-                    loading="lazy"
-                    onError={e => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
+            <div className="brands-marquee-track brands-grid-12">
+              {marqueeBrands.map((brand, idx) => (
+                <div
+                  key={`${brand.id}-${idx}`}
+                  className="brand-logo-tile brand-partner-card brand-partner-box"
+                  onClick={() => onNavigate(`products?brandId=${brand.id}&search=${encodeURIComponent(brand.name)}`)}
+                  role="button"
+                  tabIndex={0}
+                  title={brand.name}
+                  aria-label={brand.name}
+                >
+                  <BrandCardLogo brand={brand} logoUrl={getBrandImage(brand)} />
                 </div>
-                <div className="brand-partner-overlay" />
-                <div className="brand-partner-badge">
-                  <Check size={10} strokeWidth={3} />
-                  <span>Chính hãng</span>
-                </div>
-                <div className="brand-partner-info">
-                  <div className="brand-partner-name">
-                    {brand.name}
-                  </div>
-                  <div className="brand-partner-meta">
-                    <span>{brand.productCount !== undefined && brand.productCount > 0 ? `${brand.productCount} sản phẩm` : 'Phân phối chính ngạch'}</span>
-                  </div>
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
           <button
             onClick={() => onNavigate('products')}
             className="btn-luxury-outline"

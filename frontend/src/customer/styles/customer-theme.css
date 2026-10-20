@@ -838,174 +838,52 @@
   }
 }
 
-/* 3. Top Brands Grid (12 Items: 2x6 Desktop, 3x4 Tablet, 4x3 Mobile) */
+/* 3. Top Brands Row (Horizontal Scrollable) */
 .brands-grid-12 {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-@media (min-width: 640px) {
-  .brands-grid-12 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .brands-grid-12 {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 14px;
-  }
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 14px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 /* Brand Partner Card */
 .brand-partner-card {
   position: relative;
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
   background-color: #FFFFFF;
-  border: 1.5px solid var(--c-border, #F0DEE3);
+  border: 1.5px solid var(--c-border, #F0E6EB);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
               border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  aspect-ratio: 16 / 11;
 }
 
 .brand-partner-card:hover {
   transform: translateY(-5px);
   border-color: var(--c-primary, #D45D79);
-  box-shadow: 0 12px 28px rgba(212, 93, 121, 0.18);
+  box-shadow: 0 14px 30px rgba(212, 93, 121, 0.16);
 }
 
-/* Brand Media Container */
-.brand-partner-media {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: #FAF7F8;
-}
-
-.brand-partner-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.brand-partner-card:hover .brand-partner-media img {
-  transform: scale(1.08);
-}
-
-/* Subtle Gradient Overlay */
-.brand-partner-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(255, 255, 255, 0.96) 0%,
-    rgba(255, 255, 255, 0.88) 42%,
-    rgba(255, 255, 255, 0.15) 75%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-
-/* Top Official Badge */
-.brand-partner-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
-  font-size: 9.5px;
-  font-weight: 800;
-  color: var(--c-primary, #D45D79);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(4px);
-  padding: 2px 7px;
-  border-radius: 9999px;
-  border: 1px solid var(--c-gold-border, rgba(212, 93, 121, 0.25));
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Brand Info Bottom Panel */
-.brand-partner-info {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding: 10px 12px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
-.brand-partner-name {
-  font-size: 13.5px;
-  font-weight: 800;
-  color: #111827;
-  font-family: var(--font-sans);
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-  transition: color 0.2s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.brand-partner-card:hover .brand-partner-name {
-  color: var(--c-primary, #D45D79);
-}
-
-.brand-partner-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-  font-size: 11px;
-  color: var(--c-text-muted, #4B5563);
-  font-weight: 600;
-}
-
-@media (max-width: 640px) {
-  .brand-partner-card {
-    aspect-ratio: 16 / 12;
-  }
-  .brand-partner-info {
-    padding: 8px 10px 10px;
-  }
-  .brand-partner-name {
-    font-size: 12.5px;
-  }
-  .brand-partner-meta {
-    font-size: 10px;
-  }
-}
-
-/* 4. Flash Sale Grid */
+/* 4. Flash Sale Row (Horizontal Scrollable) */
 .flash-sale-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-@media (min-width: 1024px) {
-  .flash-sale-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 18px;
-  }
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 16px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 /* 5. Spa Services Grid */

@@ -14,11 +14,12 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final PaymentWebSocketHandler paymentWebSocketHandler;
     private final PaymentSubscriptionHandshake paymentSubscriptionHandshake;
+    private final CorsConfig corsConfig;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(paymentWebSocketHandler, "/ws/payment")
                 .addInterceptors(paymentSubscriptionHandshake)
-                .setAllowedOrigins(CorsConfig.ALLOWED_ORIGINS.toArray(String[]::new));
+                .setAllowedOrigins(corsConfig.getAllowedOrigins().toArray(String[]::new));
     }
 }

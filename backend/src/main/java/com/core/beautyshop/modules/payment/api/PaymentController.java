@@ -51,7 +51,7 @@ public class PaymentController {
     }
 
     private boolean isValidWebhookApiKey(String authorization) {
-        if (authorization == null || authorization.isBlank() || sePayWebhookApiKey == null) {
+        if (authorization == null || authorization.isBlank() || sePayWebhookApiKey == null || sePayWebhookApiKey.isBlank()) {
             return false;
         }
 
@@ -64,8 +64,12 @@ public class PaymentController {
             apiKey = authorization.trim();
         }
 
+        if (apiKey.isBlank()) {
+            return false;
+        }
+
         return java.security.MessageDigest.isEqual(
-                sePayWebhookApiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                sePayWebhookApiKey.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8),
                 apiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8)
         );
     }

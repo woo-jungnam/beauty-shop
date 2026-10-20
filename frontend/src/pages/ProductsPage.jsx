@@ -32,13 +32,7 @@ import { Modal } from '../shared/ui/Modal';
 import { ProductFeaturesModal } from './ProductFeaturesModal';
 import { lines, ingredientCatalog } from './productFeatures.js';
 
-const QUICK_SAMPLE_IMAGES = [
-  { label: 'Chống nắng LRP', url: 'https://images.unsplash.com/photo-1552046122-03184de85e08?auto=format&fit=crop&w=800&q=85' },
-  { label: 'Sữa rửa mặt CeraVe', url: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=85' },
-  { label: 'Serum Hyalu B5', url: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=85' },
-  { label: 'Toner Anua', url: 'https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=800&q=85' },
-  { label: 'Kem dưỡng ẩm', url: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=800&q=85' },
-];
+const QUICK_SAMPLE_IMAGES = [];
 
 const slugify = (value) => value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -219,12 +213,19 @@ export const ProductsPage = () => {
     try {
       const [catRes, brandRes] = await Promise.allSettled([
         apiClient.get(ENDPOINTS.CATALOG.CATEGORIES),
-        apiClient.get(ENDPOINTS.CATALOG.BRANDS),
+        apiClient.get(`${ENDPOINTS.CATALOG.BRANDS}?size=100`),
       ]);
       if (catRes.status === 'fulfilled') setCategories(catRes.value.data || catRes.value || []);
       if (brandRes.status === 'fulfilled') {
         const bData = brandRes.value.data || brandRes.value;
-        setBrands(bData.content || bData || []);
+        const brandList = [...(bData.content || (Array.isArray(bData) ? bData : []))];
+        const totalPages = bData.totalPages || 1;
+        for (let p = 1; p < totalPages; p++) {
+          const next = await apiClient.get(`${ENDPOINTS.CATALOG.BRANDS}?size=100&page=${p}`);
+          const nextData = next.data || next;
+          brandList.push(...(nextData.content || (Array.isArray(nextData) ? nextData : [])));
+        }
+        setBrands(brandList);
       }
     } catch (e) {
       console.error(e);
@@ -1884,19 +1885,21 @@ export const ProductsPage = () => {
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                   Định dạng: JPG, PNG, WEBP, GIF, SVG, AVIF, BMP (Tối đa 10 MB)
                 </span>
-                <div className="media-preset-bar">
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Ảnh mẫu:</span>
-                  {QUICK_SAMPLE_IMAGES.map((sample, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className="preset-chip"
-                      onClick={() => setUploadedUrl(sample.url)}
-                    >
-                      {sample.label}
-                    </button>
-                  ))}
-                </div>
+                {QUICK_SAMPLE_IMAGES.length > 0 && (
+                  <div className="media-preset-bar">
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Ảnh mẫu:</span>
+                    {QUICK_SAMPLE_IMAGES.map((sample, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="preset-chip"
+                        onClick={() => setUploadedUrl(sample.url)}
+                      >
+                        {sample.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2512,7 +2515,7 @@ export const ProductsPage = () => {
               value={bannerForm.imageUrl}
               onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })}
               required
-              placeholder="https://images.unsplash.com/..."
+              placeholder="VD: /uploads/banners/summer-sale.jpg hoặc https://..."
             />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>

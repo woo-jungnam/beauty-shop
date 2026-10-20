@@ -131,6 +131,8 @@ management:
 
 app:
   customer-url: ${CUSTOMER_APP_URL:http://localhost}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
   spa:
     notifications:
       enabled: ${SPA_NOTIFICATIONS_ENABLED:true}

@@ -22,4 +22,18 @@ class CorsConfigTest {
         assertTrue(configuration.getAllowedMethods().contains("OPTIONS"));
         assertNull(configuration.getAllowedOriginPatterns());
     }
+
+    @Test
+    void customOriginsAreIncludedWhenConfigured() {
+        var corsConfig = new CorsConfig();
+        org.springframework.test.util.ReflectionTestUtils.setField(corsConfig, "customOrigins", "https://staging.dermascan.world, https://preview.example.com");
+        org.springframework.test.util.ReflectionTestUtils.setField(corsConfig, "customerUrl", "https://app.dermascan.world/");
+
+        var request = new MockHttpServletRequest("OPTIONS", "/api/v1/products");
+        var configuration = corsConfig.corsConfigurationSource().getCorsConfiguration(request);
+        assertNotNull(configuration);
+        assertEquals("https://staging.dermascan.world", configuration.checkOrigin("https://staging.dermascan.world"));
+        assertEquals("https://preview.example.com", configuration.checkOrigin("https://preview.example.com"));
+        assertEquals("https://app.dermascan.world", configuration.checkOrigin("https://app.dermascan.world"));
+    }
 }
