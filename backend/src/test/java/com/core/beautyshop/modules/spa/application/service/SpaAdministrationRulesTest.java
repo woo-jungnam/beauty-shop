@@ -47,7 +47,6 @@ class SpaAdministrationRulesTest {
         verifyNoInteractions(packages);
     }
     @Test void packageCannotIncludeDeletedService() {
-        // The locked query excludes deleted services before the package is changed.
         when(services.findByIdForUpdate(1L)).thenReturn(Optional.empty());
         assertThrows(com.core.beautyshop.shared.exception.ResourceNotFoundException.class, () -> catalog.savePackage(null,
                 new AdminSpaCatalogService.PackageCommand("Package", null, BigDecimal.TEN, 30, null, true,

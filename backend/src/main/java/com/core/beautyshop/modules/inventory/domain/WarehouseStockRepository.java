@@ -82,7 +82,6 @@ public interface WarehouseStockRepository extends JpaRepository<WarehouseStock, 
 
     List<WarehouseStock> findByWarehouseId(Long warehouseId);
 
-    /** Include deleted legacy batches: their nonzero balances still require reconciliation. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from WarehouseStock s where s.warehouse.id = :warehouseId order by s.id")
     List<WarehouseStock> findAllByWarehouseIdForUpdate(Long warehouseId);

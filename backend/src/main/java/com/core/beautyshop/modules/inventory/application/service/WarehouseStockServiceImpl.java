@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,8 +33,11 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     @Override
     @Transactional(readOnly = true)
     public List<WarehouseStockResponse> getStocksByWarehouseId(Long warehouseId) {
-        return stockRepository.findByWarehouseId(warehouseId).stream()
-                .map(this::mapToResponse)
+        List<WarehouseStock> stocks = stockRepository.findByWarehouseId(warehouseId);
+        List<Long> variantIds = stocks.stream().map(WarehouseStock::getProductVariantId).distinct().toList();
+        Map<Long, ProductVariantSummaryDto> variants = catalogFacade.getVariantSummariesForInventory(variantIds);
+        return stocks.stream()
+                .map(stock -> mapToResponse(stock, variants.get(stock.getProductVariantId())))
                 .collect(Collectors.toList());
     }
 
@@ -159,13 +163,23 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
     private WarehouseStockResponse mapToResponse(WarehouseStock stock) {
         ProductVariantSummaryDto variant = catalogFacade.getVariantSummariesForInventory(List.of(stock.getProductVariantId()))
                 .get(stock.getProductVariantId());
+        return mapToResponse(stock, variant);
+    }
+
+    private WarehouseStockResponse mapToResponse(WarehouseStock stock, ProductVariantSummaryDto variant) {
         String sku = variant == null ? null : variant.getSku();
+        String productName = variant == null ? null : variant.getProductName();
+        String variantName = variant == null ? null : variant.getVariantName();
+        String thumbnailUrl = variant == null ? null : variant.getProductThumbnailUrl();
 
         return WarehouseStockResponse.builder()
                 .id(stock.getId())
                 .warehouseId(stock.getWarehouse().getId())
                 .productVariantId(stock.getProductVariantId())
                 .sku(sku)
+                .productName(productName)
+                .variantName(variantName)
+                .productThumbnailUrl(thumbnailUrl)
                 .quantity(stock.getQuantity())
                 .reservedQuantity(stock.getReservedQuantity())
                 .quarantinedQuantity(stock.getQuarantinedQuantity())

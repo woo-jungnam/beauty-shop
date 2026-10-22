@@ -1,5 +1,4 @@
 export const ENDPOINTS = {
-  // Authentication & Session
   AUTH: {
     LOGIN: '/api/v1/auth/login',
     REGISTER: '/api/v1/auth/register',
@@ -8,7 +7,6 @@ export const ENDPOINTS = {
     PROFILE: '/api/v1/auth/profile',
   },
 
-  // Admin Dashboard Analytics
   DASHBOARD: {
     OVERVIEW: '/api/v1/admin/dashboard',
     REVENUE: '/api/v1/admin/dashboard/revenue',
@@ -16,7 +14,6 @@ export const ENDPOINTS = {
     SPA_OCCUPANCY: '/api/v1/admin/dashboard/spa-occupancy',
   },
 
-  // Admin User & Security Moderation
   USERS: {
     LIST: '/api/v1/admin/users',
     DETAIL: (id) => `/api/v1/admin/users/${id}`,
@@ -29,7 +26,6 @@ export const ENDPOINTS = {
     RESET_PASSWORD: (id) => `/api/v1/admin/users/${id}/reset-password`,
   },
 
-  // Cart Operations
   CART: {
     GET: (sessionId) => sessionId ? `/api/v1/cart?sessionId=${encodeURIComponent(sessionId)}` : '/api/v1/cart',
     ADD: '/api/v1/cart/add',
@@ -39,7 +35,6 @@ export const ENDPOINTS = {
     MERGE: (sessionId) => `/api/v1/cart/merge?sessionId=${encodeURIComponent(sessionId)}`,
   },
 
-  // Order Processing & Checkout
   ORDERS: {
     CHECKOUT: '/api/v1/orders/checkout',
     MY_ORDERS: '/api/v1/orders/my-orders',
@@ -50,9 +45,9 @@ export const ENDPOINTS = {
     CONFIRM_REFUND: (id) => `/api/v1/admin/orders/${id}/refund-confirmation`,
   },
 
-  // Inventory & Warehouse Management
   INVENTORY: {
     TRANSACTIONS: '/api/v1/admin/inventory/transactions',
+    TRANSACTION_DETAIL: (id) => `/api/v1/admin/inventory/transactions/${id}`,
     LOW_STOCK: '/api/v1/admin/inventory/low-stock',
     EXPIRING_SOON: '/api/v1/admin/inventory/expiring-soon',
     INSPECTION: (stockId) => `/api/v1/admin/inventory/${stockId}/inspection`,
@@ -65,7 +60,6 @@ export const ENDPOINTS = {
     STOCK_DELETE: (stockId) => `/api/v1/admin/warehouses/stocks/${stockId}`,
   },
 
-  // Promotions & Vouchers
   VOUCHERS: {
     VALIDATE: '/api/v1/promotions/validate',
     LIST: '/api/v1/admin/vouchers',
@@ -75,7 +69,6 @@ export const ENDPOINTS = {
     DELETE: (id) => `/api/v1/admin/vouchers/${id}`,
   },
 
-  // Catalog, Products & Media
   CATALOG: {
     PUBLIC_PRODUCTS: '/api/v1/products',
     PUBLIC_PRODUCT_DETAIL: (id) => `/api/v1/products/${id}`,
@@ -112,7 +105,6 @@ export const ENDPOINTS = {
     BANNER_DETAIL: (id) => `/api/v1/admin/banners/${id}`,
   },
 
-  // Spa Services, Staff & Tickets
   SPA: {
     PUBLIC_SERVICES: '/api/v1/spa/services',
     PUBLIC_STAFF: '/api/v1/spa/services/staff',
@@ -156,7 +148,6 @@ export const ENDPOINTS = {
     PREPARATION_TEMPLATE_VERSIONS: (id) => `/api/v1/admin/spa/preparation/templates/${id}/versions`,
   },
 
-  // AI Chatbot Consultant
   CHATBOT: {
     CHAT: '/api/v1/chatbot/chat',
     HEALTH: '/api/v1/chatbot/health',
@@ -164,7 +155,6 @@ export const ENDPOINTS = {
     TEST_UNDERSTAND: '/api/v1/chatbot/test/understand',
   },
 
-  // Reviews Moderation
   REVIEWS: {
     LIST: '/api/v1/admin/reviews',
     DETAIL: (id) => `/api/v1/admin/reviews/${id}`,
@@ -173,13 +163,11 @@ export const ENDPOINTS = {
     DELETE: (id) => `/api/v1/admin/reviews/${id}`,
   },
 
-  // Roles & RBAC System Permissions
   ROLES: {
     LIST: '/api/v1/roles',
     DETAIL: (id) => `/api/v1/roles/${id}`,
   },
 
-  // Product Attribute Definitions
   ATTRIBUTES: {
     LIST: '/api/v1/attributes',
     DETAIL: (id) => `/api/v1/attributes/${id}`,
@@ -187,7 +175,6 @@ export const ENDPOINTS = {
     DELETE_VALUE: (valueId) => `/api/v1/attributes/values/${valueId}`,
   },
 
-  // System Infrastructure Health & Telemetry
   SYSTEM: {
     HEALTH: '/actuator/health',
     ALERTS: '/api/v1/admin/operational-alerts',
@@ -203,6 +190,7 @@ export const ENDPOINTS = {
   },
 
   PROCUREMENT: {
+    VARIANT_LOOKUP: '/api/v1/admin/procurement/variants/lookup',
     SUPPLIERS: '/api/v1/admin/procurement/suppliers',
     SUPPLIER: (id) => `/api/v1/admin/procurement/suppliers/${id}`,
     DELETE_SUPPLIER: (id) => `/api/v1/admin/procurement/suppliers/${id}`,

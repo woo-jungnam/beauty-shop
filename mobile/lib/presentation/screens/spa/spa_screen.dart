@@ -17,10 +17,10 @@ class SpaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
-        title: const Text('BeautyShop Spa & Thư Giãn'),
-        backgroundColor: HasakiColors.primary,
+        title: const Text('Spa & Thư Giãn'),
+        backgroundColor: AppColors.primary,
         elevation: 0,
         actions: [
           IconButton(
@@ -37,9 +37,8 @@ class SpaScreen extends StatelessWidget {
         builder: (context, provider, _) {
           return Column(
             children: [
-              // 1. Spa Guarantee Header Banner
               Container(
-                color: HasakiColors.primaryDark,
+                color: AppColors.primaryDark,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 10,
@@ -48,7 +47,7 @@ class SpaScreen extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.spa_outlined,
-                      color: HasakiColors.gold,
+                      color: AppColors.gold,
                       size: 20,
                     ),
                     SizedBox(width: 8),
@@ -78,7 +77,6 @@ class SpaScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              // 2. Filter Category Chips
               ListTile(
                 leading: const Icon(Icons.route_outlined),
                 title: const Text('Điều trị theo lộ trình'),
@@ -92,7 +90,7 @@ class SpaScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 height: 48,
                 child: ListView.separated(
                   padding: const EdgeInsets.symmetric(
@@ -110,28 +108,27 @@ class SpaScreen extends StatelessWidget {
                       label: Text(cat),
                       selected: isSelected,
                       onSelected: (_) => provider.setCategory(cat),
-                      selectedColor: HasakiColors.primaryLight,
-                      backgroundColor: HasakiColors.getCanvas(context),
+                      selectedColor: AppColors.primaryLight,
+                      backgroundColor: AppColors.getCanvas(context),
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: isSelected
                             ? FontWeight.w700
                             : FontWeight.w500,
                         color: isSelected
-                            ? HasakiColors.primary
-                            : HasakiColors.getTextMain(context),
+                            ? AppColors.primary
+                            : AppColors.getTextMain(context),
                       ),
                       side: BorderSide(
                         color: isSelected
-                            ? HasakiColors.primary
-                            : HasakiColors.border,
+                            ? AppColors.primary
+                            : AppColors.border,
                       ),
                     );
                   },
                 ),
               ),
 
-              // 3. Spa Services List
               Expanded(
                 child: provider.servicesError != null
                     ? CatalogState(
@@ -162,9 +159,9 @@ class SpaScreen extends StatelessWidget {
   Widget _buildServiceCard(BuildContext context, SpaService service) {
     return Container(
       decoration: BoxDecoration(
-        color: HasakiColors.getSurface(context),
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: HasakiColors.borderSubtle),
+        border: Border.all(color: AppColors.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -176,7 +173,6 @@ class SpaScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Service Image & Badges
           Stack(
             children: [
               ClipRRect(
@@ -190,9 +186,9 @@ class SpaScreen extends StatelessWidget {
                           imageUrl: service.thumbnailUrl!,
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) =>
-                              Container(color: HasakiColors.primaryLight),
+                              Container(color: AppColors.primaryLight),
                         )
-                      : Container(color: HasakiColors.primaryLight),
+                      : Container(color: AppColors.primaryLight),
                 ),
               ),
               Positioned(
@@ -235,9 +231,9 @@ class SpaScreen extends StatelessWidget {
               children: [
                 Text(
                   service.name,
-                  style: HasakiTypography.titleMedium.copyWith(
+                  style: AppTypography.titleMedium.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: HasakiColors.getTextMain(context),
+                    color: AppColors.getTextMain(context),
                   ),
                 ),
                 Text(
@@ -249,14 +245,13 @@ class SpaScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     service.description!,
-                    style: HasakiTypography.bodySmall,
+                    style: AppTypography.bodySmall,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
                 const SizedBox(height: 10),
 
-                // Price & Booking Action
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -264,18 +259,18 @@ class SpaScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          HasakiFormatters.formatCurrency(service.price),
-                          style: HasakiTypography.priceLarge.copyWith(
-                            color: HasakiColors.dealRed,
+                          AppFormatters.formatCurrency(service.price),
+                          style: AppTypography.priceLarge.copyWith(
+                            color: AppColors.dealRed,
                             fontSize: 16,
                           ),
                         ),
                         if (service.originalPrice != null)
                           Text(
-                            HasakiFormatters.formatCurrency(
+                            AppFormatters.formatCurrency(
                               service.originalPrice,
                             ),
-                            style: HasakiTypography.priceStrikethrough,
+                            style: AppTypography.priceStrikethrough,
                           ),
                       ],
                     ),
@@ -297,7 +292,7 @@ class SpaScreen extends StatelessWidget {
                             : 'Đặt Lịch Hẹn',
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: HasakiColors.primary,
+                        backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 10,

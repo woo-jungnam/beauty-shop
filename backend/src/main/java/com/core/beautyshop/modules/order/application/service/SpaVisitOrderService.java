@@ -44,7 +44,6 @@ public class SpaVisitOrderService {
         this(orders, payments, entities, jdbc, null);
     }
 
-    /** Allocate existing confirmed Spa receipts; no new cash or bank movement is manufactured. */
     @Transactional
     public SpaVisitInvoiceResult applyAdvance(Long appointmentId,BigDecimal amount,String reference) {
         if(amount==null || amount.signum()<=0 || amount.stripTrailingZeros().scale()>0 || reference==null || reference.isBlank() || reference.length()>128)
@@ -70,7 +69,6 @@ public class SpaVisitOrderService {
         return result(invoice);
     }
 
-    /** Caller holds the appointment write lock for the lifetime of this transaction. */
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public SpaVisitInvoiceResult create(CreateSpaVisitOrderCommand command) {

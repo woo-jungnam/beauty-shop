@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 
-// Share keyboard and focus behavior between customer drawers without coupling their UI.
 export const useCustomerDialog = (open, dialogRef, onClose) => {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;

@@ -32,6 +32,11 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             "v.id, p.id, p.name, v.sku, v.variantName, v.price, v.discountPrice, v.isActive, p.thumbnailUrl) " +
             "FROM ProductVariant v JOIN v.product p WHERE v.id = :variantId AND v.isDeleted = false AND p.isDeleted = false")
     Optional<ProductVariantSummaryDto> findVariantSummaryForInventory(@Param("variantId") Long variantId);
+    @Query("SELECT new com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto(" +
+            "v.id, p.id, p.name, v.sku, v.variantName, v.price, v.discountPrice, v.isActive, p.thumbnailUrl) " +
+            "FROM ProductVariant v JOIN v.product p WHERE v.sku IN :skus AND v.isDeleted = false AND p.isDeleted = false")
+    List<ProductVariantSummaryDto> findVariantSummariesForInventoryBySkus(@Param("skus") Collection<String> skus);
+
     Optional<ProductVariant> findBySku(String sku);
     boolean existsBySku(String sku);
     @Query("SELECT v FROM ProductVariant v JOIN v.product p " +

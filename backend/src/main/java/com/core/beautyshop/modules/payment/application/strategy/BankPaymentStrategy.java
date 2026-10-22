@@ -33,6 +33,8 @@ public class BankPaymentStrategy implements PaymentStrategy {
         String encodedAddInfo = URLEncoder.encode(transferSyntax, StandardCharsets.UTF_8);
         String qrCodeUrl = String.format("https://img.vietqr.io/image/%s-%s-compact.jpg?amount=%s&addInfo=%s&accountName=%s",
                 bankBin, bankAccountNumber, amount, encodedAddInfo, encodedAccountName);
+        String deepLinkUrl = String.format("https://api.vietqr.io/%s/%s?amount=%s&addInfo=%s&accountName=%s",
+                bankBin, bankAccountNumber, amount, encodedAddInfo, encodedAccountName);
 
         return PaymentInstruction.builder()
                 .method("BANK")
@@ -40,8 +42,10 @@ public class BankPaymentStrategy implements PaymentStrategy {
                 .bankName(bankName)
                 .bankAccountName(bankAccountName)
                 .bankAccountNumber(bankAccountNumber)
+                .bankBin(bankBin)
                 .transferSyntax(transferSyntax)
                 .qrCodeUrl(qrCodeUrl)
+                .deepLinkUrl(deepLinkUrl)
                 .build();
     }
 }

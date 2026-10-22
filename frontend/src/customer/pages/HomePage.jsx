@@ -36,7 +36,6 @@ const CATEGORY_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent('<svg xmln
 const BRAND_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#F9FAFB"/><g fill="none" stroke="#6B7280" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><rect x="120" y="140" width="160" height="120" rx="16"/><path d="M160 200h80"/></g><text x="200" y="310" text-anchor="middle" fill="#4B5563" font-family="Arial,sans-serif" font-size="18" font-weight="600">Thương hiệu</text></svg>')}`;
 const SPA_PLACEHOLDER = '/images/spa/facial-care.jpg';
 
-// Pure clean Brand Logo with elegant fallback for missing/broken URLs
 const BrandCardLogo = React.memo(({ brand, logoUrl }) => {
   const [imgError, setImgError] = useState(false);
   const isFallback = !logoUrl || logoUrl.includes('data:image/svg') || imgError;
@@ -72,7 +71,6 @@ export const HomePage = ({ onNavigate }) => {
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Interactive UX Modals and Toasts
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [toasts, setToasts] = useState([]);
 
@@ -88,27 +86,22 @@ export const HomePage = ({ onNavigate }) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // 1. Hero Carousel State
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [isHeroHovered, setIsHeroHovered] = useState(false);
 
-  // Clearance is independent of the normal catalog; errors never become fallback deals.
   const [clearanceProducts, setClearanceProducts] = useState([]);
   const [clearanceLoading, setClearanceLoading] = useState(true);
   const [clearanceError, setClearanceError] = useState('');
   const [clearanceAttempt, setClearanceAttempt] = useState(0);
 
-  // 3. Product Catalog Filter & Search State
   const [catalogCategoryFilter, setCatalogCategoryFilter] = useState('ALL');
   const [categoryProducts, setCategoryProducts] = useState(null);
   const [loadingCategoryProducts, setLoadingCategoryProducts] = useState(false);
   const [catalogSearchTerm, setCatalogSearchTerm] = useState('');
   const [catalogSortBy, setCatalogSortBy] = useState('DEFAULT');
 
-  // 4. Spa Service Category Filter State
   const [activeSpaCategory, setActiveSpaCategory] = useState('ALL');
 
-  // 3. Flash Sale: 6 products per tab, auto-switch every 5 seconds
   const FLASH_PAGE_SIZE = 6;
   const [currentFlashTab, setCurrentFlashTab] = useState(0);
   const [isFlashHovered, setIsFlashHovered] = useState(false);
@@ -137,14 +130,12 @@ export const HomePage = ({ onNavigate }) => {
     return clearanceProducts.slice(start, start + FLASH_PAGE_SIZE);
   }, [clearanceProducts, currentFlashTab]);
 
-  // Duplicate brands seamlessly for uninterrupted 60fps marquee loop (0% -> -50%)
   const marqueeBrands = useMemo(() => {
     if (!brands || brands.length === 0) return [];
     const repeats = brands.length < 8 ? 4 : 2;
     return Array.from({ length: repeats }, () => brands).flat();
   }, [brands]);
 
-  // Fetch dynamic catalog, categories and spa services from backend APIs
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
@@ -218,7 +209,6 @@ export const HomePage = ({ onNavigate }) => {
     return () => controller.abort();
   }, [clearanceAttempt]);
 
-  // Fetch category products dynamically from backend when category filter pill is clicked
   useEffect(() => {
     if (catalogCategoryFilter === 'ALL') {
       setCategoryProducts(null);
@@ -264,7 +254,6 @@ export const HomePage = ({ onNavigate }) => {
     return list;
   }, [products, categoryProducts, catalogSearchTerm, catalogSortBy]);
 
-  // Keep the discovery order stable while the visible limit changes with the grid.
   const randomProducts = useMemo(() => {
     if (products.length === 0) return [];
     const arr = [...products];
@@ -284,7 +273,6 @@ export const HomePage = ({ onNavigate }) => {
     onNavigate(`products${params.size ? `?${params.toString()}` : ''}`);
   };
 
-  // Dynamic category filter pills from API
   const dynamicCatalogCategories = useMemo(() => {
     const list = [{ id: 'ALL', label: `Tất cả sản phẩm (${products.length})` }];
     if (categories.length > 0) {
@@ -295,7 +283,6 @@ export const HomePage = ({ onNavigate }) => {
     return list;
   }, [categories, products.length]);
 
-  // Map category image from API, fallback to SVG placeholder
   const getCategoryImage = (cat) => {
     const raw = cat?.imageUrl || cat?.thumbnailUrl || cat?.image;
     if (typeof raw === 'string' && raw.trim().length > 0) {
@@ -304,7 +291,6 @@ export const HomePage = ({ onNavigate }) => {
     return CATEGORY_PLACEHOLDER;
   };
 
-  // Map spa service thumbnail → appropriate treatment image
   const getSpaServiceImage = (service) => {
     const raw = service?.thumbnailUrl || service?.imageUrl || service?.image;
     if (typeof raw === 'string' && raw.trim().length > 0) {
@@ -313,7 +299,6 @@ export const HomePage = ({ onNavigate }) => {
     return SPA_PLACEHOLDER;
   };
 
-  // Map brand logo → representative image
   const getBrandImage = (brand) => {
     const raw = brand?.logoUrl || brand?.imageUrl || brand?.image;
     if (typeof raw === 'string' && raw.trim().length > 0) {
@@ -427,7 +412,6 @@ export const HomePage = ({ onNavigate }) => {
 
   const [sideSlideOffset, setSideSlideOffset] = useState(0);
 
-  // Synchronize side banners rotation with main hero slide
   useEffect(() => {
     setSideSlideOffset(activeHeroSlide);
   }, [activeHeroSlide]);
@@ -445,7 +429,6 @@ export const HomePage = ({ onNavigate }) => {
     ];
   }, [heroSideBanners, sideSlideOffset]);
 
-  // Hero Carousel Auto-Play
   useEffect(() => {
     if (isHeroHovered || heroSlides.length <= 1 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const heroTimer = setInterval(() => {
@@ -463,7 +446,6 @@ export const HomePage = ({ onNavigate }) => {
     }
   };
 
-  // Filtered Spa Services logic based on dynamic categories
   const dynamicSpaCategories = useMemo(() => {
     const map = new Map();
     spaServices.forEach(s => {
@@ -487,9 +469,6 @@ export const HomePage = ({ onNavigate }) => {
   return (
     <div ref={homePageRef} className="customer-home-page" style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '56px' }}>
 
-      {/* =========================================================================
-          1. LUXURY EDITORIAL HERO BANNER (CAROUSEL WITH DYNAMIC SLIDES)
-          ========================================================================= */}
       <section
         className="hero-slider-container"
         onMouseEnter={() => setIsHeroHovered(true)}
@@ -500,7 +479,6 @@ export const HomePage = ({ onNavigate }) => {
       >
         <div style={{ position: 'relative', zIndex: 3, width: '100%' }}>
           <div className="customer-container home-banner-block hero-content-grid">
-            {/* Main Banner */}
             {(() => {
               const currentSlide = heroSlides[activeHeroSlide] || heroSlides[0] || {};
               const stat1 = currentSlide.stat1 || '10.000+ Sản Phẩm';
@@ -564,7 +542,6 @@ export const HomePage = ({ onNavigate }) => {
                     {currentSlide.description}
                   </p>
 
-                  {/* Action Buttons */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
                     <button
                       onClick={() => {
@@ -595,7 +572,6 @@ export const HomePage = ({ onNavigate }) => {
                     </button>
                   </div>
 
-                  {/* Stat Counters */}
                   <div className="hero-stats-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
@@ -651,7 +627,6 @@ export const HomePage = ({ onNavigate }) => {
                     </div>
                   </div>
 
-                  {/* Slide Indicators */}
                   {heroSlides.length > 1 && (
                     <div style={{
                       position: 'absolute',
@@ -681,7 +656,6 @@ export const HomePage = ({ onNavigate }) => {
                     </div>
                   )}
 
-                  {/* Navigation Arrows for Main Banner */}
                   {heroSlides.length > 1 && (
                     <>
                       <button
@@ -767,7 +741,6 @@ export const HomePage = ({ onNavigate }) => {
               );
             })()}
 
-            {/* Side Banners (2 Slots: Fixed height & Rotating/Synchronized) */}
             <div className="home-banner-side" style={{ display: 'grid', gap: '16px' }}>
               {displayedSideBanners.map(({ eyebrow, title, desc, cta, target, image, Icon, slotIndex }, idx) => (
                 <div
@@ -816,7 +789,6 @@ export const HomePage = ({ onNavigate }) => {
                       </p>
                     </div>
 
-                    {/* Side Banner Rotation Indicator & Manual Controls */}
                     {heroSideBanners.length > 2 && (
                       <div
                         onClick={(e) => e.stopPropagation()}
@@ -892,9 +864,6 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* =========================================================================
-          3. FLASH SALE / HASAKI DEALS (SCARCITY & URGENCY MODULE)
-          ========================================================================= */}
       <section
         id="flash-sale"
         className="customer-container"
@@ -908,7 +877,6 @@ export const HomePage = ({ onNavigate }) => {
           padding: 'clamp(12px, 1.5vw, 20px)',
           boxShadow: 'var(--shadow-card)'
         }}>
-          {/* Flash Sale Header Bar */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -1043,9 +1011,6 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* =========================================================================
-          5. DANH MỤC NỔI BẬT — HASAKI CIRCULAR ICON TILES
-          ========================================================================= */}
       <section id="categories-section" className="customer-container">
         <div className="section-header-editorial">
           <h2 className="section-title-editorial">
@@ -1085,9 +1050,6 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* =========================================================================
-          THƯƠNG HIỆU ĐỐI TÁC CHÍNH HÃNG — HASAKI TOP BRANDS (CHỈ LOGO TỰ ĐỘNG TRƯỢT)
-          ========================================================================= */}
       <section id="brand-partners" className="customer-container">
         <div className="section-header-editorial">
           <h2 className="section-title-editorial">
@@ -1095,7 +1057,6 @@ export const HomePage = ({ onNavigate }) => {
           </h2>
         </div>
 
-        {/* Marquee Carousel Track (Chỉ logo tự động trượt mượt mà) */}
         <div className="brands-marquee-wrapper">
           {loading ? (
             <div className="brands-marquee-track">
@@ -1134,9 +1095,6 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* =========================================================================
-          4. GỢI Ý CÁ NHÂN HÓA DÀNH CHO BẠN (AI RECSYS USER-TO-ITEM CENTROID)
-          ========================================================================= */}
       <section id="random-picks" className="customer-container">
         <div className="section-header-editorial">
           <h2 className="section-title-editorial">
@@ -1164,9 +1122,6 @@ export const HomePage = ({ onNavigate }) => {
         )}
       </section>
 
-      {/* =========================================================================
-          6. TOÀN BỘ SẢN PHẨM TẠI CỬA HÀNG (FULL STORE PRODUCT CATALOG SHOWCASE)
-          ========================================================================= */}
       <section id="store-catalog" className="customer-container" style={{ margin: '52px auto' }}>
         <div className="section-header-editorial">
           <h2 className="section-title-editorial">
@@ -1174,7 +1129,6 @@ export const HomePage = ({ onNavigate }) => {
           </h2>
         </div>
 
-        {/* Quick Search & Sort Bar */}
         <div style={{
           display: 'flex',
           justifyContent: 'center',
@@ -1227,7 +1181,6 @@ export const HomePage = ({ onNavigate }) => {
           </select>
         </div>
 
-        {/* Category Filter Pills — dynamically generated from API categories */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '28px' }}>
           {dynamicCatalogCategories.map((tab) => {
             const active = catalogCategoryFilter === tab.id;
@@ -1256,7 +1209,6 @@ export const HomePage = ({ onNavigate }) => {
           })}
         </div>
 
-        {/* Product Grid */}
         {loading || loadingCategoryProducts ? (
           <div className="customer-product-grid product-skeleton-frame">
             {Array.from({ length: sectionLimits.catalog }, (_, n) => (
@@ -1298,7 +1250,6 @@ export const HomePage = ({ onNavigate }) => {
           </div>
         )}
 
-        {/* Keep the home preview short and open the complete catalog with its filters. */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '14px', marginTop: '36px', flexWrap: 'wrap' }}>
           <button
             onClick={openCatalog}
@@ -1311,9 +1262,6 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* =========================================================================
-          7. SIGNATURE MEDICAL SPA & CLINIC TREATMENTS MENU (DYNAMIC FILTERS)
-          ========================================================================= */}
       <section id="spa-section" style={{
         backgroundColor: '#FFFFFF',
         padding: '72px 0',
@@ -1327,7 +1275,6 @@ export const HomePage = ({ onNavigate }) => {
             </h2>
           </div>
 
-          {/* Dynamic Category Filter Chips for Spa */}
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
             {dynamicSpaCategories.map(cat => (
               <button
@@ -1341,14 +1288,12 @@ export const HomePage = ({ onNavigate }) => {
             ))}
           </div>
 
-          {/* Responsive treatment cards. */}
           <div className="spa-services-grid">
             {getFilteredSpa().map((spa) => (
               <div
                 key={spa.id}
                 className="spa-service-card"
               >
-                {/* Spa Service Image */}
                 <div className="spa-service-image-box">
                   <img
                     src={getSpaServiceImage(spa)}
@@ -1427,9 +1372,6 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* =========================================================================
-          INTERACTIVE UX OVERLAYS, MODALS & FLOATING CONTROLS
-          ========================================================================= */}
       <QuickViewModal
         product={quickViewProduct}
         isOpen={!!quickViewProduct}

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 import java.time.*;
 import java.util.*;
 
-/** Ordinary reads run under the facility row mutex; no appointment JOIN locks. */
 @Component @RequiredArgsConstructor
 public class FacilityOccupancyReader {
     private final JdbcTemplate jdbc;
@@ -25,15 +24,12 @@ public class FacilityOccupancyReader {
                 + "from appointment_items ai join appointments a on a.id = ai.appointment_id "
                 + "where ai.facility_id = ? and " + LIVE + exclusion
                 + "and not exists (select 1 from facility_allocations fa where fa.appointment_item_id = ai.id and fa.is_deleted = false)";
-        // Match Hibernate's UTC JDBC calendar for SQL TIME. Using the JVM default calendar
-        // shifts LocalTime values when the application server runs outside UTC.
         Calendar jdbcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         return jdbc.query(sql, (rs, row) -> new Occupancy(facilityId, rs.getDate("appointment_date").toLocalDate(),
                 rs.getTime("start_time", jdbcCalendar).toLocalTime(), rs.getTime("end_time", jdbcCalendar).toLocalTime(), rs.getInt("quantity")),
                 facilityId, excludedAppointmentId, excludedAppointmentId, facilityId, excludedAppointmentId, excludedAppointmentId);
     }
 
-    /** Actual occupation stays active until execution ends, regardless of the planned slot. */
     public long executingUnits(Long facilityId, Long excludedItemId) {
         String live = " ai.is_deleted = false and a.is_deleted = false and a.status = 'IN_PROGRESS' "
                 + "and ai.execution_status = 'IN_PROGRESS' and (? is null or ai.id <> ?) ";

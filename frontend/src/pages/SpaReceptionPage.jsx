@@ -105,7 +105,7 @@ export const SpaReceptionPage = () => {
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 10000); return () => clearInterval(timer); }, []);
   useEffect(() => { setPage(0); }, [date, status, search]);
   useEffect(() => { setCheckout(previous => previous ? data.appointments.find(appointment => appointment.id === previous.id) || previous : null); }, [data.appointments]);
-  const changeView = next => { setView(next); try { localStorage.setItem('spa_reception_view', next); } catch { /* View preference is optional. */ } };
+  const changeView = next => { setView(next); try { localStorage.setItem('spa_reception_view', next); } catch {} };
   const afterAction = (message, tone = 'success') => { setNotice({ message, tone }); data.refresh(); };
   const today = getVietnamDateString(now);
   const currentFacilities = useMemo(() => data.facilities.map(facility => ({ ...facility,

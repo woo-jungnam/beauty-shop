@@ -40,9 +40,6 @@ export const ProductsPage = () => {
   const [activeTab, setActiveTab] = useState('products');
   const [loading, setLoading] = useState(false);
 
-  // ==========================================
-  // TAB 1: PRODUCTS & VARIANTS
-  // ==========================================
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -50,13 +47,11 @@ export const ProductsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
 
-  // Product Create/Edit Modal
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [submittingProduct, setSubmittingProduct] = useState(false);
   const [productFormError, setProductFormError] = useState('');
 
-  // Form Fields
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [shortDescription, setShortDescription] = useState('');
@@ -83,7 +78,6 @@ export const ProductsPage = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Variants Modal
   const [variantsModalOpen, setVariantsModalOpen] = useState(false);
   const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
   const [variantList, setVariantList] = useState([]);
@@ -97,9 +91,6 @@ export const ProductsPage = () => {
   const [varColor, setVarColor] = useState('');
   const [varBarcode, setVarBarcode] = useState('');
 
-  // ==========================================
-  // TAB 2: CATEGORIES
-  // ==========================================
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [catName, setCatName] = useState('');
@@ -114,9 +105,6 @@ export const ProductsPage = () => {
   const [catParentFilter, setCatParentFilter] = useState('ALL');
   const [catSubmitting, setCatSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB 3: BRANDS
-  // ==========================================
   const [brandModalOpen, setBrandModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState(null);
   const [brandName, setBrandName] = useState('');
@@ -126,9 +114,6 @@ export const ProductsPage = () => {
   const [brandDesc, setBrandDesc] = useState('');
   const [brandSubmitting, setBrandSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB 4: INGREDIENTS
-  // ==========================================
   const [ingredients, setIngredients] = useState([]);
   const [ingModalOpen, setIngModalOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState(null);
@@ -143,9 +128,6 @@ export const ProductsPage = () => {
   const [ingConcerns, setIngConcerns] = useState('');
   const [ingSubmitting, setIngSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB 5: ATTRIBUTES
-  // ==========================================
   const [attributes, setAttributes] = useState([]);
   const [attrModalOpen, setAttrModalOpen] = useState(false);
   const [editingAttr, setEditingAttr] = useState(null);
@@ -154,18 +136,12 @@ export const ProductsPage = () => {
   const [attrDesc, setAttrDesc] = useState('');
   const [attrSubmitting, setAttrSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB 6: TAGS
-  // ==========================================
   const [tags, setTags] = useState([]);
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [tagName, setTagName] = useState('');
   const [tagSubmitting, setTagSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB 7: BANNERS
-  // ==========================================
   const [banners, setBanners] = useState([]);
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState(null);
@@ -182,9 +158,6 @@ export const ProductsPage = () => {
   });
   const [bannerSubmitting, setBannerSubmitting] = useState(false);
 
-  // ==========================================
-  // PRODUCT IMAGES MODAL
-  // ==========================================
   const [imagesModalOpen, setImagesModalOpen] = useState(false);
   const [selectedProductForImages, setSelectedProductForImages] = useState(null);
   const [imageList, setImageList] = useState([]);
@@ -195,9 +168,6 @@ export const ProductsPage = () => {
   const [newImageOrder, setNewImageOrder] = useState('0');
   const [imageSubmitting, setImageSubmitting] = useState(false);
 
-  // ==========================================
-  // DERMATOLOGY & ROUTINE MODAL
-  // ==========================================
   const [dermaModalOpen, setDermaModalOpen] = useState(false);
   const [selectedProductForDerma, setSelectedProductForDerma] = useState(null);
   const [dermaWhenToUse, setDermaWhenToUse] = useState('');
@@ -206,9 +176,6 @@ export const ProductsPage = () => {
   const [dermaWarnings, setDermaWarnings] = useState('');
   const [dermaSubmitting, setDermaSubmitting] = useState(false);
 
-  // ==========================================
-  // DATA FETCHING
-  // ==========================================
   const fetchCatalogs = async () => {
     try {
       const [catRes, brandRes] = await Promise.allSettled([
@@ -293,9 +260,6 @@ export const ProductsPage = () => {
     if (activeTab === 'banners') fetchBanners();
   }, [activeTab]);
 
-  // ==========================================
-  // HANDLERS: PRODUCTS & VARIANTS
-  // ==========================================
   const handleOpenCreateProduct = () => {
     setEditingProduct(null);
     setHasFragrance(false); setHasAlcohol(false); setKeyActivesSummary('');
@@ -317,7 +281,6 @@ export const ProductsPage = () => {
   };
 
   const handleOpenEditProduct = async (p) => {
-    // 1. Gán ngay dữ liệu từ dòng đã có để mở modal tức thì không gây lag UI
     setEditingProduct(p);
     setProductDetailLoading(true);
     setHasFragrance(Boolean(p.hasFragrance));
@@ -342,7 +305,6 @@ export const ProductsPage = () => {
     setProductFormError('');
     setProductModalOpen(true);
 
-    // 2. Tải thêm chi tiết đầy đủ trong nền (có fallback sang public endpoint)
     try {
       let res;
       try {
@@ -392,7 +354,6 @@ export const ProductsPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Hiển thị xem trước ảnh cục bộ ngay lập tức
     const localBlob = URL.createObjectURL(file);
     setUploadedUrl(localBlob);
     setUploading(true);
@@ -553,7 +514,6 @@ export const ProductsPage = () => {
         await apiClient.post(ENDPOINTS.CATALOG.VARIANTS(selectedProductForVariants.id), payload);
       }
       setVariantModalOpen(false);
-      // Reload variants
       const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(selectedProductForVariants.id));
       const pDetail = res.data || res;
       setVariantList(pDetail.variants || []);
@@ -573,9 +533,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: CATEGORIES
-  // ==========================================
   const handleOpenCreateCategory = () => {
     setEditingCategory(null);
     setCatName('');
@@ -637,9 +594,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: BRANDS
-  // ==========================================
   const handleOpenCreateBrand = () => {
     setEditingBrand(null);
     setBrandName('');
@@ -695,9 +649,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: INGREDIENTS
-  // ==========================================
   const handleOpenCreateIngredient = () => {
     setEditingIngredient(null);
     setIngName('');
@@ -763,9 +714,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: ATTRIBUTES
-  // ==========================================
   const handleOpenCreateAttr = () => {
     setEditingAttr(null);
     setAttrName('');
@@ -815,9 +763,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: TAGS
-  // ==========================================
   const handleOpenCreateTag = () => {
     setEditingTag(null);
     setTagName('');
@@ -859,9 +804,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: BANNERS
-  // ==========================================
   const handleOpenCreateBanner = () => {
     setEditingBanner(null);
     setBannerForm({
@@ -922,9 +864,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: IMAGES GALLERY
-  // ==========================================
   const handleOpenImages = async (product) => {
     setSelectedProductForImages(product);
     setImageList(product.images || []);
@@ -958,7 +897,6 @@ export const ProductsPage = () => {
       });
       setNewImageUrl('');
       setNewImagePrimary(false);
-      // Refresh images
       const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(selectedProductForImages.id));
       const pDetail = res.data || res;
       setImageList(pDetail.images || []);
@@ -983,9 +921,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // HANDLERS: DERMATOLOGY & ROUTINE
-  // ==========================================
   const handleOpenDerma = async (product) => {
     setSelectedProductForDerma(product);
     setDermaWhenToUse('');
@@ -1028,9 +963,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // ==========================================
-  // TABLE COLUMNS
-  // ==========================================
   const productColumns = [
     {
       header: 'ID',
@@ -1480,7 +1412,6 @@ export const ProductsPage = () => {
 
   return (
     <div className="content-container">
-      {/* Page Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Quản lý Danh mục & Sản phẩm (Catalog Hub)</h1>
@@ -1543,7 +1474,6 @@ export const ProductsPage = () => {
         </div>
       </div>
 
-      {/* Modernist Swiss Sub-Tabs */}
       <div className="tabs-header">
         <button
           className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
@@ -1596,7 +1526,6 @@ export const ProductsPage = () => {
         </button>
       </div>
 
-      {/* TAB CONTENT: PRODUCTS */}
       {activeTab === 'products' && (
         <div className="card">
           <DataTable
@@ -1621,7 +1550,6 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {/* TAB CONTENT: CATEGORIES */}
       {activeTab === 'categories' && (() => {
         const filtered = categories.filter((c) => {
           const matchText = !catSearch.trim() ||
@@ -1674,7 +1602,6 @@ export const ProductsPage = () => {
         );
       })()}
 
-      {/* TAB CONTENT: BRANDS */}
       {activeTab === 'brands' && (
         <div className="card">
           <DataTable
@@ -1686,7 +1613,6 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {/* TAB CONTENT: INGREDIENTS */}
       {activeTab === 'ingredients' && (
         <div className="card">
           <DataTable
@@ -1698,7 +1624,6 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {/* TAB CONTENT: ATTRIBUTES */}
       {activeTab === 'attributes' && (
         <div className="card">
           <DataTable
@@ -1710,7 +1635,6 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {/* TAB CONTENT: TAGS */}
       {activeTab === 'tags' && (
         <div className="card">
           <DataTable
@@ -1722,7 +1646,6 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {/* TAB CONTENT: BANNERS */}
       {activeTab === 'banners' && (
         <div className="card">
           <DataTable
@@ -1736,7 +1659,6 @@ export const ProductsPage = () => {
 
       {featureProduct && <ProductFeaturesModal key={featureProduct.id} product={featureProduct} onClose={() => setFeatureProduct(null)} />}
 
-      {/* MODAL 1: CREATE / EDIT PRODUCT */}
       <Modal
         isOpen={productModalOpen}
         onClose={() => setProductModalOpen(false)}
@@ -1917,7 +1839,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 2: MANAGE PRODUCT VARIANTS (SKUs) */}
       <Modal
         isOpen={variantsModalOpen}
         onClose={() => setVariantsModalOpen(false)}
@@ -1975,7 +1896,6 @@ export const ProductsPage = () => {
         </table>
       </Modal>
 
-      {/* MODAL 2.1: CREATE / EDIT VARIANT */}
       <Modal
         isOpen={variantModalOpen}
         onClose={() => setVariantModalOpen(false)}
@@ -2003,7 +1923,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 3: CREATE / EDIT CATEGORY */}
       <Modal
         isOpen={categoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
@@ -2156,7 +2075,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 4: CREATE / EDIT BRAND */}
       <Modal
         isOpen={brandModalOpen}
         onClose={() => setBrandModalOpen(false)}
@@ -2208,7 +2126,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 5: CREATE INGREDIENT */}
       <Modal
         isOpen={ingModalOpen}
         onClose={() => setIngModalOpen(false)}
@@ -2245,7 +2162,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 6: CREATE / EDIT ATTRIBUTE */}
       <Modal
         isOpen={attrModalOpen}
         onClose={() => setAttrModalOpen(false)}
@@ -2279,7 +2195,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 7: CREATE / EDIT TAG */}
       <Modal
         isOpen={tagModalOpen}
         onClose={() => setTagModalOpen(false)}
@@ -2295,7 +2210,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 8: PRODUCT IMAGES GALLERY */}
       <Modal
         isOpen={imagesModalOpen}
         onClose={() => setImagesModalOpen(false)}
@@ -2303,7 +2217,6 @@ export const ProductsPage = () => {
         maxWidth="750px"
       >
         <div>
-          {/* Gallery View */}
           <div style={{ marginBottom: '20px' }}>
             <label className="form-label">Hình ảnh hiện tại ({imageList.length})</label>
             {imageLoading ? (
@@ -2342,7 +2255,6 @@ export const ProductsPage = () => {
             )}
           </div>
 
-          {/* Add Image Form */}
           <form onSubmit={handleAddImage} style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
             <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '10px' }}>Thêm ảnh mới vào bộ sưu tập</div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
@@ -2418,7 +2330,6 @@ export const ProductsPage = () => {
         </div>
       </Modal>
 
-      {/* MODAL 9: DERMATOLOGY & USAGE GUIDELINES */}
       <Modal
         isOpen={dermaModalOpen}
         onClose={() => setDermaModalOpen(false)}
@@ -2476,7 +2387,6 @@ export const ProductsPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 10: CREATE / EDIT BANNER */}
       <Modal
         isOpen={bannerModalOpen}
         onClose={() => setBannerModalOpen(false)}
@@ -2496,7 +2406,7 @@ export const ProductsPage = () => {
               label="Huy hiệu / Badge"
               value={bannerForm.badge}
               onChange={(e) => setBannerForm({ ...bannerForm, badge: e.target.value })}
-              placeholder="VD: HASAKI DEALS GIỜ VÀNG"
+              placeholder="VD: BEAUTYSHOP DEALS GIỜ VÀNG"
             />
             <Select
               label="Vị trí hiển thị *"

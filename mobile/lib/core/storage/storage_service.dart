@@ -5,7 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
-  // Also fires when token refresh expires outside AuthProvider.
   static final ValueNotifier<int> authCleared = ValueNotifier<int>(0);
   static const String _keyAccessToken = 'auth_access_token';
   static const String _keyRefreshToken = 'auth_refresh_token';
@@ -31,7 +30,6 @@ class StorageService {
     _refreshToken ??= _prefs?.getString(_keyRefreshToken);
   }
 
-  // Tokens
   static Future<void> setAccessToken(String? token) async {
     if (token == null) {
       await _secureStorage.delete(key: _keyAccessToken);
@@ -54,7 +52,6 @@ class StorageService {
 
   static String? getRefreshToken() => _refreshToken;
 
-  // Aliases for legacy code
   static Future<void> saveToken(String token) async => setAccessToken(token);
   static Future<String?> getToken() async => _accessToken;
 
@@ -70,7 +67,6 @@ class StorageService {
     await _prefs?.remove(_keyUserData);
   }
 
-  // Guest Session ID
   static String getGuestSessionId() {
     String? id = _prefs?.getString(_keyGuestSessionId);
     if (id == null || id.isEmpty) {
@@ -83,21 +79,18 @@ class StorageService {
     return id;
   }
 
-  // User Data JSON
   static Future<void> saveUserData(String userJson) async {
     await _prefs?.setString(_keyUserData, userJson);
   }
 
   static String? getUserData() => _prefs?.getString(_keyUserData);
 
-  // Custom Base URL
   static Future<void> setBaseUrl(String url) async {
     await _prefs?.setString(_keyBaseUrl, url);
   }
 
   static String? getBaseUrl() => _prefs?.getString(_keyBaseUrl);
 
-  // Local checkout drafts are scoped to the account or current guest session.
   static String _deliveryKey(String base) {
     try {
       final raw = _prefs?.getString(_keyUserData);
@@ -111,7 +104,6 @@ class StorageService {
     }
   }
 
-  // Delivery Address
   static Future<void> setDeliveryAddress(String address) async {
     await _prefs?.setString(_deliveryKey(_keyDeliveryAddress), address);
   }
@@ -171,7 +163,6 @@ class StorageService {
     );
   }
 
-  // Theme Mode ('system', 'light', 'dark')
   static Future<void> setThemeMode(String mode) async {
     await _prefs?.setString(_keyThemeMode, mode);
   }

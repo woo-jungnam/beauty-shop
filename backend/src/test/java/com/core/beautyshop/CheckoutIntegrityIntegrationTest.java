@@ -61,7 +61,6 @@ class CheckoutIntegrityIntegrationTest {
     private String previousShippingThreshold;
     @BeforeEach void isolateFixtureShippingPolicy() {
         SpaOperationalJdbcFixture.ensure(dataSource);
-        // These concurrency fixtures price a unit at 100 VND. Shipping is tested separately.
         var previous=configRepository.findByConfigKeyAndIsDeletedFalse("shipping.free_threshold");
         previousShippingThreshold=previous.map(com.core.beautyshop.shared.config.domain.SystemConfig::getConfigValue).orElse(null);
         if(previous.isPresent())systemConfigs.update("shipping.free_threshold","0");

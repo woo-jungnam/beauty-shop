@@ -21,6 +21,33 @@ class ProcurementServiceTest {
     @InjectMocks ProcurementService service;
 
     @Test
+    void createOnlySavesDraftWithoutReceivingStock() {
+        Supplier supplier = Supplier.builder().code("SUP").name("Supplier").build(); supplier.setId(2L);
+        when(suppliers.findById(2L)).thenReturn(Optional.of(supplier));
+        when(orders.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        var view = service.create(new ProcurementService.OrderCommand(2L, 3L, null, "Excel",
+                List.of(new ProcurementService.ItemCommand(4L, 2, new BigDecimal("10.25"), " LOT ", null))));
+        assertEquals(PurchaseOrder.Status.DRAFT, view.status());
+        assertEquals(new BigDecimal("20.50"), view.totalAmount());
+        assertEquals(0, view.items().getFirst().receivedQuantity());
+        verify(inventory).validateWarehouse(3L);
+        verifyNoMoreInteractions(inventory);
+    }
+
+    @Test
+    void rejectsMoneyOutsideDatabasePrecisionBeforeSaving() {
+        Supplier supplier = Supplier.builder().code("SUP").name("Supplier").build(); supplier.setId(2L);
+        when(suppliers.findById(2L)).thenReturn(Optional.of(supplier));
+        for (var item : List.of(
+                new ProcurementService.ItemCommand(4L, 1, new BigDecimal("10000000000.00"), "", null),
+                new ProcurementService.ItemCommand(4L, 101, new BigDecimal("9999999999.99"), "", null))) {
+            assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
+                    () -> service.create(new ProcurementService.OrderCommand(2L, 3L, null, "", List.of(item))));
+        }
+        verify(orders, never()).save(any());
+    }
+
+    @Test
     void receiveApprovedOrderPostsEachLineToInventoryExactlyOnce() {
         Supplier supplier = Supplier.builder().code("SUP").name("Supplier").build(); supplier.setId(2L);
         PurchaseOrder order = PurchaseOrder.builder().orderNumber("PO-1").supplier(supplier).warehouseId(3L)

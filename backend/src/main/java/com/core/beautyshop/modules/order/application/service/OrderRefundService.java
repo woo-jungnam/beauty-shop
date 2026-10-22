@@ -51,7 +51,6 @@ public class OrderRefundService {
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.context.ApplicationEventPublisher events;
 
-    /** Partial refunds approved by treatment workflow; confirms a real manual transfer in the shared ledger. */
     @Transactional
     public void confirmTreatmentRefund(Long orderId, java.math.BigDecimal amount, String reference, String reason) {
         if (!com.core.beautyshop.shared.security.utils.SecurityUtils.isAdmin())
@@ -78,7 +77,6 @@ public class OrderRefundService {
         publishFinancialAdjustment(order);
     }
 
-    /** A single approved transfer can refund the original purchase plus settled plan adjustments. */
     @Transactional
     public void confirmTreatmentRefund(java.util.List<Long> orderIds, java.math.BigDecimal amount, String reference, String reason) {
         if (!com.core.beautyshop.shared.security.utils.SecurityUtils.isAdmin())
@@ -98,7 +96,6 @@ public class OrderRefundService {
             if (remaining.signum() == 0) break;
             java.math.BigDecimal part = remaining.min(source.getPaidAmount().subtract(source.getRefundedAmount()));
             if (part.signum() <= 0) continue;
-            // Additional source rows have deterministic references; all are committed with the workflow in one transaction.
             String partReference = index++ == 0 ? reference : refundPartReference(reference, source.getId());
             confirmTreatmentRefund(source.getId(), part, partReference, reason); remaining = remaining.subtract(part);
         }

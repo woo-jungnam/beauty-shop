@@ -11,6 +11,7 @@ import 'package:beautyshop_mobile/providers/auth_provider.dart';
 import 'package:beautyshop_mobile/presentation/screens/auth/login_screen.dart';
 import '../../widgets/catalog_state.dart';
 import '../treatments/treatment_hub_screen.dart';
+import '../treatments/treatment_appointment_screen.dart';
 
 class SpaBookingScreen extends StatefulWidget {
   final SpaService service;
@@ -165,23 +166,22 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
         ),
       );
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Đặt Lịch Hẹn Spa & Làm Đẹp'),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Service Summary Card
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: HasakiColors.borderSubtle),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: Row(
                 children: [
@@ -189,12 +189,12 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: HasakiColors.primaryLight,
+                      color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
                       Icons.spa,
-                      color: HasakiColors.primary,
+                      color: AppColors.primary,
                       size: 28,
                     ),
                   ),
@@ -205,7 +205,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       children: [
                         Text(
                           widget.service.name,
-                          style: HasakiTypography.titleMedium.copyWith(
+                          style: AppTypography.titleMedium.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -213,10 +213,10 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                         Text(
                           selectedTicket != null
                               ? 'Dùng lượt đã mua — không tính lại phí dịch vụ'
-                              : HasakiFormatters.formatCurrency(
+                              : AppFormatters.formatCurrency(
                                   widget.service.price,
                                 ),
-                          style: HasakiTypography.priceMedium,
+                          style: AppTypography.priceMedium,
                         ),
                       ],
                     ),
@@ -259,21 +259,20 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Clinic Location
             _buildSectionTitle('1. Cơ sở điều trị:'),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: HasakiColors.border),
+                border: Border.all(color: AppColors.border),
               ),
               child: const Row(
                 children: [
                   Icon(
                     Icons.location_on,
-                    color: HasakiColors.primary,
+                    color: AppColors.primary,
                     size: 20,
                   ),
                   SizedBox(width: 8),
@@ -291,7 +290,6 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Select Date
             _buildSectionTitle('2. Chọn ngày hẹn:'),
             InkWell(
               onTap: () async {
@@ -312,21 +310,21 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: HasakiColors.border),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      HasakiFormatters.formatDate(_selectedDate),
-                      style: HasakiTypography.bodyMedium,
+                      AppFormatters.formatDate(_selectedDate),
+                      style: AppTypography.bodyMedium,
                     ),
                     const Icon(
                       Icons.calendar_today,
                       size: 18,
-                      color: HasakiColors.primary,
+                      color: AppColors.primary,
                     ),
                   ],
                 ),
@@ -334,13 +332,12 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Select Time Slot - Dynamic from Backend
-            _buildSectionTitle('3. Chọn khung giờ khả dụng:'),
+            _buildSectionTitle('3. Chọn giờ hẹn:'),
             if (_loadingSlots)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  child: CircularProgressIndicator(color: HasakiColors.primary),
+                  child: CircularProgressIndicator(color: AppColors.primary),
                 ),
               )
             else if (_slotsError != null)
@@ -370,28 +367,27 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     label: Text(slot),
                     selected: isSelected,
                     onSelected: (_) => setState(() => _selectedTime = slot),
-                    selectedColor: HasakiColors.primaryLight,
-                    backgroundColor: HasakiColors.getSurface(context),
+                    selectedColor: AppColors.primaryLight,
+                    backgroundColor: AppColors.getSurface(context),
                     labelStyle: TextStyle(
                       fontSize: 12,
                       fontWeight: isSelected
                           ? FontWeight.w800
                           : FontWeight.w600,
                       color: isSelected
-                          ? HasakiColors.primary
-                          : HasakiColors.getTextMain(context),
+                          ? AppColors.primary
+                          : AppColors.getTextMain(context),
                     ),
                     side: BorderSide(
                       color: isSelected
-                          ? HasakiColors.primary
-                          : HasakiColors.border,
+                          ? AppColors.primary
+                          : AppColors.border,
                     ),
                   );
                 }).toList(),
               ),
             const SizedBox(height: 16),
 
-            // Note Input
             _buildSectionTitle('4. Ghi chú tình trạng da (tùy chọn):'),
             TextField(
               controller: _noteController,
@@ -402,7 +398,6 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Submit Button
             if (_policyError != null) ...[
               Text(_policyError!),
               TextButton(
@@ -415,9 +410,9 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                 value: _financialAccepted,
                 onChanged: (value) =>
                     setState(() => _financialAccepted = value ?? false),
-                title: const Text('Đồng ý chính sách cọc, hủy và vắng hẹn'),
+                title: const Text('Đồng ý điều khoản đặt lịch & hủy hẹn'),
                 subtitle: Text(
-                  'Phiên bản ${_financialPolicy!['version']}: cọc tối đa ${_financialPolicy!['depositAmount']} VND; phí hủy sau hạn ${_financialPolicy!['cancellationFee']} VND; phí vắng hẹn ${_financialPolicy!['noShowFee']} VND. Nộp cọc tại Spa để xác nhận lịch; cọc trừ hóa đơn hoặc hoàn sau đối soát.',
+                  'Tiền cọc: ${AppFormatters.formatCurrency((num.tryParse('${_financialPolicy!['depositAmount']}') ?? 0).toDouble())} (nếu có). Phí hủy trễ hạn: ${AppFormatters.formatCurrency((num.tryParse('${_financialPolicy!['cancellationFee']}') ?? 0).toDouble())}. Tiền cọc sẽ được trừ trực tiếp vào hóa đơn tại quầy Spa.',
                 ),
               ),
             SizedBox(
@@ -430,7 +425,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Cần tải và xác nhận chính sách cọc trước khi đặt.',
+                          'Vui lòng đọc và đồng ý với điều khoản đặt hẹn trước khi tiếp tục.',
                         ),
                       ),
                     );
@@ -440,7 +435,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Vui lòng chọn khung giờ trống khả dụng.',
+                          'Vui lòng chọn khung giờ hẹn còn trống.',
                         ),
                       ),
                     );
@@ -456,14 +451,14 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                           children: [
                             Icon(
                               Icons.lock_outline,
-                              color: HasakiColors.primary,
+                              color: AppColors.primary,
                             ),
                             SizedBox(width: 8),
                             Text('Yêu cầu đăng nhập'),
                           ],
                         ),
                         content: const Text(
-                          'Bạn cần đăng nhập tài khoản BeautyShop để xác nhận và quản lý lịch hẹn Spa & Làm Đẹp.',
+                          'Bạn cần đăng nhập tài khoản để xác nhận và quản lý lịch hẹn Spa & Làm Đẹp.',
                         ),
                         actions: [
                           TextButton(
@@ -472,7 +467,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                           ),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: HasakiColors.primary,
+                              backgroundColor: AppColors.primary,
                             ),
                             onPressed: () => Navigator.pop(ctx, true),
                             child: const Text('Đăng nhập ngay'),
@@ -493,7 +488,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Vé đã chọn chưa khả dụng. Tải lại vé hoặc chủ động chọn thanh toán dịch vụ lẻ.',
+                          'Vé đã chọn chưa thể sử dụng. Vui lòng tải lại vé hoặc chọn thanh toán trực tiếp.',
                         ),
                       ),
                     );
@@ -515,6 +510,21 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
 
                   if (!mounted || !context.mounted) return;
                   if (success) {
+                    final appointmentId = context
+                        .read<SpaProvider>()
+                        .lastBookedAppointmentId;
+                    if (appointmentId != null) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TreatmentAppointmentScreen(
+                            id: appointmentId,
+                            operate: false,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
@@ -522,14 +532,14 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                           children: [
                             Icon(
                               Icons.check_circle,
-                              color: HasakiColors.success,
+                              color: AppColors.success,
                             ),
                             SizedBox(width: 8),
                             Text('Đặt Lịch Thành Công!'),
                           ],
                         ),
                         content: Text(
-                          'Lịch hẹn liệu trình "${widget.service.name}" lúc $_selectedTime ngày ${HasakiFormatters.formatDate(_selectedDate)} đã được gửi thành công.',
+                          'Lịch hẹn liệu trình "${widget.service.name}" lúc $_selectedTime ngày ${AppFormatters.formatDate(_selectedDate)} đã được gửi thành công.',
                         ),
                         actions: [
                           TextButton(
@@ -549,7 +559,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(err),
-                        backgroundColor: HasakiColors.dealRed,
+                        backgroundColor: AppColors.dealRed,
                       ),
                     );
                   }
@@ -568,7 +578,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: HasakiTypography.titleMedium.copyWith(
+        style: AppTypography.titleMedium.copyWith(
           fontSize: 13.5,
           fontWeight: FontWeight.w700,
         ),

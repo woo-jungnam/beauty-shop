@@ -15,7 +15,6 @@ export const isClearanceProduct = product => product?.clearanceVariant != null
   || product?.earliestExpirationDate != null || product?.clearanceStock != null;
 export const chooseVariant = (product, requestedId) => {
   const rows = activeVariants(product);
-  // An explicit choice must never fall back to a different SKU.
   if (requestedId != null) return validId(requestedId)
     ? rows.find(row => Number(row.id) === Number(requestedId)) || null : null;
   if (isClearanceProduct(product)) {

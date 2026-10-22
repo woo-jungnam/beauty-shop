@@ -18,6 +18,13 @@ import org.springframework.web.bind.annotation.*;
 public class AdminProcurementController {
     private final ProcurementService service;
 
+    @Operation(summary = "Đối chiếu SKU khi lập phiếu mua", description = "Chỉ đọc; 1–500 SKU, tối đa 100 ký tự/mã. Khớp chính xác sau trim, gồm hàng ngưng bán, loại hàng đã xóa. SKU không thấy không có trong kết quả; không tạo phiếu hoặc cộng tồn.")
+    @PostMapping("/variants/lookup")
+    public ApiResponse<java.util.List<com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto>> lookupVariants(
+            @RequestBody ProcurementService.VariantLookup command) {
+        return ApiResponse.success(service.lookupVariants(command));
+    }
+
     @Operation(summary = "Lấy danh sách nhà cung cấp (phân trang)")
     @GetMapping("/suppliers")
     public ApiResponse<PageResponse<ProcurementService.SupplierView>> suppliers(@ParameterObject Pageable pageable) {

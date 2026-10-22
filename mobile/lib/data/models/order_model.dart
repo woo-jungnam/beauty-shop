@@ -6,8 +6,10 @@ class PaymentInstruction {
   final String? bankName;
   final String? bankAccountName;
   final String? bankAccountNumber;
+  final String? bankBin;
   final String? transferSyntax;
   final String? qrCodeUrl;
+  final String? deepLinkUrl;
 
   PaymentInstruction({
     this.method,
@@ -15,8 +17,10 @@ class PaymentInstruction {
     this.bankName,
     this.bankAccountName,
     this.bankAccountNumber,
+    this.bankBin,
     this.transferSyntax,
     this.qrCodeUrl,
+    this.deepLinkUrl,
   });
 
   factory PaymentInstruction.fromJson(Map<String, dynamic> json) {
@@ -26,8 +30,10 @@ class PaymentInstruction {
       bankName: json['bankName']?.toString(),
       bankAccountName: json['bankAccountName']?.toString(),
       bankAccountNumber: json['bankAccountNumber']?.toString(),
+      bankBin: json['bankBin']?.toString(),
       transferSyntax: json['transferSyntax']?.toString(),
       qrCodeUrl: json['qrCodeUrl']?.toString(),
+      deepLinkUrl: json['deepLinkUrl']?.toString(),
     );
   }
 }
@@ -64,7 +70,9 @@ class OrderItem {
           'Sản phẩm',
       variantName: json['variantName']?.toString() ?? 'Tiêu chuẩn',
       thumbnailUrl:
-          json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
+          json['imageUrl']?.toString() ??
+          json['thumbnailUrl']?.toString() ??
+          json['image']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
     );
@@ -174,7 +182,7 @@ class CheckoutRequest {
   final String ward;
   final String district;
   final String city;
-  final String paymentMethod; // COD or BANK
+  final String paymentMethod;
   final String? notes;
   final String? voucherCode;
 

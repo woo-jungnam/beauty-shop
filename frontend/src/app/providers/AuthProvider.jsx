@@ -26,7 +26,6 @@ export const AuthProvider = ({ children }) => {
     const onProfileUpdated = () => verifySession();
     window.addEventListener('auth:profile-updated', onProfileUpdated);
 
-    // Initial check: if token exists, fetch current user profile
     const verifySession = async () => {
       if (token) {
         try {
@@ -35,7 +34,6 @@ export const AuthProvider = ({ children }) => {
           setUser(profile);
           localStorage.setItem('beautyshop_admin_user', JSON.stringify(profile));
         } catch {
-          // Token expired or invalid
           setUser(null);
           setToken(null);
           localStorage.removeItem('beautyshop_admin_token');
@@ -64,7 +62,6 @@ export const AuthProvider = ({ children }) => {
     const data = response.data || response;
     const roles = data.roles || [];
 
-    // Verify administrator / staff authority for Operator Console login.
     const operationalRoles = [
       'ROLE_ADMIN', 'ADMIN',
       'ROLE_STAFF', 'STAFF'
@@ -123,9 +120,7 @@ export const AuthProvider = ({ children }) => {
       if (refreshToken) {
         await apiClient.post(ENDPOINTS.AUTH.LOGOUT, { refreshToken });
       }
-    } catch {
-      // Ignore logout request errors
-    } finally {
+    } catch {} finally {
       localStorage.removeItem('beautyshop_admin_token');
       localStorage.removeItem('beautyshop_admin_refresh_token');
       localStorage.removeItem('beautyshop_admin_user');

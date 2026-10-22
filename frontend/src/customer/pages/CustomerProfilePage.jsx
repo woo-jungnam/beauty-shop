@@ -201,17 +201,14 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
     }
   };
 
-  // Find upcoming active appointment
   const upcomingAppointment = appointments.find((a) =>
     ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS'].includes(a.status)
   ) || appointments[0];
   const aptDateParts = getAptDateParts(upcomingAppointment?.appointmentDate);
 
-  // Latest order
   const latestOrder = orders[0];
   const orderStepIndex = getOrderStepIndex(latestOrder?.status);
 
-  // Active tickets
   const activeTickets = spaTickets.filter((t) => (t.remainingSessions == null || t.remainingSessions > 0) && t.status !== 'EXPIRED' && t.status !== 'REVOKED');
 
   const navSections = [

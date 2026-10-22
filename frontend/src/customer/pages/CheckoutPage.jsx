@@ -108,7 +108,6 @@ export const CheckoutPage = ({ onNavigate }) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    // 1. Validation
     if (!formData.fullName.trim() || !formData.phone.trim() || !formData.address.trim() || !formData.city.trim() || !formData.ward.trim()) {
       setErrorMessage('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng.');
       return;
@@ -125,7 +124,6 @@ export const CheckoutPage = ({ onNavigate }) => {
     try {
       const sessionId = getGuestSessionId();
 
-      // 2. Ensure backend cart has items before placing order
       try {
         const cartCheckRes = await apiClient.get(`/api/v1/cart?sessionId=${encodeURIComponent(sessionId)}`);
         const currentCart = cartCheckRes?.data || cartCheckRes;
@@ -157,7 +155,6 @@ export const CheckoutPage = ({ onNavigate }) => {
         console.warn('Cart check notice:', syncErr);
       }
 
-      // 3. Prepare real Checkout Payload
       const idempotencyKey = `ord_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const checkoutPayload = {
         sessionId: sessionId,
@@ -168,12 +165,11 @@ export const CheckoutPage = ({ onNavigate }) => {
         ward: formData.ward.trim(),
         district: formData.district.trim(),
         city: formData.city.trim(),
-        paymentMethod: formData.paymentMethod, // 'BANK' or 'COD'
+        paymentMethod: formData.paymentMethod,
         notes: formData.note ? formData.note.trim() : '',
         voucherCode: voucher?.code || null
       };
 
-      // 4. Send POST /api/v1/orders/checkout to backend
       const res = await apiClient.post('/api/v1/orders/checkout', checkoutPayload, {
         headers: {
           'Idempotency-Key': idempotencyKey,
@@ -187,14 +183,11 @@ export const CheckoutPage = ({ onNavigate }) => {
         throw new Error('Không nhận được thông tin xác nhận đơn hàng từ máy chủ.');
       }
 
-      // 5. Store completed order information for OrderSuccessPage
       sessionStorage.setItem('last_created_order', JSON.stringify(orderData));
-      if (!user) { try { const key = `beautyshop_guest_orders:${sessionId}`; const previous = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify([{ id: orderData.id, orderNumber: orderData.orderNumber }, ...previous.filter(row => row.id !== orderData.id)].slice(0, 100))); } catch { /* Order is still accessible from the current confirmation. */ } }
+      if (!user) { try { const key = `beautyshop_guest_orders:${sessionId}`; const previous = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify([{ id: orderData.id, orderNumber: orderData.orderNumber }, ...previous.filter(row => row.id !== orderData.id)].slice(0, 100))); } catch {} }
 
-      // 6. Clear local cart
       clearCart();
 
-      // 7. Navigate to Order Success Page
       const orderId = orderData.id || '';
       const orderCode = orderData.orderNumber || `BS-${orderId}`;
       const method = orderData.paymentMethod || formData.paymentMethod;
@@ -212,7 +205,6 @@ export const CheckoutPage = ({ onNavigate }) => {
 
   return (
     <div className="customer-container customer-checkout-page" style={{ padding: '32px 20px 80px 20px' }}>
-      {/* Title */}
       <div style={{ marginBottom: '28px' }}>
         <button
           onClick={() => onNavigate('products')}
@@ -262,10 +254,8 @@ export const CheckoutPage = ({ onNavigate }) => {
           gap: '36px',
           alignItems: 'start'
         }}>
-          {/* ================= LEFT COLUMN: FORM DETAILS ================= */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-            {/* Section 1: Customer Contact Info */}
             <div style={{
               backgroundColor: '#FFFFFF',
               borderRadius: 'var(--radius-md)',
@@ -324,7 +314,6 @@ export const CheckoutPage = ({ onNavigate }) => {
             </div>
 
             {user && <details className="account-card"><summary>Chọn hoặc quản lý địa chỉ đã lưu</summary><AddressBook onSelect={row => setFormData(current => ({ ...current, fullName: row.recipientName, phone: row.phone, address: row.address, ward: row.ward, district: row.district || '', city: row.city }))} /></details>}
-            {/* Section 2: Shipping Address */}
             <div style={{
               backgroundColor: '#FFFFFF',
               borderRadius: 'var(--radius-md)',
@@ -403,7 +392,6 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Section 3: Payment Method */}
             <div style={{
               backgroundColor: '#FFFFFF',
               borderRadius: 'var(--radius-md)',
@@ -415,7 +403,6 @@ export const CheckoutPage = ({ onNavigate }) => {
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {/* Method 1: VietQR (BANK) */}
                 <label style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -447,7 +434,6 @@ export const CheckoutPage = ({ onNavigate }) => {
                   </div>
                 </label>
 
-                {/* Method 2: COD */}
                 <label style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -479,7 +465,6 @@ export const CheckoutPage = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: ORDER SUMMARY ================= */}
           <div style={{
             backgroundColor: '#FFFFFF',
             borderRadius: 'var(--radius-md)',
@@ -493,7 +478,6 @@ export const CheckoutPage = ({ onNavigate }) => {
               Đơn Hàng ({items.length} món)
             </h3>
 
-            {/* Items mini list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '280px', overflowY: 'auto', marginBottom: '20px', paddingRight: '4px' }}>
               {items.map((item) => (
                 <div key={item.itemId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
@@ -517,7 +501,6 @@ export const CheckoutPage = ({ onNavigate }) => {
               ))}
             </div>
 
-            {/* Voucher Section */}
             <div style={{
               borderTop: '1px solid var(--c-border-subtle)',
               paddingTop: '16px',
@@ -662,7 +645,6 @@ export const CheckoutPage = ({ onNavigate }) => {
               )}
             </div>
 
-            {/* Calculations Breakdown */}
             <div style={{ borderTop: '1px solid var(--c-border-subtle)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-text-muted)' }}>
                 <span>Tạm tính</span>
@@ -703,7 +685,6 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Submit Order Button */}
             <button
               type="submit"
               disabled={isSubmitting}

@@ -30,7 +30,6 @@ export const ScrollProgressTop = () => {
 
   if (!isVisible) return null;
 
-  // SVG circular calculation
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scrollProgress / 100) * circumference;
@@ -48,7 +47,6 @@ export const ScrollProgressTop = () => {
         gap: '6px'
       }}
     >
-      {/* Tooltip on hover */}
       {isHovered && (
         <div style={{
           backgroundColor: 'var(--c-primary)',
@@ -89,14 +87,12 @@ export const ScrollProgressTop = () => {
           padding: 0
         }}
       >
-        {/* SVG Progress Ring */}
         <svg
           width="50"
           height="50"
           viewBox="0 0 48 48"
           style={{ position: 'absolute', transform: 'rotate(-90deg)' }}
         >
-          {/* Background circle */}
           <circle
             cx="24"
             cy="24"
@@ -105,7 +101,6 @@ export const ScrollProgressTop = () => {
             stroke="var(--c-border-subtle)"
             strokeWidth="3.5"
           />
-          {/* Progress circle */}
           <circle
             cx="24"
             cy="24"
@@ -120,7 +115,6 @@ export const ScrollProgressTop = () => {
           />
         </svg>
 
-        {/* Center Icon */}
         <div style={{
           position: 'relative',
           zIndex: 2,

@@ -55,7 +55,6 @@ class OpenApiContractIntegrationTest {
             if (entry.getValue().hasMethodAnnotation(Hidden.class) || entry.getValue().getBeanType().isAnnotationPresent(Hidden.class)) continue;
             for (String mappedPath : entry.getKey().getPatternValues()) {
                 if (!mappedPath.startsWith("/api/v1/")) continue;
-                // OpenAPI strips Spring's path-variable regex, e.g. {id:[0-9]+} -> {id}.
                 String path = mappedPath.replaceAll("\\{([^}:]+):[^}]+\\}", "{$1}");
                 for (var method : entry.getKey().getMethodsCondition().getMethods()) {
                     JsonNode operation = operation(path, method.name().toLowerCase(Locale.ROOT));

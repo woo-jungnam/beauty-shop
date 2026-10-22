@@ -21,7 +21,7 @@ public class BannerRequest {
     private String title;
 
     @Size(max = 100, message = "Badge không quá 100 ký tự")
-    @Schema(description = "Huy hiệu phụ trên banner", example = "HASAKI CHÍNH HÃNG 100%")
+    @Schema(description = "Huy hiệu phụ trên banner", example = "BEAUTYSHOP CHÍNH HÃNG 100%")
     private String badge;
 
     @Size(max = 500, message = "Mô tả không quá 500 ký tự")

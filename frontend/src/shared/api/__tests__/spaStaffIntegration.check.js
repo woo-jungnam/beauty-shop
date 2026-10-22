@@ -1,4 +1,3 @@
-// spaStaffIntegration.check.js - Comprehensive End-to-End API Test for Spa Staff & Reception Operations
 import assert from 'node:assert/strict';
 
 const BASE_URL = process.env.BACKEND_URL || 'http://localhost:8080';
@@ -27,9 +26,6 @@ async function runTests() {
   console.log('=== STARTING SPA STAFF & RECEPTION OPERATIONAL TESTS ===');
   console.log(`Backend Target: ${BASE_URL}\n`);
 
-  // -------------------------------------------------------------
-  // TEST 1: Login with Staff Account (Authentication & Role Verification)
-  // -------------------------------------------------------------
   assert.ok(process.env.E2E_STAFF_USERNAME && process.env.E2E_STAFF_PASSWORD,
     'Set E2E_STAFF_USERNAME and E2E_STAFF_PASSWORD for a dedicated test account');
   console.log('[TEST 1] Logging in as the configured Staff test account...');
@@ -53,9 +49,6 @@ async function runTests() {
 
   const authHeader = { Authorization: `Bearer ${staffToken}` };
 
-  // -------------------------------------------------------------
-  // TEST 2: Facilities / Treatment Rooms Access for Staff
-  // -------------------------------------------------------------
   console.log('\n[TEST 2] Verifying Staff access to Treatment Rooms (Facilities)...');
   const facRes = await request('/api/v1/admin/spa/facilities', {
     headers: authHeader
@@ -70,9 +63,6 @@ async function runTests() {
   console.log(`  -> PASS: Staff successfully retrieved ${rooms.length} clinical treatment rooms:`);
   rooms.slice(0, 4).forEach(r => console.log(`     - [${r.id}] ${r.name} (Sức chứa: ${r.capacity} giường)`));
 
-  // -------------------------------------------------------------
-  // TEST 3: Available Slots Query (Checking V42 Schedule Fallback)
-  // -------------------------------------------------------------
   const testDate = '2026-10-08';
   console.log(`\n[TEST 3] Querying Available Slots for Service #1 on Date: ${testDate}...`);
   const slotRes = await request(`/api/v1/spa/services/1/available-slots?date=${testDate}`);
@@ -83,9 +73,6 @@ async function runTests() {
   assert.ok(slots.includes('08:00') || slots.includes('08:30') || slots.includes('09:00'), 'Expected standard morning opening slots');
   console.log(`  -> PASS: Returned ${slots.length} available slots on ${testDate}:`, slots.slice(0, 6), '...');
 
-  // -------------------------------------------------------------
-  // TEST 4: Reception Queue List (getAllAppointments)
-  // -------------------------------------------------------------
   console.log('\n[TEST 4] Querying Reception Appointments Queue (GET /api/v1/appointments/admin/all)...');
   const queueRes = await request(`/api/v1/appointments/admin/all?date=${testDate}&size=50`, {
     headers: authHeader
@@ -95,10 +82,7 @@ async function runTests() {
   assert.ok(pageData, 'Expected PageResponse in data');
   console.log(`  -> PASS: Reception queue accessible. Total elements for date: ${pageData.totalElements}`);
 
-  // -------------------------------------------------------------
-  // TEST 5: Create Walk-in / Reception Booking (Step 1: PENDING)
-  // -------------------------------------------------------------
-  const targetDate = '2026-10-15'; // Future date to prevent past conflict
+  const targetDate = '2026-10-15';
   console.log(`\n[TEST 5] Creating a Walk-in Appointment for date ${targetDate} 10:00:00...`);
   const bookPayload = {
     appointmentDate: targetDate,
@@ -106,8 +90,8 @@ async function runTests() {
     notes: 'Khách hàng tiếp đón tại quầy - Da hỗn hợp thiên dầu',
     items: [
       {
-        serviceId: 1, // Aqua Peel
-        staffId: null // Auto/unassigned initially
+        serviceId: 1,
+        staffId: null
       }
     ]
   };
@@ -125,13 +109,10 @@ async function runTests() {
   const createdItemId = createdApt.items[0].id;
   console.log(`  -> PASS: Appointment created with ID: ${createdApt.id}, Status: ${createdApt.status}`);
 
-  // -------------------------------------------------------------
-  // TEST 6: Prevent Double Booking for Same User (Overlap Constraint)
-  // -------------------------------------------------------------
   console.log('\n[TEST 6] Testing Double Booking Prevention for Same User in overlapping slot (10:00 - 11:15)...');
   const duplicatePayload = {
     appointmentDate: targetDate,
-    startTime: '10:30:00', // Overlaps with 10:00 - 11:15
+    startTime: '10:30:00',
     notes: 'Cố tình đặt trùng giờ để test hệ thống',
     items: [{ serviceId: 1 }]
   };
@@ -143,14 +124,11 @@ async function runTests() {
   assert.equal(dupRes.status, 400, `Expected 400 Bad Request for overlapping booking, got ${dupRes.status}`);
   console.log('  -> PASS: Backend correctly rejected duplicate booking with message:', dupRes.data?.message);
 
-  // -------------------------------------------------------------
-  // TEST 7: Staff Assignment & Status Change to CONFIRMED
-  // -------------------------------------------------------------
   console.log(`\n[TEST 7] Assigning Staff #1 to Appointment #${createdApt.id} and confirming...`);
   const assignPayload = {
     status: 'CONFIRMED',
     staffAssignments: {
-      [createdItemId]: 1 // Assign Staff #1 (BS. Mai Anh)
+      [createdItemId]: 1
     },
     notes: 'Lễ tân đã phân công chuyên viên'
   };
@@ -165,9 +143,6 @@ async function runTests() {
   assert.equal(confirmedApt.items[0].staffId, 1);
   console.log('  -> PASS: Appointment confirmed. Staff assigned:', confirmedApt.items[0].staffName);
 
-  // -------------------------------------------------------------
-  // TEST 8: Check Customer Name, Phone & Real Staff Name in DTO
-  // -------------------------------------------------------------
   console.log('\n[TEST 8] Verifying customerName, customerPhone and real staffName formatting...');
   const detailRes = await request(`/api/v1/appointments/${createdApt.id}`, {
     headers: authHeader
@@ -182,12 +157,7 @@ async function runTests() {
   console.log(`     - Customer: ${detailApt.customerName} (${detailApt.customerPhone})`);
   console.log(`     - Specialist: ${staffDisplayName}`);
 
-  // -------------------------------------------------------------
-  // TEST 9: Check-in Guest (Recorded on Reception)
-  // -------------------------------------------------------------
   console.log(`\n[TEST 9] Simulating Customer Check-in for Appointment #${createdApt.id}...`);
-  // Note: Backend requires appointment date to be today for check-in
-  // We test the check-in endpoint with a today-dated appointment
   const todayDate = new Date().toISOString().split('T')[0];
   const todayAptRes = await request('/api/v1/appointments/book', {
     method: 'POST',
@@ -201,7 +171,6 @@ async function runTests() {
   if (todayAptRes.status === 201) {
     const todayAptId = todayAptRes.data.data.id;
     const todayItemId = todayAptRes.data.data.items[0].id;
-    // Confirm first
     await request(`/api/v1/appointments/admin/${todayAptId}/status`, {
       method: 'PUT',
       headers: authHeader,
@@ -210,7 +179,6 @@ async function runTests() {
         staffAssignments: { [todayItemId]: 1 }
       })
     });
-    // Check-in
     const checkInRes = await request(`/api/v1/appointments/${todayAptId}/check-in`, {
       method: 'PUT',
       headers: authHeader
@@ -222,9 +190,6 @@ async function runTests() {
     console.log('  -> SKIP Today Check-in test (booking outside open hours or slot taken today)');
   }
 
-  // -------------------------------------------------------------
-  // TEST 10: Reschedule Appointment (Testing Cutoff & Time Changes)
-  // -------------------------------------------------------------
   console.log(`\n[TEST 10] Testing Reschedule of Appointment #${createdApt.id} to 14:00:00...`);
   const rescheduleRes = await request(`/api/v1/appointments/${createdApt.id}/reschedule`, {
     method: 'PUT',
@@ -239,9 +204,6 @@ async function runTests() {
   assert.equal(rescheduleRes.data?.data?.startTime, '14:00:00');
   console.log(`  -> PASS: Rescheduled successfully to: ${rescheduleRes.data?.data?.appointmentDate} at ${rescheduleRes.data?.data?.startTime}`);
 
-  // -------------------------------------------------------------
-  // TEST 11: Cancel Appointment (Quota & Resource Release)
-  // -------------------------------------------------------------
   console.log(`\n[TEST 11] Testing Cancellation of Appointment #${createdApt.id}...`);
   const cancelRes = await request(`/api/v1/appointments/${createdApt.id}/cancel`, {
     method: 'PUT',
@@ -255,11 +217,7 @@ async function runTests() {
   assert.equal(verifyCancelled.data?.data?.status, 'CANCELLED');
   console.log(`  -> PASS: Appointment #${createdApt.id} cancelled. Status: CANCELLED`);
 
-  // -------------------------------------------------------------
-  // TEST 12: Reception POS Invoice & Cash Collection Flow
-  // -------------------------------------------------------------
   console.log('\n[TEST 12] Verifying Cashier Invoice Creation for a Completed Visit...');
-  // Check if there is an existing completed appointment or verify endpoint schema
   const completedList = (queueRes.data?.data?.content || []).filter(a => a.status === 'COMPLETED' && !a.orderId);
   if (completedList.length > 0) {
     const aptToPay = completedList[0];
@@ -276,7 +234,6 @@ async function runTests() {
     });
     if (invRes.status === 200 || invRes.status === 201) {
       console.log(`  -> PASS: Created Invoice for Completed Apt #${aptToPay.id}. Invoice #${invRes.data?.data?.orderNumber}`);
-      // Record cash collection
       const cashRes = await request(`/api/v1/appointments/${aptToPay.id}/invoice/cash-receipts`, {
         method: 'POST',
         headers: {

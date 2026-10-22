@@ -82,7 +82,6 @@ class AuthProvider extends ChangeNotifier {
           await fetchCurrentUser();
         }
 
-        // Merge guest cart if available
         final guestSessionId = StorageService.getGuestSessionId();
         if (guestSessionId.isNotEmpty) {
           try {

@@ -4,7 +4,6 @@ import com.core.beautyshop.shared.time.BusinessTime;
 import java.time.LocalDate;
 import java.util.Objects;
 
-/** Runtime eligibility only; never changes physical stock, prices or administrator intent. */
 public final class InventoryExpiryPolicy {
     public static final int MIN_REMAINING_DAYS = 30;
     public static final int MAX_CLEARANCE_DAYS = 90;

@@ -13,7 +13,6 @@ import java.time.LocalDate;
 import java.sql.Date;
 import java.util.List;
 
-/** Durable in-app reminders. Delivery through external channels remains separately configured. */
 @Component @RequiredArgsConstructor @Slf4j
 @ConditionalOnProperty(name = "app.jobs.enabled", havingValue = "true", matchIfMissing = true)
 public class TreatmentReminderJob {

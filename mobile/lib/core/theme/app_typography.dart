@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-class HasakiTypography {
+class AppTypography {
   static TextStyle get headlineLarge => GoogleFonts.inter(
     fontSize: 22,
     fontWeight: FontWeight.w800,
-
     letterSpacing: -0.3,
   );
 
@@ -25,32 +24,32 @@ class HasakiTypography {
   static TextStyle get bodySmall => GoogleFonts.inter(
     fontSize: 12,
     fontWeight: FontWeight.w400,
-    color: HasakiColors.textMuted,
+    color: AppColors.textMuted,
     height: 1.35,
   );
 
   static TextStyle get caption => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w500,
-    color: HasakiColors.textLight,
+    color: AppColors.textLight,
   );
 
   static TextStyle get priceLarge => GoogleFonts.inter(
     fontSize: 18,
     fontWeight: FontWeight.w800,
-    color: HasakiColors.dealRed,
+    color: AppColors.dealRed,
   );
 
   static TextStyle get priceMedium => GoogleFonts.inter(
     fontSize: 15,
     fontWeight: FontWeight.w700,
-    color: HasakiColors.dealRed,
+    color: AppColors.dealRed,
   );
 
   static TextStyle get priceStrikethrough => GoogleFonts.inter(
     fontSize: 12,
     fontWeight: FontWeight.w400,
-    color: HasakiColors.textLight,
+    color: AppColors.textLight,
     decoration: TextDecoration.lineThrough,
   );
 }

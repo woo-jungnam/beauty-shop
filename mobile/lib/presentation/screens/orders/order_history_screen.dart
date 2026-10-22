@@ -1,4 +1,5 @@
 import 'order_detail_screen.dart';
+import 'order_lookup_screen.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/catalog_state.dart';
 import 'package:provider/provider.dart';
@@ -88,28 +89,38 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   Color _getStatusColor(String status) {
     switch (status) {
       case 'DELIVERED':
-        return HasakiColors.success;
+        return AppColors.success;
       case 'SHIPPED':
       case 'PROCESSING':
         return const Color(0xFF0284C7);
       case 'PENDING':
         return Colors.orange;
       case 'CANCELLED':
-        return HasakiColors.dealRed;
+        return AppColors.dealRed;
       default:
-        return HasakiColors.getTextMain(context);
+        return AppColors.getTextMain(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: Text(
           widget.unpaidOnly ? 'Đơn hàng chờ thanh toán' : 'Lịch Sử Đơn Hàng',
         ),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Tra cứu đơn hàng',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const OrderLookupScreen()),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -133,7 +144,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             );
           if (orderProvider.isLoading && orderProvider.orders.isEmpty) {
             return const Center(
-              child: CircularProgressIndicator(color: HasakiColors.primary),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
@@ -152,7 +163,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                       Icon(
                         Icons.receipt_long_outlined,
                         size: 64,
-                        color: HasakiColors.textLight.withOpacity(0.5),
+                        color: AppColors.textLight.withOpacity(0.5),
                       ),
                       const SizedBox(height: 12),
                       if (orderProvider.hasMore)
@@ -164,7 +175,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         ),
                       Text(
                         'Chưa có đơn hàng nào trong mục này',
-                        style: HasakiTypography.caption.copyWith(fontSize: 13),
+                        style: AppTypography.caption.copyWith(fontSize: 13),
                       ),
                     ],
                   ),
@@ -172,7 +183,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               }
 
               return RefreshIndicator(
-                color: HasakiColors.primary,
+                color: AppColors.primary,
                 onRefresh: () => orderProvider.fetchOrders(),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(12),
@@ -206,14 +217,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: HasakiColors.getSurface(context),
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: HasakiColors.borderSubtle),
+        border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Order Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -241,30 +251,53 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
               ),
             ],
           ),
-          const Divider(height: 18, color: HasakiColors.borderSubtle),
+          const Divider(height: 18, color: AppColors.borderSubtle),
 
-          // Items summary
           if (order.items.isNotEmpty)
             ...order.items.map(
               (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        color: const Color(0xFFF3F4F6),
+                        child: item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
+                            ? Image.network(
+                                item.thumbnailUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined, size: 14, color: Color(0xFF9CA3AF)),
+                              )
+                            : const Icon(Icons.image_outlined, size: 14, color: Color(0xFF9CA3AF)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        '${item.productName} (x${item.quantity})',
-                        style: HasakiTypography.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.productName,
+                            style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${item.variantName} × ${item.quantity}',
+                            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          ),
+                        ],
                       ),
                     ),
                     Text(
-                      HasakiFormatters.formatCurrency(
+                      AppFormatters.formatCurrency(
                         item.price * item.quantity,
                       ),
                       style: const TextStyle(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
                     ),
@@ -274,11 +307,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             )
           else
             Text(
-              'Đơn hàng sản phẩm BeautyShop',
-              style: HasakiTypography.bodySmall,
+              'Đơn hàng sản phẩm',
+              style: AppTypography.bodySmall,
             ),
 
-          const Divider(height: 18, color: HasakiColors.borderSubtle),
+          const Divider(height: 18, color: AppColors.borderSubtle),
 
           OutlinedButton(
             onPressed: () => Navigator.push(
@@ -289,7 +322,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             ),
             child: const Text('Chi tiết, mua lại & đổi trả'),
           ),
-          // Total and actions
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -300,12 +332,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     'Tổng thanh toán:',
                     style: TextStyle(
                       fontSize: 11,
-                      color: HasakiColors.textMuted,
+                      color: AppColors.textMuted,
                     ),
                   ),
                   Text(
-                    HasakiFormatters.formatCurrency(order.totalAmount),
-                    style: HasakiTypography.priceLarge.copyWith(fontSize: 16),
+                    AppFormatters.formatCurrency(order.totalAmount),
+                    style: AppTypography.priceLarge.copyWith(fontSize: 16),
                   ),
                 ],
               ),
@@ -324,8 +356,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         );
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: HasakiColors.primary,
-                        side: const BorderSide(color: HasakiColors.primary),
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
@@ -360,7 +392,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                                 onPressed: () => Navigator.pop(ctx, true),
                                 child: const Text(
                                   'Hủy đơn',
-                                  style: TextStyle(color: HasakiColors.dealRed),
+                                  style: TextStyle(color: AppColors.dealRed),
                                 ),
                               ),
                             ],
@@ -374,7 +406,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         'Hủy đơn',
                         style: TextStyle(
                           fontSize: 12,
-                          color: HasakiColors.dealRed,
+                          color: AppColors.dealRed,
                         ),
                       ),
                     ),

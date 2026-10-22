@@ -3,29 +3,29 @@ import 'package:flutter/services.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
-class HasakiTheme {
+class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      primaryColor: HasakiColors.primary,
-      scaffoldBackgroundColor: HasakiColors.canvas,
+      primaryColor: AppColors.primary,
+      scaffoldBackgroundColor: AppColors.canvas,
       colorScheme: const ColorScheme.light(
-        primary: HasakiColors.primary,
-        onPrimary: HasakiColors.textOnDark,
-        secondary: HasakiColors.dealRed,
-        onSecondary: HasakiColors.textOnDark,
-        surface: HasakiColors.surface,
-        onSurface: HasakiColors.textMain,
-        error: HasakiColors.dealRed,
+        primary: AppColors.primary,
+        onPrimary: AppColors.textOnDark,
+        secondary: AppColors.dealRed,
+        onSecondary: AppColors.textOnDark,
+        surface: AppColors.surface,
+        onSurface: AppColors.textMain,
+        error: AppColors.dealRed,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: HasakiColors.primary,
-        foregroundColor: HasakiColors.textOnDark,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.textOnDark,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: HasakiTypography.titleLarge.copyWith(
-          color: HasakiColors.textOnDark,
+        titleTextStyle: AppTypography.titleLarge.copyWith(
+          color: AppColors.textOnDark,
           fontWeight: FontWeight.w700,
         ),
         systemOverlayStyle: const SystemUiOverlayStyle(
@@ -35,27 +35,27 @@ class HasakiTheme {
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: HasakiColors.surface,
-        selectedItemColor: HasakiColors.primary,
-        unselectedItemColor: HasakiColors.textLight,
+        backgroundColor: AppColors.surface,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textLight,
         selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
         unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       cardTheme: CardThemeData(
-        color: HasakiColors.surface,
+        color: AppColors.surface,
         elevation: 0.5,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: HasakiColors.borderSubtle, width: 0.8),
+          side: const BorderSide(color: AppColors.borderSubtle, width: 0.8),
         ),
         margin: EdgeInsets.zero,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: HasakiColors.primary,
-          foregroundColor: HasakiColors.textOnDark,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.textOnDark,
           elevation: 0,
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
           shape: RoundedRectangleBorder(
@@ -66,8 +66,8 @@ class HasakiTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: HasakiColors.primary,
-          side: const BorderSide(color: HasakiColors.primary, width: 1.2),
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary, width: 1.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -76,21 +76,21 @@ class HasakiTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: HasakiColors.surface,
+        fillColor: AppColors.surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: HasakiColors.border),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: HasakiColors.border),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: HasakiColors.primary, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        hintStyle: HasakiTypography.bodySmall,
+        hintStyle: AppTypography.bodySmall,
       ),
     );
   }
@@ -99,24 +99,24 @@ class HasakiTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: HasakiColors.darkPrimary,
-      scaffoldBackgroundColor: HasakiColors.darkCanvas,
+      primaryColor: AppColors.darkPrimary,
+      scaffoldBackgroundColor: AppColors.darkCanvas,
       colorScheme: const ColorScheme.dark(
-        primary: HasakiColors.darkPrimary,
+        primary: AppColors.darkPrimary,
         onPrimary: Colors.white,
-        secondary: HasakiColors.dealRed,
+        secondary: AppColors.dealRed,
         onSecondary: Colors.white,
-        surface: HasakiColors.darkSurface,
-        onSurface: HasakiColors.darkTextMain,
-        error: HasakiColors.dealRed,
+        surface: AppColors.darkSurface,
+        onSurface: AppColors.darkTextMain,
+        error: AppColors.dealRed,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: HasakiColors.darkSurface,
-        foregroundColor: HasakiColors.darkTextMain,
+        backgroundColor: AppColors.darkSurface,
+        foregroundColor: AppColors.darkTextMain,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: HasakiTypography.titleLarge.copyWith(
-          color: HasakiColors.darkTextMain,
+        titleTextStyle: AppTypography.titleLarge.copyWith(
+          color: AppColors.darkTextMain,
           fontWeight: FontWeight.w700,
         ),
         systemOverlayStyle: const SystemUiOverlayStyle(
@@ -126,26 +126,26 @@ class HasakiTheme {
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: HasakiColors.darkSurface,
-        selectedItemColor: HasakiColors.darkPrimary,
-        unselectedItemColor: HasakiColors.darkTextLight,
+        backgroundColor: AppColors.darkSurface,
+        selectedItemColor: AppColors.darkPrimary,
+        unselectedItemColor: AppColors.darkTextLight,
         selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
         unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       cardTheme: CardThemeData(
-        color: HasakiColors.darkSurface,
+        color: AppColors.darkSurface,
         elevation: 0.5,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: HasakiColors.darkBorder, width: 0.8),
+          side: const BorderSide(color: AppColors.darkBorder, width: 0.8),
         ),
         margin: EdgeInsets.zero,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: HasakiColors.darkPrimary,
+          backgroundColor: AppColors.darkPrimary,
           foregroundColor: Colors.white,
           elevation: 0,
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
@@ -157,8 +157,8 @@ class HasakiTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: HasakiColors.darkPrimary,
-          side: const BorderSide(color: HasakiColors.darkPrimary, width: 1.2),
+          foregroundColor: AppColors.darkPrimary,
+          side: const BorderSide(color: AppColors.darkPrimary, width: 1.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -167,21 +167,21 @@ class HasakiTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: HasakiColors.darkSurface,
+        fillColor: AppColors.darkSurface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: HasakiColors.darkBorder),
+          borderSide: const BorderSide(color: AppColors.darkBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: HasakiColors.darkBorder),
+          borderSide: const BorderSide(color: AppColors.darkBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: HasakiColors.darkPrimary, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.darkPrimary, width: 1.5),
         ),
-        hintStyle: HasakiTypography.bodySmall.copyWith(color: HasakiColors.darkTextMuted),
+        hintStyle: AppTypography.bodySmall.copyWith(color: AppColors.darkTextMuted),
       ),
     );
   }

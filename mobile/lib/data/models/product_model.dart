@@ -66,7 +66,6 @@ class ProductItem {
             json['clearanceVariant'] as Map<String, dynamic>,
           )
         : null;
-    // Check if variants contain a lower price
     double? lowestVariantPrice;
     if (json['variants'] is List && (json['variants'] as List).isNotEmpty) {
       for (final v in json['variants']) {
@@ -292,7 +291,6 @@ class ProductDetail {
   }
 
   factory ProductDetail.fromJson(Map<String, dynamic> json) {
-    // Parse variants
     final variantsRaw = json['variants'] as List<dynamic>? ?? [];
     final variantsList = variantsRaw
         .map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
@@ -300,7 +298,6 @@ class ProductDetail {
         .toList();
     variantsList.sort((a, b) => a.isDefault ? -1 : 1);
 
-    // Parse images
     final imagesRaw = json['images'] as List<dynamic>? ?? [];
     final imagesList = imagesRaw
         .map((img) => (img['imageUrl'] ?? img['url'] ?? '').toString())

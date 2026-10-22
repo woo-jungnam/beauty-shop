@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 
-/** A service invoice snapshot is separate from physical order items and stock allocations. */
 @Entity
 @Table(name = "spa_visit_invoice_items")
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor

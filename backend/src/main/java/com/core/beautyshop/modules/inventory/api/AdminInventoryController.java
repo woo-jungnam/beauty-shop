@@ -32,6 +32,12 @@ public class AdminInventoryController {
         return ApiResponse.success(PageResponse.of(ledger.find(stockId, variantId, pageable)));
     }
 
+    @Operation(summary = "Xem chi tiết một bản ghi biến động kho")
+    @GetMapping("/transactions/{id}")
+    public ApiResponse<InventoryLedgerService.LedgerView> getTransaction(@PathVariable Long id) {
+        return ApiResponse.success(ledger.findById(id));
+    }
+
     @Operation(summary = "Cảnh báo tồn khả dụng ở mức tối thiểu trở xuống", description = "quantity−reservedQuantity≤minQuantity, gồm cả bằng ngưỡng; lọc lô và kho chưa xóa. quarantine không cộng vào lượng bán được.")
     @GetMapping("/low-stock")
     public ApiResponse<List<InventoryAlertService.StockAlert>> lowStock() {

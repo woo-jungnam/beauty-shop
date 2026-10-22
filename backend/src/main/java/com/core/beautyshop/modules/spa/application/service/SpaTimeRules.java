@@ -4,7 +4,6 @@ import com.core.beautyshop.modules.spa.domain.BeautyService;
 import com.core.beautyshop.shared.exception.BusinessException;
 import java.time.*;
 
-/** Shared business time rules. Do not use the server's default timezone for bookings. */
 public final class SpaTimeRules {
     public static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     public static final LocalTime OPEN = LocalTime.of(8, 0);

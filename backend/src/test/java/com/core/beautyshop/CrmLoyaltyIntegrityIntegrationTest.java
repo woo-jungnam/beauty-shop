@@ -141,7 +141,6 @@ class CrmLoyaltyIntegrityIntegrationTest {
         loyalty.reconcile(order.getId(), customer.getId(), order.getTotalAmount()); assertEquals(20, points(customer));
         var returned = new ProductReturn(); returned.setOrderId(order.getId()); returned.setStatus("RECEIVED"); returned.setReason("One product returned");
         returned.setRefundAmount(new BigDecimal("50000")); returned.setLinesJson("[]"); returned.setEvidenceJson("[]"); returns.saveAndFlush(returned);
-        // Physical receipt reduces eligible spend before a manual refund is recorded.
         loyalty.reconcile(order.getId(), customer.getId(), order.getTotalAmount()); assertEquals(15, points(customer));
         tx(() -> { var row = orders.findById(order.getId()).orElseThrow(); row.setRefundedAmount(new BigDecimal("50000")); row.setPaidAmount(new BigDecimal("300000")); return null; });
         loyalty.reconcile(order.getId(), customer.getId(), order.getTotalAmount()); assertEquals(15, points(customer));
@@ -193,7 +192,6 @@ class CrmLoyaltyIntegrityIntegrationTest {
         });
         spaLoyalty.performedTicket(ticket); assertEquals(10, points(customer));
         spaLoyalty.performedTicket(ticket); assertEquals(10, points(customer));
-        // Catalog edits and compensated quota cannot rewrite the original paid denominator.
         tx(() -> { em.find(ServicePackage.class, pack.getId()).setPrice(new BigDecimal("999999")); em.find(UserServiceTicket.class, ticket.getId()).setTotalSessions(20); return null; });
         spaLoyalty.performedTicket(ticket); assertEquals(10, points(customer));
         assertEquals(10, awards.findByOrderId(purchase.getId()).orElseThrow().getPoints());
@@ -210,7 +208,6 @@ class CrmLoyaltyIntegrityIntegrationTest {
         });
         var admin = user("ROLE_ADMIN");
 
-        // 1. Spa visit invoice applies 10% discount for GOLD tier
         var visitCommand = new com.core.beautyshop.modules.order.api.dto.CreateSpaVisitOrderCommand(
                 99991L, goldCustomer.getId(),
                 List.of(new com.core.beautyshop.modules.order.api.dto.SpaVisitCharge(8881L, 7771L, "Gold facial", new BigDecimal("200000"))),
@@ -218,9 +215,8 @@ class CrmLoyaltyIntegrityIntegrationTest {
         );
         var visitInvoice = as(admin, () -> spaVisitOrderService.create(visitCommand));
         assertEquals(0, new BigDecimal("200000").compareTo(visitInvoice.subTotal()));
-        assertEquals(0, new BigDecimal("180000").compareTo(visitInvoice.totalAmount())); // 200k - 10% = 180k
+        assertEquals(0, new BigDecimal("180000").compareTo(visitInvoice.totalAmount()));
 
-        // 2. Spa package purchase applies 10% discount for GOLD tier
         var pack = tx(() -> {
             var row = ServicePackage.builder().name("Gold Spa Package").price(new BigDecimal("1000000")).build();
             em.persist(row); return row;

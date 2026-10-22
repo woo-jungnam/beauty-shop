@@ -23,6 +23,22 @@ public class ProcurementService {
     private final com.core.beautyshop.modules.catalog.api.CatalogFacade catalog;
 
     @Transactional(readOnly = true)
+    public List<com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto> lookupVariants(VariantLookup command) {
+        if (command == null || command.skus() == null || command.skus().isEmpty() || command.skus().size() > 500)
+            throw new BusinessException("Cần từ 1 đến 500 mã SKU để đối chiếu");
+        Set<String> skus = new LinkedHashSet<>();
+        for (Object value : command.skus()) {
+            if (!(value instanceof String sku) || sku.isBlank() || sku.length() > 100)
+                throw new BusinessException("SKU phải là chuỗi không trống, tối đa 100 ký tự");
+            skus.add(sku.trim());
+        }
+        return catalog.getVariantSummariesForInventoryBySkus(skus);
+    }
+
+    public record VariantLookup(
+            @ArraySchema(minItems = 1, maxItems = 500, schema = @Schema(type = "string", maxLength = 100)) List<?> skus) { }
+
+    @Transactional(readOnly = true)
     public Page<SupplierView> suppliers(Pageable pageable) { return suppliers.findAll(pageable).map(this::supplierView); }
 
     @Transactional(readOnly = true)
@@ -97,8 +113,9 @@ public class ProcurementService {
         List<PurchaseOrderItem> items = new ArrayList<>();
         for (ItemCommand item : command.items()) {
             if (item == null || item.variantId() == null || item.variantId() <= 0 || item.quantity() == null || item.quantity() <= 0
-                    || item.unitCost() == null || item.unitCost().signum() < 0 || item.unitCost().scale() > 2)
-                throw new BusinessException("Mỗi mặt hàng nhập kho phải có biến thể hợp lệ, số lượng và giá vốn lớn hơn 0");
+                    || item.unitCost() == null || item.unitCost().signum() < 0 || item.unitCost().scale() > 2
+                    || item.unitCost().compareTo(new BigDecimal("9999999999.99")) > 0)
+                throw new BusinessException("Mỗi mặt hàng phải có biến thể hợp lệ, số lượng nguyên dương, giá vốn từ 0 đến 9999999999.99 và tối đa 2 số lẻ");
             catalog.getVariantSummaryForInventory(item.variantId());
             if (item.batchCode() != null && item.batchCode().trim().length() > 100) throw new BusinessException("Mã số lô hàng không được vượt quá 100 ký tự");
             if (item.expirationDate() != null && !item.expirationDate().isAfter(com.core.beautyshop.shared.time.BusinessTime.today()))
@@ -108,6 +125,8 @@ public class ProcurementService {
                     .expirationDate(item.expirationDate()).build();
             items.add(entity);
             total = total.add(item.unitCost().multiply(BigDecimal.valueOf(item.quantity())));
+            if (total.compareTo(new BigDecimal("999999999999.99")) > 0)
+                throw new BusinessException("Tổng giá vốn vượt giới hạn 999999999999.99 của phiếu mua");
         }
         order.setSupplier(supplier); order.setWarehouseId(command.warehouseId()); order.setExpectedDate(command.expectedDate()); order.setNote(command.note());
         order.getItems().clear(); order.getItems().addAll(items);

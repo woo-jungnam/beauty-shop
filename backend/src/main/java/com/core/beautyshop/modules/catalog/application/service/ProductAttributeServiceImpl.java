@@ -180,7 +180,6 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
             setTypedValue(value, definition.getDataType(), request.getValue());
             replacements.add(value);
         }
-        // Validate every row before replacing; rollback preserves the original list on failure.
         product.getAttributeValues().clear();
         productRepository.flush();
         var saved = valueRepository.saveAllAndFlush(replacements);

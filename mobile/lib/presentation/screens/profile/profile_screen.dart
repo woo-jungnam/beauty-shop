@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import '../../../core/constants/api_constants.dart';
 import 'customer_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +10,7 @@ import '../cart/cart_screen.dart';
 import 'package:beautyshop_mobile/providers/theme_provider.dart';
 import 'package:beautyshop_mobile/presentation/screens/auth/login_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/orders/order_history_screen.dart';
+import 'package:beautyshop_mobile/presentation/screens/orders/order_lookup_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/spa/my_appointments_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/spa/spa_tickets_screen.dart';
 import '../../../data/models/treatment_model.dart';
@@ -19,10 +22,10 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Tài Khoản & Hội Viên'),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
         elevation: 0,
       ),
       body: Consumer<AuthProvider>(
@@ -32,9 +35,8 @@ class ProfileScreen extends StatelessWidget {
           return SingleChildScrollView(
             child: Column(
               children: [
-                // 1. User Header & Member Tier Card (Hasaki Style)
                 Container(
-                  color: HasakiColors.primary,
+                  color: AppColors.primary,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                   child: Column(
                     children: [
@@ -90,10 +92,10 @@ class ProfileScreen extends StatelessWidget {
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: HasakiColors.getSurface(
+                                backgroundColor: AppColors.getSurface(
                                   context,
                                 ),
-                                foregroundColor: HasakiColors.primary,
+                                foregroundColor: AppColors.primary,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
                                   vertical: 8,
@@ -105,15 +107,14 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
 
-                      // VIP Points / Tier Banner Card
                       if (auth.isAuthenticated)
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: HasakiColors.primaryDark,
+                            color: AppColors.primaryDark,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: HasakiColors.gold.withOpacity(0.4),
+                              color: AppColors.gold.withOpacity(0.4),
                             ),
                           ),
                           child: Row(
@@ -161,9 +162,8 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                // 2. Order Status 5 Stages (Hasaki Standard)
                 Container(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     children: [
@@ -172,7 +172,7 @@ class ProfileScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Đơn Hàng Của Tôi',
-                            style: HasakiTypography.titleMedium,
+                            style: AppTypography.titleMedium,
                           ),
                           InkWell(
                             onTap: () {
@@ -189,13 +189,13 @@ class ProfileScreen extends StatelessWidget {
                                   'Xem lịch sử',
                                   style: TextStyle(
                                     fontSize: 11.5,
-                                    color: HasakiColors.textMuted,
+                                    color: AppColors.textMuted,
                                   ),
                                 ),
                                 Icon(
                                   Icons.chevron_right,
                                   size: 16,
-                                  color: HasakiColors.textMuted,
+                                  color: AppColors.textMuted,
                                 ),
                               ],
                             ),
@@ -204,7 +204,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const Divider(
                         height: 20,
-                        color: HasakiColors.borderSubtle,
+                        color: AppColors.borderSubtle,
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -287,9 +287,8 @@ class ProfileScreen extends StatelessWidget {
                         ),
                     ],
                   ),
-                // 3. Quick Utility Menu List
                 Material(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   child: Column(
                     children: [
                       _buildMenuItem(
@@ -339,6 +338,16 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       _buildMenuItem(
+                        Icons.search_outlined,
+                        'Tra Cứu Đơn Hàng (Không Cần Đăng Nhập)',
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const OrderLookupScreen(),
+                          ),
+                        ),
+                      ),
+                      _buildMenuItem(
                         Icons.card_giftcard,
                         'Ví Vé Liệu Trình Spa & Làm Đẹp',
                         () => Navigator.push(
@@ -378,13 +387,17 @@ class ProfileScreen extends StatelessWidget {
                           );
                         },
                       ),
+                      _buildMenuItem(
+                        Icons.dns_outlined,
+                        'Máy chủ kết nối: ${ApiConstants.baseUrl}',
+                        () => _showServerDialog(context),
+                      ),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 14),
 
-                // 4. Logout Button
                 if (auth.isAuthenticated)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -394,15 +407,15 @@ class ProfileScreen extends StatelessWidget {
                         onPressed: () => auth.logout(),
                         icon: const Icon(
                           Icons.logout,
-                          color: HasakiColors.dealRed,
+                          color: AppColors.dealRed,
                         ),
                         label: const Text(
                           'ĐĂNG XUẤT TÀI KHOẢN',
-                          style: TextStyle(color: HasakiColors.dealRed),
+                          style: TextStyle(color: AppColors.dealRed),
                         ),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(
-                            color: HasakiColors.dealRedBorder,
+                            color: AppColors.dealRedBorder,
                           ),
                         ),
                       ),
@@ -437,7 +450,7 @@ class ProfileScreen extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, color: HasakiColors.gold, size: 14),
+            Icon(icon, color: AppColors.gold, size: 14),
             const SizedBox(width: 4),
             Text(
               value,
@@ -470,7 +483,7 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         child: Column(
           children: [
-            Icon(icon, color: HasakiColors.primary, size: 24),
+            Icon(icon, color: AppColors.primary, size: 24),
             const SizedBox(height: 6),
             Text(
               label,
@@ -487,17 +500,17 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: HasakiColors.primary, size: 22),
+      leading: Icon(icon, color: AppColors.primary, size: 22),
       title: Text(
         title,
-        style: HasakiTypography.bodyMedium.copyWith(
+        style: AppTypography.bodyMedium.copyWith(
           fontWeight: FontWeight.w600,
         ),
       ),
       trailing: const Icon(
         Icons.chevron_right,
         size: 18,
-        color: HasakiColors.textLight,
+        color: AppColors.textLight,
       ),
       onTap: onTap,
     );
@@ -522,7 +535,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               value: ThemeMode.system,
               groupValue: theme.themeMode,
-              activeColor: HasakiColors.primary,
+              activeColor: AppColors.primary,
               onChanged: (val) {
                 if (val != null) theme.setThemeMode(val);
                 Navigator.pop(ctx);
@@ -536,7 +549,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               value: ThemeMode.light,
               groupValue: theme.themeMode,
-              activeColor: HasakiColors.primary,
+              activeColor: AppColors.primary,
               onChanged: (val) {
                 if (val != null) theme.setThemeMode(val);
                 Navigator.pop(ctx);
@@ -550,7 +563,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               value: ThemeMode.dark,
               groupValue: theme.themeMode,
-              activeColor: HasakiColors.primary,
+              activeColor: AppColors.primary,
               onChanged: (val) {
                 if (val != null) theme.setThemeMode(val);
                 Navigator.pop(ctx);
@@ -564,6 +577,190 @@ class ProfileScreen extends StatelessWidget {
             child: const Text('ĐÓNG'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showServerDialog(BuildContext context) {
+    final controller = TextEditingController(text: ApiConstants.baseUrl);
+    bool testing = false;
+    String? testResult;
+    bool? isSuccess;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.dns, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Cấu hình máy chủ Backend',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Địa chỉ máy chủ (Base URL):',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'https://...',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Gợi ý kết nối:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ActionChip(
+                      label: const Text('Production Cloud', style: TextStyle(fontSize: 11)),
+                      onPressed: () => setState(() => controller.text = 'https://api.dermascan.world'),
+                    ),
+                    ActionChip(
+                      label: const Text('Android Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
+                      onPressed: () => setState(() => controller.text = 'http://10.0.2.2:8080'),
+                    ),
+                    ActionChip(
+                      label: const Text('Local (localhost:8080)', style: TextStyle(fontSize: 11)),
+                      onPressed: () => setState(() => controller.text = 'http://localhost:8080'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (testing)
+                  const Row(
+                    children: [
+                      SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      SizedBox(width: 8),
+                      Text('Đang kiểm tra kết nối...', style: TextStyle(fontSize: 12)),
+                    ],
+                  )
+                else if (testResult != null)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSuccess == true ? AppColors.primaryLight : AppColors.dealRedLight,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isSuccess == true ? AppColors.primary : AppColors.dealRedBorder,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSuccess == true ? Icons.check_circle : Icons.error,
+                          size: 16,
+                          color: isSuccess == true ? AppColors.primary : AppColors.dealRed,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            testResult!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isSuccess == true ? AppColors.primaryDark : AppColors.dealRedDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.network_check, size: 18),
+                    label: const Text('Kiểm tra kết nối ngay'),
+                    onPressed: testing
+                        ? null
+                        : () async {
+                            setState(() {
+                              testing = true;
+                              testResult = null;
+                              isSuccess = null;
+                            });
+                            final targetUrl = controller.text.trim();
+                            final stopwatch = Stopwatch()..start();
+                            try {
+                              final dio = Dio(
+                                BaseOptions(
+                                  connectTimeout: const Duration(seconds: 6),
+                                  receiveTimeout: const Duration(seconds: 6),
+                                ),
+                              );
+                              final res = await dio.get('$targetUrl/api/v1/system-configs/public');
+                              stopwatch.stop();
+                              setState(() {
+                                testing = false;
+                                isSuccess = res.statusCode == 200;
+                                testResult = 'Kết nối thành công (200 OK) • ${stopwatch.elapsedMilliseconds}ms';
+                              });
+                            } catch (_) {
+                              stopwatch.stop();
+                              try {
+                                final dio = Dio(
+                                  BaseOptions(
+                                    connectTimeout: const Duration(seconds: 6),
+                                    receiveTimeout: const Duration(seconds: 6),
+                                  ),
+                                );
+                                final res = await dio.get('$targetUrl/api/v1/categories');
+                                setState(() {
+                                  testing = false;
+                                  isSuccess = res.statusCode == 200;
+                                  testResult = 'Kết nối thành công (200 OK) • ${stopwatch.elapsedMilliseconds}ms';
+                                });
+                              } catch (e2) {
+                                setState(() {
+                                  testing = false;
+                                  isSuccess = false;
+                                  testResult = 'Không thể kết nối đến máy chủ: $targetUrl';
+                                });
+                              }
+                            }
+                          },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('HỦY'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () {
+                final newUrl = controller.text.trim();
+                if (newUrl.isNotEmpty) {
+                  ApiConstants.setCustomBaseUrl(newUrl);
+                }
+                Navigator.pop(ctx);
+              },
+              child: const Text('LƯU & ÁP DỤNG'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -6,5 +6,6 @@ public enum TransactionStatus {
     CANCELLED_ORDER_RECEIVED,
     ORDER_NOT_FOUND,
     IGNORED,
-    FAILED
+    FAILED,
+    DEPOSIT_REVIEW
 }

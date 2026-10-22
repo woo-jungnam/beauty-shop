@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:beautyshop_mobile/core/constants/api_constants.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
@@ -24,7 +25,8 @@ class VietQrPaymentScreen extends StatefulWidget {
   State<VietQrPaymentScreen> createState() => _VietQrPaymentScreenState();
 }
 
-class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
+class _VietQrPaymentScreenState extends State<VietQrPaymentScreen>
+    with WidgetsBindingObserver {
   Timer? _pollingTimer;
   dynamic _ws;
   StreamSubscription? _wsSubscription;
@@ -35,6 +37,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startWebSocketListener();
     _startPaymentPolling();
     _checkPaymentStatus();
@@ -42,12 +45,20 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollingTimer?.cancel();
     _wsSubscription?.cancel();
     try {
       _ws?.close();
     } catch (_) {}
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_isPaid) {
+      _checkPaymentStatus();
+    }
   }
 
   Future<void> _startWebSocketListener() async {
@@ -93,14 +104,10 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                     if (mounted && !_isPaid) _startWebSocketListener();
                   });
               },
-              onError: (_) {
-                // Falls back to periodic polling automatically
-              },
+              onError: (_) {},
             );
           })
-          .catchError((_) {
-            // Falls back to periodic polling automatically
-          });
+          .catchError((_) {});
     } catch (_) {}
   }
 
@@ -149,7 +156,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
           content: Text(
             'Hệ thống chưa ghi nhận tiền về tài khoản. Vui lòng đợi trong giây lát!',
           ),
-          backgroundColor: HasakiColors.primary,
+          backgroundColor: AppColors.primary,
           duration: Duration(seconds: 2),
         ),
       );
@@ -166,7 +173,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.check_circle, color: HasakiColors.success, size: 28),
+            Icon(Icons.check_circle, color: AppColors.success, size: 28),
             SizedBox(width: 8),
             Text('Thanh Toán Thành Công!'),
           ],
@@ -179,7 +186,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: HasakiColors.primary,
+              backgroundColor: AppColors.primary,
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -213,7 +220,101 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
       SnackBar(
         content: Text('Đã sao chép $label: $text'),
         duration: const Duration(seconds: 2),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _openBankingApp(
+    PaymentInstruction? instruction,
+    double amount,
+  ) async {
+    if (instruction == null) return;
+    final syntax = instruction.transferSyntax ?? '';
+
+    if (syntax.isNotEmpty) {
+      await Clipboard.setData(ClipboardData(text: syntax));
+    }
+
+    final bankBin = instruction.bankBin ?? '970422';
+    final bankAccount = instruction.bankAccountNumber ?? '';
+    final amountInt = amount.toInt();
+    final accountName = instruction.bankAccountName ?? '';
+
+    String deepLink = instruction.deepLinkUrl ?? '';
+    if (deepLink.isEmpty) {
+      final encodedName = Uri.encodeComponent(accountName);
+      final encodedSyntax = Uri.encodeComponent(syntax);
+      deepLink =
+          'https://api.vietqr.io/$bankBin/$bankAccount?amount=$amountInt&addInfo=$encodedSyntax&accountName=$encodedName';
+    }
+
+    try {
+      final uri = Uri.parse(deepLink);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Không thể mở app ngân hàng tự động. Đã sao chép nội dung CK, vui lòng mở app ngân hàng của bạn.',
+              ),
+              backgroundColor: Color(0xFFB45309),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Đang chuyển sang ứng dụng ngân hàng... Vui lòng xác thực thanh toán.',
+              ),
+              backgroundColor: AppColors.primary,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi mở ứng dụng ngân hàng: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _copyAllPaymentInfo(PaymentInstruction? instruction, double amount) {
+    if (instruction == null) return;
+    final buffer = StringBuffer();
+    if (instruction.bankName != null) {
+      buffer.writeln('Ngân hàng: ${instruction.bankName}');
+    }
+    if (instruction.bankAccountNumber != null) {
+      buffer.writeln('Số tài khoản: ${instruction.bankAccountNumber}');
+    }
+    if (instruction.bankAccountName != null) {
+      buffer.writeln('Chủ tài khoản: ${instruction.bankAccountName}');
+    }
+    buffer.writeln('Số tiền: ${AppFormatters.formatCurrency(amount)}');
+    if (instruction.transferSyntax != null) {
+      buffer.writeln('Nội dung chuyển khoản: ${instruction.transferSyntax}');
+    }
+
+    Clipboard.setData(ClipboardData(text: buffer.toString().trim()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Đã sao chép toàn bộ thông tin thanh toán!'),
+        backgroundColor: AppColors.primary,
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -228,14 +329,14 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
     final bankAccountName = instruction?.bankAccountName;
     final qrUrl =
         (instruction?.qrCodeUrl != null && instruction!.qrCodeUrl!.isNotEmpty)
-        ? instruction.qrCodeUrl!
-        : '';
+            ? instruction.qrCodeUrl!
+            : '';
 
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Thanh Toán VietQR Tức Thì'),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
         automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
@@ -243,7 +344,6 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
         child: Center(
           child: Column(
             children: [
-              // Polling status badge
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.symmetric(
@@ -252,12 +352,12 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                 ),
                 decoration: BoxDecoration(
                   color: _isPaid
-                      ? HasakiColors.primaryLight
+                      ? AppColors.primaryLight
                       : const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: _isPaid
-                        ? HasakiColors.primarySoft
+                        ? AppColors.primarySoft
                         : const Color(0xFFFDE68A),
                   ),
                 ),
@@ -270,7 +370,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: HasakiColors.primary,
+                          color: AppColors.primary,
                         ),
                       )
                     else
@@ -278,7 +378,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                         _isPaid ? Icons.check_circle : Icons.sync,
                         size: 16,
                         color: _isPaid
-                            ? HasakiColors.primary
+                            ? AppColors.primary
                             : const Color(0xFFB45309),
                       ),
                     const SizedBox(width: 8),
@@ -290,8 +390,138 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: _isPaid
-                            ? HasakiColors.primary
+                            ? AppColors.primary
                             : const Color(0xFFB45309),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.85),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.bolt,
+                            color: Colors.amberAccent,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Thanh toán tức thì 1-chạm',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Tự động mở App Ngân Hàng & điền sẵn thông tin',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppColors.primary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.account_balance, size: 20),
+                        label: const Text(
+                          'MỞ APP NGÂN HÀNG THANH TOÁN',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        onPressed: () => _openBankingApp(
+                          instruction,
+                          order.totalAmount,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () => _copyAllPaymentInfo(
+                        instruction,
+                        order.totalAmount,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.copy_all,
+                              color: Colors.white70,
+                              size: 16,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Sao chép toàn bộ thông tin CK',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -301,7 +531,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -318,27 +548,26 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                       children: [
                         Icon(
                           Icons.qr_code_2,
-                          color: HasakiColors.primary,
-                          size: 28,
+                          color: AppColors.primary,
+                          size: 24,
                         ),
                         SizedBox(width: 8),
                         Text(
-                          'Quét mã qua App Ngân Hàng',
+                          'Hoặc quét mã QR từ thiết bị khác',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
 
-                    // QR Image
                     if (qrUrl.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          border: Border.all(color: HasakiColors.border),
+                          border: Border.all(color: AppColors.border),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Image.network(
@@ -378,7 +607,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                       _buildPaymentDetailRow('Chủ tài khoản:', bankAccountName),
                     _buildPaymentDetailRow(
                       'Số tiền:',
-                      HasakiFormatters.formatCurrency(order.totalAmount),
+                      AppFormatters.formatCurrency(order.totalAmount),
                     ),
                     if (transferContent != null && transferContent.isNotEmpty)
                       _buildCopyableRow(
@@ -424,7 +653,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                     Navigator.popUntil(context, (route) => route.isFirst),
                 child: const Text(
                   'Tôi sẽ thanh toán sau',
-                  style: TextStyle(color: HasakiColors.textMuted),
+                  style: TextStyle(color: AppColors.textMuted),
                 ),
               ),
             ],
@@ -442,8 +671,8 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
         children: [
           Text(
             label,
-            style: HasakiTypography.caption.copyWith(
-              color: HasakiColors.textMuted,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textMuted,
             ),
           ),
           Expanded(
@@ -471,8 +700,8 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
         children: [
           Text(
             label,
-            style: HasakiTypography.caption.copyWith(
-              color: HasakiColors.textMuted,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textMuted,
             ),
           ),
           Expanded(
@@ -486,7 +715,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      color: HasakiColors.primary,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -496,7 +725,7 @@ class _VietQrPaymentScreenState extends State<VietQrPaymentScreen> {
                   child: const Icon(
                     Icons.copy,
                     size: 16,
-                    color: HasakiColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
               ],

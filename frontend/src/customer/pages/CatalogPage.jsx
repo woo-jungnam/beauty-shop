@@ -118,7 +118,6 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Let the API combine filters before sorting and pagination; cancel obsolete requests.
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);

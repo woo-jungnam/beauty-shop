@@ -82,7 +82,6 @@ class _TreatmentBookingScreenState extends State<TreatmentBookingScreen> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      // Resolve an ambiguous timeout from the server before another booking attempt.
       try {
         final course = await provider.enrollment(
           widget.course.id,
@@ -101,9 +100,7 @@ class _TreatmentBookingScreenState extends State<TreatmentBookingScreen> {
           if (mounted) Navigator.pop(context, true);
           return;
         }
-      } catch (_) {
-        /* User keeps the unresolved error and can explicitly refresh. */
-      }
+      } catch (_) {}
       if (mounted) {
         setState(() {
           _busy = false;

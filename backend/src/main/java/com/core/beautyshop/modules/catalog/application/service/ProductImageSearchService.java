@@ -39,15 +39,12 @@ public class ProductImageSearchService {
         }
         if (raw.length > MAX_BYTES) throw new ImageSearchException(413, "Ảnh tối đa 5 MiB.");
         if (!supported(raw)) throw new ImageSearchException(415, "Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.");
-        // Avoid holding a DB transaction open during model inference.
         return resolve(client.search(raw));
     }
 
     public SearchResult resolve(ImageSearchClient.Result result) {
         var ids = result.items().stream().map(ImageSearchClient.Candidate::productId).toList();
         if (ids.isEmpty()) return new SearchResult("EMPTY", result.indexVersion(), List.of());
-        // Existing batch catalog projection verifies ACTIVE, soft deletion, active SKU,
-        // safe stock, expiration and warehouse/batch restrictions at request time.
         var available = products.findAvailableByIds(ids, BusinessTime.today()).stream()
                 .collect(Collectors.toMap(ProductListResponse::getId, Function.identity(), (a, b) -> a));
         var photoIds = result.items().stream().map(ImageSearchClient.Candidate::imageId)
@@ -55,7 +52,6 @@ public class ProductImageSearchService {
         var photos = images.findAllById(photoIds).stream()
                 .filter(image -> !Boolean.TRUE.equals(image.getIsDeleted()))
                 .collect(Collectors.toMap(ProductImage::getId, Function.identity(), (a, b) -> a));
-        // Display only the current uploaded photo that matched the index, never an external thumbnail.
         var items = result.items().stream().map(candidate -> {
                     var product = available.get(candidate.productId());
                     if (product == null) return null;

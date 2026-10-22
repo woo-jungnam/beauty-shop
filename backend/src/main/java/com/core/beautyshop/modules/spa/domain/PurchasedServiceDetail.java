@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 
-/** Name and relative allocation value captured when the order is created. */
 @Embeddable @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class PurchasedServiceDetail {
     @Column(name = "service_name", nullable = false, length = 255)

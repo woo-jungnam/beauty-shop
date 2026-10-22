@@ -140,7 +140,6 @@ public class TreatmentCourseService {
         return result;
     }
 
-    /** Runs inside paid-ticket issuance transaction. Duplicate callbacks repair a missing enrollment safely. */
     public void onTicketIssued(UserServiceTicket ticket) {
         if (ticket == null || ticket.getOrderId() == null) return;
         Purchase purchase = em.find(Purchase.class, ticket.getOrderId(), LockModeType.PESSIMISTIC_WRITE);
@@ -160,7 +159,6 @@ public class TreatmentCourseService {
         }
         Change change = first(Change.class, "select c from TreatmentChange c where c.settlementOrderId=:oid", "oid", ticket.getOrderId());
         if (change != null) {
-            // The payment transaction already owns the order. Never acquire a course lock here: refunds lock course -> order.
             ticket.setStatus(TicketStatus.REVOKED);
             events.publishEvent(new com.core.beautyshop.modules.spa.api.event.TreatmentSettlementPaidEvent(change.getId()));
         }
@@ -402,8 +400,6 @@ public class TreatmentCourseService {
                 .filter(i -> existing == null || existing.getItems().stream().anyMatch(a -> Objects.equals(a.getId(), i.getAppointmentItemId()))).toList();
         if (remaining.isEmpty()) return List.of();
         List<String> result = new ArrayList<>();
-        // Evaluate contiguous intervals directly: a 40-minute first item can make the
-        // next start 10:40, outside the public single-service 30-minute start lattice.
         var hours = calendar.forDate(date);
         if (hours.closed()) return List.of();
         for (int minute=hours.opensAt().getHour()*60+hours.opensAt().getMinute(); minute<hours.closesAt().getHour()*60+hours.closesAt().getMinute(); minute+=30) {

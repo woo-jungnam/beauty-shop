@@ -53917,7 +53917,7 @@
             "minLength": 0,
             "type": "string",
             "description": "Huy hiệu phụ trên banner",
-            "example": "HASAKI CHÍNH HÃNG 100%"
+            "example": "BEAUTYSHOP CHÍNH HÃNG 100%"
           },
           "description": {
             "maxLength": 500,

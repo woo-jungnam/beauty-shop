@@ -112,8 +112,6 @@ public class CategoryServiceImpl implements CategoryService {
             @CacheEvict(value = "product_detail", allEntries = true)
     })
     public CategoryResponse updateCategory(Long id, UpdateCategoryRequest request) {
-        // Tree mutations share the same ordered locks, so concurrent A->B and B->A
-        // changes cannot both validate against the old hierarchy.
         categoryRepository.findAllForHierarchyUpdate();
         Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với id: " + id));

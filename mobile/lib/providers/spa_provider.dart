@@ -14,6 +14,7 @@ class SpaProvider extends ChangeNotifier {
   bool _authManaged = false;
   int _privateGeneration = 0;
   bool _disposed = false;
+  int? lastBookedAppointmentId;
 
   List<SpaService> _services = [];
   List<Appointment> _appointments = [];
@@ -81,6 +82,7 @@ class SpaProvider extends ChangeNotifier {
     _packageKeys.clear();
     _appointments = [];
     _myTickets = [];
+    lastBookedAppointmentId = null;
     _appointmentsError = _ticketsError = _errorMessage = null;
     _loadingAppointments = _loadingTickets = false;
     if (notify) notifyListeners();
@@ -218,8 +220,10 @@ class SpaProvider extends ChangeNotifier {
     int? financialPolicyVersion,
     int? ticketId,
   }) async {
+    final generation = _privateGeneration;
     _isLoading = true;
     _errorMessage = null;
+    lastBookedAppointmentId = null;
     notifyListeners();
 
     final dateStr =
@@ -245,23 +249,28 @@ class SpaProvider extends ChangeNotifier {
           ],
         },
       );
+      if (_disposed || generation != _privateGeneration) return false;
       if (response.isSuccess) {
+        final data = response.data;
+        final id = data is Map ? int.tryParse('${data['id']}') : null;
+        lastBookedAppointmentId = id != null && id > 0 ? id : null;
         await fetchAppointments();
-        _isLoading = false;
-        notifyListeners();
-        return true;
+        return !_disposed && generation == _privateGeneration;
       } else {
         _errorMessage = response.message ?? 'Không thể đặt lịch hẹn';
       }
     } catch (e) {
+      if (_disposed || generation != _privateGeneration) return false;
       if (e is ApiException) {
         _errorMessage = e.message;
       } else {
         _errorMessage = 'Lỗi kết nối khi gửi yêu cầu đặt lịch hẹn';
       }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!_disposed && generation == _privateGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
 
     return false;

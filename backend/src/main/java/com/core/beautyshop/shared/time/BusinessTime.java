@@ -1,6 +1,5 @@
 package com.core.beautyshop.shared.time;
 import java.time.*;
-/** Business calendar dates are Vietnamese dates; persisted event timestamps remain UTC instants. */
 public final class BusinessTime {
  public static final ZoneId ZONE=ZoneId.of("Asia/Ho_Chi_Minh");
  private BusinessTime(){}

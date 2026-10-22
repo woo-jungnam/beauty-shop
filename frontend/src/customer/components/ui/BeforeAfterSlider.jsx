@@ -38,7 +38,6 @@ export const BeforeAfterSlider = ({
 
   return (
     <div className="clinical-case-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
-      {/* Card Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
         <span className="badge-dermatology safe" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
           <Microscope size={13} />
@@ -57,7 +56,6 @@ export const BeforeAfterSlider = ({
         <span>{patient}</span>
       </div>
 
-      {/* Interactive Split Comparison Viewport */}
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
@@ -76,7 +74,6 @@ export const BeforeAfterSlider = ({
           marginBottom: '16px'
         }}
       >
-        {/* Background Layer: AFTER IMAGE (Full width) */}
         <img
           src={afterImage}
           alt="Sau điều trị"
@@ -90,7 +87,6 @@ export const BeforeAfterSlider = ({
           }}
         />
 
-        {/* Foreground Layer: BEFORE IMAGE (Clipped by slider position) */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -111,7 +107,6 @@ export const BeforeAfterSlider = ({
           />
         </div>
 
-        {/* Draggable Divider Line */}
         <div style={{
           position: 'absolute',
           top: 0,
@@ -124,7 +119,6 @@ export const BeforeAfterSlider = ({
           zIndex: 10,
           pointerEvents: 'none'
         }}>
-          {/* Circular Divider Handle */}
           <div style={{
             position: 'absolute',
             top: '50%',
@@ -145,7 +139,6 @@ export const BeforeAfterSlider = ({
           </div>
         </div>
 
-        {/* Floating Labels */}
         <div style={{
           position: 'absolute',
           bottom: '10px',
@@ -181,7 +174,6 @@ export const BeforeAfterSlider = ({
         </div>
       </div>
 
-      {/* Preset Quick Snap Controls */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
         <button
           onClick={() => setSliderPos(0)}
@@ -233,7 +225,6 @@ export const BeforeAfterSlider = ({
         </button>
       </div>
 
-      {/* Statistical Metric Badge */}
       <div style={{
         backgroundColor: 'var(--c-canvas)',
         padding: '10px 14px',
@@ -246,7 +237,6 @@ export const BeforeAfterSlider = ({
         </div>
       </div>
 
-      {/* Applied Regimen Details */}
       <div style={{ fontSize: '11.5px', color: 'var(--c-text-muted)', marginTop: 'auto' }}>
         <strong>Phác đồ ứng dụng:</strong> {routine}
       </div>

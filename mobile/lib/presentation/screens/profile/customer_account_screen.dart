@@ -578,7 +578,6 @@ Future<AccountMap?> accountForm(
       ),
     ),
   );
-  // Dialog teardown is deferred until its closing animation has completed.
   Future<void>.delayed(const Duration(milliseconds: 400), () {
     for (final controller in controllers.values) {
       controller.dispose();

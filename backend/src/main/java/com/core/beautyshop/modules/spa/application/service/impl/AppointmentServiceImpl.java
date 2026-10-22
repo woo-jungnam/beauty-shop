@@ -105,8 +105,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         List<AppointmentItem> items = new ArrayList<>();
         LocalTime currentStartTime = request.getStartTime();
 
-        // Lock course ownership before staff/tickets. Every entry is checked, including legacy
-        // clients that attempt to use a course-owned ticket without its session item.
         var sessionIds = request.getItems().stream()
                 .map(com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest::getTreatmentSessionItemId)
                 .filter(java.util.Objects::nonNull).toList();
@@ -149,7 +147,6 @@ public class AppointmentServiceImpl implements AppointmentService {
 
             if (staff != null) {
                 requireWorkingShift(staff, request.getAppointmentDate(), currentStartTime, itemEndTime);
-                // The staff row is the scheduling mutex; a locking JOIN could deadlock with rescheduling.
                 boolean isOverlapping = appointmentRepository.existsOverlappingAppointmentForStaff(
                         staff.getId(),
                         request.getAppointmentDate(),
@@ -427,7 +424,6 @@ public class AppointmentServiceImpl implements AppointmentService {
                 appointment.setNotes(incoming);
             } else {
                 String combined = existing + "; " + incoming;
-                // ponytail: truncate to 500; upgrade path: move notes to AppointmentActionHistory only
                 if (combined.length() > 500) {
                     appointment.setNotes(incoming);
                 } else {

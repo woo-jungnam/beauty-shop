@@ -31,8 +31,6 @@ public class InventoryOrderEventListener {
     public void handleOrderPaid(OrderEvents.OrderPaidEvent event) {
         log.info("Handling OrderPaidEvent in Inventory for orderId={}, orderNumber={} with {} items",
                 event.getOrderId(), event.getOrderNumber(), event.getItems() != null ? event.getItems().size() : 0);
-
-        // Money receipt does not prove dispatch. Keep the order's exact reservations until shipment.
     }
 
     @EventListener

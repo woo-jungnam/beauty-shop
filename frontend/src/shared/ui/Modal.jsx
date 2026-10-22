@@ -2,7 +2,6 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from './Button';
 
-// A shared stack keeps keyboard focus and body scrolling correct for nested dialogs.
 const openDialogs = [];
 let originalBodyOverflow = '';
 

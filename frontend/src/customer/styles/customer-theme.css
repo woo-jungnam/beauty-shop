@@ -226,7 +226,7 @@
   }
 }
 
-/* Buttons - Hasaki Standard */
+/* Buttons - BeautyShop Standard */
 .btn-luxury-primary {
   display: inline-flex;
   align-items: center;
@@ -299,7 +299,7 @@
   background: var(--c-primary-light);
 }
 
-/* Card - Hasaki Product & Info Card */
+/* Card - BeautyShop Product & Info Card */
 .luxury-card {
   background: #FFFFFF;
   border: 1px solid var(--c-border);
@@ -598,7 +598,7 @@
    HOMEPAGE SPECIFIC LUXURY & SCIENTIFIC UI COMPONENTS
    ========================================================================== */
 
-/* Hero Banner Carousel Transition - Hasaki Deep Forest Theme */
+/* Hero Banner Carousel Transition - BeautyShop Theme */
 .hero-slider-container {
   position: relative;
   overflow: hidden;
@@ -626,7 +626,7 @@
   background: #A7F3D0;
 }
 
-/* Flash Sale Progress Bar - Hasaki Deal Bar */
+/* Flash Sale Progress Bar - BeautyShop Deal Bar */
 .flash-deal-progress-bg {
   width: 100%;
   height: 8px;
@@ -643,7 +643,7 @@
   transition: width 0.5s ease;
 }
 
-/* Tab Filter Buttons - Hasaki Pill/Tab Filter */
+/* Tab Filter Buttons - BeautyShop Pill/Tab Filter */
 .tab-filter-btn {
   display: inline-flex;
   align-items: center;

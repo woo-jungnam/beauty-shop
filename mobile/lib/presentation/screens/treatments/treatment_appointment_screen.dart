@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/treatment_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/treatment_provider.dart';
+import 'appointment_payment_section.dart';
 import 'treatment_widgets.dart';
 
 class TreatmentAppointmentScreen extends StatefulWidget {
@@ -88,18 +89,6 @@ class _TreatmentAppointmentScreenState
         instructionError = '$error';
       }
     }
-    JsonMap? finance;
-    String? financeError;
-    if (widget.courseId == 0 && (owner || provider.canManageReception)) {
-      try {
-        final response = await ApiClient().get<dynamic>(
-          '/api/v1/spa/appointments/${widget.id}/finance',
-        );
-        finance = treatmentMap(response.data);
-      } catch (error) {
-        financeError = '$error';
-      }
-    }
     JsonMap? care;
     String? careError;
     if (clinical) {
@@ -114,8 +103,6 @@ class _TreatmentAppointmentScreenState
       'customerView': customerView,
       'assignedItems': assignedItems,
       'assignmentError': assignmentError,
-      'finance': finance,
-      'financeError': financeError,
       'appointment': appointment,
       'preparation': preparation,
       'preparationError': preparationError,
@@ -484,41 +471,11 @@ class _TreatmentAppointmentScreenState
                       TreatmentStatusChip(status),
                       if (data['assignmentError'] != null)
                         Text('${data['assignmentError']}'),
-                      if (data['financeError'] != null)
-                        Text(
-                          'Chưa tải được thông tin cọc/phí: ${data['financeError']}',
-                        ),
-                      if (data['finance'] is Map)
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Cọc & phí lịch hẹn',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                for (final entry in <String, String>{
-                                  'depositRequired': 'Cọc yêu cầu',
-                                  'depositCollected': 'Đã thu cọc',
-                                  'appliedToInvoice': 'Đã trừ vào hóa đơn',
-                                  'assessedFee':
-                                      'Phí phát sinh theo chính sách',
-                                  'feePaid': 'Phí đã thu',
-                                  'feeDue': 'Phí còn thiếu',
-                                  'refundable': 'Cọc còn có thể hoàn',
-                                  'refunded': 'Đã hoàn',
-                                }.entries)
-                                  Text(
-                                    '${entry.value}: ${(data['finance'] as Map)[entry.key] ?? 0} ₫',
-                                  ),
-                                const Text(
-                                  'Liên hệ quầy để đối soát cọc, phí và chứng từ thanh toán.',
-                                ),
-                              ],
-                            ),
-                          ),
+                      if (owner || reception)
+                        AppointmentPaymentSection(
+                          key: ValueKey('payment-${widget.id}'),
+                          id: widget.id,
+                          status: status,
                         ),
                       if (widget.operate)
                         Text(
@@ -625,7 +582,7 @@ class _TreatmentAppointmentScreenState
                                 ),
                                 if (preparation['legacyBooking'] == true)
                                   const Text(
-                                    'Lịch cũ không có snapshot yêu cầu mới.',
+                                    'Lịch hẹn trước đây không có yêu cầu bổ sung.',
                                   ),
                                 ...treatmentMaps(preparation['forms']).map((
                                   requirement,

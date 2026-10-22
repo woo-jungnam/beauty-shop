@@ -43,7 +43,6 @@ const submissionError = (error) => {
   if (status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để gửi bình luận.';
   if (status === 403) return 'Bạn chưa có quyền gửi nội dung này. Vui lòng kiểm tra tài khoản.';
   const message = error?.response?.data?.message ?? error?.message ?? '';
-  // Keep useful Vietnamese business errors, without exposing technical messages.
   if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(message)
     && !/Exception|SQL|java\.|stack trace|HTTP \d|[ÃÂ]/.test(message)) return message;
   return 'Chưa thể gửi nội dung. Vui lòng thử lại; thông tin bạn đã nhập vẫn được giữ.';

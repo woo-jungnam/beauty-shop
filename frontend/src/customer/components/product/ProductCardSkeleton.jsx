@@ -1,10 +1,5 @@
 import React from 'react';
 
-/**
- * ProductCardSkeleton
- * Khung placeholder mô phỏng cấu trúc ProductCard 1:1,
- * duy trì layout ổn định (CLS = 0) và hiệu ứng shimmer mượt mà trong lúc tải dữ liệu.
- */
 export const ProductCardSkeleton = () => {
   return (
     <div
@@ -20,7 +15,6 @@ export const ProductCardSkeleton = () => {
       }}
       aria-hidden="true"
     >
-      {/* 1. Image Media Container - Tỉ lệ 1:1 chuẩn xác với ProductCard */}
       <div
         className="product-card-media"
         style={{
@@ -30,7 +24,6 @@ export const ProductCardSkeleton = () => {
           overflow: 'hidden',
         }}
       >
-        {/* Lớp nền shimmer toàn ảnh */}
         <div
           className="skeleton-shimmer"
           style={{
@@ -42,7 +35,6 @@ export const ProductCardSkeleton = () => {
           }}
         />
 
-        {/* Khung badge góc trái trên (Hot deal / Discount) */}
         <div
           className="skeleton-shimmer"
           style={{
@@ -56,7 +48,6 @@ export const ProductCardSkeleton = () => {
           }}
         />
 
-        {/* Khung nút tròn wishlist góc phải trên */}
         <div
           className="skeleton-shimmer"
           style={{
@@ -71,7 +62,6 @@ export const ProductCardSkeleton = () => {
         />
       </div>
 
-      {/* 2. Content Body - Đồng bộ padding và khoảng cách dòng */}
       <div
         className="product-card-body"
         style={{
@@ -81,7 +71,6 @@ export const ProductCardSkeleton = () => {
           flex: 1,
         }}
       >
-        {/* Khung tên thương hiệu */}
         <div
           className="skeleton-shimmer"
           style={{
@@ -92,7 +81,6 @@ export const ProductCardSkeleton = () => {
           }}
         />
 
-        {/* Khung tiêu đề sản phẩm: 2 dòng giữ vững minHeight 36px tránh giật layout */}
         <div
           style={{
             minHeight: '36px',
@@ -120,7 +108,6 @@ export const ProductCardSkeleton = () => {
           />
         </div>
 
-        {/* Khung rating sao và số lượng đã bán */}
         <div
           style={{
             display: 'flex',
@@ -148,7 +135,6 @@ export const ProductCardSkeleton = () => {
           />
         </div>
 
-        {/* Khung giá khuyến mãi và giá gốc */}
         <div
           style={{
             display: 'flex',
@@ -179,10 +165,6 @@ export const ProductCardSkeleton = () => {
   );
 };
 
-/**
- * ProductGridSkeleton
- * Lưới khung sản phẩm hiển thị khi reload bộ lọc, tìm kiếm hoặc fetch dữ liệu ban đầu
- */
 export const ProductGridSkeleton = ({ count = 8 }) => {
   return (
     <div

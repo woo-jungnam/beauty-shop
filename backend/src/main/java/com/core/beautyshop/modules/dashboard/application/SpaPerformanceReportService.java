@@ -10,7 +10,6 @@ import java.time.*;
 import java.sql.Timestamp;
 import java.util.*;
 
-/** Earned service value uses historical invoices/entitlements/consumptions, never current catalog prices. */
 @Service @RequiredArgsConstructor
 public class SpaPerformanceReportService {
  private final JdbcTemplate jdbc;

@@ -14,9 +14,10 @@ import java.math.*;
 import java.time.*;
 import java.util.*;
 
-/** Confirmed receipts and refund evidence; this service never initiates a bank transfer. */
 @Service @RequiredArgsConstructor
-public class SpaFinancialService {
+public class SpaFinancialService implements com.core.beautyshop.modules.spa.api.SpaDepositFacade {
+ @org.springframework.beans.factory.annotation.Autowired
+ private com.core.beautyshop.modules.payment.api.PaymentFacade payments;
  private final JdbcTemplate jdbc;
  private final EntityManager em;
  private final SpaAccessService access;
@@ -24,7 +25,9 @@ public class SpaFinancialService {
  public record Policy(int version,BigDecimal depositAmount,BigDecimal cancellationFee,BigDecimal noShowFee) {}
  public record Entry(Long id,String key,String kind,BigDecimal amount,String method,String externalReference,String reason,Long actorId,String createdAt) {}
  public record Finance(Long appointmentId,int policyVersion,BigDecimal depositRequired,BigDecimal depositCollected,BigDecimal appliedToInvoice,
-                       BigDecimal assessedFee,BigDecimal feePaid,BigDecimal feeDue,BigDecimal refundable,BigDecimal refunded,boolean closed,List<Entry> entries) {}
+                       BigDecimal assessedFee,BigDecimal feePaid,BigDecimal feeDue,BigDecimal refundable,BigDecimal refunded,boolean closed,List<Entry> entries,
+                       BigDecimal depositDue,DepositPayment depositPayment,List<String> reviewReasons) {}
+ public record DepositPayment(String transferCode,boolean canPay,com.core.beautyshop.modules.payment.api.dto.PaymentInstruction paymentInstruction) {}
  public record Receipt(BigDecimal amount,String method,String externalReference,String reason) {}
  @Transactional(readOnly=true)
  public Policy policy() { return jdbc.queryForObject("SELECT * FROM spa_financial_policy WHERE id=1",(rs,n)->new Policy(rs.getInt("version"),rs.getBigDecimal("deposit_amount"),rs.getBigDecimal("cancellation_fee"),rs.getBigDecimal("no_show_fee"))); }
@@ -52,16 +55,89 @@ public class SpaFinancialService {
   jdbc.update("UPDATE spa_appointment_finance SET closed=TRUE,assessed_fee="+(noShow?"no_show_fee":chargeCancellation?"cancellation_fee":"0")+" WHERE appointment_id=?",appointment.getId());
  }
  @Transactional(readOnly=true)
- public Finance view(Long id) { Appointment a=appointment(id,false); access.requireCanViewAppointment(a); return load(id); }
+ public Finance view(Long id) { Appointment a=appointment(id,false); requireFinanceAccess(a); return load(id); }
+ private void requireFinanceAccess(Appointment a) {
+  if(!access.canManageReception() && !Objects.equals(a.getUserId(),SecurityUtils.getCurrentUserId()))
+   throw new org.springframework.security.access.AccessDeniedException("Chỉ chủ lịch hoặc thu ngân được xem tài chính");
+ }
+ @Transactional
+ public Finance depositPayment(Long id) {
+  Appointment a=appointment(id,true); requireFinanceAccess(a); Finance f=load(id);
+  if(!canPay(a,f.closed(),f.depositDue())) throw new BusinessException("Lịch không còn cần thanh toán cọc");
+  jdbc.update("UPDATE spa_appointment_finance SET deposit_transfer_code=? WHERE appointment_id=? AND deposit_transfer_code IS NULL",
+          "SPADEP-"+UUID.randomUUID().toString().replace("-","").toUpperCase(Locale.ROOT),id);
+  return load(id);
+ }
+ private boolean canPay(Appointment a,boolean closed,BigDecimal due) {
+  return !closed && due.signum()>0 && Set.of(AppointmentStatus.PENDING,AppointmentStatus.CONFIRMED).contains(a.getStatus());
+ }
+ @Override @Transactional
+ public String receiveDeposit(String transferCode,com.core.beautyshop.modules.payment.api.dto.BankReceipt receipt) {
+  whole(receipt.amount());
+  var ids=jdbc.query("SELECT appointment_id FROM spa_appointment_finance WHERE deposit_transfer_code=?",(rs,n)->rs.getLong(1),transferCode);
+  if(ids.isEmpty()) return "DEPOSIT_REVIEW";
+  Long id=ids.getFirst(); Appointment a=em.find(Appointment.class,id,LockModeType.PESSIMISTIC_WRITE);
+  if(a==null) return "DEPOSIT_REVIEW";
+  em.refresh(a,LockModeType.PESSIMISTIC_WRITE);
+  var linked=jdbc.query("SELECT appointment_id FROM spa_financial_entries WHERE payment_transaction_id=?",(rs,n)->rs.getLong(1),receipt.transactionId());
+  if(!linked.isEmpty()) {
+   if(!id.equals(linked.getFirst())) throw new BusinessException("Giao dịch đã thuộc lịch khác");
+   return depositStatus(load(id),a);
+  }
+  var evidence=jdbc.query("SELECT id,appointment_id,kind,amount FROM spa_financial_entries WHERE method='BANK' AND external_reference=?",(rs,n)->new Object[]{rs.getLong(1),rs.getLong(2),rs.getString(3),rs.getBigDecimal(4)},receipt.reference());
+  if(!evidence.isEmpty()) {
+   var old=evidence.getFirst();
+   if(!id.equals(old[1]) || !"DEPOSIT".equals(old[2]) || receipt.amount().compareTo((BigDecimal)old[3])!=0) return "DEPOSIT_REVIEW";
+   jdbc.update("UPDATE spa_financial_entries SET payment_transaction_id=? WHERE id=?",receipt.transactionId(),old[0]);
+  } else {
+   Long legacy=jdbc.queryForObject("SELECT COUNT(*) FROM spa_financial_entries WHERE appointment_id=? AND method='BANK' AND kind IN ('DEPOSIT','FEE') AND payment_transaction_id IS NULL",Long.class,id);
+   if(legacy>0) return "DEPOSIT_REVIEW";
+   jdbc.update("INSERT INTO spa_financial_entries(appointment_id,entry_key,kind,amount,method,external_reference,reason,actor_id,payment_transaction_id) VALUES(?,?,'DEPOSIT',?,'BANK',?,?,NULL,?)",
+           id,"SEPAY-DEPOSIT-"+receipt.transactionId(),receipt.amount(),receipt.reference(),"Tiền cọc thực nhận qua SePay",receipt.transactionId());
+  }
+  return depositStatus(load(id),a);
+ }
+ private String depositStatus(Finance f,Appointment a) {
+  if(f.closed() || Boolean.TRUE.equals(a.getIsDeleted()) || !f.reviewReasons().isEmpty()) return "DEPOSIT_REVIEW";
+  return f.depositDue().signum()>0?"PARTIALLY_PAID":"SUCCESS";
+ }
  @Transactional
  public Finance receipt(Long id,Receipt c,String key,boolean fee) {
-  Appointment a=appointment(id,true); if(!access.canManageReception()) throw new org.springframework.security.access.AccessDeniedException("Chỉ lễ tân được ghi phiếu thu");
+  if(!access.canManageReception()) throw new org.springframework.security.access.AccessDeniedException("Chỉ lễ tân được ghi phiếu thu");
+  if(c!=null && "BANK".equals(c.method())) return bankReceipt(id,c,key,fee);
+  Appointment a=appointment(id,true);
   validate(c,key); Finance f=load(id); String kind=fee?"FEE":"DEPOSIT";
   if(replay(id,key,kind,c)) return load(id);
   if(fee) { if(!f.closed() || c.amount().compareTo(f.feeDue())>0) throw new BusinessException("Số thu vượt phí còn thiếu hoặc lịch chưa đóng"); }
   else if(!Set.of(AppointmentStatus.PENDING,AppointmentStatus.CONFIRMED).contains(a.getStatus()) || c.amount().compareTo(f.depositRequired().subtract(f.depositCollected()))>0)
    throw new BusinessException("Chỉ thu phần cọc còn thiếu trước khi thực hiện dịch vụ");
   insert(id,key,kind,c); return load(id);
+ }
+ private Finance bankReceipt(Long id,Receipt c,String key,boolean fee) {
+  if(c.externalReference()==null || c.externalReference().isBlank()) throw new BusinessException("Cần mã giao dịch SePay");
+  var receipt=payments.lockBankReceipt(c.externalReference().trim());
+  Appointment a=appointment(id,true); String kind=fee?"FEE":"DEPOSIT";
+  var linked=jdbc.query("SELECT appointment_id,kind FROM spa_financial_entries WHERE payment_transaction_id=?",(rs,n)->Map.entry(rs.getLong(1),rs.getString(2)),receipt.transactionId());
+  if(!linked.isEmpty()) {
+   if(!id.equals(linked.getFirst().getKey()) || !kind.equals(linked.getFirst().getValue()) || c.amount()==null || c.amount().compareTo(receipt.amount())!=0)
+    throw new BusinessException("Giao dịch đã được ghi nhận với nội dung khác");
+   return load(id);
+  }
+  validate(c,key);
+  if(c.amount().compareTo(receipt.amount())!=0) throw new BusinessException("Số tiền phải khớp toàn bộ giao dịch SePay");
+  String code=jdbc.queryForObject("SELECT deposit_transfer_code FROM spa_appointment_finance WHERE appointment_id=?",String.class,id);
+  if(code==null) {
+   code="SPADEP-"+UUID.randomUUID().toString().replace("-","").toUpperCase(Locale.ROOT);
+   jdbc.update("UPDATE spa_appointment_finance SET deposit_transfer_code=? WHERE appointment_id=?",code,id);
+  }
+  if(!"UNKNOWN".equals(receipt.target()) && !code.equals(receipt.target())) throw new BusinessException("Giao dịch có mã đích khác hoặc mơ hồ");
+  Finance f=load(id);
+  if(fee && (!f.closed() || c.amount().compareTo(f.feeDue())>0)) throw new BusinessException("Số thu vượt phí còn thiếu hoặc lịch chưa đóng");
+  if(replay(id,key,kind,c)) return load(id);
+  insert(id,key,kind,c);
+  jdbc.update("UPDATE spa_financial_entries SET payment_transaction_id=? WHERE entry_key=?",receipt.transactionId(),key);
+  payments.assignBankReceipt(receipt.transactionId(),code,fee?"SUCCESS":depositStatus(load(id),a));
+  return load(id);
  }
  @Transactional
  public Finance refund(Long id,Receipt c,String key) {
@@ -73,6 +149,7 @@ public class SpaFinancialService {
  }
  public void applyAdvance(Appointment appointment,BigDecimal invoiceTotal) {
   Finance f=load(appointment.getId());
+  if(f.closed()) return;
   BigDecimal remaining=f.depositCollected().subtract(f.appliedToInvoice()).subtract(f.refunded()).max(BigDecimal.ZERO);
   BigDecimal applicable=remaining.min(invoiceTotal.subtract(f.appliedToInvoice()).max(BigDecimal.ZERO));
   if(applicable.signum()>0) {
@@ -88,14 +165,28 @@ public class SpaFinancialService {
   totals.put("ASSESSED_FEES",jdbc.queryForObject("SELECT COALESCE(SUM(assessed_fee),0) FROM spa_appointment_finance",BigDecimal.class)); return totals;
  }
  private Finance load(Long id) {
-  List<Entry> entries=jdbc.query("SELECT * FROM spa_financial_entries WHERE appointment_id=? ORDER BY id",(rs,n)->new Entry(rs.getLong("id"),rs.getString("entry_key"),rs.getString("kind"),rs.getBigDecimal("amount"),rs.getString("method"),rs.getString("external_reference"),rs.getString("reason"),rs.getLong("actor_id"),rs.getTimestamp("created_at").toInstant().toString()),id);
+  List<Entry> entries=jdbc.query("SELECT * FROM spa_financial_entries WHERE appointment_id=? ORDER BY id",(rs,n)->new Entry(rs.getLong("id"),rs.getString("entry_key"),rs.getString("kind"),rs.getBigDecimal("amount"),rs.getString("method"),rs.getString("external_reference"),rs.getString("reason"),rs.getObject("actor_id",Long.class),rs.getTimestamp("created_at").toInstant().toString()),id);
   BigDecimal collected=sum(entries,"DEPOSIT"),applied=sum(entries,"APPLY"),refunded=sum(entries,"REFUND"),feePaid=sum(entries,"FEE");
   var rows=jdbc.query("SELECT * FROM spa_appointment_finance WHERE appointment_id=?",(rs,n)-> {
-   BigDecimal fee=rs.getBigDecimal("assessed_fee");
-   return new Finance(id,rs.getInt("policy_version"),rs.getBigDecimal("deposit_required"),collected,applied,fee,feePaid,
-           fee.subtract(collected.min(fee)).subtract(feePaid).max(BigDecimal.ZERO),collected.subtract(applied).subtract(collected.min(fee)).subtract(refunded).max(BigDecimal.ZERO),refunded,rs.getBoolean("closed"),entries);
+   BigDecimal fee=rs.getBigDecimal("assessed_fee"),required=rs.getBigDecimal("deposit_required"),due=required.subtract(collected).max(BigDecimal.ZERO);
+   boolean closed=rs.getBoolean("closed"); String code=rs.getString("deposit_transfer_code");
+   var reasons=new ArrayList<String>();
+   if(collected.compareTo(required)>0) reasons.add("OVERPAYMENT");
+   if(closed && collected.subtract(applied).subtract(refunded).signum()>0) reasons.add(applied.signum()>0?"UNALLOCATED_AFTER_INVOICE":"LATE_RECEIPT");
+   boolean legacy=jdbc.queryForObject("SELECT COUNT(*) FROM spa_financial_entries WHERE appointment_id=? AND method='BANK' AND kind IN ('DEPOSIT','FEE') AND payment_transaction_id IS NULL",Long.class,id)>0;
+   if(legacy) reasons.add("LEGACY_BANK_REVIEW");
+   DepositPayment payment=null;
+   if(code!=null) {
+    Appointment a=em.find(Appointment.class,id);
+    boolean payable=a!=null && !Boolean.TRUE.equals(a.getIsDeleted()) && canPay(a,closed,due);
+    var instruction=payable?payments.processPayment(com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK,
+            com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto.builder().orderNumber(code).totalAmount(due).build()):null;
+    payment=new DepositPayment(code,payable,instruction);
+   }
+   return new Finance(id,rs.getInt("policy_version"),required,collected,applied,fee,feePaid,
+           fee.subtract(collected.min(fee)).subtract(feePaid).max(BigDecimal.ZERO),collected.subtract(applied).subtract(collected.min(fee)).subtract(refunded).max(BigDecimal.ZERO),refunded,closed,entries,due,payment,reasons);
   },id);
-  return rows.isEmpty()?new Finance(id,0,BigDecimal.ZERO,collected,applied,BigDecimal.ZERO,feePaid,BigDecimal.ZERO,BigDecimal.ZERO,refunded,false,entries):rows.getFirst();
+  return rows.isEmpty()?new Finance(id,0,BigDecimal.ZERO,collected,applied,BigDecimal.ZERO,feePaid,BigDecimal.ZERO,BigDecimal.ZERO,refunded,false,entries,BigDecimal.ZERO,null,List.of()):rows.getFirst();
  }
  private boolean replay(Long id,String key,String kind,Receipt c) {
   List<String> existing=jdbc.query("SELECT entry_key FROM spa_financial_entries WHERE entry_key=?",(rs,n)->rs.getString(1),key);

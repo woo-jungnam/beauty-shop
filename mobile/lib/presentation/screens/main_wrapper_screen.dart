@@ -38,17 +38,16 @@ class _MainWrapperScreenState extends State<MainWrapperScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       body: FadeIndexedStack(index: _currentIndex, children: _screens),
 
-      // Hasaki 5-Tab Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onTabChange,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: HasakiColors.getSurface(context),
-        selectedItemColor: HasakiColors.primary,
-        unselectedItemColor: HasakiColors.textLight,
+        backgroundColor: AppColors.getSurface(context),
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textLight,
         selectedFontSize: 11,
         unselectedFontSize: 11,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800),
@@ -70,7 +69,7 @@ class _MainWrapperScreenState extends State<MainWrapperScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.flash_on_outlined),
-            activeIcon: Icon(Icons.flash_on, color: HasakiColors.dealRed),
+            activeIcon: Icon(Icons.flash_on, color: AppColors.dealRed),
             label: 'Ưu đãi',
           ),
           BottomNavigationBarItem(

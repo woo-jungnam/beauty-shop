@@ -10,6 +10,7 @@ public interface CatalogFacade {
     Map<Long, ProductVariantSummaryDto> getVariantSummariesByIds(Collection<Long> variantIds);
     ProductVariantSummaryDto getVariantSummaryForInventory(Long variantId);
     Map<Long, ProductVariantSummaryDto> getVariantSummariesForInventory(Collection<Long> variantIds);
+    java.util.List<ProductVariantSummaryDto> getVariantSummariesForInventoryBySkus(Collection<String> skus);
     boolean variantExistsById(Long variantId);
     boolean productExistsById(Long productId);
     void updateProductRating(Long productId, double averageRating, int totalReviews);

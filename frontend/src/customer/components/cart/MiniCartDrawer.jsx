@@ -91,15 +91,12 @@ export const MiniCartDrawer = ({ onNavigate }) => {
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className="drawer-backdrop" 
-        onClick={() => setCartOpen(false)} 
+      <div
+        className="drawer-backdrop"
+        onClick={() => setCartOpen(false)}
       />
 
-      {/* Slide Drawer Panel */}
       <div ref={drawerRef} className="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="customer-cart-title" tabIndex={-1}>
-        {/* 1. Header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -134,7 +131,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
 
         {cartErrorNotice}
 
-        {/* 2. Free Shipping Progress Bar */}
         <div style={{
           padding: '12px 20px',
           backgroundColor: isFreeShipping ? 'var(--c-safe-green-bg)' : 'var(--c-gold-light)',
@@ -177,7 +173,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* 3. Items List or Empty State */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
@@ -234,7 +229,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                   borderBottom: '1px solid var(--c-border-subtle)'
                 }}
               >
-                {/* Thumbnail */}
                 <div style={{
                   width: '64px',
                   height: '64px',
@@ -247,17 +241,16 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                   justifyContent: 'center'
                 }}>
                   {item.image ? (
-                    <img 
-                      src={item.image} 
-                      alt={item.name} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (
                     <Sparkles size={20} color="var(--c-gold)" />
                   )}
                 </div>
 
-                {/* Details */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '11px', color: 'var(--c-gold-hover)', fontWeight: 600, textTransform: 'uppercase' }}>
                     {item.brand}
@@ -282,7 +275,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                     justifyContent: 'space-between',
                     marginTop: '8px'
                   }}>
-                    {/* Quantity controller */}
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -291,7 +283,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                       overflow: 'hidden',
                       height: '26px'
                     }}>
-                      <button 
+                      <button
                         disabled={isLoading}
                         onClick={() => updateQuantity(item.itemId, item.quantity - 1)}
                         style={{
@@ -317,7 +309,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                       }}>
                         {item.quantity}
                       </span>
-                      <button 
+                      <button
                         disabled={isLoading}
                         onClick={() => updateQuantity(item.itemId, item.quantity + 1)}
                         style={{
@@ -337,7 +329,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                       </button>
                     </div>
 
-                    {/* Price and delete */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{
                         fontSize: '13px',
@@ -370,7 +361,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
           )}
         </div>
 
-        {/* 4. Voucher & Checkout Footer */}
         {items.length > 0 && (
           <div style={{
             padding: '16px 20px',
@@ -380,7 +370,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
             flexDirection: 'column',
             gap: '12px'
           }}>
-            {/* Voucher input */}
             <div>
               {voucher ? (
                 <div style={{
@@ -453,7 +442,6 @@ export const MiniCartDrawer = ({ onNavigate }) => {
               )}
             </div>
 
-            {/* Calculations Breakdown */}
             <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-text-muted)' }}>
                 <span>Tạm tính</span>
@@ -487,8 +475,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Checkout Action Button */}
-            <button 
+            <button
               disabled={isLoading}
               onClick={() => {
                 setCartOpen(false);

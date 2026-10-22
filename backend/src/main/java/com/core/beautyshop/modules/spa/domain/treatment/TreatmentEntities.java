@@ -6,7 +6,6 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/** Independent purchase and clinical records; published plans and historical results are never rewritten. */
 public final class TreatmentEntities {
     private TreatmentEntities() {}
 

@@ -54,6 +54,14 @@ public class CatalogFacadeImpl implements CatalogFacade {
     }
 
     @Override
+    public java.util.List<ProductVariantSummaryDto> getVariantSummariesForInventoryBySkus(Collection<String> skus) {
+        if (skus == null || skus.isEmpty()) return java.util.List.of();
+        var exactSkus = new java.util.HashSet<>(skus);
+        return productVariantRepository.findVariantSummariesForInventoryBySkus(exactSkus).stream()
+                .filter(dto -> exactSkus.contains(dto.getSku())).toList();
+    }
+
+    @Override
     @Transactional
     public void lockProductForRating(Long productId) {
         productRepository.findByIdForUpdate(productId)

@@ -91,7 +91,6 @@ public class WarehouseServiceImpl implements WarehouseService {
     public void deleteWarehouse(Long id) {
         Warehouse warehouse = warehouseRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho với id: " + id));
-        // Same warehouse→batch order as receipts/transfers; refresh bypasses cached pre-lock state.
         entities.refresh(warehouse, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         for (var stock : stocks.findAllByWarehouseIdForUpdate(id)) {
             entities.refresh(stock, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);

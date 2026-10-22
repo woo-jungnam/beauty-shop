@@ -20,6 +20,7 @@ import {
   formatDateTime,
   formatDate,
   formatNumber,
+  resolveMediaUrl,
 } from '../shared/utils/formatters';
 import { Button } from '../shared/ui/Button';
 import { Input } from '../shared/ui/Input';
@@ -72,29 +73,29 @@ export const InventoryPage = () => {
   const transferKey = useRef(crypto.randomUUID());
   const [loading, setLoading] = useState(false);
 
-  // Sổ cái biến động kho
   const [transactions, setTransactions] = useState([]);
   const [ledgerPage, setLedgerPage] = useState(0);
   const [ledgerTotalPages, setLedgerTotalPages] = useState(1);
   const [ledgerTotalElements, setLedgerTotalElements] = useState(0);
+  const [filterStockId, setFilterStockId] = useState('');
+  const [filterVariantId, setFilterVariantId] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({ stockId: '', variantId: '' });
+  const [selectedTx, setSelectedTx] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
-  // Cảnh báo tồn & cận hạn
   const [lowStockList, setLowStockList] = useState([]);
   const [expiringList, setExpiringList] = useState([]);
 
-  // Kho bãi & Lô tồn
   const [warehouses, setWarehouses] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [warehouseStocks, setWarehouseStocks] = useState([]);
 
-  // Modal xử lý hàng hoàn trả cách ly
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
   const [inspectQuantity, setInspectQuantity] = useState(1);
   const [inspectRestock, setInspectRestock] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Modal tạo kho mới
   const [createWhModalOpen, setCreateWhModalOpen] = useState(false);
   const [whName, setWhName] = useState('');
   const [whCode, setWhCode] = useState('');
@@ -105,25 +106,26 @@ export const InventoryPage = () => {
   const [whType, setWhType] = useState('CENTRAL');
   const [whSubmitting, setWhSubmitting] = useState(false);
 
-  // Modal nhập kho hàng hóa
   const [inboundModalOpen, setInboundModalOpen] = useState(false);
+  const [inboundMethod, setInboundMethod] = useState('RECEIPT');
   const [inboundVariantId, setInboundVariantId] = useState('');
   const [inboundQuantity, setInboundQuantity] = useState('50');
   const [inboundCostPrice, setInboundCostPrice] = useState('150000');
-  const [inboundBatchCode, setInboundBatchCode] = useState('LO-2026-10');
-  const [inboundExpDate, setInboundExpDate] = useState('2027-12-31');
+  const [inboundBatchCode, setInboundBatchCode] = useState('');
+  const [inboundExpDate, setInboundExpDate] = useState('');
+  const [inboundLocation, setInboundLocation] = useState('Kệ A-01');
   const [inboundMinQty, setInboundMinQty] = useState('10');
   const [inboundMaxQty, setInboundMaxQty] = useState('500');
   const [inboundSubmitting, setInboundSubmitting] = useState(false);
+  const [catalogVariants, setCatalogVariants] = useState([]);
+  const [variantSearch, setVariantSearch] = useState('');
 
-  // Modal điều chỉnh số lượng sau kiểm kê
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [selectedStockForAdjust, setSelectedStockForAdjust] = useState(null);
   const [adjustQuantityAfter, setAdjustQuantityAfter] = useState('0');
   const [adjustReason, setAdjustReason] = useState('Kiểm kê kho định kỳ');
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
 
-  // Modal điều chuyển kho
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [selectedStockForTransfer, setSelectedStockForTransfer] = useState(null);
   const [targetWhId, setTargetWhId] = useState('');
@@ -131,11 +133,13 @@ export const InventoryPage = () => {
   const [transferReason, setTransferReason] = useState('Điều phối luân chuyển hàng giữa các kho');
   const [transferSubmitting, setTransferSubmitting] = useState(false);
 
-  // Tải dữ liệu Sổ cái
-  const fetchLedger = async (p = 0) => {
+  const fetchLedger = async (p = 0, currentFilters = appliedFilters) => {
     setLoading(true);
     try {
-      const res = await apiClient.get(`${ENDPOINTS.INVENTORY.TRANSACTIONS}?page=${p}&size=15`);
+      const params = new URLSearchParams({ page: String(p), size: '15' });
+      if (currentFilters.stockId?.trim()) params.append('stockId', currentFilters.stockId.trim());
+      else if (currentFilters.variantId?.trim()) params.append('variantId', currentFilters.variantId.trim());
+      const res = await apiClient.get(`${ENDPOINTS.INVENTORY.TRANSACTIONS}?${params.toString()}`);
       const pageData = res.data || res;
       setTransactions(pageData.content || []);
       setLedgerPage(pageData.page ?? p);
@@ -146,7 +150,35 @@ export const InventoryPage = () => {
     }
   };
 
-  // Tải dữ liệu Cảnh báo
+  const handleApplyFilter = (e) => {
+    e.preventDefault();
+    const newFilters = { stockId: filterStockId, variantId: filterVariantId };
+    setAppliedFilters(newFilters);
+    fetchLedger(0, newFilters);
+  };
+
+  const handleResetFilter = () => {
+    setFilterStockId('');
+    setFilterVariantId('');
+    const newFilters = { stockId: '', variantId: '' };
+    setAppliedFilters(newFilters);
+    fetchLedger(0, newFilters);
+  };
+
+  const handleOpenTxDetail = async (tx) => {
+    setSelectedTx(tx);
+    setDetailModalOpen(true);
+    if (tx?.id) {
+      try {
+        const res = await apiClient.get(ENDPOINTS.INVENTORY.TRANSACTION_DETAIL(tx.id));
+        const fullData = res.data || res;
+        if (fullData) setSelectedTx(fullData);
+      } catch (err) {
+        console.warn('Could not fetch latest transaction detail', err);
+      }
+    }
+  };
+
   const fetchAlerts = async () => {
     setLoading(true);
     try {
@@ -161,7 +193,6 @@ export const InventoryPage = () => {
     }
   };
 
-  // Tải danh sách kho
   const fetchWarehouses = async () => {
     setLoading(true);
     try {
@@ -176,7 +207,6 @@ export const InventoryPage = () => {
     }
   };
 
-  // Tải tồn kho theo kho bãi
   const fetchWarehouseStocks = async (whId) => {
     if (!whId) return;
     setLoading(true);
@@ -261,10 +291,52 @@ export const InventoryPage = () => {
     }
   };
 
+  const fetchCatalogVariants = async () => {
+    try {
+      const res = await apiClient.get('/api/v1/products?size=100');
+      const list = res?.data?.content || res?.content || res?.data || (Array.isArray(res) ? res : []);
+      const flattened = [];
+      list.forEach(p => {
+        (p.variants || []).forEach(v => {
+          flattened.push({
+            id: v.id,
+            productId: p.id,
+            productName: p.name,
+            variantName: v.variantName || v.volume || 'Tiêu chuẩn',
+            sku: v.sku,
+            price: v.price || p.minPrice || 0,
+            imageUrl: v.imageUrl || p.thumbnailUrl,
+          });
+        });
+      });
+      setCatalogVariants(flattened);
+      if (flattened.length > 0 && !inboundVariantId) {
+        setInboundVariantId(String(flattened[0].id));
+        setInboundCostPrice(String(Math.round(flattened[0].price * 0.7)));
+      }
+    } catch (e) {
+      console.warn('Could not load products for inbound picker', e);
+    }
+  };
+
+  const handleOpenInboundModal = () => {
+    fetchCatalogVariants();
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    setInboundBatchCode(`LOT-${todayStr}-01`);
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 2);
+    setInboundExpDate(futureDate.toISOString().slice(0, 10));
+    setInboundModalOpen(true);
+  };
+
   const handleInboundStock = async (e) => {
     e.preventDefault();
     if (!selectedWarehouseId) {
       alert('Vui lòng chọn một kho bãi trước khi nhập hàng.');
+      return;
+    }
+    if (!inboundVariantId) {
+      alert('Vui lòng chọn sản phẩm / biến thể cần nhập kho.');
       return;
     }
     setInboundSubmitting(true);
@@ -273,14 +345,19 @@ export const InventoryPage = () => {
         productVariantId: parseInt(inboundVariantId, 10),
         quantity: parseInt(inboundQuantity, 10),
         reservedQuantity: 0,
-        costPrice: parseFloat(inboundCostPrice),
+        costPrice: parseFloat(inboundCostPrice || 0),
         batchCode: inboundBatchCode.trim() || undefined,
         expirationDate: inboundExpDate || undefined,
+        location: inboundLocation.trim() || undefined,
         minQuantity: parseInt(inboundMinQty, 10) || 0,
         maxQuantity: inboundMaxQty ? parseInt(inboundMaxQty, 10) : undefined,
       };
-      await apiClient.post(ENDPOINTS.INVENTORY.WAREHOUSE_RECEIPTS(selectedWarehouseId), payload, { headers: { 'Idempotency-Key': inboundKey.current } });
-      inboundKey.current = crypto.randomUUID();
+      if (inboundMethod === 'RECEIPT') {
+        await apiClient.post(ENDPOINTS.INVENTORY.WAREHOUSE_RECEIPTS(selectedWarehouseId), payload, { headers: { 'Idempotency-Key': inboundKey.current } });
+        inboundKey.current = crypto.randomUUID();
+      } else {
+        await apiClient.post(ENDPOINTS.INVENTORY.WAREHOUSE_STOCKS(selectedWarehouseId), payload);
+      }
       setInboundModalOpen(false);
       fetchWarehouseStocks(selectedWarehouseId);
     } catch (err) {
@@ -363,46 +440,65 @@ export const InventoryPage = () => {
     }
   };
 
-  // Cột bảng: Sổ cái biến động kho
   const ledgerColumns = [
     {
       header: 'Thời điểm',
       accessor: (row) => formatDateTime(row.occurredAt),
-      width: '140px',
+      width: '130px',
     },
     {
       header: 'Biến thể SKU / Sản phẩm',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{row.productName || `Biến thể #${row.variantId}`}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Mã SKU: {row.sku || '-'}</div>
+          <div style={{ fontWeight: 600 }}>{row.productName || (row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId || row.variantId}`)}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Mã SKU: {row.sku || '-'}
+            {row.variantName ? ` · ${row.variantName}` : ''}
+            {row.batchCode ? ` · Lô: ${row.batchCode}` : ''}
+          </div>
         </div>
       ),
     },
     {
       header: 'Kho bãi',
       accessor: (row) => row.warehouseName || `Kho #${row.warehouseId}`,
+      width: '130px',
     },
     {
       header: 'Loại biến động',
       accessor: (row) => {
-        const type = row.transactionType;
-        const meta = TRANSACTION_TYPE_MAP[type] || { label: type, variant: 'default' };
+        const type = row.type || row.transactionType;
+        const meta = TRANSACTION_TYPE_MAP[type] || { label: type || 'Khác', variant: 'default' };
         return <Badge variant={meta.variant}>{meta.label}</Badge>;
       },
-      width: '150px',
+      width: '140px',
     },
     {
       header: 'Biến động',
+      accessor: (row) => {
+        const qty = row.quantity ?? row.quantityChange ?? 0;
+        return (
+          <span
+            style={{
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              color: qty > 0 ? 'var(--color-success-700)' : qty < 0 ? 'var(--color-danger-700)' : 'var(--text-muted)',
+            }}
+          >
+            {qty > 0 ? `+${qty}` : qty}
+          </span>
+        );
+      },
+      align: 'right',
+      width: '90px',
+    },
+    {
+      header: 'Tồn sau',
       accessor: (row) => (
-        <span
-          style={{
-            fontWeight: 700,
-            fontVariantNumeric: 'tabular-nums',
-            color: row.quantityChange > 0 ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-          }}
-        >
-          {row.quantityChange > 0 ? `+${row.quantityChange}` : row.quantityChange}
+        <span style={{ fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+          {row.quantityBefore != null && row.quantityAfter != null
+            ? `${row.quantityBefore} → ${row.quantityAfter}`
+            : (row.quantityAfter ?? '-')}
         </span>
       ),
       align: 'right',
@@ -412,6 +508,7 @@ export const InventoryPage = () => {
       header: 'Đơn giá vốn',
       accessor: (row) => formatCurrency(row.unitCost),
       align: 'right',
+      width: '110px',
     },
     {
       header: 'Tham chiếu & Ghi chú',
@@ -425,9 +522,18 @@ export const InventoryPage = () => {
         );
       },
     },
+    {
+      header: 'Thao tác',
+      accessor: (row) => (
+        <Button size="sm" variant="outline" onClick={() => handleOpenTxDetail(row)}>
+          Chi tiết
+        </Button>
+      ),
+      align: 'center',
+      width: '85px',
+    },
   ];
 
-  // Cột bảng: Cảnh báo tồn kho & Cận hạn
   const alertColumns = [
     {
       header: 'Mã lô',
@@ -440,14 +546,24 @@ export const InventoryPage = () => {
     },
     {
       header: 'Sản phẩm & Phân loại',
-      accessor: (row) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId}`}</div>
-          {row.batchCode && (
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Mã lô: {row.batchCode}</div>
-          )}
-        </div>
-      ),
+      accessor: (row) => {
+        const img = row.productThumbnailUrl ? resolveMediaUrl(row.productThumbnailUrl) : null;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {img && (
+              <img src={img} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+            )}
+            <div>
+              <div style={{ fontWeight: 600 }}>{row.productName || (row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId}`)}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 6 }}>
+                {row.variantName && <span>{row.variantName}</span>}
+                {row.sku && <span>· SKU: <code>{row.sku}</code></span>}
+                {row.batchCode && <span>· Lô: {row.batchCode}</span>}
+              </div>
+            </div>
+          </div>
+        );
+      },
     },
     {
       header: 'Tồn thực tế',
@@ -502,35 +618,52 @@ export const InventoryPage = () => {
     },
   ];
 
-  // Cột bảng: Tồn kho biến thể theo kho bãi
   const warehouseStockColumns = [
     {
       header: 'Mã lô',
       accessor: 'id',
-      width: '70px',
+      width: '60px',
     },
     {
-      header: 'Biến thể SKU',
-      accessor: (row) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{row.sku || `Biến thể #${row.productVariantId}`}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID biến thể: {row.productVariantId}</div>
-        </div>
-      ),
+      header: 'Sản phẩm & Biến thể',
+      accessor: (row) => {
+        const img = row.productThumbnailUrl ? resolveMediaUrl(row.productThumbnailUrl) : null;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 4, overflow: 'hidden', backgroundColor: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {img ? (
+                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              ) : (
+                <Boxes size={18} color="var(--text-muted)" />
+              )}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600 }}>{row.productName || `Biến thể #${row.productVariantId}`}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 6, marginTop: 2 }}>
+                {row.variantName && <span>{row.variantName}</span>}
+                {row.sku && <span>· SKU: <code>{row.sku}</code></span>}
+              </div>
+            </div>
+          </div>
+        );
+      },
     },
     {
-      header: 'Mã lô sản xuất',
-      accessor: (row) => row.batchCode || 'Mặc định (Không mã)',
+      header: 'Mã lô SX',
+      accessor: (row) => row.batchCode ? <code style={{ fontWeight: 600 }}>{row.batchCode}</code> : 'Mặc định',
+      width: '110px',
     },
     {
       header: 'Tồn bán được',
-      accessor: (row) => <strong>{formatNumber(row.quantity)}</strong>,
+      accessor: (row) => <strong style={{ color: 'var(--color-success-700)', fontSize: 13 }}>{formatNumber(row.quantity)}</strong>,
       align: 'right',
+      width: '100px',
     },
     {
       header: 'Đang giữ cho đơn',
       accessor: (row) => formatNumber(row.reservedQuantity || 0),
       align: 'right',
+      width: '110px',
     },
     {
       header: 'Hàng cách ly (Hoàn)',
@@ -541,15 +674,32 @@ export const InventoryPage = () => {
           <span style={{ color: 'var(--text-muted)' }}>0</span>
         ),
       align: 'right',
+      width: '110px',
     },
     {
       header: 'Đơn giá vốn',
       accessor: (row) => formatCurrency(row.costPrice),
       align: 'right',
+      width: '110px',
     },
     {
-      header: 'Hạn sử dụng',
-      accessor: (row) => formatDate(row.expirationDate) || 'Không có',
+      header: 'Hạn dùng & Vị trí',
+      accessor: (row) => {
+        const daysLeft = getDaysUntilExpiration(row.expirationDate);
+        return (
+          <div>
+            <div style={{ color: daysLeft != null && daysLeft <= 30 ? 'var(--color-danger-700)' : 'inherit', fontWeight: 600 }}>
+              {formatDate(row.expirationDate) || 'Không có'}
+              {daysLeft != null && (
+                <span style={{ fontSize: '11px', display: 'block', fontWeight: 400 }}>
+                  {daysLeft < 0 ? '(Đã hết hạn)' : `(Còn ${daysLeft} ngày)`}
+                </span>
+              )}
+            </div>
+            {row.location && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>Vị trí: {row.location}</div>}
+          </div>
+        );
+      },
     },
     {
       header: 'Thao tác',
@@ -609,7 +759,7 @@ export const InventoryPage = () => {
               <Button variant="outline" size="sm" onClick={() => setCreateWhModalOpen(true)} icon={Warehouse}>
                 Tạo kho mới
               </Button>
-              <Button variant="primary" size="sm" onClick={() => setInboundModalOpen(true)} icon={PackagePlus}>
+              <Button variant="primary" size="sm" onClick={handleOpenInboundModal} icon={PackagePlus}>
                 Nhập kho hàng hóa
               </Button>
             </>
@@ -630,7 +780,6 @@ export const InventoryPage = () => {
         </div>
       </div>
 
-      {/* Danh sách Tab */}
       <InventoryRecallPanel />
       <div className="tabs-header">
         <button
@@ -656,9 +805,52 @@ export const InventoryPage = () => {
         </button>
       </div>
 
-      {/* Tab 1: Sổ cái biến động */}
       {activeTab === 'ledger' && (
         <div className="card">
+          <form
+            onSubmit={handleApplyFilter}
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'flex-end',
+              marginBottom: '16px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid var(--border-subtle)',
+            }}
+          >
+            <div style={{ flex: '1 1 180px' }}>
+              <Input
+                label="Lọc theo ID lô hàng (Stock ID)"
+                type="number"
+                min="1"
+                placeholder="VD: 10"
+                value={filterStockId}
+                onChange={(e) => setFilterStockId(e.target.value)}
+              />
+            </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <Input
+                label="Lọc theo ID biến thể SKU"
+                type="number"
+                min="1"
+                placeholder="VD: 30"
+                value={filterVariantId}
+                onChange={(e) => setFilterVariantId(e.target.value)}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '2px' }}>
+              <Button type="submit" variant="primary" size="sm">
+                Lọc
+              </Button>
+              {(filterStockId || filterVariantId || appliedFilters.stockId || appliedFilters.variantId) && (
+                <Button type="button" variant="outline" size="sm" onClick={handleResetFilter}>
+                  Đặt lại
+                </Button>
+              )}
+            </div>
+          </form>
+
           <DataTable
             columns={ledgerColumns}
             data={transactions}
@@ -681,7 +873,6 @@ export const InventoryPage = () => {
         </div>
       )}
 
-      {/* Tab 2: Cảnh báo */}
       {activeTab === 'alerts' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
@@ -716,7 +907,6 @@ export const InventoryPage = () => {
         </div>
       )}
 
-      {/* Tab 3: Kho bãi & Lô tồn */}
       {activeTab === 'warehouses' && (
         <div>
           <div className="admin-warehouse-toolbar">
@@ -763,7 +953,6 @@ export const InventoryPage = () => {
         </div>
       )}
 
-      {/* MODAL 1: TẠO KHO BÃI MỚI */}
       <Modal
         isOpen={createWhModalOpen}
         onClose={() => setCreateWhModalOpen(false)}
@@ -802,42 +991,115 @@ export const InventoryPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 2: NHẬP KHO HÀNG HÓA */}
       <Modal
         isOpen={inboundModalOpen}
         onClose={() => setInboundModalOpen(false)}
         title={`Nhập Hàng Vào Kho: ${warehouses.find((w) => String(w.id) === String(selectedWarehouseId))?.name || 'Kho đã chọn'}`}
-        maxWidth="540px"
+        maxWidth="640px"
       >
         <form onSubmit={handleInboundStock}>
-          <Input
-            label="ID Biến thể Sản phẩm (Variant ID) *"
-            type="number"
-            value={inboundVariantId}
-            onChange={(e) => setInboundVariantId(e.target.value)}
-            required
-            placeholder="VD: 1, 2, 27..."
-          />
-          <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Input label="Số lượng nhập *" type="number" min={1} value={inboundQuantity} onChange={(e) => setInboundQuantity(e.target.value)} required />
-            <Input label="Đơn giá vốn (VNĐ) *" type="number" value={inboundCostPrice} onChange={(e) => setInboundCostPrice(e.target.value)} required />
+          <div style={{ backgroundColor: '#F9FAFB', padding: '12px 14px', borderRadius: 8, border: '1px solid #E5E7EB', marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 8, color: 'var(--c-primary)' }}>Phương thức nhập kho *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', border: inboundMethod === 'RECEIPT' ? '2px solid var(--sp-primary)' : '1px solid #D1D5DB', backgroundColor: inboundMethod === 'RECEIPT' ? '#EFF6FF' : '#FFFFFF', borderRadius: 6, cursor: 'pointer' }}>
+                <input type="radio" name="inboundMethod" value="RECEIPT" checked={inboundMethod === 'RECEIPT'} onChange={() => setInboundMethod('RECEIPT')} style={{ marginTop: 2 }} />
+                <div>
+                  <strong style={{ fontSize: 13, display: 'block' }}>Nhập lô hàng mới</strong>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Cộng dồn vào tồn kho & tự động tính giá vốn bình quân gia quyền</span>
+                </div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', border: inboundMethod === 'ABSOLUTE' ? '2px solid var(--sp-primary)' : '1px solid #D1D5DB', backgroundColor: inboundMethod === 'ABSOLUTE' ? '#EFF6FF' : '#FFFFFF', borderRadius: 6, cursor: 'pointer' }}>
+                <input type="radio" name="inboundMethod" value="ABSOLUTE" checked={inboundMethod === 'ABSOLUTE'} onChange={() => setInboundMethod('ABSOLUTE')} style={{ marginTop: 2 }} />
+                <div>
+                  <strong style={{ fontSize: 13, display: 'block' }}>Đặt tồn tuyệt đối</strong>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Ghi đè số lượng tồn kho (khởi tạo kho hoặc đối soát kiểm kê)</span>
+                </div>
+              </label>
+            </div>
           </div>
-          <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Input label="Mã lô sản xuất (Batch Code)" value={inboundBatchCode} onChange={(e) => setInboundBatchCode(e.target.value)} placeholder="LO-2026-10" />
-            <Input label="Hạn sử dụng (Expiration Date)" type="date" value={inboundExpDate} onChange={(e) => setInboundExpDate(e.target.value)} />
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 6 }}>Chọn mặt hàng / SKU cần nhập *</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="text"
+                placeholder="Tìm nhanh theo tên sản phẩm hoặc mã SKU..."
+                value={variantSearch}
+                onChange={e => setVariantSearch(e.target.value)}
+                style={{ flex: 1, padding: '8px 12px', fontSize: 12.5, borderRadius: 6, border: '1px solid #D1D5DB' }}
+              />
+            </div>
+
+            <select
+              value={inboundVariantId}
+              onChange={e => {
+                const vid = e.target.value;
+                setInboundVariantId(vid);
+                const selected = catalogVariants.find(v => String(v.id) === String(vid));
+                if (selected) {
+                  setInboundCostPrice(String(Math.round(selected.price * 0.7)));
+                }
+              }}
+              required
+              style={{ width: '100%', padding: '9px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #D1D5DB', backgroundColor: '#FFFFFF' }}
+            >
+              <option value="">-- Chọn sản phẩm & phân loại SKU --</option>
+              {catalogVariants
+                .filter(v => {
+                  if (!variantSearch.trim()) return true;
+                  const q = variantSearch.toLowerCase();
+                  return (v.productName || '').toLowerCase().includes(q) || (v.sku || '').toLowerCase().includes(q) || (v.variantName || '').toLowerCase().includes(q);
+                })
+                .map(v => (
+                  <option key={v.id} value={v.id}>
+                    [{v.sku}] {v.productName} · {v.variantName} ({formatCurrency(v.price)})
+                  </option>
+                ))}
+            </select>
           </div>
-          <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Input label="Định mức tồn tối thiểu (Min)" type="number" value={inboundMinQty} onChange={(e) => setInboundMinQty(e.target.value)} />
-            <Input label="Định mức tồn tối đa (Max)" type="number" value={inboundMaxQty} onChange={(e) => setInboundMaxQty(e.target.value)} />
+
+          {(() => {
+            const currentSelected = catalogVariants.find(v => String(v.id) === String(inboundVariantId));
+            if (!currentSelected) return null;
+            const img = currentSelected.imageUrl ? resolveMediaUrl(currentSelected.imageUrl) : null;
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', backgroundColor: '#F3F4F6', borderRadius: 6, marginBottom: 14 }}>
+                {img && <img src={img} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} />}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>{currentSelected.productName}</div>
+                  <div style={{ fontSize: 11.5, color: '#4B5563', marginTop: 2 }}>
+                    Phân loại: <strong>{currentSelected.variantName}</strong> · SKU: <code>{currentSelected.sku}</code> · Giá niêm yết: {formatCurrency(currentSelected.price)}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="grid-2">
+            <Input label="Số lượng nhập hàng *" type="number" min={1} value={inboundQuantity} onChange={(e) => setInboundQuantity(e.target.value)} required />
+            <Input label="Đơn giá vốn nhập (VNĐ) *" type="number" min={0} value={inboundCostPrice} onChange={(e) => setInboundCostPrice(e.target.value)} required />
           </div>
+
+          <div className="grid-2" style={{ marginTop: '12px' }}>
+            <Input label="Mã lô sản xuất (Batch Code) *" value={inboundBatchCode} onChange={(e) => setInboundBatchCode(e.target.value)} required placeholder="VD: LOT-20261022-01" />
+            <Input label="Hạn sử dụng (Expiration Date) *" type="date" value={inboundExpDate} onChange={(e) => setInboundExpDate(e.target.value)} required />
+          </div>
+
+          <div className="grid-3" style={{ marginTop: '12px' }}>
+            <Input label="Vị trí lưu kho" value={inboundLocation} onChange={(e) => setInboundLocation(e.target.value)} placeholder="Kệ A1 - Tầng 2" />
+            <Input label="Định mức tồn tối thiểu (Min)" type="number" min={0} value={inboundMinQty} onChange={(e) => setInboundMinQty(e.target.value)} />
+            <Input label="Định mức tồn tối đa (Max)" type="number" min={0} value={inboundMaxQty} onChange={(e) => setInboundMaxQty(e.target.value)} />
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setInboundModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={inboundSubmitting}>Xác nhận nhập kho</Button>
+            <Button variant="primary" type="submit" loading={inboundSubmitting}>
+              {inboundMethod === 'RECEIPT' ? 'Xác nhận nhập kho (+ Tồn)' : 'Thiết lập tồn kho'}
+            </Button>
           </div>
         </form>
       </Modal>
 
-      {/* MODAL 3: XỬ LÝ HÀNG HOÀN TRẢ CÁCH LY */}
       <Modal
         isOpen={inspectModalOpen}
         onClose={() => setInspectModalOpen(false)}
@@ -893,7 +1155,6 @@ export const InventoryPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 4: ĐIỀU CHỈNH SỐ LƯỢNG SAU KIỂM KÊ */}
       <Modal
         isOpen={adjustModalOpen}
         onClose={() => setAdjustModalOpen(false)}
@@ -946,7 +1207,6 @@ export const InventoryPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL 5: ĐIỀU CHUYỂN KHO */}
       <Modal
         isOpen={transferModalOpen}
         onClose={() => setTransferModalOpen(false)}
@@ -1010,6 +1270,134 @@ export const InventoryPage = () => {
             <Button variant="primary" type="submit" loading={transferSubmitting}>Xác nhận điều chuyển</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        title={`Chi tiết giao dịch kho #${selectedTx?.id || ''}`}
+        maxWidth="680px"
+      >
+        {selectedTx && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '12px',
+                padding: '14px',
+                backgroundColor: 'var(--bg-muted, #f8fafc)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Loại biến động</div>
+                <div style={{ marginTop: '4px' }}>
+                  <Badge variant={TRANSACTION_TYPE_MAP[selectedTx.type || selectedTx.transactionType]?.variant || 'default'}>
+                    {TRANSACTION_TYPE_MAP[selectedTx.type || selectedTx.transactionType]?.label || selectedTx.type || selectedTx.transactionType || '-'}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Số lượng biến động</div>
+                <div style={{ marginTop: '4px', fontSize: '16px', fontWeight: 700, color: (selectedTx.quantity ?? 0) > 0 ? 'var(--color-success-700)' : (selectedTx.quantity ?? 0) < 0 ? 'var(--color-danger-700)' : 'var(--text-main)' }}>
+                  {(selectedTx.quantity ?? 0) > 0 ? `+${selectedTx.quantity}` : (selectedTx.quantity ?? 0)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Tồn khả dụng (Trước → Sau)</div>
+                <div style={{ marginTop: '4px', fontSize: '14px', fontWeight: 600 }}>
+                  {selectedTx.quantityBefore != null && selectedTx.quantityAfter != null
+                    ? `${selectedTx.quantityBefore} → ${selectedTx.quantityAfter}`
+                    : (selectedTx.quantityAfter ?? '-')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Thời điểm ghi nhận</div>
+                <div style={{ marginTop: '4px', fontSize: '13px' }}>
+                  {formatDateTime(selectedTx.occurredAt)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Người thực hiện</div>
+                <div style={{ marginTop: '4px', fontSize: '13px', fontWeight: 500 }}>
+                  {selectedTx.createdBy || 'Hệ thống / Tự động'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '14px' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Thông tin hàng hóa & Lô kho</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13px' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Sản phẩm: </span>
+                  <strong>{selectedTx.productName || `Sản phẩm #${selectedTx.productVariantId || selectedTx.variantId}`}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Biến thể: </span>
+                  <span>{selectedTx.variantName || '-'}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Mã SKU: </span>
+                  <code>{selectedTx.sku || '-'}</code>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Kho bãi: </span>
+                  <strong>{selectedTx.warehouseName || `Kho #${selectedTx.warehouseId}`}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Mã lô SX: </span>
+                  <span>{selectedTx.batchCode ? <Badge variant="info">{selectedTx.batchCode}</Badge> : 'Không có mã lô'}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Hạn sử dụng: </span>
+                  <span>{selectedTx.expirationDate ? formatDate(selectedTx.expirationDate) : 'Không có hạn dùng'}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Vị trí lưu kho: </span>
+                  <span>{selectedTx.location || 'Chưa định vị'}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Mã lô tồn (Stock ID): </span>
+                  <span>#{selectedTx.stockId}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '14px' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Tài chính & Chứng từ đối chiếu</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13px' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Đơn giá vốn: </span>
+                  <strong>{formatCurrency(selectedTx.unitCost)}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Tổng giá trị biến động: </span>
+                  <strong style={{ color: 'var(--color-primary-600)' }}>{formatCurrency(Math.abs((selectedTx.quantity ?? 0) * (selectedTx.unitCost ?? 0)))}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Loại chứng từ: </span>
+                  <span>{REFERENCE_TYPE_MAP[selectedTx.referenceType] || selectedTx.referenceType || 'Không có'}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Mã chứng từ: </span>
+                  <strong>{selectedTx.referenceId || '-'}</strong>
+                </div>
+              </div>
+              {selectedTx.note && (
+                <div style={{ marginTop: '12px', padding: '8px 12px', backgroundColor: 'var(--bg-main, #fff)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', fontSize: '12px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Ghi chú: </span>
+                  <span>{selectedTx.note}</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <Button variant="outline" onClick={() => setDetailModalOpen(false)}>Đóng</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

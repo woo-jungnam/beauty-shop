@@ -35,7 +35,6 @@ export const ToastNotification = ({ toasts = [], onDismiss }) => {
             animation: 'fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
-          {/* Toast Icon */}
           <div style={{
             width: '32px',
             height: '32px',
@@ -56,7 +55,6 @@ export const ToastNotification = ({ toasts = [], onDismiss }) => {
             {(!toast.type || toast.type === 'cart' || toast.type === 'success') && <Check size={16} />}
           </div>
 
-          {/* Toast Content */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-primary)' }}>
               {toast.title}
@@ -66,7 +64,6 @@ export const ToastNotification = ({ toasts = [], onDismiss }) => {
             </div>
           </div>
 
-          {/* Close button */}
           <button
             onClick={() => onDismiss(toast.id)}
             style={{
@@ -83,7 +80,6 @@ export const ToastNotification = ({ toasts = [], onDismiss }) => {
             <X size={15} />
           </button>
 
-          {/* Countdown indicator line at bottom */}
           <div style={{
             position: 'absolute',
             bottom: 0,

@@ -58,16 +58,12 @@ export const SpaPage = () => {
   const [activeTab, setActiveTab] = useState('appointments');
   const [loading, setLoading] = useState(false);
 
-  // ==========================================
-  // TAB 1: APPOINTMENTS
-  // ==========================================
   const [appointments, setAppointments] = useState([]);
   const [aptPage, setAptPage] = useState(0);
   const [aptTotalPages, setAptTotalPages] = useState(1);
   const [aptTotalElements, setAptTotalElements] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
 
-  // Status Change Modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedApt, setSelectedApt] = useState(null);
   const [targetAptStatus, setTargetAptStatus] = useState('CONFIRMED');
@@ -75,13 +71,9 @@ export const SpaPage = () => {
   const [appointmentAssignments, setAppointmentAssignments] = useState({});
   const [submittingStatus, setSubmittingStatus] = useState(false);
 
-  // ==========================================
-  // TAB 2: SPA SERVICES & PACKAGES
-  // ==========================================
   const [services, setServices] = useState([]);
   const [spaCategories, setSpaCategories] = useState([]);
 
-  // Safety Policy & Preparation Modal for Service
   const [policyModalOpen, setPolicyModalOpen] = useState(false);
   const [selectedServiceForPolicy, setSelectedServiceForPolicy] = useState(null);
   const [policyWarningsRequired, setPolicyWarningsRequired] = useState(false);
@@ -92,9 +84,6 @@ export const SpaPage = () => {
   const [policyFeedback, setPolicyFeedback] = useState(null);
   const policyRequest = useRef(0);
 
-  // ==========================================
-  // TAB: SPA CATEGORIES
-  // ==========================================
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [catName, setCatName] = useState('');
@@ -103,9 +92,6 @@ export const SpaPage = () => {
   const [catActive, setCatActive] = useState(true);
   const [catSubmitting, setCatSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB 3: STAFF & SHIFT SCHEDULES
-  // ==========================================
   const [staffList, setStaffList] = useState([]);
   const [createStaffModalOpen, setCreateStaffModalOpen] = useState(false);
   const [staffUserId, setStaffUserId] = useState('');
@@ -113,7 +99,6 @@ export const SpaPage = () => {
   const [staffBio, setStaffBio] = useState('');
   const [staffSubmitting, setStaffSubmitting] = useState(false);
 
-  // Shift Schedules Modal
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [selectedStaffForSchedule, setSelectedStaffForSchedule] = useState(null);
   const [shiftDate, setShiftDate] = useState(() => getVietnamDateString());
@@ -122,7 +107,6 @@ export const SpaPage = () => {
   const [shiftNote, setShiftNote] = useState('Ca làm việc chuẩn');
   const [shiftSubmitting, setShiftSubmitting] = useState(false);
 
-  // Staff Skills Modal
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const [selectedStaffForSkills, setSelectedStaffForSkills] = useState(null);
   const [staffSkillList, setStaffSkillList] = useState([]);
@@ -131,9 +115,6 @@ export const SpaPage = () => {
   const [newSkillUntil,setNewSkillUntil]=useState('');
   const [skillSubmitting, setSkillSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB: PREPARATION FORM TEMPLATES
-  // ==========================================
   const [createTemplateModalOpen, setCreateTemplateModalOpen] = useState(false);
   const [tplTitle, setTplTitle] = useState('');
   const [tplQuestions, setTplQuestions] = useState([
@@ -142,9 +123,6 @@ export const SpaPage = () => {
   ]);
   const [tplSubmitting, setTplSubmitting] = useState(false);
 
-  // ==========================================
-  // TAB 4: TICKETS & PACKAGES
-  // ==========================================
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [extendModalOpen, setExtendModalOpen] = useState(false);
@@ -155,9 +133,6 @@ export const SpaPage = () => {
   const [compensateSessions, setCompensateSessions] = useState(1);
   const [compensateReason, setCompensateReason] = useState('Bồi thường buổi theo biên bản xử lý');
 
-  // ==========================================
-  // TAB 5: SPA FACILITIES (ROOMS / BEDS / MACHINES)
-  // ==========================================
   const [facilities, setFacilities] = useState([]);
   const [facilityModalOpen, setFacilityModalOpen] = useState(false);
   const [editingFacility, setEditingFacility] = useState(null);
@@ -167,7 +142,6 @@ export const SpaPage = () => {
   const [facActive, setFacActive] = useState(true);
   const [facSubmitting, setFacSubmitting] = useState(false);
 
-  // Facility Blocks / Maintenance Modal
   const [blocksModalOpen, setBlocksModalOpen] = useState(false);
   const [selectedFacForBlocks, setSelectedFacForBlocks] = useState(null);
   const [blocksList, setBlocksList] = useState([]);
@@ -176,15 +150,9 @@ export const SpaPage = () => {
   const [blockReason, setBlockReason] = useState('Bảo trì thiết bị định kỳ');
   const [blockSubmitting, setBlockSubmitting] = useState(false);
 
-  // ==========================================
-  // APPOINTMENT CHECKOUT / INVOICING MODAL
-  // ==========================================
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [selectedAptForInvoice, setSelectedAptForInvoice] = useState(null);
 
-  // ==========================================
-  // DATA FETCHING
-  // ==========================================
   const fetchAppointments = async (p = 0) => {
     setLoading(true);
     try {
@@ -233,7 +201,7 @@ export const SpaPage = () => {
           const publicRes = await apiClient.get(ENDPOINTS.SPA.PUBLIC_STAFF || '/api/v1/spa/services/staff');
           const pData = publicRes?.data || publicRes || [];
           list = Array.isArray(pData) ? pData : (pData?.content || []);
-        } catch { /* The admin list remains the authoritative source. */ }
+        } catch {}
       }
       setStaffList(list || []);
     } catch (e) {
@@ -300,7 +268,6 @@ export const SpaPage = () => {
     }
   }, [activeTab, statusFilter]);
 
-  // Handlers: Appointment Status
   const handleOpenStatusModal = (apt) => {
     setSelectedApt(apt);
     setTargetAptStatus(apt.status || 'CONFIRMED');
@@ -345,8 +312,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Handlers: Spa Service
-  // Spa Category Handlers
   const handleOpenCreateCategory = () => {
     setEditingCategory(null);
     setCatName('');
@@ -401,7 +366,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Service Policy & Preparation Handlers
   const handleOpenPolicyModal = async (srv) => {
     const requestVersion = ++policyRequest.current;
     setPolicyLoaded(false);
@@ -459,7 +423,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Staff Skills Handlers
   const handleOpenSkillsModal = (staff) => {
     setSelectedStaffForSkills(staff);
     setStaffSkillList(staff.skills || []);
@@ -499,7 +462,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Preparation Template Creation Handlers
   const handleOpenCreateTemplate = () => {
     setTplTitle('');
     setTplQuestions([
@@ -526,7 +488,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Handlers: Staff & Schedules
   const handleCreateStaff = async (e) => {
     e.preventDefault();
     setStaffSubmitting(true);
@@ -569,7 +530,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Handlers: Tickets
   const handleExtendTicket = async (e) => {
     e.preventDefault();
     if (!selectedTicket) return;
@@ -605,7 +565,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Handlers: Facilities
   const handleOpenCreateFacility = () => {
     setEditingFacility(null);
     setFacName('');
@@ -658,7 +617,6 @@ export const SpaPage = () => {
     }
   };
 
-  // Blocks / Maintenance
   const handleOpenBlocks = async (fac) => {
     setSelectedFacForBlocks(fac);
     setBlocksModalOpen(true);
@@ -708,9 +666,6 @@ export const SpaPage = () => {
     setInvoiceModalOpen(true);
   };
 
-  // ==========================================
-  // TABLE COLUMNS
-  // ==========================================
   const appointmentColumns = [
     { header: 'ID', accessor: 'id', width: '60px' },
     {
@@ -1008,7 +963,6 @@ export const SpaPage = () => {
       {policyFeedback && !policyModalOpen && <div className={`spa-catalog-notice ${policyFeedback.tone}`} role={policyFeedback.tone === 'error' ? 'alert' : 'status'}>{policyFeedback.message}<button type="button" aria-label="Đóng thông báo" onClick={() => setPolicyFeedback(null)}>×</button></div>}
 
       <SpaOperatingPolicy />
-      {/* Tabs */}
       <div className="tabs-header">
         <button
           className={`tab-btn ${activeTab === 'appointments' ? 'active' : ''}`}
@@ -1061,7 +1015,6 @@ export const SpaPage = () => {
         </button>
       </div>
 
-      {/* Tab: Appointments */}
       {activeTab === 'appointments' && (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
@@ -1097,10 +1050,8 @@ export const SpaPage = () => {
         </div>
       )}
 
-      {/* Tab: Services */}
       {activeTab === 'services' && <SpaCatalogTab onOpenPolicy={handleOpenPolicyModal} />}
 
-      {/* Tab: Categories */}
       {activeTab === 'categories' && (
         <div className="card">
           <DataTable
@@ -1112,7 +1063,6 @@ export const SpaPage = () => {
         </div>
       )}
 
-      {/* Tab: Staff */}
       {activeTab === 'staff' && (
         <div className="card">
           <DataTable
@@ -1124,7 +1074,6 @@ export const SpaPage = () => {
         </div>
       )}
 
-      {/* Tab: Tickets */}
       {activeTab === 'tickets' && (
         <div className="card">
           <DataTable
@@ -1136,7 +1085,6 @@ export const SpaPage = () => {
         </div>
       )}
 
-      {/* Tab: Facilities */}
       {activeTab === 'facilities' && (
         <div className="card">
           <DataTable
@@ -1148,7 +1096,6 @@ export const SpaPage = () => {
         </div>
       )}
 
-      {/* Tab: Preparation Form Templates */}
       {activeTab === 'preparation' && (
         <div className="card">
           <div style={{ marginBottom: 12, color: 'var(--text-muted)', fontSize: 13 }}>
@@ -1163,7 +1110,6 @@ export const SpaPage = () => {
         </div>
       )}
 
-      {/* MODAL: UPDATE APPOINTMENT STATUS */}
       <Modal
         isOpen={statusModalOpen}
         onClose={() => setStatusModalOpen(false)}
@@ -1223,7 +1169,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: CREATE / EDIT SPA CATEGORY */}
       <Modal
         isOpen={categoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
@@ -1250,7 +1195,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: SERVICE SAFETY POLICY & PREPARATION */}
       <Modal
         isOpen={policyModalOpen}
         onClose={handleClosePolicy}
@@ -1337,7 +1281,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: STAFF SKILLS MANAGEMENT */}
       <Modal
         isOpen={skillsModalOpen}
         onClose={() => setSkillsModalOpen(false)}
@@ -1403,7 +1346,6 @@ export const SpaPage = () => {
         </div>
       </Modal>
 
-      {/* MODAL: CREATE FORM TEMPLATE */}
       <Modal
         isOpen={createTemplateModalOpen}
         onClose={() => setCreateTemplateModalOpen(false)}
@@ -1508,7 +1450,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: CREATE STAFF PROFILE */}
       <Modal
         isOpen={createStaffModalOpen}
         onClose={() => setCreateStaffModalOpen(false)}
@@ -1531,7 +1472,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: ASSIGN SHIFT SCHEDULE TO STAFF */}
       <Modal
         isOpen={scheduleModalOpen}
         onClose={() => setScheduleModalOpen(false)}
@@ -1554,7 +1494,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: EXTEND TICKET */}
       <Modal
         isOpen={extendModalOpen}
         onClose={() => setExtendModalOpen(false)}
@@ -1572,7 +1511,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: COMPENSATE SESSIONS */}
       <Modal
         isOpen={compensateModalOpen}
         onClose={() => setCompensateModalOpen(false)}
@@ -1598,7 +1536,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: CREATE / EDIT FACILITY */}
       <Modal
         isOpen={facilityModalOpen}
         onClose={() => setFacilityModalOpen(false)}
@@ -1648,7 +1585,6 @@ export const SpaPage = () => {
         </form>
       </Modal>
 
-      {/* MODAL: FACILITY BLOCKS / MAINTENANCE */}
       <Modal
         isOpen={blocksModalOpen}
         onClose={() => setBlocksModalOpen(false)}
@@ -1714,7 +1650,6 @@ export const SpaPage = () => {
         </div>
       </Modal>
 
-      {/* MODAL: APPOINTMENT INVOICE & CHECKOUT */}
       {workspaceId&&<TreatmentAppointmentDialog appointmentId={workspaceId} role={isAdmin?'admin':'staff'} onClose={()=>setWorkspaceId(null)} onSaved={()=>fetchAppointments(aptPage)} />}
       <Modal
         isOpen={invoiceModalOpen}

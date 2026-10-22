@@ -23,7 +23,6 @@ public class FacilitySchedulingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Facility not available: " + id));
     }
 
-    /** Called only for a new booking, while its service rows are locked. */
     @Transactional
     public void snapshotRequirements(List<AppointmentItem> items) {
         for (AppointmentItem item : items) {
@@ -49,7 +48,6 @@ public class FacilitySchedulingService {
         assignInternal(items, date, excludedAppointmentId, true);
     }
 
-    /** Caller holds the appointment, staff and ticket mutexes before starting this item. */
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void requireExecutionCapacity(AppointmentItem item) {
         Map<Long, Integer> unitsByFacility = new TreeMap<>();
@@ -85,7 +83,6 @@ public class FacilitySchedulingService {
         boolean constrained = items.stream().anyMatch(item -> !released(item)
                 && (item.getFacility() != null || (item.getResourceRequirements() != null && !item.getResourceRequirements().isEmpty())));
         if (!constrained) return;
-        // Sorted row mutexes serialize allocations and administrative maintenance edits.
         List<Facility> locked = facilities.findAllForAllocationUpdate();
         locked.forEach(entityManager::refresh);
         Map<Long, Facility> byId = new LinkedHashMap<>();
@@ -171,7 +168,6 @@ public class FacilitySchedulingService {
                     if (r.getUnits() == null || r.getUnits() <= 0) throw new BusinessException("Thông tin yêu cầu tài nguyên không hợp lệ");
                     result.merge(r.getResourceType(), r.getUnits(), Math::addExact);
                 });
-        // Existing legacy single-facility reservations stay constrained without consulting live catalog rules.
         if (result.isEmpty() && item.getFacility() != null) result.put(item.getFacility().getType(), 1);
         return result;
     }

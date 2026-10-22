@@ -16,9 +16,9 @@ import 'package:beautyshop_mobile/providers/product_provider.dart';
 import 'package:beautyshop_mobile/providers/auth_provider.dart';
 import 'package:beautyshop_mobile/providers/theme_provider.dart';
 import 'package:beautyshop_mobile/providers/chatbot_provider.dart';
-import 'package:beautyshop_mobile/presentation/widgets/hasaki_product_card.dart';
-import 'package:beautyshop_mobile/presentation/widgets/hasaki_flash_deal_card.dart';
-import 'package:beautyshop_mobile/presentation/widgets/hasaki_banner_carousel.dart';
+import 'package:beautyshop_mobile/presentation/widgets/app_product_card.dart';
+import 'package:beautyshop_mobile/presentation/widgets/app_flash_deal_card.dart';
+import 'package:beautyshop_mobile/presentation/widgets/app_banner_carousel.dart';
 import 'package:beautyshop_mobile/presentation/screens/catalog/category_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/home/home_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/profile/profile_screen.dart';
@@ -142,9 +142,9 @@ void main() {
       expect(selected.displayPrice, 0);
       expect(selected.basePrice, 100000);
       expect(selected.discountPercent, 100);
-      expect(HasakiFormatters.calculateDiscountPercent(100000, 0), 100);
-      expect(HasakiFormatters.calculateDiscountPercent(100000, 80000), 20);
-      expect(HasakiFormatters.calculateDiscountPercent(100000, -1), 0);
+      expect(AppFormatters.calculateDiscountPercent(100000, 0), 100);
+      expect(AppFormatters.calculateDiscountPercent(100000, 80000), 20);
+      expect(AppFormatters.calculateDiscountPercent(100000, -1), 0);
       final detail = ProductDetail.fromJson({
         'id': 10,
         'variants': [
@@ -298,10 +298,10 @@ void main() {
       }),
     );
     await cart.fetchCart();
-    expect(await cart.applyVoucher('HASAKI100'), isFalse);
+    expect(await cart.applyVoucher('BEAUTY100'), isFalse);
     expect(requests, 0);
     await StorageService.setAccessToken('test-token');
-    expect(await cart.applyVoucher('HASAKI100'), isFalse);
+    expect(await cart.applyVoucher('BEAUTY100'), isFalse);
     expect(cart.voucherError, 'Mã hết hạn');
     expect(cart.voucherDiscount, 0);
   });
@@ -405,7 +405,7 @@ void main() {
           body: SizedBox(
             width: 150,
             height: 250,
-            child: HasakiFlashDealCard(product: item, onTap: () {}),
+            child: AppFlashDealCard(product: item, onTap: () {}),
           ),
         ),
       ),
@@ -413,14 +413,14 @@ void main() {
     expect(find.text('-35%'), findsNothing);
     expect(find.textContaining('ĐÃ BÁN'), findsNothing);
     expect(find.text('Chưa có đánh giá'), findsOneWidget);
-    expect(find.byType(HasakiProductCard), findsOneWidget);
+    expect(find.byType(AppProductCard), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('Empty banner list never displays sample photos', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: HasakiBannerCarousel(banners: [])),
+        home: Scaffold(body: AppBannerCarousel(banners: [])),
       ),
     );
     expect(find.byType(PageView), findsNothing);

@@ -64,8 +64,6 @@ export default function SkillsMatrix({ service, staff = [], onClose, onSaved }) 
     }));
   };
 
-  // Keep unsuccessful intentions only. Other rows follow the latest server state so
-  // retrying does not overwrite a colleague's changes or repeat confirmed writes.
   const reconcile = (canonical, pending) => {
     const nextDraft = permissionsFor(canonical, service.id);
     const unresolved = new Map();

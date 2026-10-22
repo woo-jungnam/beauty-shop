@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.*;
 
-/** All appointment mutations acquire course locks before appointment/staff/ticket locks. */
 @Service @RequiredArgsConstructor @Transactional
 public class TreatmentAppointmentBridge {
     private final TreatmentCourseService courses;

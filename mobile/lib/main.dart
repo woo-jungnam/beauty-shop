@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/constants/api_constants.dart';
 import 'core/storage/storage_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
@@ -15,6 +16,7 @@ import 'presentation/screens/main_wrapper_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await StorageService.init();
+  ApiConstants.setCustomBaseUrl('https://api.dermascan.world');
 
   runApp(
     MultiProvider(
@@ -37,23 +39,23 @@ void main() async {
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => ChatbotProvider()),
       ],
-      child: const BeautyShopApp(),
+      child: const MobileApp(),
     ),
   );
 }
 
-class BeautyShopApp extends StatelessWidget {
-  const BeautyShopApp({Key? key}) : super(key: key);
+class MobileApp extends StatelessWidget {
+  const MobileApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
-      title: 'BeautyShop — Mỹ Phẩm & Spa Làm Đẹp',
+      title: 'Mỹ Phẩm & Spa Làm Đẹp',
       debugShowCheckedModeBanner: false,
-      theme: HasakiTheme.lightTheme,
-      darkTheme: HasakiTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
       home: const MainWrapperScreen(),
     );

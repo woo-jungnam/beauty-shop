@@ -20,7 +20,6 @@ export const parseMarkdown = (md) => {
   if (!md) return '';
   let html = escapeHtml(md);
 
-  // Inline formatting: bold, italic, inline code, links
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
   html = html.replace(/`([^`]+)`/g, '<code class="chatbot-code">$1</code>');
@@ -52,7 +51,6 @@ export const parseMarkdown = (md) => {
       continue;
     }
 
-    // Markdown Table: lines starting and ending with '|'
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       if (inList) {
         formatted += `</${listType}>`;
@@ -88,7 +86,6 @@ export const parseMarkdown = (md) => {
       tableHeaderDone = false;
     }
 
-    // Horizontal Divider --- or ***
     if (/^(\-{3,}|\*{3,})$/.test(trimmed)) {
       if (inList) {
         formatted += `</${listType}>`;
@@ -98,7 +95,6 @@ export const parseMarkdown = (md) => {
       continue;
     }
 
-    // Headings
     if (trimmed.startsWith('#### ')) {
       if (inList) {
         formatted += `</${listType}>`;
@@ -124,7 +120,6 @@ export const parseMarkdown = (md) => {
       continue;
     }
 
-    // Blockquote
     if (trimmed.startsWith('&gt; ')) {
       if (inList) {
         formatted += `</${listType}>`;
@@ -134,7 +129,6 @@ export const parseMarkdown = (md) => {
       continue;
     }
 
-    // Bullet lists: - item or * item
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       if (!inList || listType !== 'ul') {
         if (inList) formatted += `</${listType}>`;
@@ -146,7 +140,6 @@ export const parseMarkdown = (md) => {
       continue;
     }
 
-    // Numbered lists: 1. item
     const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
     if (olMatch) {
       if (!inList || listType !== 'ol') {
@@ -241,7 +234,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
     setIsTyping(true);
 
     try {
-      // 1. Send query to backend AI RAG Chatbot API
       const res = await apiClient.post(ENDPOINTS.CHATBOT.CHAT, {
         sessionId: chatSessionId,
         message: query.trim(),
@@ -288,7 +280,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
 
   return (
     <>
-      {/* Floating Toggle Button */}
       <div className="chatbot-floating-toggle" style={{
         position: 'fixed',
         bottom: '24px',
@@ -320,7 +311,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
         )}
       </div>
 
-      {/* Chat Popup Panel */}
       {isOpen && (
         <div className="chatbot-panel" style={{
           position: 'fixed',
@@ -339,7 +329,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
           zIndex: 1000,
           overflow: 'hidden'
         }}>
-          {/* Header */}
           <div style={{
             backgroundColor: 'var(--c-primary)',
             color: '#FFFFFF',
@@ -396,7 +385,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
             </button>
           </div>
 
-          {/* Messages Body */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
@@ -456,7 +444,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                     </div>
                   )}
 
-                  {/* Optional Recommended Product Cards inside chat */}
                   {(() => {
                     const recItems = (msg.products && msg.products.length > 0) ? msg.products : (msg.product ? [msg.product] : []);
                     if (recItems.length === 0) return null;
@@ -576,7 +563,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Prompts */}
           <div style={{
             padding: '8px 12px',
             backgroundColor: '#FFFFFF',
@@ -606,7 +592,6 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
             ))}
           </div>
 
-          {/* Input Footer */}
           <div style={{
             padding: '12px',
             backgroundColor: '#FFFFFF',

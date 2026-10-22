@@ -18,6 +18,9 @@ public class OrderItemResponse {
     @Schema(description = "ID dòng sản phẩm trong đơn", example = "501")
     private Long id;
 
+    @Schema(description = "ID sản phẩm", example = "101")
+    private Long productId;
+
     @Schema(description = "ID biến thể SKU", example = "201")
     private Long variantId;
 

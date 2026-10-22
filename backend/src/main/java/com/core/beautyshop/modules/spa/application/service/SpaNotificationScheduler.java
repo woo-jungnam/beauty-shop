@@ -35,8 +35,6 @@ public class SpaNotificationScheduler {
         if (!jobsEnabled) return;
         var local = now.atZone(SpaTimeRules.ZONE);
         var horizon = local.plusHours(hoursAhead);
-        // Hibernate's UTC JDBC TIME encoding can wrap midnight while appointment_date stays local.
-        // Page candidates by date/ID; the locked ORM appointment applies the exact Instant window.
         long cursor = 0;
         while (true) {
             var candidates = SpaJdbcSupport.query(jdbc, """

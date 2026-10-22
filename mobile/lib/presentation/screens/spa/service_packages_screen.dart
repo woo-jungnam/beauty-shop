@@ -42,7 +42,7 @@ class _ServicePackagesScreenState extends State<ServicePackagesScreen> {
         title: Text('Mua ${pack['name']}'),
         content: SingleChildScrollView(
           child: Text(
-            '${HasakiFormatters.formatCurrency((pack['price'] as num).toDouble())}\n'
+            '${AppFormatters.formatCurrency((pack['price'] as num).toDouble())}\n'
             '${(pack['items'] as List).map((s) => "${s['serviceName']}: ${s['quantity']} lượt").join('\n')}\n'
             '${pack['validityDays'] == null ? 'Không giới hạn hạn dùng' : '${pack['validityDays']} ngày từ khi thanh toán'}.\n'
             'Vé chỉ cấp sau xác nhận đủ tiền. Hủy/vắng mặt theo chính sách lúc đặt. Quyết toán cần hủy lịch đang giữ; lượt đã dùng/mất không được hoàn. Giá trị còn lại phân bổ theo giá dịch vụ lúc mua, làm tròn xuống VND; lượt bù không làm tăng tiền hoàn.',
@@ -137,7 +137,7 @@ class _ServicePackagesScreenState extends State<ServicePackagesScreen> {
                       ),
                       Text('${p['description'] ?? ''}'),
                       Text(
-                        HasakiFormatters.formatCurrency(
+                        AppFormatters.formatCurrency(
                           (p['price'] as num).toDouble(),
                         ),
                       ),

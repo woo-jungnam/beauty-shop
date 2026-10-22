@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
 
-/** All batch creators lock the owning warehouse before looking up a batch, including missing batches. */
 @Service
 @RequiredArgsConstructor
 public class InventoryBatchService {
@@ -16,7 +15,6 @@ public class InventoryBatchService {
     private final BatchRecallRepository recalls;
 
     public void requireReceivable(Long variantId,String batchCode) {
-        // Serialize against recalls across every warehouse, including a new destination batch.
         stocks.lockRecallBatches(variantId,normalizeBatchCode(batchCode));
         if(!recalls.findByVariantIdAndBatchCodeAndActiveTrue(variantId,normalizeBatchCode(batchCode)).isEmpty())
             throw new BusinessException("This batch is under active recall; resolve the recall before receiving sellable stock");
@@ -33,7 +31,6 @@ public class InventoryBatchService {
         if (id == null) throw new BusinessException("Kho hàng là bắt buộc");
         Warehouse warehouse = warehouses.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho hàng: " + id));
-        // Procurement validation may have loaded this warehouse before the lock was acquired.
         entities.refresh(warehouse, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         return warehouse;
     }

@@ -63,14 +63,12 @@ export const CustomerFooter = ({ onNavigate }) => {
   const [storeContact, setStoreContact] = useState({ address: '', hotline: '', email: '' });
   useEffect(() => {
     let active = true;
-    // Only values explicitly exposed by the public API may be displayed here.
-    // Contract: STRING store.address / store.hotline / store.email; no seeded defaults.
     apiClient.get('/api/v1/system-configs/public').then(response => {
       if (!active || response?.success === false) return;
       const configs = response?.data ?? response;
       const text = key => typeof configs?.[key] === 'string' ? configs[key].trim() : '';
       setStoreContact({ address: text('store.address'), hotline: text('store.hotline'), email: text('store.email') });
-    }).catch(() => { /* Missing contact information stays unconfigured on failure. */ });
+    }).catch(() => {});
     return () => { active = false; };
   }, []);
   const hotlineNumber = storeContact.hotline.replace(/[\s().-]/g, '');
@@ -90,7 +88,6 @@ export const CustomerFooter = ({ onNavigate }) => {
       marginTop: 'auto',
       borderTop: '1px solid rgba(255, 255, 255, 0.08)'
     }}>
-      {/* Storefront information and customer actions */}
       <div style={{
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '32px 0',
@@ -213,7 +210,6 @@ export const CustomerFooter = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 2. Main Footer Navigation Columns */}
       <div style={{ padding: '48px 0 32px 0' }}>
         <div className="customer-container">
           <div style={{
@@ -221,7 +217,6 @@ export const CustomerFooter = ({ onNavigate }) => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
             gap: '36px'
           }}>
-            {/* Column 1: Brand Introduction */}
             <div style={{ gridColumn: 'span 1' }}>
               <div
                 onClick={() => onNavigate('')}
@@ -272,7 +267,6 @@ export const CustomerFooter = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Column 2: Cosmetics Catalog */}
             <div>
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Danh Mục Nổi Bật
@@ -286,7 +280,6 @@ export const CustomerFooter = ({ onNavigate }) => {
               </ul>
             </div>
 
-            {/* Column 3: Spa Treatments */}
             <div>
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Dịch Vụ Làm Đẹp
@@ -298,7 +291,6 @@ export const CustomerFooter = ({ onNavigate }) => {
               </ul>
             </div>
 
-            {/* Column 4: Newsletter & Certification */}
             <div>
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Khuyến Mãi & Bản Tin
@@ -343,7 +335,6 @@ export const CustomerFooter = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Copyright bar */}
           <div style={{
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
             marginTop: '36px',
@@ -370,7 +361,6 @@ export const CustomerFooter = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 3. Policy & Commitment Modal */}
       {activePolicy && POLICIES[activePolicy] && (
         <div
           style={{

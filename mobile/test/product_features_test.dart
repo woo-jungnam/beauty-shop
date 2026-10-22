@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Chưa công bố'), findsNWidgets(2));
     expect(
       tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
-      HasakiColors.darkCanvas,
+      AppColors.darkCanvas,
     );
   });
   testWidgets(

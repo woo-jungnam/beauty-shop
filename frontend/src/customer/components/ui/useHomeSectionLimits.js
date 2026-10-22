@@ -9,7 +9,6 @@ const initialLimits = {
   spa: 2,
 };
 
-// Read the rendered grids so item limits follow the same breakpoints as the CSS.
 export const useHomeSectionLimits = (pageRef) => {
   const [limits, setLimits] = useState(initialLimits);
 

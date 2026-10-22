@@ -100,7 +100,6 @@ public class CustomerAccountService {
         message.setSubject("Đặt lại mật khẩu BeautyShop");
         message.setText("Bạn đã yêu cầu đặt lại mật khẩu. Liên kết có hiệu lực 30 phút và chỉ dùng một lần:\n"+customerUrl.replaceAll("/$","")+"/#/reset-password?token="+token+"\nNếu bạn không yêu cầu, hãy bỏ qua email này.");
         try {mail.get().send(message);} catch(org.springframework.mail.MailException ex){
-            // Keep the same public response for registered and unregistered emails.
             org.slf4j.LoggerFactory.getLogger(getClass()).error("Password recovery mail delivery failed; check SMTP configuration");
             em.remove(record);
         }

@@ -47,7 +47,6 @@ public class IdentityFacadeImpl implements IdentityFacade {
         }
         var role = roleRepository.findByName("ROLE_CUSTOMER").filter(r -> !Boolean.TRUE.equals(r.getIsDeleted()))
                 .orElseThrow(() -> new BusinessException("Chưa cấu hình vai trò khách hàng. Vui lòng liên hệ quản trị viên."));
-        // A reception profile has no shared/default password or fabricated email.
         User customer = User.builder().fullName(name).phone(normalized)
                 .username("walkin_" + java.util.UUID.randomUUID().toString().replace("-", ""))
                 .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))

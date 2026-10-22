@@ -191,7 +191,6 @@ class IdentityAdministrationIntegrationTest {
     }
     private AuthResponse login(User user) { return auth.login(new LoginRequest(user.getUsername().contains("@") ? user.getEmail() : user.getUsername(), "Password123!")); }
     private void assertProtected(String token, int expected) throws Exception {
-        // Direct service login sets the caller's context; HTTP assertions must start as a fresh request.
         org.springframework.security.test.context.TestSecurityContextHolder.clearContext();
         mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + token)).andExpect(status().is(expected));
     }

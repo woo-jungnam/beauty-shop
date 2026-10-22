@@ -137,7 +137,6 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
           animation: 'fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
-        {/* Close Button */}
         <button
           onClick={onClose}
           aria-label="Đóng xem nhanh"
@@ -162,7 +161,6 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
           <X size={16} />
         </button>
 
-        {/* Product Visual Column */}
         <div style={{
           position: 'relative',
           backgroundColor: '#F8F6F2',
@@ -224,7 +222,6 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
           </div>
         </div>
 
-        {/* Product Details Column - Pastel Pink Theme */}
         <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{
@@ -249,7 +246,6 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
               {product.name}
             </h2>
 
-            {/* Rating Stars */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', fontSize: '12px' }}>
               <div style={{ display: 'flex', gap: '2px' }}>
                 {[1, 2, 3, 4, 5].map(s => (
@@ -273,7 +269,6 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
               )}
             </div>
 
-            {/* Price Row */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '18px' }}>
               <span style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-deal-red, #E11D48)', fontFamily: 'var(--font-mono)' }}>
                 {price == null ? 'Chưa xác minh giá bán' : formatCurrency(price)}
@@ -291,12 +286,10 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
               <div role="alert"><p>Phân loại đã chọn không còn khả dụng. Vui lòng tải lại hoặc chọn phân loại khác.</p><button type="button" className="btn-luxury-outline" onClick={reloadDetail}>Tải lại phân loại</button></div>
             ) : <p role="status">{stock == null ? 'Tồn kho chưa xác minh' : `Còn ${stock} sản phẩm khả dụng`}</p>}
 
-            {/* Description Snippet */}
             <p style={{ fontSize: '13px', color: 'var(--c-text-muted)', lineHeight: 1.55, margin: '0 0 18px 0' }}>
               {activeProduct.shortDescription || activeProduct.description || 'Mô tả sản phẩm đang được cập nhật.'}
             </p>
 
-            {/* Volume / Variant Selector */}
             <div style={{ marginBottom: '18px' }}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#1F2937', marginBottom: '8px' }}>
                 Chọn phân loại:
@@ -330,7 +323,6 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
               </div>
             </div>
 
-            {/* Quantity Stepper */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#1F2937' }}>Số lượng:</span>
               <div style={{
@@ -385,7 +377,6 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
             </div>
           </div>
 
-          {/* Action CTAs */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               type="button"

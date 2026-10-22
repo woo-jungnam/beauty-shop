@@ -10,6 +10,7 @@ import org.springframework.data.domain.*;
 @Service @RequiredArgsConstructor
 public class PaymentResolutionService {
  private final PaymentTransactionRepository transactions;private final PaymentResolutionRepository resolutions;private final OrderFacade orders;
+ private final org.springframework.jdbc.core.JdbcTemplate jdbc;
  public record Command(String kind,String orderNumber,String reference,String reason){}
  @Transactional(readOnly=true)public Page<PaymentResolution> list(Pageable p){return resolutions.findAll(p);}
  @Transactional(readOnly=true)public Page<PaymentTransaction> exceptions(TransactionStatus status,Pageable p){
@@ -22,6 +23,8 @@ public class PaymentResolutionService {
  @Transactional public PaymentResolution resolve(Long id,Command c){
   if(c==null||!("MATCH".equals(c.kind())||"REFUND".equals(c.kind()))||c.reason()==null||c.reason().isBlank()||c.reason().length()>500)throw new BusinessException("Resolution kind MATCH/REFUND and evidence reason required");
   var tx=transactions.findByIdForUpdate(id).orElseThrow(()->new ResourceNotFoundException("Payment transaction not found"));
+  if(tx.getOrderNumber().startsWith("SPADEP-") || jdbc.queryForObject("SELECT COUNT(*) FROM spa_financial_entries WHERE payment_transaction_id=?",Long.class,id)>0)
+   throw new BusinessException("Giao dịch cọc phải đối soát/hoàn trong sổ cọc, không phân bổ lại sang đơn hàng");
   var existing=resolutions.findByTransactionId(id);if(existing.isPresent()){var r=existing.get();if(!r.getKind().equals(c.kind())||!java.util.Objects.equals(r.getOrderNumber(),c.orderNumber())||!java.util.Objects.equals(r.getReference(),c.reference())||!r.getReason().equals(c.reason()))throw new BusinessException("Receipt already resolved differently");return r;}
   if(!"in".equalsIgnoreCase(tx.getTransferType())||tx.getAmount().signum()<=0||!(tx.getStatus()==TransactionStatus.IGNORED||tx.getStatus()==TransactionStatus.ORDER_NOT_FOUND))throw new BusinessException("Only unassigned valid incoming receipts can be resolved");
   if("MATCH".equals(c.kind())){

@@ -107,7 +107,6 @@ class ApiClient {
     return completer.future;
   }
 
-  // GET
   Future<ApiResponse<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -126,7 +125,6 @@ class ApiClient {
     }
   }
 
-  // POST
   Future<ApiResponse<T>> post<T>(
     String path, {
     dynamic data,
@@ -147,7 +145,6 @@ class ApiClient {
     }
   }
 
-  // PUT
   Future<ApiResponse<T>> put<T>(
     String path, {
     dynamic data,
@@ -168,7 +165,6 @@ class ApiClient {
     }
   }
 
-  // DELETE
   Future<ApiResponse<T>> delete<T>(
     String path, {
     dynamic data,
@@ -189,7 +185,6 @@ class ApiClient {
     }
   }
 
-  // Server-Sent Events (SSE) Stream
   Stream<Map<String, dynamic>> postSse(
     String path, {
     required dynamic data,
@@ -229,9 +224,7 @@ class ApiClient {
     if (raw is String) {
       try {
         raw = jsonDecode(raw);
-      } on FormatException {
-        // Plain-text body
-      }
+      } on FormatException {}
     }
 
     if (raw is Map<String, dynamic>) {

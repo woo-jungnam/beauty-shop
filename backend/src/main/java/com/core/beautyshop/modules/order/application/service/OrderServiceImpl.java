@@ -75,7 +75,6 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Thanh toán tiền mặt (CASH) chỉ áp dụng khi thanh toán tại quầy Spa");
         String key = checkoutKey(userId, request);
         String hash = requestHash(request);
-        // The cart row survives clearing. Lock it before reading items or replaying a request.
         CartResponse cart = cartFacade.lockCart(userId, request.getSessionId());
         if (key != null) {
             var previous = orderRepository.findByCheckoutKey(key);
@@ -139,7 +138,6 @@ public class OrderServiceImpl implements OrderService {
 
         order.setDiscountAmount(applicableDiscount);
         order.setSubTotal(subTotal);
-        // VND obligations are rounded once before persistence and payment instructions.
         order.setTotalAmount(grossAmount.subtract(applicableDiscount).setScale(0, java.math.RoundingMode.HALF_UP));
 
         createStatusHistory(order, OrderStatus.PENDING, "Đơn hàng được tạo khi thanh toán");

@@ -24,7 +24,6 @@ public class OrderCodSettlementService {
         if(c==null||c.amount()==null||c.amount().signum()<=0||c.amount().stripTrailingZeros().scale()>0||c.reference()==null||c.reference().isBlank()||c.reference().length()>80||c.reason()==null||c.reason().isBlank()||c.reason().length()>250)throw new BusinessException("Whole-VND collection amount, bank reference and reason required");
         var order=orders.findByIdForUpdate(id).orElseThrow(()->new ResourceNotFoundException("Order not found"));
         String reference="COD-SETTLED-"+c.reference();
-        // The order lock serializes replay; payment facade validates persisted reference ownership.
         if(order.getPaymentMethod()!=PaymentMethod.COD||order.getStatus()!=OrderStatus.DELIVERED)throw new BusinessException("Only delivered COD orders can be settled");
         boolean created=payments.recordCarrierRemittance(order.getOrderNumber(),c.amount(),reference,c.reason(),SecurityUtils.getCurrentUserId());if(!created)return;
         if(order.getPaymentMethod()!=PaymentMethod.COD||order.getStatus()!=OrderStatus.DELIVERED||c.amount().compareTo(order.getTotalAmount().subtract(order.getPaidAmount()))>0)throw new BusinessException("Only outstanding delivered COD amounts can be settled");

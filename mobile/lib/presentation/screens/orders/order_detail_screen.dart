@@ -28,7 +28,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String? returnFingerprint, returnKey;
   bool busy = false;
   String money(dynamic value) =>
-      HasakiFormatters.formatCurrency((value as num?)?.toDouble() ?? 0);
+      AppFormatters.formatCurrency((value as num?)?.toDouble() ?? 0);
   @override
   void initState() {
     super.initState();
@@ -86,7 +86,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     for (final item in order?['items'] as List? ?? []) {
       try {
         if (item['variantId'] == null)
-          throw StateError('SKU không còn khả dụng');
+          throw StateError('Sản phẩm tạm thời hết hàng');
         await api.post<dynamic>(
           '/api/v1/cart/add',
           data: {
@@ -199,22 +199,53 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 'Vận chuyển: ${value['carrierName'] ?? ''} · ${value['trackingCode']}',
               ),
             ...(value['items'] as List? ?? []).map(
-              (item) => ListTile(
-                title: Text('${item['productName']} × ${item['quantity']}'),
-                subtitle: Text('${item['variantName'] ?? item['sku'] ?? ''}'),
-                trailing: Text(
-                  money(
-                    ((item['price'] as num?) ?? 0) *
-                        ((item['quantity'] as num?) ?? 0),
+              (item) {
+                final img = item['imageUrl']?.toString() ?? item['thumbnailUrl']?.toString();
+                final price = ((item['price'] as num?) ?? 0) - ((item['discount'] as num?) ?? 0);
+                final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      color: const Color(0xFFF3F4F6),
+                      child: img != null && img.isNotEmpty
+                          ? Image.network(
+                              img,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.image_outlined,
+                                size: 20,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.image_outlined,
+                              size: 20,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                    ),
                   ),
-                ),
-              ),
+                  title: Text('${item['productName']}'),
+                  subtitle: Text(
+                    '${item['variantName'] ?? item['sku'] ?? 'Tiêu chuẩn'} · SL: $qty',
+                  ),
+                  trailing: Text(
+                    money(price * qty),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                );
+              },
             ),
             Text(
               'Tổng đơn: ${money(value['totalAmount'])}\nĐã thu: ${money(value['paidAmount'])}\nĐã hoàn: ${money(value['refundedAmount'])}',
             ),
             if (deadline != null)
-              Text('Hạn thanh toán: ${HasakiFormatters.formatDate(deadline)}'),
+              Text('Hạn thanh toán: ${AppFormatters.formatDate(deadline)}'),
             if (canPay)
               FilledButton(
                 onPressed: busy

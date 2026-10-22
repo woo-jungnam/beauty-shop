@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-/** Customer notifications deliberately contain no clinical notes or internal audit details. */
 @Service @RequiredArgsConstructor
 public class TreatmentNotificationService {
     private final TreatmentNotificationRepository notifications;

@@ -5,6 +5,7 @@ import { apiClient } from '../../shared/api/client';
 import { dateLabel, errorMessage, rows, statusLabel, treatmentApi, unwrap } from './treatmentApi';
 import { AppointmentMaterials } from './AppointmentMaterials';
 import { AppointmentFinance } from './AppointmentFinance';
+import { SpaVisitCheckout } from '../../shared/ui/SpaVisitCheckout';
 import { useAuth } from '../../app/providers/AuthProvider';
 
 export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSaved }) => {
@@ -77,6 +78,7 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
     {loading && !appointment && <p role="status">Đang tải lịch hẹn…</p>}
     {appointment && <><div className="treatment-card-heading"><strong>{dateLabel(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</strong><span className="treatment-badge">{statusLabel(appointment.status)}</span></div>
       {(reception || String(appointment.userId) === String(user?.id)) && <AppointmentFinance appointmentId={appointment.id} role={role} />}
+      {(reception || String(appointment.userId) === String(user?.id)) && appointment.status === 'COMPLETED' && <SpaVisitCheckout appointment={appointment} onUpdated={load} />}
       {preparation.map(item => {
         const canPrepare = ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(appointment.status) && appointment.items?.find(row => row.id === item.appointmentItemId)?.executionStatus === 'PLANNED';
         return <section className="treatment-form-session" key={item.appointmentItemId}><h3>Chuẩn bị dịch vụ #{item.appointmentItemId}</h3>{item.legacyBooking && <p className="treatment-muted">Lịch hẹn sử dụng chính sách cũ.</p>}

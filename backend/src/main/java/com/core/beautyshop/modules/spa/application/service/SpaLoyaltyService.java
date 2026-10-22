@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 
-/** Loyalty is earned by performed services, never by forfeited/no-show quota. */
 @Service @RequiredArgsConstructor
 public class SpaLoyaltyService {
     private final EntityManager em;

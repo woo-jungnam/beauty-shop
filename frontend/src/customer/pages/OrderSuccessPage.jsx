@@ -14,6 +14,7 @@ import { apiClient } from '../../shared/api/client';
 import { getGuestSessionId } from '../../shared/utils/session';
 import { serverBaseUrl } from '../../shared/api/baseUrl';
 import { orderBenefitDestination } from '../../features/spa/benefitModel';
+import { resolveMediaUrl } from '../../shared/utils/formatters';
 
 const formatCurrency = (val) => {
   const amount = val == null || typeof val === 'boolean' || String(val).trim() === '' ? NaN : Number(val);
@@ -59,7 +60,6 @@ export const OrderSuccessPage = ({
   const isCodMethod = orderDetail?.paymentMethod === 'COD';
   const isClosed = ['CANCELLED', 'EXPIRED', 'RETURNED', 'REFUNDED', 'RETURN_TO_SENDER'].includes(orderDetail?.status);
 
-  // Fetch full real order information if orderId exists
   useEffect(() => {
     let isMounted = true;
     const fetchOrder = async () => {
@@ -88,7 +88,6 @@ export const OrderSuccessPage = ({
     return () => { isMounted = false; };
   }, [targetOrderId, orderFetchVersion]);
 
-  // Real-time WebSocket connection for instant payment push (< 100ms)
   useEffect(() => {
     if (!hasVerifiedOrder || !isBankMethod || isPaid || isClosed) return;
     const targetId = targetOrderId;
@@ -122,9 +121,7 @@ export const OrderSuccessPage = ({
             setOrderDetail(previous => previous && String(previous.id) === targetId ? { ...previous, paymentStatus: 'PAID' } : previous);
             setOrderFetchVersion(value => value + 1);
           }
-        } catch {
-          // ignore non-json
-        }
+        } catch {}
       };
 
       ws.onclose = () => { if (!cancelled) reconnectTimer = setTimeout(connect, 2000); };
@@ -146,7 +143,6 @@ export const OrderSuccessPage = ({
     };
   }, [targetOrderId, hasVerifiedOrder, isBankMethod, isPaid, isClosed]);
 
-  // Real-time polling fallback for payment confirmation webhook (every 4 seconds)
   useEffect(() => {
     if (!hasVerifiedOrder || !isBankMethod || isPaid || isClosed || (orderDetail?.paymentDeadline && Date.parse(orderDetail.paymentDeadline) <= Date.now())) return;
 
@@ -166,15 +162,12 @@ export const OrderSuccessPage = ({
         setClockNow(Date.now());
         setOrderDetail(data);
         if (['CANCELLED', 'EXPIRED', 'RETURNED', 'REFUNDED', 'RETURN_TO_SENDER'].includes(data.status) || data.paymentStatus === 'PAID') clearInterval(interval);
-      } catch {
-        // quiet retry
-      }
+      } catch {}
     }, 4000);
 
     return () => { active = false; clearInterval(interval); };
   }, [targetOrderId, orderDetail?.paymentDeadline, hasVerifiedOrder, isBankMethod, isPaid, isClosed]);
 
-  // Keep the remaining time anchored to the backend Instant across navigation/reloads.
   useEffect(() => {
     const update = () => {
       setClockNow(Date.now());
@@ -190,7 +183,6 @@ export const OrderSuccessPage = ({
   const hasKnownTotal = currentTotalAmount != null && typeof currentTotalAmount !== 'boolean' && String(currentTotalAmount).trim() !== '' && Number.isFinite(Number(currentTotalAmount)) && Number(currentTotalAmount) >= 0;
   const paymentDeadline = Date.parse(orderDetail?.paymentDeadline);
   const isExpired = isBankMethod && !isPaid && (countdown === 0 || (Number.isFinite(paymentDeadline) && paymentDeadline <= clockNow) || orderDetail?.paymentStatus === 'EXPIRED');
-  // Payment instructions come from the current order; never invent bank details.
   const paymentInstruction = orderDetail?.paymentInstruction;
   const hasBankInstructions = Boolean(hasVerifiedOrder && hasKnownTotal && Number(currentTotalAmount) > 0 && paymentInstruction?.bankAccountNumber && paymentInstruction?.transferSyntax && !isClosed && !isExpired);
   const positiveHeader = hasVerifiedOrder && !isClosed && !isExpired && (isPaid || isCodMethod);
@@ -241,7 +233,6 @@ export const OrderSuccessPage = ({
         boxShadow: 'var(--shadow-card)',
         textAlign: 'center'
       }}>
-        {/* Status Header - Dynamically reflecting Payment State */}
         <div style={{
           width: '64px',
           height: '64px',
@@ -257,7 +248,6 @@ export const OrderSuccessPage = ({
           {positiveHeader ? <CheckCircle2 size={34} /> : hasBankInstructions ? <QrCode size={32} /> : <Clock size={32} />}
         </div>
 
-        {/* State Tag */}
         <div style={{ marginBottom: '8px' }}>
           <span style={{
             fontSize: '11px',
@@ -282,7 +272,6 @@ export const OrderSuccessPage = ({
           {hasBankInstructions && !isPaid && ' • Đơn hàng sẽ được xử lý sau khi hệ thống xác nhận thanh toán.'}
         </p>
 
-        {/* ================= VIETQR REALTIME PAYMENT SECTION ================= */}
         {!orderDetail && !orderError && <p role="status">Đang xác minh đơn và hướng dẫn thanh toán…</p>}
         {orderError && <div role="alert" style={{ padding: 16, background: '#fff0ed', borderRadius: 10, marginBottom: 20 }}><p>{orderError}</p><button type="button" className="btn-luxury-outline" onClick={() => setOrderFetchVersion(value => value + 1)}>Tải lại hướng dẫn thanh toán</button></div>}
         {hasVerifiedOrder && isBankMethod && !isPaid && !isClosed && !hasBankInstructions && <div role="alert" style={{ padding: 16, background: '#fff8e8', borderRadius: 10, marginBottom: 20 }}><p>{isExpired ? 'Đơn đã hết hạn thanh toán. Vui lòng kiểm tra lại trạng thái đơn trước khi thanh toán.' : 'Chưa có đủ thông tin thanh toán đã xác minh cho đơn này. Vui lòng tải lại trước khi chuyển khoản.'}</p><button type="button" className="btn-luxury-outline" onClick={() => setOrderFetchVersion(value => value + 1)}>Tải lại thông tin đơn</button></div>}
@@ -331,7 +320,6 @@ export const OrderSuccessPage = ({
                   </div>
                 </div>
 
-                {/* Real QR Code Graphic from VietQR */}
                 <div style={{
                   width: '210px',
                   height: '210px',
@@ -365,7 +353,6 @@ export const OrderSuccessPage = ({
                   Mở ứng dụng ngân hàng bất kỳ (Vietcombank, MB, Techcombank, VPBank...) quét mã để tự động điền số tiền và nội dung.
                 </div>
 
-                {/* Account Details Copy Table */}
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -423,7 +410,6 @@ export const OrderSuccessPage = ({
           </div>
         )}
 
-        {/* ================= COD DETAILS SECTION ================= */}
         {hasVerifiedOrder && !isClosed && isCodMethod && hasKnownTotal && (
           <div style={{
             maxWidth: '520px',
@@ -445,7 +431,62 @@ export const OrderSuccessPage = ({
           </div>
         )}
 
-        {/* Next Steps */}
+        {hasVerifiedOrder && orderDetail?.items && orderDetail.items.length > 0 && (
+          <div style={{
+            maxWidth: '520px',
+            margin: '0 auto 28px auto',
+            padding: '20px',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--c-border)',
+            textAlign: 'left',
+            fontSize: '13px'
+          }}>
+            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '14px', color: 'var(--c-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Chi tiết đơn hàng ({orderDetail.items.length} món)</span>
+              <span style={{ fontSize: '11px', color: 'var(--c-text-muted)', fontWeight: 600 }}>
+                {orderDetail.orderNumber}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+              {orderDetail.items.map((item, idx) => {
+                const img = item.imageUrl ? resolveMediaUrl(item.imageUrl) : null;
+                const price = Number(item.price || 0) - Number(item.discount || 0);
+                return (
+                  <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center', paddingBottom: '10px', borderBottom: idx < orderDetail.items.length - 1 ? '1px solid var(--c-border-subtle)' : 'none' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '4px', backgroundColor: '#F3F4F6', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {img ? (
+                        <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+                      ) : (
+                        <Sparkles size={16} color="var(--c-gold)" />
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, color: 'var(--c-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.productName}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--c-text-light)' }}>
+                        {item.variantName ? `${item.variantName} · ` : ''}Số lượng: {item.quantity}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+                      {formatCurrency(price * item.quantity)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--c-border-subtle)', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--c-text-muted)' }}>Địa chỉ nhận:</span>
+              <span style={{ fontWeight: 600, textAlign: 'right', maxWidth: '300px', fontSize: '12px' }}>
+                {orderDetail.customerName} ({orderDetail.customerPhone}) · {orderDetail.shippingAddress}
+              </span>
+            </div>
+          </div>
+        )}
+
         {hasVerifiedOrder && !isClosed && <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -477,7 +518,6 @@ export const OrderSuccessPage = ({
           </div>
         </div>}
 
-        {/* Action Buttons */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '14px' }}>
           <button onClick={() => onNavigate('products')} className="btn-luxury-outline">
             Tiếp Tục Mua Sắm

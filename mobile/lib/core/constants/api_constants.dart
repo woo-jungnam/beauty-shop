@@ -25,7 +25,6 @@ class ApiConstants {
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
-  // Authentication
   static const String login = '/api/v1/auth/login';
   static const String register = '/api/v1/auth/register';
   static const String refreshToken = '/api/v1/auth/refresh';
@@ -33,62 +32,50 @@ class ApiConstants {
   static const String currentUserProfile = '/api/v1/auth/profile';
   static const String updateProfile = '/api/v1/users/profile';
 
-  // Catalog & Products
   static const String products = '/api/v1/products';
   static const String productFeatured = '/api/v1/products/featured';
-  static const String recommendedForYou =
-      '/api/v1/products/recommended-for-you';
+  static const String recommendedForYou = '/api/v1/products/recommended-for-you';
   static const String expiringSoon = '/api/v1/products/expiring-soon';
   static const String productSearch = '/api/v1/products/search';
-  static const String productCategory =
-      '/api/v1/products/category/'; // + categoryId
-  static const String productDetail = '/api/v1/products/'; // + id
+  static const String searchByImage = '/api/v1/products/search-by-image';
+  static const String productCategory = '/api/v1/products/category/';
+  static const String productDetail = '/api/v1/products/';
   static const String categories = '/api/v1/categories';
   static const String rootCategories = '/api/v1/categories/root';
   static const String brands = '/api/v1/brands';
   static const String banners = '/api/v1/banners';
   static const String reviews = '/api/v1/reviews';
 
-  // Cart
   static const String cart = '/api/v1/cart';
   static const String addToCart = '/api/v1/cart/add';
-  static const String updateCartItem = '/api/v1/cart/items/'; // + itemId
-  static const String removeCartItem = '/api/v1/cart/items/'; // + itemId
+  static const String updateCartItem = '/api/v1/cart/items/';
+  static const String removeCartItem = '/api/v1/cart/items/';
   static const String clearCart = '/api/v1/cart/clear';
   static const String mergeCart = '/api/v1/cart/merge';
 
-  // Orders & Checkout
   static const String checkout = '/api/v1/orders/checkout';
   static const String myOrders = '/api/v1/orders/my-orders';
-  static const String orderDetail = '/api/v1/orders/'; // + id
-  static const String cancelOrder = '/api/v1/orders/'; // + id + '/cancel'
+  static const String orderDetail = '/api/v1/orders/';
+  static const String cancelOrder = '/api/v1/orders/';
   static String orderCancelUrl(int id) => '/api/v1/orders/$id/cancel';
 
-  // Spa & Clinic
   static const String spaServices = '/api/v1/spa/services';
   static const String treatmentTemplates = '/api/v1/spa/treatment-templates';
-  static const String adminTreatmentTemplates =
-      '/api/v1/admin/spa/treatment-templates';
+  static const String adminTreatmentTemplates = '/api/v1/admin/spa/treatment-templates';
   static const String treatmentPurchases = '/api/v1/spa/treatment-purchases';
   static const String myTreatments = '/api/v1/spa/my-treatments';
-  static const String treatmentNotifications =
-      '/api/v1/spa/treatment-notifications';
+  static const String treatmentNotifications = '/api/v1/spa/treatment-notifications';
   static const String spaPackages = '/api/v1/spa/services/packages';
   static const String spaTickets = '/api/v1/spa/tickets/my-tickets';
-  static const String spaActiveTickets =
-      '/api/v1/spa/tickets/my-active-tickets';
+  static const String spaActiveTickets = '/api/v1/spa/tickets/my-active-tickets';
   static const String bookAppointment = '/api/v1/appointments/book';
   static const String myAppointments = '/api/v1/appointments/my-appointments';
-  static const String cancelAppointment =
-      '/api/v1/appointments/'; // + id + '/cancel'
-  static String appointmentCancelUrl(int id) =>
-      '/api/v1/appointments/$id/cancel';
+  static const String cancelAppointment = '/api/v1/appointments/';
+  static String appointmentCancelUrl(int id) => '/api/v1/appointments/$id/cancel';
 
-  // Chatbot AI
   static const String chat = '/api/v1/chatbot/chat';
   static const String chatStream = '/api/v1/chatbot/chat/stream';
 
-  // System & Public Configs
   static const String publicConfigs = '/api/v1/system-configs/public';
   static const String validateVoucher = '/api/v1/promotions/validate';
 }

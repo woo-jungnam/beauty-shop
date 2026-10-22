@@ -565,7 +565,6 @@ public class ProductServiceImpl implements ProductService {
             return List.of();
         }
 
-        // 1. Thử lấy danh sách ID từ FastAPI Content-Based Engine
         var recResult = recommendationClient.similar(productId, Math.min(50, safeLimit * 3));
         List<Long> similarIds = recResult.ids();
         if (similarIds != null && !similarIds.isEmpty()) {
@@ -585,7 +584,6 @@ public class ProductServiceImpl implements ProductService {
 
         if (recResult.available()) return List.of();
 
-        // 2. Fallback dựa trên Category hoặc Brand cùng loại trong MySQL
         List<Long> categoryIds = currentProduct.getCategories() != null
                 ? currentProduct.getCategories().stream().map(Category::getId).toList()
                 : List.of();
@@ -600,7 +598,6 @@ public class ProductServiceImpl implements ProductService {
         LocalDate businessDate = BusinessTime.today();
         int safeLimit = (limit <= 0 || limit > 50) ? 8 : limit;
 
-        // 1. Thử lấy danh sách ID từ FastAPI RecSys (User-to-Item Centroid Vector)
         var recResult = recommendationClient.forUser(userId, sessionId, Math.min(50, safeLimit * 3));
         List<Long> recommendedIds = recResult.ids();
         if (recommendedIds != null && !recommendedIds.isEmpty()) {
@@ -619,7 +616,6 @@ public class ProductServiceImpl implements ProductService {
 
         if (recResult.available()) return List.of();
 
-        // 2. Fallback Cold-Start: Lấy danh sách sản phẩm phổ biến / bán chạy nhất
         return productSearchRepository.findAvailablePopular(safeLimit, businessDate);
     }
 
@@ -653,7 +649,6 @@ public class ProductServiceImpl implements ProductService {
                         || expiry.isAfter(businessDate.plusDays(safeThreshold))
                         || stock.getAvailableQuantity() == null || stock.getAvailableQuantity() <= 0) continue;
                 ProductListResponse last = selected.values().stream().max(order).orElse(null);
-                // Read every tie at the final date, but keep only the best limit distinct products in memory.
                 if (selected.size() == safeLimit && expiry.isAfter(last.getEarliestExpirationDate())) {
                     finished = true;
                     break;

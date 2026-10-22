@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
-/** Reject oversize/unknown-length bodies before the servlet multipart parser allocates files. */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class ImageSearchUploadFilter extends OncePerRequestFilter {

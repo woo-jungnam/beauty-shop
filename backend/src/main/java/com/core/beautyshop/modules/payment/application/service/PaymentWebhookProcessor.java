@@ -17,9 +17,9 @@ public class PaymentWebhookProcessor {
     private final OrderFacade orders;
     private final PaymentTransactionRepository transactions;
     private final ObjectMapper mapper;
+    private final com.core.beautyshop.modules.spa.api.SpaDepositFacade deposits;
     @Value("${sepay.bank.account-number}")
     private String accountNumber;
-    private static final Pattern ORDER = Pattern.compile("\\bORD-?([A-Z0-9]{32}|[A-Z0-9]{8})\\b");
 
     public String reference(SePayWebhookRequest request) {
         if (request.getReferenceCode() != null && !request.getReferenceCode().isBlank()) {
@@ -35,13 +35,11 @@ public class PaymentWebhookProcessor {
         var previous = transactions.findByReferenceCodeForUpdate(reference);
         if (previous.isPresent()) {
             PaymentTransaction tx = previous.get();
-            // Retry only unmatched bank receipts; use the stored payload, never replacement money/account data.
             if (tx.getStatus() != TransactionStatus.IGNORED || !"UNKNOWN".equals(tx.getOrderNumber())
                     || !"SEPAY".equals(tx.getGateway())) return;
             SePayWebhookRequest original;
             try {
                 var stored=mapper.readTree(tx.getRawPayload());
-                // Some JDBC JSON implementations return a quoted JSON document. Unwrap the stored value once.
                 if(stored!=null&&stored.isTextual())stored=mapper.readTree(stored.asText());
                 if(stored==null||!stored.isObject())throw new IllegalArgumentException("Stored webhook must contain a JSON object");
                 original=mapper.treeToValue(stored,SePayWebhookRequest.class);
@@ -55,7 +53,6 @@ public class PaymentWebhookProcessor {
         catch (com.fasterxml.jackson.core.JsonProcessingException exception) { throw new IllegalArgumentException("Invalid webhook", exception); }
         BigDecimal amount = request.getTransferAmount() == null ? BigDecimal.ZERO : request.getTransferAmount();
         PaymentTransaction tx = PaymentTransaction.builder().referenceCode(reference).orderNumber("UNKNOWN")
-                // The route determines the ledger source; provider bank metadata remains in rawPayload.
                 .gateway("SEPAY")
                 .transferType(request.getTransferType() == null ? "unknown" : request.getTransferType())
                 .amount(amount).accumulatedAmount(request.getAccumulated()).accountNumber(request.getAccountNumber())
@@ -66,8 +63,7 @@ public class PaymentWebhookProcessor {
     }
 
     private void settle(SePayWebhookRequest request, PaymentTransaction tx) {
-        var match = ORDER.matcher(request.getContent() == null ? "" : request.getContent().toUpperCase(java.util.Locale.ROOT));
-        String orderNumber = match.find() ? "ORD-" + match.group(1) : "UNKNOWN";
+        String orderNumber = PaymentTransferTarget.parse(request.getContent());
         tx.setOrderNumber(orderNumber);
         BigDecimal amount = tx.getAmount();
         if (!"in".equalsIgnoreCase(request.getTransferType())) return;
@@ -76,7 +72,16 @@ public class PaymentWebhookProcessor {
             tx.setStatus(TransactionStatus.FAILED);
             return;
         }
-        if ("UNKNOWN".equals(orderNumber)) return;
+        if ("UNKNOWN".equals(orderNumber) || "AMBIGUOUS".equals(orderNumber)) return;
+        if (orderNumber.startsWith("SPADEP-")) {
+            if (amount.compareTo(new BigDecimal("99999999")) > 0) {
+                tx.setStatus(TransactionStatus.DEPOSIT_REVIEW);
+                return;
+            }
+            var receipt = new com.core.beautyshop.modules.payment.api.dto.BankReceipt(tx.getId(), tx.getReferenceCode(), amount, orderNumber);
+            tx.setStatus(TransactionStatus.valueOf(deposits.receiveDeposit(orderNumber, receipt)));
+            return;
+        }
         boolean paid = orders.markOrderAsPaid(orderNumber, amount, tx.getReferenceCode());
         String state = orders.findPaymentState(orderNumber).orElse("NOT_FOUND");
         tx.setStatus(switch (state) {

@@ -14,7 +14,6 @@ public class TreatmentSettlementPaymentListener {
     public void paid(TreatmentSettlementPaidEvent event) {
         try { treatments.reconcilePaidSettlement(event.changeId()); }
         catch (RuntimeException failure) {
-            // Payment and revoked adjustment ticket remain committed; the durable AWAITING_SETTLEMENT row supports explicit retry.
             log.error("Paid treatment adjustment {} requires reconciliation", event.changeId(), failure);
         }
     }

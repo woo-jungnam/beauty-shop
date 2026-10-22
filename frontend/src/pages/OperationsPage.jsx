@@ -38,7 +38,6 @@ export const OperationsPage = () => {
   const [newDesc, setNewDesc] = useState('');
   const [newIsPublic, setNewIsPublic] = useState(false);
 
-  // Chatbot Admin State
   const [chatbotStatus, setChatbotStatus] = useState(null);
   const [checkingChatbot, setCheckingChatbot] = useState(false);
   const [syncLimit, setSyncLimit] = useState('');
@@ -114,7 +113,6 @@ export const OperationsPage = () => {
       } else if (tab === 'chatbot') {
         checkChatbotHealth();
       } else if (tab === 'recommendations') {
-        // The panel owns its independent loading and retry state.
       } else {
         const res = await apiClient.get(ENDPOINTS.SYSTEM.CONFIGS);
         setConfigs(res.data || res || []);
@@ -229,7 +227,6 @@ export const OperationsPage = () => {
     {tab === 'payments' && <PaymentExceptionPanel onChanged={load} />}
     {tab === 'chatbot' && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {/* Card 1: Chatbot Service Health */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
@@ -280,7 +277,6 @@ export const OperationsPage = () => {
           </div>
         </div>
 
-        {/* Card 2: Database Ingestion into RAG */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div>
@@ -326,7 +322,6 @@ export const OperationsPage = () => {
           )}
         </div>
 
-        {/* Card 3: NLU Understanding Live Tester */}
         <div className="card">
           <div style={{ marginBottom: 14 }}>
             <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>

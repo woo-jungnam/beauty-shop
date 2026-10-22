@@ -92,7 +92,7 @@ export const RecommendationAdminPanel = () => {
       const data = unwrap(response);
       setConfig(data.config);
       setFeedback({ error: !data.applied, text: response.message || (data.applied ? 'Đã áp dụng cấu hình gợi ý.' : 'Đã lưu cấu hình; đang chờ dịch vụ gợi ý đọc lại.') });
-      try { setStatus(unwrap(await apiClient.get(`${BASE}/status`))); } catch { /* Saved values remain visible. */ }
+      try { setStatus(unwrap(await apiClient.get(`${BASE}/status`))); } catch {}
     } catch (error) { setFeedback({ error: true, text: message(error, 'Chưa lưu được cấu hình. Dữ liệu đã nhập vẫn được giữ.') }); }
     finally { setBusy(false); }
   };

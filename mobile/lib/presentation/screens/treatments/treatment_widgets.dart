@@ -73,7 +73,6 @@ String treatmentDate(String? value) {
   if (value == null || value.isEmpty) return 'Chưa xác định';
   final parsed = DateTime.tryParse(value);
   if (parsed == null) return value;
-  // All appointment and treatment windows are displayed in Vietnam time.
   final local = value.endsWith('Z') || RegExp(r'[+-]\d\d:\d\d$').hasMatch(value)
       ? parsed.toUtc().add(const Duration(hours: 7))
       : parsed;
@@ -167,7 +166,6 @@ Future<Map<String, String>?> treatmentTextForm(
       );
     },
   );
-  // Dialog exit animation can still reference its text fields.
   Future<void>.delayed(const Duration(milliseconds: 300), () {
     for (final controller in controllers.values) {
       controller.dispose();

@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/** Public catalog filters run before pagination; to-many relationships use EXISTS to avoid duplicate products. */
 @Repository
 @RequiredArgsConstructor
 public class ProductSearchRepository {
@@ -227,8 +226,6 @@ public class ProductSearchRepository {
         List<Predicate> conditions = new ArrayList<>();
         conditions.add(builder.equal(item.get("product"), product));
         conditions.add(builder.equal(item.get("isRecommended"), recommended));
-        // ALL_SKIN is a broad legacy claim: any explicit negative compatibility invalidates it.
-        // The canonical dictionary normally contains individual skin types and no ALL_SKIN row.
         if (recommended || !SkinType.ALL_SKIN.name().equals(code)) {
             conditions.add(builder.equal(item.get("skinType").get("code"), code));
         }

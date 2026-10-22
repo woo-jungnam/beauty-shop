@@ -50,7 +50,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
   }, []);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Data states - 100% dynamically loaded from Database APIs
   const [appointments, setAppointments] = useState([]);
   const [workspaceId, setWorkspaceId] = useState(null);
   const [services, setServices] = useState([]);
@@ -58,26 +57,21 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
   const [facilitiesList, setFacilitiesList] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Filters - Default to ALL so the appointment queue is never blank on load
   const [dateFilter, setDateFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [roomStatusFilter, setRoomStatusFilter] = useState('ALL');
 
-  // Modal states
   const [selectedAptForAssign, setSelectedAptForAssign] = useState(null);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [assignSubmitting, setAssignSubmitting] = useState(false);
 
-  // POS Checkout State
   const [posSelectedApt, setPosSelectedApt] = useState(null);
 
-  // Ticket Lookup state
   const [ticketSearch, setTicketSearch] = useState('');
   const [ticketsData, setTicketsData] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
 
-  // Reschedule state
   const [rescheduleApt, setRescheduleApt] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleTime, setRescheduleTime] = useState('09:00:00');
@@ -93,13 +87,11 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     return()=>controller.abort();
   },[rescheduleApt?.id,rescheduleDate]);
 
-  // Live Digital Clock
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch initial appointments & master data
   useEffect(() => {
     fetchAppointments();
     fetchMasterData();
@@ -161,7 +153,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     }
   };
 
-  // Reception Queue Filter
   const filteredAppointments = useMemo(() => {
     let list = [...appointments];
     if (searchTerm.trim()) {
@@ -176,7 +167,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     return list;
   }, [appointments, searchTerm]);
 
-  // Today KPI Metrics
   const todayKPIs = useMemo(() => {
     const todayStr = getVietnamDateString();
     const todayList = appointments.filter(a => !dateFilter || dateFilter === 'ALL' || a.appointmentDate === todayStr);
@@ -189,7 +179,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     };
   }, [appointments, dateFilter]);
 
-  // Action: Check-in Guest
   const handleCheckIn = async (appointmentId) => {
     try {
       await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointmentId));
@@ -199,7 +188,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     }
   };
 
-  // Action: Start Treatment
   const handleStartAppointment = async (appointmentId) => {
     try {
       await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointmentId), {
@@ -212,12 +200,10 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     }
   };
 
-  // Action: Complete Treatment
   const handleCompleteAppointment = async (apt) => {
     setWorkspaceId(apt.id);
   };
 
-  // Action: Assign Staff
   const handleSaveStaffAssignment = async (e) => {
     e.preventDefault();
     if (!selectedAptForAssign) return;
@@ -242,7 +228,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     }
   };
 
-  // Action: Reschedule
   const handleOpenReschedule = (apt) => {
     setRescheduleApt(apt);
     setRescheduleDate(apt.appointmentDate);
@@ -270,7 +255,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     }
   };
 
-  // Action: Cancel Appointment
   const handleCancelAppointment = async (apt) => {
     const reason = prompt('Nhập lý do hủy lịch hẹn:', 'Khách báo bận việc đột xuất cần hủy ca');
     if (!reason) return;
@@ -282,7 +266,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
     }
   };
 
-  // Action: No-show
   const handleMarkNoShow = async (apt) => {
     const reason = prompt('Nhập lý do khách vắng mặt (No-show):', 'Khách không đến quá 30 phút và không thể liên lạc');
     if (!reason) return;
@@ -367,7 +350,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
   return (
     <div className="spa-portal-container">
-      {/* 1. Header - Flat, No Radius, No Shadow */}
       <header className="spa-portal-header">
         <div className="spa-portal-brand">
           <div className="spa-portal-brand-badge">
@@ -383,7 +365,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           </div>
         </div>
 
-        {/* Live Clock & Shift Information */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, fontFamily: 'monospace' }}>
@@ -393,7 +374,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
             </div>
           </div>
 
-          {/* Operator Profile Tag - Flat */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -414,7 +394,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
             </div>
           </div>
 
-          {/* Action Buttons - Flat */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <a href="#/treatments?tab=courses" style={{ color: '#FFFFFF', fontSize: 12, padding: '6px 12px' }}>Lộ trình của tôi</a>
             {typeof onSwitchToAdmin === 'function' && (
@@ -462,7 +441,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
         </div>
       </header>
 
-      {/* 2. Navigation Tab Bar - Flat */}
       <nav className="spa-portal-nav">
         <button className={`spa-nav-tab ${activeTab === 'treatments' ? 'active' : ''}`} onClick={() => setActiveTab('treatments')}><Stethoscope size={16} /><span>Hồ sơ lộ trình điều trị</span></button>
         <button
@@ -513,14 +491,11 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
         </>}
       </nav>
 
-      {/* 3. Main Workspace */}
       <main className="spa-portal-main">
         {activeTab === 'treatments' && <TreatmentWorkspace role={isAdmin ? 'admin' : 'staff'} />}
 
-        {/* ================= TAB 1: SẢNH TIẾP ĐÓN & CHECK-IN ================= */}
         {activeTab === 'queue' && (
           <div>
-            {/* KPI Cards - Flat 1px Border, No Shadow, No Radius */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
               <div className="spa-card" style={{ padding: '14px 16px', borderLeft: '3px solid var(--sp-primary)' }}>
                 <div style={{ fontSize: '12px', color: 'var(--sp-text-muted)', fontWeight: 600 }}>Tổng lịch hẹn</div>
@@ -551,7 +526,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
               </div>
             </div>
 
-            {/* Quick Filter Strip - Flat */}
             <div className="spa-card" style={{ padding: '12px 18px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button
@@ -656,7 +630,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
               </button>
             </div>
 
-            {/* Reception Queue Table */}
             <div className="spa-card" style={{ padding: 0, overflow: 'hidden' }}>
               <table className="spa-pos-table">
                 <thead>
@@ -932,7 +905,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                                 </button>
                               )}
 
-                              {/* Secondary actions: Reschedule, No-show, Cancel */}
                               {isSpaReception && (apt.status === 'PENDING' || apt.status === 'CONFIRMED') && (
                                 <button
                                   type="button"
@@ -1001,10 +973,8 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           </div>
         )}
 
-        {/* ================= TAB 2: THU NGÂN & HOÁ ĐƠN POS ================= */}
         {isSpaReception && activeTab === 'pos' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(360px, 1fr)', gap: '20px' }}>
-            {/* Left: Completed Pending Queue */}
             <div className="spa-card">
               <h2 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Receipt size={16} color="var(--sp-primary)" />
@@ -1060,7 +1030,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
               </div>
             </div>
 
-            {/* Right: Cashier Register - Flat */}
             <div className="spa-card" style={{ border: '1px solid var(--sp-border)' }}>
               <h2 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 14px 0', borderBottom: '1px solid var(--sp-border)', paddingBottom: '10px' }}>
                 Thu ngân và thanh toán tại quầy
@@ -1076,10 +1045,8 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           </div>
         )}
 
-        {/* ================= TAB 3: TIẾP NHẬN KHÁCH VÃNG LAI ================= */}
         {isSpaReception && activeTab === 'walk-in' && <WalkInDrawer services={services} facilities={facilitiesList} onClose={() => setActiveTab('queue')} onBooked={() => { fetchAppointments(); }} />}
 
-        {/* ================= TAB 4: TRA CỨU VÉ LIỆU TRÌNH ================= */}
         {isSpaReception && activeTab === 'tickets' && (
           <div className="spa-card">
             <h2 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1162,10 +1129,8 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           </div>
         )}
 
-        {/* ================= TAB 5: SƠ ĐỒ PHÒNG & CA KTV ================= */}
         {isSpaReception && activeTab === 'resources' && (
           <div>
-            {/* Quick Room Status Counters - Flat */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
               <div className="spa-card" style={{ padding: '14px 18px', borderLeft: '3px solid var(--sp-primary)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--sp-text-muted)', fontWeight: 700 }}>TỔNG SỐ PHÒNG ĐIỀU TRỊ</div>
@@ -1208,7 +1173,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
               </div>
             </div>
 
-            {/* Room Filter Strip */}
             <div className="spa-card" style={{ padding: '10px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#374151', marginRight: '6px' }}>Lọc phòng:</span>
@@ -1283,9 +1247,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
               </div>
             </div>
 
-            {/* Main Layout: 2 Columns (Rooms Grid on Left + Staff List on Right) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(300px, 1fr)', gap: '16px' }}>
-              {/* Left Column: Danh sách phòng - Chỉ hiển thị tên phòng và hiện trạng phòng */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
                 {displayFacilities
                   .filter(f => {
@@ -1351,7 +1313,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                   })}
               </div>
 
-              {/* Right Column: Kỹ thuật viên & Bác sĩ trong ca */}
               <div className="spa-card" style={{ margin: 0, padding: '16px' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <User size={15} color="var(--sp-primary)" />
@@ -1409,7 +1370,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
 
       </main>
 
-      {/* ================= MODAL: ASSIGN STAFF ================= */}
       {isSpaReception && selectedAptForAssign && (
         <div style={{
           position: 'fixed',
@@ -1467,7 +1427,6 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
         </div>
       )}
 
-      {/* ================= MODAL: RESCHEDULE ================= */}
       {workspaceId && <TreatmentAppointmentDialog appointmentId={workspaceId} role={isAdmin ? 'admin' : 'staff'} onClose={() => setWorkspaceId(null)} onSaved={fetchAppointments} />}
       {isSpaReception && rescheduleApt && (
         <div style={{

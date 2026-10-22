@@ -59,7 +59,6 @@ const isMoney = (value) => value !== null && value !== undefined && value !== ''
 const isActiveVariant = (variant) => isPositiveId(variant?.id) && variant.isActive === true
   && !variant.isDeleted && typeof variant.sku === 'string' && variant.sku.trim().length > 0;
 
-// Unavailable historical lines may have a null price/SKU; they are still valid cart data.
 const isValidCart = (cart) => isPositiveId(cart?.id) && Array.isArray(cart.items)
   && isMoney(cart.totalPrice)
   && cart.items.every((item) => isPositiveId(item?.id) && isPositiveId(item.variantId)
@@ -69,7 +68,6 @@ const isValidCart = (cart) => isPositiveId(cart?.id) && Array.isArray(cart.items
   && new Set(cart.items.map((item) => Number(item.id))).size === cart.items.length
   && new Set(cart.items.map((item) => Number(item.variantId))).size === cart.items.length;
 
-// ApiResponse omits null data; only this GET envelope proves that no cart exists.
 const isEmptyCartEnvelope = (response) => response?.status === 200 && response.message === 'Success'
   && response.path === '/api/v1/cart' && typeof response.timestamp === 'string' && response.timestamp.length > 0
   && response.success !== false && response.errorCode == null && response.errors == null
@@ -169,7 +167,6 @@ export const cartActions = {
           : active.find((item) => item.isDefault) || active[0];
       };
       let selectedVariant = isActiveVariant(variant) ? variant : pickVariant(product?.variants);
-      // Clearance cards are snapshots; recheck the exact SKU, never the current default.
       if ((clearance || !selectedVariant) && isPositiveId(product?.id)) {
         let prodRes;
         try {
@@ -229,7 +226,6 @@ export const cartActions = {
     const item = memoryState.items.find((i) => i.itemId === String(itemId));
     const backendId = item?.backendId || (isNaN(Number(itemId)) ? null : itemId);
 
-    // Optimistic update
     if (item) {
       item.quantity = qty;
       notifyListeners();
@@ -356,7 +352,6 @@ export const cartActions = {
   },
 };
 
-// Initial sync with backend
 cartActions.fetchCart();
 cartActions.fetchShippingPolicy();
 

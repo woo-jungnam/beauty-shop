@@ -30,10 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: HasakiColors.getSurface(context),
+      backgroundColor: AppColors.getSurface(context),
       appBar: AppBar(
         title: const Text('Đăng Nhập Tài Khoản'),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -46,12 +46,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: HasakiColors.primaryLight,
+                  color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
                   Icons.spa,
-                  color: HasakiColors.primary,
+                  color: AppColors.primary,
                   size: 36,
                 ),
               ),
@@ -59,9 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             Center(
               child: Text(
-                'BEAUTYSHOP',
-                style: HasakiTypography.headlineMedium.copyWith(
-                  color: HasakiColors.primary,
+                'MỸ PHẨM & SPA',
+                style: AppTypography.headlineMedium.copyWith(
+                  color: AppColors.primary,
                   letterSpacing: 1,
                 ),
               ),
@@ -69,8 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
             Center(
               child: Text(
                 'Mỹ phẩm chính hãng & Spa làm đẹp cao cấp',
-                style: HasakiTypography.caption.copyWith(
-                  color: HasakiColors.textMuted,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
                 ),
               ),
             ),
@@ -81,15 +81,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.all(10),
                 margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
-                  color: HasakiColors.dealRedLight,
+                  color: AppColors.dealRedLight,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: HasakiColors.dealRedBorder),
+                  border: Border.all(color: AppColors.dealRedBorder),
                 ),
                 child: Row(
                   children: [
                     const Icon(
                       Icons.error_outline,
-                      color: HasakiColors.dealRed,
+                      color: AppColors.dealRed,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
@@ -97,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Text(
                         auth.errorMessage!,
                         style: const TextStyle(
-                          color: HasakiColors.dealRed,
+                          color: AppColors.dealRed,
                           fontSize: 12,
                         ),
                       ),
@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             Text(
               'Tên đăng nhập / Email:',
-              style: HasakiTypography.bodySmall.copyWith(
+              style: AppTypography.bodySmall.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -124,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             Text(
               'Mật khẩu:',
-              style: HasakiTypography.bodySmall.copyWith(
+              style: AppTypography.bodySmall.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -186,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Chưa có tài khoản? ',
                     style: TextStyle(
                       fontSize: 13,
-                      color: HasakiColors.textMuted,
+                      color: AppColors.textMuted,
                     ),
                   ),
                   InkWell(
@@ -200,8 +200,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                     child: Text(
                       'Đăng ký ngay',
-                      style: HasakiTypography.bodyMedium.copyWith(
-                        color: HasakiColors.primary,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.primary,
                         fontWeight: FontWeight.w800,
                       ),
                     ),

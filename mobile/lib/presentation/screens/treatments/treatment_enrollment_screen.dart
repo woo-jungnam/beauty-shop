@@ -355,7 +355,7 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
       fields: {
         'amount': 'Số tiền đã hoàn (VND)',
         'reference': 'Mã giao dịch hoàn tiền',
-        'reason': 'Ghi chú đối soát',
+        'reason': 'Ghi chú hoàn tiền',
       },
     );
     if (data == null || !mounted) return;
@@ -657,7 +657,7 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
                               ),
                               Text('${change['reason'] ?? ''}'),
                               Text(
-                                'Chênh lệch: ${HasakiFormatters.formatCurrency(double.tryParse('${change['priceDifference']}') ?? 0)}',
+                                'Chênh lệch: ${AppFormatters.formatCurrency(double.tryParse('${change['priceDifference']}') ?? 0)}',
                               ),
                               ExpansionTile(
                                 tilePadding: EdgeInsets.zero,
@@ -795,7 +795,7 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
                                 ),
                               if (request['refundAmount'] != null)
                                 Text(
-                                  'Khoản hoàn: ${HasakiFormatters.formatCurrency(double.tryParse('${request['refundAmount']}') ?? 0)}',
+                                  'Khoản hoàn: ${AppFormatters.formatCurrency(double.tryParse('${request['refundAmount']}') ?? 0)}',
                                 ),
                               if (request['refundReference'] != null)
                                 Text(
@@ -882,7 +882,7 @@ class _PlanSummary extends StatelessWidget {
         Text('${plan['name'] ?? ''}'),
         Text('${plan['description'] ?? ''}'),
         Text(
-          '${HasakiFormatters.formatCurrency(double.tryParse('${plan['price']}') ?? 0)} • ${plan['validityDays'] ?? 'Không giới hạn'} ngày',
+          '${AppFormatters.formatCurrency(double.tryParse('${plan['price']}') ?? 0)} • ${plan['validityDays'] ?? 'Không giới hạn'} ngày',
         ),
         ...treatmentMaps(plan['sessions']).map(
           (session) => Padding(

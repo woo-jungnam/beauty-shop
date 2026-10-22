@@ -44,7 +44,6 @@ class PaymentSubscriptionTokenTest {
         assertEquals(7L, subscription.orderId());
         assertTrue(subscription.expiresAt().isAfter(before.plusSeconds(299)));
         assertTrue(subscription.expiresAt().isBefore(Instant.now().plusSeconds(301)));
-        // JWT timestamps have whole-second precision.
         assertTrue(Math.abs(scope.expiresAt().getEpochSecond() - subscription.expiresAt().getEpochSecond()) <= 1);
     }
 
@@ -84,7 +83,6 @@ class PaymentSubscriptionTokenTest {
         var handler = new PaymentWebSocketHandler(new ObjectMapper());
         var session = mock(WebSocketSession.class);
         when(session.getId()).thenReturn("verified-session"); when(session.isOpen()).thenReturn(true);
-        // An attacker-controlled URI never overrides the verified handshake attributes.
         when(session.getUri()).thenReturn(URI.create("ws://localhost/ws/payment?orderId=99&orderCode=ORD-OTHER"));
         when(session.getAttributes()).thenReturn(Map.of("paymentScope", new PaymentSubscriptionTokenService.Scope(7L, "ORD-SEVEN", Instant.now().plusSeconds(300))));
         handler.afterConnectionEstablished(session); clearInvocations(session);

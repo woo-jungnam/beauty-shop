@@ -74,7 +74,6 @@ public class SpaRefundService {
                 }
                 BigDecimal unit = allFree ? BigDecimal.ONE : detail.getUnitValue();
                 totalWeight = totalWeight.add(unit.multiply(BigDecimal.valueOf(e.getValue())));
-                // Compensation is a gift, never increases the refundable purchase quota.
                 int unused = Math.max(0, e.getValue() - entitlement.getUsed());
                 remainingWeight = remainingWeight.add(unit.multiply(BigDecimal.valueOf(unused)));
             }

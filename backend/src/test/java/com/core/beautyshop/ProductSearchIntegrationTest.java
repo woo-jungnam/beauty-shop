@@ -87,7 +87,6 @@ class ProductSearchIntegrationTest {
     }
     void available(ProductVariant variant) { stock(variant, warehouse(), 3, 1, 0, null); }
     void makeCatalogSellable() {
-        // Taxonomy/sort tests need real stock; inventory tests supply their own explicit lots.
         for (Product product : products.findAll().stream().filter(row -> row.getName().startsWith(prefix)).toList()) {
             var rows = variants.findByProductIdAndIsDeletedFalse(product.getId());
             if (rows.isEmpty()) rows = List.of(variant(product, "100", null));

@@ -32,7 +32,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
   const feedbackTimerRef = useRef(null);
   useEffect(() => () => clearTimeout(feedbackTimerRef.current), []);
 
-  // Missing media uses a neutral placeholder, never another product's photo.
   const imageUrl = resolveProductImage(product);
 
   const variants = product.variants || [];
@@ -101,7 +100,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* 1. Image Media Container */}
       <div className="product-card-media" style={{
         position: 'relative',
         width: '100%',
@@ -132,7 +130,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           }}
         />
 
-        {/* Top Badges - Hasaki Style */}
         <div className="product-card-badges" style={{
           position: 'absolute',
           top: '8px',
@@ -187,7 +184,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           )}
         </div>
 
-        {/* Wishlist Heart Button */}
         <button
           onClick={handleToggleWishlist}
           disabled={wishlistBusy}
@@ -220,7 +216,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           )}
         </button>
 
-        {/* Quick View Eye Button */}
         {onQuickView && (
           <button
             onClick={(e) => {
@@ -252,7 +247,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           </button>
         )}
 
-        {/* Quick Add Button overlay on hover */}
         <div className="product-card-quick-add" style={{
           position: 'absolute',
           bottom: '10px',
@@ -303,9 +297,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
         </div>
       </div>
 
-      {/* 2. Content Body - Pastel Pink Theme */}
       <div className="product-card-body" style={{ padding: 'var(--product-card-body-padding, 12px 14px)', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* Brand label */}
         <div className="product-card-brand" title={cleanDisplayName(brandName)} style={{
           fontSize: '11px',
           fontWeight: 800,
@@ -317,7 +309,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           {cleanDisplayName(brandName)}
         </div>
 
-        {/* Product Title */}
         <h3 style={{
           margin: 0,
           fontFamily: 'var(--font-sans)',
@@ -335,7 +326,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           <a className="product-card-title-link" href={`#/${path}`} onClick={(event) => { event.stopPropagation(); if (fromSearch) recordSearchClick(product.id); }}>{product.name}</a>
         </h3>
 
-        {/* Rating and Volume / Sales */}
         <div className="product-card-rating" style={{
           display: 'flex',
           alignItems: 'center',
@@ -382,7 +372,6 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
             : `SKU ${selectedVariant.sku} · Còn ${clearanceStock} sản phẩm cận hạn tại lúc tải${knownCount(product.daysRemaining) != null ? ` · HSD gần nhất còn ${product.daysRemaining} ngày` : ''}`}
         </p>}
 
-        {/* Price Row - Rose Red Bold Accent */}
         <div className="product-card-price" style={{
           display: 'flex',
           alignItems: 'baseline',

@@ -66,5 +66,17 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>mbmobile</string>
+		<string>vcbdigibank</string>
+		<string>bidvsmartbanking</string>
+		<string>tcb</string>
+		<string>vpbankneo</string>
+		<string>tpbank</string>
+		<string>momo</string>
+	</array>
 </dict>
 </plist>

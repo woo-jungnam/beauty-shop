@@ -13,10 +13,14 @@ public class PaymentWebhookServiceImpl implements PaymentWebhookService {
     @Override
     public void processSePayWebhook(SePayWebhookRequest request) {
         String reference = processor.reference(request);
-        try { processor.process(request, reference); }
-        catch (DataIntegrityViolationException exception) {
-            // Processor's transaction has already rolled back. A concurrent committed duplicate is harmless.
-            if (!transactions.existsByReferenceCode(reference)) throw exception;
+        for (int attempt = 0; ; attempt++) {
+            try { processor.process(request, reference); return; }
+            catch (DataIntegrityViolationException exception) {
+                if (attempt >= 2 || !transactions.existsByReferenceCode(reference)) throw exception;
+            }
+            catch (org.springframework.dao.TransientDataAccessException exception) {
+                if (attempt >= 2) throw exception;
+            }
         }
     }
 }

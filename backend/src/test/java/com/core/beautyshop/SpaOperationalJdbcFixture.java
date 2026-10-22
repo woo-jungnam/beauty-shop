@@ -6,14 +6,11 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 
-/** Hibernate's test schema knows entity columns; operational append-only JDBC tables need explicit H2 setup. */
 final class SpaOperationalJdbcFixture {
  private SpaOperationalJdbcFixture() {}
  static synchronized void ensure(DataSource source) {
   try(var connection=source.getConnection()) {
    if(!connection.getMetaData().getDatabaseProductName().equalsIgnoreCase("H2"))return;
-   // A recreated Hibernate schema resets parent IDs, while H2 DB_CLOSE_DELAY=-1
-   // retains these JDBC-only tables across evicted Spring contexts.
    try(var statement=connection.createStatement();var rows=statement.executeQuery("SELECT (SELECT COUNT(*) FROM users)+(SELECT COUNT(*) FROM appointments)")) {
     rows.next();
     if(rows.getLong(1)==0) {
@@ -32,6 +29,11 @@ final class SpaOperationalJdbcFixture {
       .replace("INSERT INTO spa_weekly_hours(day_of_week,closed,opens_at,closes_at) VALUES","MERGE INTO spa_weekly_hours(day_of_week,closed,opens_at,closes_at) KEY(day_of_week) VALUES")
       .replace("INSERT INTO spa_financial_policy(id,version,deposit_amount,cancellation_fee,no_show_fee) VALUES","MERGE INTO spa_financial_policy(id,version,deposit_amount,cancellation_fee,no_show_fee) KEY(id) VALUES");
     new ResourceDatabasePopulator(new ByteArrayResource(sql.getBytes(StandardCharsets.UTF_8))).execute(source);
+   }
+   try(var statement=connection.createStatement()) {
+    statement.execute("ALTER TABLE spa_appointment_finance ADD COLUMN IF NOT EXISTS deposit_transfer_code VARCHAR(39) UNIQUE");
+    statement.execute("ALTER TABLE spa_financial_entries ALTER COLUMN actor_id DROP NOT NULL");
+    statement.execute("ALTER TABLE spa_financial_entries ADD COLUMN IF NOT EXISTS payment_transaction_id BIGINT UNIQUE REFERENCES payment_transactions(id)");
    }
   }catch(Exception failure){throw new IllegalStateException("Cannot prepare isolated Spa JDBC test tables",failure);}
  }

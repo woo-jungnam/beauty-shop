@@ -27,10 +27,10 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Giỏ Hàng Của Bạn'),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
         elevation: 0,
       ),
       body: Consumer<CartProvider>(
@@ -50,17 +50,17 @@ class _CartScreenState extends State<CartScreen> {
                   const Icon(
                     Icons.remove_shopping_cart_outlined,
                     size: 64,
-                    color: HasakiColors.textLight,
+                    color: AppColors.textLight,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Giỏ hàng chưa có sản phẩm',
-                    style: HasakiTypography.titleMedium,
+                    style: AppTypography.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Khám phá hàng ngàn mỹ phẩm chính hãng tại BeautyShop',
-                    style: HasakiTypography.bodySmall,
+                    'Khám phá hàng ngàn mỹ phẩm và dịch vụ làm đẹp chính hãng',
+                    style: AppTypography.bodySmall,
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -74,9 +74,8 @@ class _CartScreenState extends State<CartScreen> {
 
           return Column(
             children: [
-              // 1. Freeship 2H Progress Banner
               Container(
-                color: HasakiColors.primaryLight,
+                color: AppColors.primaryLight,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,
@@ -85,7 +84,7 @@ class _CartScreenState extends State<CartScreen> {
                   children: [
                     const Icon(
                       Icons.local_shipping_outlined,
-                      color: HasakiColors.primary,
+                      color: AppColors.primary,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
@@ -97,10 +96,10 @@ class _CartScreenState extends State<CartScreen> {
                             : cart.selectedSubtotal >=
                                   cart.freeShippingThreshold!
                             ? 'Bạn đã đủ điều kiện miễn phí vận chuyển!'
-                            : 'Mua thêm ${HasakiFormatters.formatCurrency(cart.freeShippingThreshold! - cart.selectedSubtotal)} để nhận Freeship',
+                            : 'Mua thêm ${AppFormatters.formatCurrency(cart.freeShippingThreshold! - cart.selectedSubtotal)} để nhận Freeship',
                         style: const TextStyle(
                           fontSize: 11.5,
-                          color: HasakiColors.primaryDark,
+                          color: AppColors.primaryDark,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -115,7 +114,6 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
 
-              // 2. Cart Items List
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(10),
@@ -128,9 +126,8 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
 
-              // 3. Voucher Promo Code Box
               Container(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 10,
@@ -176,13 +173,13 @@ class _CartScreenState extends State<CartScreen> {
                                               'Giỏ hàng đã thay đổi. Vui lòng áp dụng lại mã.',
                                   ),
                                   backgroundColor: success
-                                      ? HasakiColors.primary
-                                      : HasakiColors.dealRed,
+                                      ? AppColors.primary
+                                      : AppColors.dealRed,
                                 ),
                               );
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: HasakiColors.primary,
+                        backgroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
@@ -196,11 +193,10 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
 
-              // 4. Bottom Order Summary & Checkout Button (Hasaki Style)
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.06),
@@ -212,7 +208,6 @@ class _CartScreenState extends State<CartScreen> {
                 child: SafeArea(
                   child: Row(
                     children: [
-                      // Total Amount Column
                       Expanded(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -222,25 +217,25 @@ class _CartScreenState extends State<CartScreen> {
                               'Tổng dự kiến:',
                               style: TextStyle(
                                 fontSize: 11.5,
-                                color: HasakiColors.textMuted,
+                                color: AppColors.textMuted,
                               ),
                             ),
                             Text(
                               cart.hasShippingPolicy
-                                  ? HasakiFormatters.formatCurrency(
+                                  ? AppFormatters.formatCurrency(
                                       cart.finalTotal,
                                     )
                                   : 'Chưa xác định phí giao hàng',
-                              style: HasakiTypography.priceLarge.copyWith(
+                              style: AppTypography.priceLarge.copyWith(
                                 fontSize: 18,
                               ),
                             ),
                             if (cart.voucherDiscount > 0)
                               Text(
-                                'Tiết kiệm: ${HasakiFormatters.formatCurrency(cart.voucherDiscount)}',
+                                'Tiết kiệm: ${AppFormatters.formatCurrency(cart.voucherDiscount)}',
                                 style: const TextStyle(
                                   fontSize: 11,
-                                  color: HasakiColors.success,
+                                  color: AppColors.success,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -248,7 +243,6 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ),
 
-                      // Checkout Button
                       ElevatedButton(
                         onPressed:
                             cart.cart.items.any((item) => item.isSelected) &&
@@ -274,7 +268,7 @@ class _CartScreenState extends State<CartScreen> {
                               }
                             : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: HasakiColors.dealRed,
+                          backgroundColor: AppColors.dealRed,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 12,
@@ -304,21 +298,19 @@ class _CartScreenState extends State<CartScreen> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: HasakiColors.getSurface(context),
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: HasakiColors.borderSubtle),
+        border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Checkbox Select Item
           Checkbox(
             value: item.isSelected,
-            activeColor: HasakiColors.primary,
+            activeColor: AppColors.primary,
             onChanged: (_) => cart.toggleItemSelection(item.id),
           ),
 
-          // Thumbnail
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: SizedBox(
@@ -329,21 +321,20 @@ class _CartScreenState extends State<CartScreen> {
                       imageUrl: item.thumbnailUrl!,
                       fit: BoxFit.cover,
                       errorWidget: (_, __, ___) =>
-                          Container(color: HasakiColors.canvas),
+                          Container(color: AppColors.canvas),
                     )
-                  : Container(color: HasakiColors.canvas),
+                  : Container(color: AppColors.canvas),
             ),
           ),
           const SizedBox(width: 10),
 
-          // Details & Stepper
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   item.productName,
-                  style: HasakiTypography.bodySmall.copyWith(
+                  style: AppTypography.bodySmall.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 2,
@@ -353,28 +344,26 @@ class _CartScreenState extends State<CartScreen> {
                   const SizedBox(height: 2),
                   Text(
                     'Phân loại: ${item.variantName}',
-                    style: HasakiTypography.caption.copyWith(
-                      color: HasakiColors.textMuted,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],
                 const SizedBox(height: 6),
 
-                // Price and Quantity Stepper
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      HasakiFormatters.formatCurrency(item.price),
-                      style: HasakiTypography.priceMedium.copyWith(
+                      AppFormatters.formatCurrency(item.price),
+                      style: AppTypography.priceMedium.copyWith(
                         fontSize: 14,
                       ),
                     ),
 
-                    // Quantity Stepper [-] 1 [+]
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: HasakiColors.border),
+                        border: Border.all(color: AppColors.border),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Row(

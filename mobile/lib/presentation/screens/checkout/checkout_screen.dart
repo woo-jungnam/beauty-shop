@@ -20,7 +20,7 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _placing = false;
-  String _paymentMethod = 'VIETQR'; // 'VIETQR' (BANK) | 'COD'
+  String _paymentMethod = 'VIETQR';
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
@@ -66,10 +66,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final cart = context.watch<CartProvider>();
 
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Xác Nhận Đơn Hàng'),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
@@ -108,13 +108,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
             ),
-            // 1. Delivery Information Form
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: HasakiColors.borderSubtle),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,7 +122,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     children: [
                       Icon(
                         Icons.location_on,
-                        color: HasakiColors.primary,
+                        color: AppColors.primary,
                         size: 20,
                       ),
                       SizedBox(width: 8),
@@ -136,7 +135,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                     ],
                   ),
-                  const Divider(color: HasakiColors.borderSubtle, height: 16),
+                  const Divider(color: AppColors.borderSubtle, height: 16),
                   TextField(
                     controller: _nameController,
                     decoration: const InputDecoration(
@@ -198,22 +197,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 2. Order Items Review List
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: HasakiColors.borderSubtle),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Sản phẩm đã chọn (${cart.cart.items.where((i) => i.isSelected).length}):',
-                    style: HasakiTypography.titleMedium,
+                    style: AppTypography.titleMedium,
                   ),
-                  const Divider(color: HasakiColors.borderSubtle, height: 16),
+                  const Divider(color: AppColors.borderSubtle, height: 16),
                   ...cart.cart.items.where((i) => i.isSelected).map((item) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -223,13 +221,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           Expanded(
                             child: Text(
                               '${item.productName} (x${item.quantity})',
-                              style: HasakiTypography.bodySmall,
+                              style: AppTypography.bodySmall,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           Text(
-                            HasakiFormatters.formatCurrency(item.totalPrice),
+                            AppFormatters.formatCurrency(item.totalPrice),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 13,
@@ -244,22 +242,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 3. Payment Method Selector
             Material(
-              color: HasakiColors.getSurface(context),
+              color: AppColors.getSurface(context),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: HasakiColors.borderSubtle),
+                  border: Border.all(color: AppColors.borderSubtle),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Phương thức thanh toán:',
-                      style: HasakiTypography.titleMedium,
+                      style: AppTypography.titleMedium,
                     ),
                     const SizedBox(height: 6),
                     RadioListTile<String>(
@@ -268,7 +265,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         children: [
                           Icon(
                             Icons.qr_code_scanner,
-                            color: HasakiColors.primary,
+                            color: AppColors.primary,
                             size: 20,
                           ),
                           SizedBox(width: 8),
@@ -286,13 +283,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       subtitle: const Text(
                         'Tự động xác nhận giao dịch • Khuyên dùng',
                         style: TextStyle(
-                          color: HasakiColors.success,
+                          color: AppColors.success,
                           fontSize: 11,
                         ),
                       ),
                       value: 'VIETQR',
                       groupValue: _paymentMethod,
-                      activeColor: HasakiColors.primary,
+                      activeColor: AppColors.primary,
                       onChanged: (val) => setState(() => _paymentMethod = val!),
                     ),
                     RadioListTile<String>(
@@ -301,7 +298,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         children: [
                           Icon(
                             Icons.payments_outlined,
-                            color: HasakiColors.textMuted,
+                            color: AppColors.textMuted,
                             size: 20,
                           ),
                           SizedBox(width: 8),
@@ -318,7 +315,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       value: 'COD',
                       groupValue: _paymentMethod,
-                      activeColor: HasakiColors.primary,
+                      activeColor: AppColors.primary,
                       onChanged: (val) => setState(() => _paymentMethod = val!),
                     ),
                   ],
@@ -327,13 +324,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 4. Order Note Input
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: HasakiColors.borderSubtle),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: TextField(
                 controller: _noteController,
@@ -345,36 +341,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 5. Payment Cost Breakdown
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: HasakiColors.getSurface(context),
+                color: AppColors.getSurface(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: HasakiColors.borderSubtle),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: Column(
                 children: [
                   _buildCostRow(
                     'Tạm tính:',
-                    HasakiFormatters.formatCurrency(cart.selectedSubtotal),
+                    AppFormatters.formatCurrency(cart.selectedSubtotal),
                   ),
                   const SizedBox(height: 6),
                   _buildCostRow(
                     'Phí vận chuyển:',
                     cart.hasShippingPolicy
-                        ? HasakiFormatters.formatCurrency(cart.shippingFee)
+                        ? AppFormatters.formatCurrency(cart.shippingFee)
                         : 'Chưa xác định',
                   ),
                   if (cart.voucherDiscount > 0) ...[
                     const SizedBox(height: 6),
                     _buildCostRow(
                       'Giảm giá voucher:',
-                      '-${HasakiFormatters.formatCurrency(cart.voucherDiscount)}',
+                      '-${AppFormatters.formatCurrency(cart.voucherDiscount)}',
                       isDiscount: true,
                     ),
                   ],
-                  const Divider(color: HasakiColors.borderSubtle, height: 18),
+                  const Divider(color: AppColors.borderSubtle, height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -390,9 +385,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       Expanded(
                         child: Text(
                           cart.hasShippingPolicy
-                              ? HasakiFormatters.formatCurrency(cart.finalTotal)
+                              ? AppFormatters.formatCurrency(cart.finalTotal)
                               : 'Chưa xác định',
-                          style: HasakiTypography.priceLarge,
+                          style: AppTypography.priceLarge,
                           textAlign: TextAlign.right,
                         ),
                       ),
@@ -407,7 +402,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Place Order Button
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -425,7 +419,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               content: Text(
                                 'Vui lòng điền đầy đủ họ tên, số điện thoại, địa chỉ, phường/xã, quận/huyện và tỉnh/thành phố',
                               ),
-                              backgroundColor: HasakiColors.dealRed,
+                              backgroundColor: AppColors.dealRed,
                             ),
                           );
                           return;
@@ -532,7 +526,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         }
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: HasakiColors.dealRed,
+                  backgroundColor: AppColors.dealRed,
                 ),
                 child: Text(
                   _placing ? 'ĐANG XÁC NHẬN...' : 'ĐẶT HÀNG NGAY',
@@ -553,7 +547,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(child: Text(label, style: HasakiTypography.bodySmall)),
+        Expanded(child: Text(label, style: AppTypography.bodySmall)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -562,8 +556,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: isDiscount
-                  ? HasakiColors.success
-                  : HasakiColors.getTextMain(context),
+                  ? AppColors.success
+                  : AppColors.getTextMain(context),
             ),
           ),
         ),
@@ -578,13 +572,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.check_circle, color: HasakiColors.success),
+            Icon(Icons.check_circle, color: AppColors.success),
             SizedBox(width: 8),
             Text('Đặt Hàng Thành Công!'),
           ],
         ),
         content: Text(
-          'Mã đơn hàng: ${order.orderCode}. Tổng thanh toán: ${HasakiFormatters.formatCurrency(order.totalAmount)}. Bạn có thể theo dõi trạng thái trong lịch sử đơn hàng.',
+          'Mã đơn hàng: ${order.orderCode}. Tổng thanh toán: ${AppFormatters.formatCurrency(order.totalAmount)}. Bạn có thể theo dõi trạng thái trong lịch sử đơn hàng.',
         ),
         actions: [
           TextButton(
@@ -595,7 +589,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: const Text(
               'HOÀN TẤT',
               style: TextStyle(
-                color: HasakiColors.primary,
+                color: AppColors.primary,
                 fontWeight: FontWeight.w800,
               ),
             ),

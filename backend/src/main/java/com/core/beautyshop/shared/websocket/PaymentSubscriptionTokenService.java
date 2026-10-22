@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
 
-/** A short-lived order-scoped capability, never an account access token. */
 @Service
 public class PaymentSubscriptionTokenService {
     private final javax.crypto.SecretKey key;

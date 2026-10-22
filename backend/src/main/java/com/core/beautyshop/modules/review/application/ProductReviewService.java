@@ -111,8 +111,6 @@ public class ProductReviewService {
     private ProductReview findForRatingUpdate(Long id) {
         Long productId = repository.findProductIdForReview(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhận xét: " + id));
-        // Serialize aggregate changes before loading the mutable review; READ_COMMITTED
-        // ensures the aggregate sees reviews committed while waiting for this lock.
         catalogFacade.lockProductForRating(productId);
         return repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhận xét: " + id));

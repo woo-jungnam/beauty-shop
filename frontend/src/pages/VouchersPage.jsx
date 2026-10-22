@@ -26,13 +26,11 @@ export const VouchersPage = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Modal create/edit state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Form fields
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -73,7 +71,6 @@ export const VouchersPage = () => {
     setDiscountValue('');
     setMaxDiscountAmount('');
     setMinOrderAmount('0');
-    // Default next 30 days
     const now = new Date();
     const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     setStartsAt(now.toISOString().slice(0, 16));
@@ -286,7 +283,6 @@ export const VouchersPage = () => {
         onPageChange={(p) => fetchVouchers(p)}
       />
 
-      {/* Create / Edit Modal */}
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

@@ -38,7 +38,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
-            // A supplied bearer token is authoritative; never retain an earlier thread/test authentication.
             if (jwt != null) SecurityContextHolder.clearContext();
             java.util.Optional<UserDetailsImpl> principal = jwt == null
                     ? java.util.Optional.empty()

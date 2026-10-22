@@ -94,7 +94,7 @@ class _TreatmentTemplateScreenState extends State<TreatmentTemplateScreen> {
             Text(template.description),
             const SizedBox(height: 12),
             Text(
-              HasakiFormatters.formatCurrency(template.price),
+              AppFormatters.formatCurrency(template.price),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             Text(

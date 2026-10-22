@@ -72,7 +72,6 @@ export const CustomerApp = () => {
     }
   };
 
-  // Route dispatcher
   const renderCurrentPage = () => {
     if (route.split('?')[0] === 'image-search') return <ImageSearch onNavigate={navigate} />;
     if (route.startsWith('order-lookup')) return <OrderLookupPage onNavigate={navigate} />;
@@ -81,14 +80,12 @@ export const CustomerApp = () => {
       const params = new URLSearchParams(route.split('?')[1] || '');
       return <TreatmentWorkspace role="customer" initialCourseId={params.get('course')} initialTab={params.get('tab')} />;
     }
-    // 1. Product Detail: product/123
     if (route.startsWith('product/')) {
       const id = route.split('/')[1]?.split(/[?#]/)[0];
       const params = new URLSearchParams(route.split('?')[1] || '');
       return <ProductDetailPage productId={id} requestedVariantId={params.get('variantId')} onNavigate={navigate} />;
     }
 
-    // 2. Catalog / Products
     if (route.startsWith('products') || route === 'catalog') {
       const qIndex = route.indexOf('?');
       const queryString = qIndex !== -1 ? route.substring(qIndex + 1) : '';
@@ -102,7 +99,6 @@ export const CustomerApp = () => {
     }
 
     if (route.startsWith('service-packages')) return <ServicePackages onNavigate={navigate} />;
-    // 3. Spa Booking
     if (route.startsWith('booking') || route === 'spa') {
       const serviceMatch = route.match(/serviceId=([^&]+)/);
       const serviceId = serviceMatch ? serviceMatch[1] : null;
@@ -110,12 +106,10 @@ export const CustomerApp = () => {
       return <SpaBookingPage onNavigate={navigate} preselectedServiceId={serviceId} preselectedTicketId={params.get('ticketId')} />;
     }
 
-    // 4. Checkout
     if (route.startsWith('checkout')) {
       return <CheckoutPage onNavigate={navigate} />;
     }
 
-    // 5. Order Success
     if (route.startsWith('order-success')) {
       const idMatch = route.match(/id=([^&]+)/);
       const codeMatch = route.match(/code=([^&]+)/);
@@ -133,35 +127,28 @@ export const CustomerApp = () => {
       );
     }
 
-    // 6. Profile / Digital Spa Tickets
     if (route.startsWith('profile')) {
       const tabMatch = route.match(/tab=([^&]+)/);
       const tab = tabMatch ? tabMatch[1] : 'overview';
       return <CustomerProfilePage onNavigate={navigate} initialTab={tab} />;
     }
 
-    // Default: Home Page
     return <HomePage onNavigate={navigate} />;
   };
 
   return (
     <div className="customer-app">
       <a className="customer-skip-link" href="#customer-main" onClick={(event) => { event.preventDefault(); mainRef.current?.focus(); mainRef.current?.scrollIntoView({ block: 'start' }); }}>Bỏ qua điều hướng, đến nội dung</a>
-      {/* 1. Global Luxury Navigation */}
       <CustomerHeader onNavigate={navigate} currentRoute={route} />
 
-      {/* 2. Main Page Container */}
       <main id="customer-main" ref={mainRef} tabIndex={-1} style={{ flex: 1 }}>
         {renderCurrentPage()}
       </main>
 
-      {/* 3. Global Mini-Cart Slide-out Drawer */}
       <MiniCartDrawer onNavigate={navigate} />
 
-      {/* 4. AI Skincare Consultant Floating Widget */}
       <ChatbotSkincareWidget onNavigate={navigate} />
 
-      {/* 5. Luxury Brand Footer */}
       <CustomerFooter onNavigate={navigate} />
     </div>
   );

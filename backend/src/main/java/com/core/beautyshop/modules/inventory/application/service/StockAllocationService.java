@@ -45,7 +45,6 @@ public class StockAllocationService {
         if (remaining != 0) throw new InsufficientStockException("Insufficient sellable stock for variant #" + variantId);
     }
 
-    /** Every new dispatch, including a carrier retry, must still meet today's safety window. */
     @Transactional
     public void validateForDispatch(String orderNumber, Long variantId, int quantity) {
         LocalDate businessDate = BusinessTime.today();
@@ -101,7 +100,6 @@ public class StockAllocationService {
         }
     }
 
-    /** The caller locks its return request. Returned quantities never exceed original allocations. */
     @Transactional
     public void returnPartial(String orderNumber, Long variantId, int quantity) {
         validate(orderNumber, variantId, quantity); var rows = allocations.lockAllocations(orderNumber, variantId);

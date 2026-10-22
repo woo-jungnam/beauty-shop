@@ -35,7 +35,6 @@ public class InventoryMovementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lô hàng tại kho xuất"));
         if (targetWarehouseId == null) throw new BusinessException("Kho đích là bắt buộc");
         if (sourceWarehouseId.equals(targetWarehouseId)) throw new BusinessException("Kho xuất và kho nhập phải khác nhau");
-        // Same ordering for opposing transfers and receipts prevents warehouse/stock lock inversion.
         Warehouse first = batches.lockWarehouse(Math.min(sourceWarehouseId, targetWarehouseId));
         Warehouse second = batches.lockWarehouse(Math.max(sourceWarehouseId, targetWarehouseId));
         Warehouse targetWarehouse = first.getId().equals(targetWarehouseId) ? first : second;

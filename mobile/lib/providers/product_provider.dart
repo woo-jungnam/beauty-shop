@@ -317,9 +317,7 @@ class ProductProvider extends ChangeNotifier {
         await fetchReviewsForProduct(request.productId);
         return true;
       }
-    } catch (_) {
-      /* The caller displays the submission failure. */
-    }
+    } catch (_) {}
     return false;
   }
 

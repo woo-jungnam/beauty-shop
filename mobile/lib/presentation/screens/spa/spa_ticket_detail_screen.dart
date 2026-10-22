@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/spa_model.dart';
 import '../../../providers/spa_provider.dart';
@@ -129,21 +130,24 @@ class _SpaTicketDetailScreenState extends State<SpaTicketDetailScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Text(t.serviceName, style: Theme.of(context).textTheme.titleLarge),
-          if (!t.nameSnapshot)
-            const Text('Tên hiện tại; chưa có snapshot tên lúc mua.'),
           Text(
             t.benefitType == 'TREATMENT_COURSE'
-                ? 'Lộ trình điều trị'
-                : 'Gói nhiều lượt thông thường',
+                ? 'Lộ trình điều trị y khoa'
+                : 'Gói dịch vụ spa',
+            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
           ),
+          const SizedBox(height: 6),
           Text(
-            '${t.isValid ? 'Khả dụng' : 'Chưa dùng (vé không khả dụng)'} ${t.remainingQuantity}/${t.totalQuantity} · Đang giữ ${t.reservedSessions}',
+            'Trạng thái: ${t.isValid ? 'Còn hiệu lực' : 'Đã hết hạn/lượt'} · Còn ${t.remainingQuantity}/${t.totalQuantity} buổi',
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           ...t.services.map(
             (s) => ListTile(
-              title: Text('${s['serviceName']}'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text('${s['serviceName']}', style: const TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text(
-                '${s['available']} ${t.isValid ? 'khả dụng' : 'chưa dùng (vé không khả dụng)'} · ${s['used']} đã dùng/mất · ${s['reserved']} đang giữ / ${s['total']} tổng',
+                'Còn ${s['available']} buổi · Đã thực hiện: ${s['used']} · Tổng: ${s['total']} buổi',
               ),
             ),
           ),
@@ -191,7 +195,7 @@ class _SpaTicketDetailScreenState extends State<SpaTicketDetailScreen> {
           ..._refunds.map(
             (r) => ListTile(
               title: Text(
-                'Đã quyết toán ${HasakiFormatters.formatCurrency((r['amount'] as num).toDouble())}',
+                'Đã quyết toán ${AppFormatters.formatCurrency((r['amount'] as num).toDouble())}',
               ),
               subtitle: Text('${r['reference']} · ${r['reason']}'),
             ),

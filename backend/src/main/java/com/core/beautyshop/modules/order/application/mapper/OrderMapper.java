@@ -1,12 +1,16 @@
 package com.core.beautyshop.modules.order.application.mapper;
 
+import com.core.beautyshop.modules.catalog.api.CatalogFacade;
+import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.order.application.dto.response.OrderItemResponse;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
 import com.core.beautyshop.modules.order.domain.Order;
 import com.core.beautyshop.modules.order.domain.OrderItem;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -14,10 +18,29 @@ import java.util.stream.Stream;
 @Component
 public class OrderMapper {
 
+    private final CatalogFacade catalogFacade;
+
+    public OrderMapper() {
+        this.catalogFacade = null;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public OrderMapper(CatalogFacade catalogFacade) {
+        this.catalogFacade = catalogFacade;
+    }
+
     public OrderResponse toOrderResponse(Order order) {
         if (order == null) {
             return null;
         }
+
+        List<Long> variantIds = (order.getItems() != null && catalogFacade != null)
+                ? order.getItems().stream().map(OrderItem::getProductVariantId).distinct().toList()
+                : List.of();
+        Map<Long, ProductVariantSummaryDto> variantMap = variantIds.isEmpty()
+                ? Map.of()
+                : catalogFacade.getVariantSummariesByIds(variantIds);
+
         return OrderResponse.builder()
                 .id(order.getId())
                 .userId(order.getUserId())
@@ -55,8 +78,8 @@ public class OrderMapper {
                         .map(history -> new com.core.beautyshop.modules.order.application.dto.response.OrderStatusHistoryResponse(
                                 history.getStatus(), history.getNotes(), history.getCreatedAt())).toList())
                 .createdAt(order.getCreatedAt())
-                .items(order.getItems() != null ? 
-                        order.getItems().stream().map(this::toOrderItemResponse).collect(Collectors.toList()) 
+                .items(order.getItems() != null ?
+                        order.getItems().stream().map(item -> toOrderItemResponse(item, variantMap.get(item.getProductVariantId()))).collect(Collectors.toList())
                         : List.of())
                 .build();
     }
@@ -70,16 +93,26 @@ public class OrderMapper {
     }
 
     public OrderItemResponse toOrderItemResponse(OrderItem item) {
+        return toOrderItemResponse(item, null);
+    }
+
+    public OrderItemResponse toOrderItemResponse(OrderItem item, ProductVariantSummaryDto variant) {
         if (item == null) {
             return null;
         }
+        Long productId = variant != null ? variant.getProductId() : null;
+        String imageUrl = item.getImageUrl() != null && !item.getImageUrl().isBlank()
+                ? item.getImageUrl()
+                : (variant != null ? variant.getProductThumbnailUrl() : null);
+
         return OrderItemResponse.builder()
                 .id(item.getId())
+                .productId(productId)
                 .variantId(item.getProductVariantId())
                 .sku(item.getSku())
                 .productName(item.getProductName())
                 .variantName(item.getVariantName())
-                .imageUrl(item.getImageUrl())
+                .imageUrl(imageUrl)
                 .quantity(item.getQuantity())
                 .price(item.getPrice())
                 .discount(item.getDiscount())

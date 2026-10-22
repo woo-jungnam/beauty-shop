@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
-        android:label="BeautyShop Hasaki"
+        android:label="BeautyShop"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -30,6 +30,22 @@
             android:value="2" />
     </application>
     <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <package android:name="com.mbmobile" />
+        <package android:name="com.VCB" />
+        <package android:name="com.vnpay.bidv" />
+        <package android:name="com.vnpay.vpbank" />
+        <package android:name="vn.com.techcombank.bb.app" />
+        <package android:name="com.tpb.mb.gprsandroid" />
+        <package android:name="com.vnpay.Agribank" />
+        <package android:name="com.mservice.momotransfer" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

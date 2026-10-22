@@ -17,7 +17,7 @@ const normalText = value => String(value || '').replace(/\s+/g, ' ').trim();
 const IngredientList = ({ label, items }) => items.length ? <div className="pd-function-group"><h3>{label}</h3><div className="pd-tags">{items.map(item => <span key={item}>{item}</span>)}</div></div> : null;
 const track = (productId, actionType) => {
   try { apiClient.post(ENDPOINTS.CATALOG.TRACKING_INTERACTION, { productId: Number(productId), actionType, sessionId: getGuestSessionId() }).catch(() => {}); }
-  catch { /* Analytics must not change the result of a purchase or product load. */ }
+  catch {}
 };
 
 export const ProductDetailPage = props => <ProductDetailContent key={JSON.stringify([props.productId, props.requestedVariantId ?? null])} {...props} />;

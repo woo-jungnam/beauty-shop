@@ -144,7 +144,6 @@ class SpaConcurrencyIntegrityIntegrationTest {
     void awaitBookingReservation(CountDownLatch reserved, Future<?> booking) throws Exception {
         long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
         while(!reserved.await(100,TimeUnit.MILLISECONDS)) {
-            // Surface the original reservation failure instead of disguising it as a lock/barrier timeout.
             if(booking.isDone()) booking.get();
             if(System.nanoTime()>deadline) fail("Booking did not reserve its interval before testing the conflicting shift deletion");
         }

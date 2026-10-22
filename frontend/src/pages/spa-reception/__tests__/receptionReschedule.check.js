@@ -1,4 +1,3 @@
-// receptionReschedule.check.js - Pure Node assert self-check for Reception Reschedule UX logic
 import assert from 'node:assert/strict';
 
 function calculateDuration(startTime, endTime) {
@@ -22,19 +21,16 @@ function isExceedingClosing(estimatedEnd, closingHour = 20) {
   return (h * 60 + m) > closingHour * 60;
 }
 
-// 1. Duration calculation
 assert.equal(calculateDuration('10:00:00', '11:30:00'), 90);
 assert.equal(calculateDuration('09:00', '09:45'), 45);
 assert.equal(calculateDuration(null, null), 60);
 
-// 2. Estimated end time calculation
 assert.equal(calculateEstimatedEnd('14:30', 90), '16:00');
 assert.equal(calculateEstimatedEnd('18:30', 60), '19:30');
 
-// 3. Exceeds closing time check (closing at 20:00)
-assert.equal(isExceedingClosing(calculateEstimatedEnd('18:30', 60)), false); // Ends 19:30 <= 20:00
-assert.equal(isExceedingClosing(calculateEstimatedEnd('19:00', 60)), false); // Ends 20:00 <= 20:00
-assert.equal(isExceedingClosing(calculateEstimatedEnd('19:30', 60)), true);  // Ends 20:30 > 20:00
-assert.equal(isExceedingClosing(calculateEstimatedEnd('18:30', 120)), true); // Ends 20:30 > 20:00
+assert.equal(isExceedingClosing(calculateEstimatedEnd('18:30', 60)), false);
+assert.equal(isExceedingClosing(calculateEstimatedEnd('19:00', 60)), false);
+assert.equal(isExceedingClosing(calculateEstimatedEnd('19:30', 60)), true);
+assert.equal(isExceedingClosing(calculateEstimatedEnd('18:30', 120)), true);
 
 console.log('receptionReschedule.check.js: All assert checks passed.');

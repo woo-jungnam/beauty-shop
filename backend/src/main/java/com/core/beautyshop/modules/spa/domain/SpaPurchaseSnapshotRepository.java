@@ -1,7 +1,6 @@
 package com.core.beautyshop.modules.spa.domain;
 import org.springframework.data.jpa.repository.JpaRepository;
 public interface SpaPurchaseSnapshotRepository extends JpaRepository<SpaPurchaseSnapshot, Long> {
-    // One SQL statement observes one committed snapshot while an order becomes a ticket.
     @org.springframework.data.jpa.repository.Query(value = "select "
             + "(select count(*) from user_service_tickets t join ticket_entitlements e on e.ticket_id = t.id "
             + "where e.service_id = :serviceId and e.total_sessions > e.used_sessions and t.is_deleted = false "

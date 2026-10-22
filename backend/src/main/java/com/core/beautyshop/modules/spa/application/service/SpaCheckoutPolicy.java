@@ -2,7 +2,6 @@ package com.core.beautyshop.modules.spa.application.service;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** Default policy: settle a completed visit; no deposits, cancellation fees or no-show fees. */
 @Schema(description = "Quy tắc checkout mặc định; chưa bật cọc/phí hủy/no-show hoặc tự hoàn mục SKIPPED")
 public record SpaCheckoutPolicy(@Schema(example = "COMPLETED") String invoiceStage,
                                 @Schema(example = "PERFORMED_WITHOUT_TICKET") String chargeableItems,

@@ -204,7 +204,6 @@ class TreatmentCourseIntegrationTest extends SpaWorkflowTestSupport {
         Long sessionId = f.course().sessions().getFirst().id();
         assertThrows(BusinessException.class, () -> as(f.responsible(), () -> treatments.sessionResult(f.course().id(), sessionId, new ResultCommand("Invented result", null, null, true))));
         long appointment = bookCourse(f);
-        // The bridge consumes real appointment execution evidence. Ticket redemption is independently covered by execution integration tests.
         as(f.base().admin(), () -> tx(() -> {
             AppointmentItem item = appointmentRows.findById(appointment).orElseThrow().getItems().getFirst(); item.setExecutionStatus(AppointmentItemExecutionStatus.PERFORMED);
             item.setActualStartedAt(Instant.now().minusSeconds(60)); item.setActualCompletedAt(Instant.now()); treatmentAppointments.synchronizeExecution(item);

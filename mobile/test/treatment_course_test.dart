@@ -702,7 +702,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Điền và xác nhận biểu mẫu'));
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Điền và xác nhận biểu mẫu'));
       await tester.pumpAndSettle();
       expect(

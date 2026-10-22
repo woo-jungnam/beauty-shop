@@ -34,13 +34,18 @@ public class InventoryAlertService {
         return stocks.stream().map(stock -> {
             var variant = variants.get(stock.getProductVariantId());
             return new StockAlert(stock.getId(), stock.getWarehouse().getId(), stock.getWarehouse().getName(),
-                    stock.getProductVariantId(), variant == null ? null : variant.getSku(), stock.getBatchCode(),
+                    stock.getProductVariantId(), variant == null ? null : variant.getSku(),
+                    variant == null ? null : variant.getProductName(),
+                    variant == null ? null : variant.getVariantName(),
+                    variant == null ? null : variant.getProductThumbnailUrl(),
+                    stock.getBatchCode(),
                     stock.getQuantity(), stock.getReservedQuantity(), stock.getMinQuantity(), stock.getExpirationDate(), stock.getCostPrice());
         }).toList();
     }
 
     @Schema(description = "Lô đạt điều kiện cảnh báo; quantity là tồn bán được có gồm reserved, không gồm quarantine; sku có thể null khi catalog không còn bán")
     public record StockAlert(Long stockId, Long warehouseId, String warehouseName, Long productVariantId, String sku,
+                             String productName, String variantName, String productThumbnailUrl,
                              String batchCode, Integer quantity, Integer reservedQuantity, Integer minQuantity,
                              LocalDate expirationDate, BigDecimal costPrice) { }
 }

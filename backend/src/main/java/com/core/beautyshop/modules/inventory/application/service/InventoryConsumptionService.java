@@ -22,7 +22,6 @@ public class InventoryConsumptionService {
     @Transactional
     public InventoryConsumptionResult consume(String reference,Long variantId,Long warehouseId,int quantity) {
         if(reference==null||reference.isBlank()||reference.length()>100||variantId==null||warehouseId==null||quantity<=0) throw new BusinessException("Reference, SKU, warehouse and positive quantity required");
-        // Serialize replays even when their original warehouse has since been deactivated/deleted.
         var warehouse = batches.lockWarehouseForHistory(warehouseId);
         var existing=consumptions.findByReference(reference);
         if(existing.isPresent()) {

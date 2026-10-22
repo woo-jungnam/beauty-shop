@@ -89,7 +89,6 @@ public class MediaStorageService {
             log.warn("Configured upload directory {} not writable: {}", configured, e.getMessage());
         }
 
-        // Fallback 1: user.home/.beautyshop/uploads
         try {
             Path homePath = Paths.get(System.getProperty("user.home"), ".beautyshop", "uploads").toAbsolutePath().normalize();
             Files.createDirectories(homePath);
@@ -98,7 +97,6 @@ public class MediaStorageService {
             }
         } catch (Exception ignored) { }
 
-        // Fallback 2: temp dir
         try {
             Path tmpPath = Paths.get(System.getProperty("java.io.tmpdir"), "beautyshop-uploads").toAbsolutePath().normalize();
             Files.createDirectories(tmpPath);

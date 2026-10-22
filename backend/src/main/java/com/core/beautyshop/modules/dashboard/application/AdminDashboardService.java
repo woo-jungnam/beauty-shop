@@ -16,10 +16,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AdminDashboardService {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    private static final String RECEIPTS = "transfer_type = 'in' AND amount > 0 AND status IN ('SUCCESS','PARTIALLY_PAID','CANCELLED_ORDER_RECEIVED','ORDER_NOT_FOUND','IGNORED')";
+    private static final String RECEIPTS = "transfer_type = 'in' AND amount > 0 AND status IN ('SUCCESS','PARTIALLY_PAID','CANCELLED_ORDER_RECEIVED','ORDER_NOT_FOUND','IGNORED','DEPOSIT_REVIEW')";
     private final JdbcTemplate jdbc;
 
-    /** Order volumes use creation time; collections/refunds use their own ledger times; settled orders use paid_at. */
     @Transactional(readOnly = true)
     public Overview overview(Instant from, Instant to) {
         TimeRange range = range(from, to);
@@ -36,13 +35,12 @@ public class AdminDashboardService {
         Map<String, Object> collections = row("SELECT COALESCE(SUM(amount),0) revenue, "
                 + "COALESCE(SUM(CASE WHEN gateway = 'COD' THEN amount ELSE 0 END),0) cod_amount, COALESCE(SUM(CASE WHEN gateway = 'CASH' THEN amount ELSE 0 END),0) cash_amount, COUNT(*) receipt_count "
                 + "FROM payment_transactions WHERE " + RECEIPTS + " AND created_at >= ? AND created_at < ?", range.from(), range.to());
-        BigDecimal refunds = decimal(first(row("SELECT COALESCE(SUM(amount),0) refunded_amount FROM (SELECT amount,confirmed_at recorded_at FROM refund_confirmations UNION ALL SELECT amount,created_at recorded_at FROM payment_resolutions WHERE kind='REFUND') r WHERE recorded_at >= ? AND recorded_at < ?", range.from(), range.to())));
+        BigDecimal refunds = decimal(first(row("SELECT COALESCE(SUM(amount),0) refunded_amount FROM (SELECT amount,confirmed_at recorded_at FROM refund_confirmations UNION ALL SELECT amount,created_at recorded_at FROM payment_resolutions WHERE kind='REFUND' UNION ALL SELECT amount,created_at recorded_at FROM spa_financial_entries WHERE kind='REFUND') r WHERE recorded_at >= ? AND recorded_at < ?", range.from(), range.to())));
         long customers = number(first(row("""
                 SELECT COUNT(DISTINCT u.id) customer_count FROM users u JOIN user_roles ur ON ur.user_id = u.id
                 JOIN roles r ON r.id = ur.role_id WHERE u.is_deleted = false AND u.status = 'ACTIVE'
                 AND r.is_deleted = false AND r.name IN ('ROLE_USER', 'ROLE_CUSTOMER')
                 """))).longValue();
-        // A minimum repeated on several batches must not multiply the SKU threshold.
         long lowStock = number(first(row("""
                 SELECT COUNT(*) low_stock_items FROM (
                     SELECT product_variant_id FROM warehouse_stocks WHERE is_deleted = false
@@ -60,7 +58,6 @@ public class AdminDashboardService {
                 customers, lowStock, inventory, refunds, cod, received.subtract(cod).subtract(cash), cash, number(collections.get("receipt_count")).longValue());
     }
 
-    /** Legacy revenue is gross incoming cash, including unmatched receipts and COD. Refunds are shown separately. */
     @Transactional(readOnly = true)
     public List<RevenuePoint> revenue(Instant from, Instant to, String period) {
         TimeRange range = range(from, to);
@@ -85,7 +82,7 @@ public class AdminDashboardService {
         }
         for (var refund : rows("""
                 SELECT DATE_FORMAT(CONVERT_TZ(recorded_at,'+00:00','+07:00'), ?) period_key, COALESCE(SUM(amount),0) refunded_amount
-                FROM (SELECT amount,confirmed_at recorded_at FROM refund_confirmations UNION ALL SELECT amount,created_at recorded_at FROM payment_resolutions WHERE kind='REFUND') r WHERE recorded_at >= ? AND recorded_at < ?
+                FROM (SELECT amount,confirmed_at recorded_at FROM refund_confirmations UNION ALL SELECT amount,created_at recorded_at FROM payment_resolutions WHERE kind='REFUND' UNION ALL SELECT amount,created_at recorded_at FROM spa_financial_entries WHERE kind='REFUND') r WHERE recorded_at >= ? AND recorded_at < ?
                 GROUP BY period_key
                 """, format, range.from(), range.to())) bucket(buckets, refund).refunds = decimal(refund.get("refunded_amount"));
         for (var paid : rows("""
@@ -156,7 +153,6 @@ public class AdminDashboardService {
                 overload, overload > 0, percentage(served, scheduled), number(appointment.get("reserved_minutes")).longValue(), number(appointment.get("legacy_finalized_minutes")).longValue());
     }
 
-    /** Current operational balances, independent of receipt/creation reporting periods. */
     @Transactional(readOnly = true)
     public SpaFinancials spaFinancials() {
         var due = row("""
@@ -193,7 +189,6 @@ public class AdminDashboardService {
         return new TimeRange(start, end);
     }
 
-    /** UTC parameter binding is independent of the JVM's default zone. MySQL connections also use UTC. */
     private List<Map<String, Object>> rows(String sql, Object... parameters) {
         return jdbc.query(connection -> {
             var statement = connection.prepareStatement(sql);

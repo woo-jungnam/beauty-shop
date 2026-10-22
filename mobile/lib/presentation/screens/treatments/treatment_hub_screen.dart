@@ -179,7 +179,7 @@ class _TemplateListState extends State<_TemplateList> {
                           title: Text(template.name),
                           subtitle: Text(
                             '${template.sessions.length} buổi • ${template.validityDays == null ? 'Không giới hạn' : '${template.validityDays} ngày'}\n'
-                            '${HasakiFormatters.formatCurrency(template.price)} • Phiên bản ${template.versionNumber}',
+                            '${AppFormatters.formatCurrency(template.price)} • Phiên bản ${template.versionNumber}',
                           ),
                           isThreeLine: true,
                           trailing: widget.admin
@@ -413,7 +413,7 @@ class _ReportPanelState extends State<_ReportPanel> {
               title: Text(entry.value),
               trailing: Text(
                 entry.key.endsWith('Amount')
-                    ? HasakiFormatters.formatCurrency(
+                    ? AppFormatters.formatCurrency(
                         double.tryParse('${data[entry.key]}') ?? 0,
                       )
                     : '${data[entry.key] ?? 0}',

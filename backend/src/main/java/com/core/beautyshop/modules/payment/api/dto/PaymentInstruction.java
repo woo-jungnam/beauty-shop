@@ -22,8 +22,12 @@ public class PaymentInstruction {
     private String bankAccountName;
     @Schema(description = "Số tài khoản nhận")
     private String bankAccountNumber;
+    @Schema(description = "Mã BIN ngân hàng thụ hưởng (MBBank: 970422)", example = "970422")
+    private String bankBin;
     @Schema(description = "Nội dung chuyển khoản cần giữ nguyên để webhook khớp order", example = "ORD-1234ABCD")
     private String transferSyntax;
     @Schema(description = "URL VietQR; invoice Spa có số tiền còn thiếu tại thời điểm đọc")
     private String qrCodeUrl;
+    @Schema(description = "DeepLink mở trực tiếp ứng dụng ngân hàng hoặc trang điều phối VietQR", example = "https://api.vietqr.io/970422/0123456789?amount=100000&addInfo=ORD-1234ABCD")
+    private String deepLinkUrl;
 }

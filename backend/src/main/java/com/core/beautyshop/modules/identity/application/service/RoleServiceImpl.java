@@ -81,7 +81,6 @@ public class RoleServiceImpl implements RoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò với id: " + id));
         if (administrationGuard.isSystemRole(role.getName())) throw new BusinessException("Không được phép xóa vai trò hệ thống mặc định");
-        // Remove mappings explicitly; Hibernate-generated test schemas need not have ON DELETE CASCADE.
         for (var user : userRepository.findByRoleIdForUpdate(id)) {
             user.getRoles().removeIf(assigned -> id.equals(assigned.getId()));
             userRepository.save(user);

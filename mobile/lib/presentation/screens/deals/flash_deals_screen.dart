@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../../core/utils/cart_actions.dart';
 import '../../widgets/catalog_state.dart';
-import '../../widgets/hasaki_product_card.dart';
+import '../../widgets/app_product_card.dart';
 import '../product_detail/product_detail_screen.dart';
 
 class FlashDealsScreen extends StatelessWidget {
@@ -37,7 +37,7 @@ class FlashDealsScreen extends StatelessWidget {
                 ),
                 itemBuilder: (context, index) {
                   final product = deals[index];
-                  return HasakiProductCard(
+                  return AppProductCard(
                     product: product,
                     onTap: () => Navigator.push(
                       context,

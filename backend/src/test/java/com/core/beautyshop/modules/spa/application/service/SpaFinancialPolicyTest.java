@@ -28,6 +28,9 @@ class SpaFinancialPolicyTest {
   jdbc.execute("CREATE TABLE appointments(id BIGINT PRIMARY KEY)");jdbc.update("INSERT INTO appointments VALUES(20)");
   jdbc.execute("CREATE TABLE orders(id BIGINT PRIMARY KEY)");
   new ResourceDatabasePopulator(new ClassPathResource("db/migration/V62__spa_deposit_and_fee_ledger.sql")).execute(source);
+  jdbc.execute("ALTER TABLE spa_appointment_finance ADD COLUMN deposit_transfer_code VARCHAR(39) UNIQUE");
+  jdbc.execute("ALTER TABLE spa_financial_entries ALTER COLUMN actor_id DROP NOT NULL");
+  jdbc.execute("ALTER TABLE spa_financial_entries ADD COLUMN payment_transaction_id BIGINT UNIQUE");
   var access=mock(SpaAccessService.class);when(access.canManageReception()).thenReturn(true);when(access.hasRole("ADMIN")).thenReturn(true);
   em=mock(EntityManager.class);orders=mock(OrderFacade.class);finance=new SpaFinancialService(new JdbcTemplate(source),em,access,orders);
   var principal=new UserDetailsImpl(10L,"cashier","cashier@test.invalid","unused",List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));

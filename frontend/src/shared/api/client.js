@@ -13,7 +13,6 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Request Interceptor: Attach Access Token & Guest Session ID
 apiClient.interceptors.request.use(
   (config) => {
     if (config.data instanceof FormData) {
@@ -40,16 +39,13 @@ apiClient.interceptors.request.use(
       if (guestSessionId && !config.headers['X-Guest-Session-Id']) {
         config.headers['X-Guest-Session-Id'] = guestSessionId;
       }
-    } catch (e) {
-      // ignore storage access issues
-    }
+    } catch (e) {}
 
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Auto Refresh on 401 & ApiResponse normalization
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -66,7 +62,6 @@ const processQueue = (error, token = null) => {
 
 apiClient.interceptors.response.use(
   (response) => {
-    // If response matches backend ApiResponse wrapper, extract data or return body
     return response.data;
   },
   async (error) => {

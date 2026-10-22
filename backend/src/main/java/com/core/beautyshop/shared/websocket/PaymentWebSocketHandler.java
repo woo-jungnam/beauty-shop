@@ -23,7 +23,6 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper;
 
-    // Map orderIdentifier (either orderCode or orderId as string) -> Set of active WebSocket sessions
     private final Map<String, Set<WebSocketSession>> orderSessions = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> sessionToOrderKeys = new ConcurrentHashMap<>();
 

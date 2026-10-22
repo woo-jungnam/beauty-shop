@@ -32,7 +32,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
           children: [
             const Icon(
               Icons.confirmation_number_outlined,
-              color: HasakiColors.primary,
+              color: AppColors.primary,
             ),
             const SizedBox(width: 8),
             Text(
@@ -49,7 +49,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                border: Border.all(color: HasakiColors.border),
+                border: Border.all(color: AppColors.border),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: ticket.qrCodeUrl?.isNotEmpty == true
@@ -68,7 +68,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                   ? 'Xuất trình mã QR tại quầy tiếp tân để check-in dịch vụ.'
                   : 'Xuất trình số vé và thông tin tài khoản để nhân viên kiểm tra quyền lợi tại quầy.',
               textAlign: TextAlign.center,
-              style: HasakiTypography.bodySmall,
+              style: AppTypography.bodySmall,
             ),
           ],
         ),
@@ -78,7 +78,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
             child: const Text(
               'ĐÓNG',
               style: TextStyle(
-                color: HasakiColors.primary,
+                color: AppColors.primary,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -91,7 +91,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: const Text('Ví Vé Liệu Trình Spa & Thư Giãn'),
         actions: [
@@ -104,7 +104,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
             tooltip: 'Mua gói dịch vụ',
           ),
         ],
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
       ),
       body: Consumer<SpaProvider>(
         builder: (context, provider, _) {
@@ -117,7 +117,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
             );
           if (provider.isLoading && provider.myTickets.isEmpty) {
             return const Center(
-              child: CircularProgressIndicator(color: HasakiColors.primary),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
@@ -131,17 +131,17 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                   Icon(
                     Icons.card_giftcard_outlined,
                     size: 60,
-                    color: HasakiColors.textLight.withOpacity(0.5),
+                    color: AppColors.textLight.withOpacity(0.5),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Chưa có vé liệu trình nào',
-                    style: HasakiTypography.titleMedium,
+                    style: AppTypography.titleMedium,
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Vé được cấp khi thanh toán gói dịch vụ. Dịch vụ lẻ thanh toán theo hóa đơn buổi hẹn.',
-                    style: HasakiTypography.bodySmall,
+                    style: AppTypography.bodySmall,
                   ),
                 ],
               ),
@@ -149,7 +149,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
           }
 
           return RefreshIndicator(
-            color: HasakiColors.primary,
+            color: AppColors.primary,
             onRefresh: () => provider.fetchMyTickets(),
             child: ListView.separated(
               padding: const EdgeInsets.all(14),
@@ -172,9 +172,9 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: HasakiColors.getSurface(context),
+        color: AppColors.getSurface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: HasakiColors.borderSubtle),
+        border: Border.all(color: AppColors.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -192,7 +192,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: HasakiColors.primaryLight,
+                  color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -202,7 +202,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
-                    color: HasakiColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -210,8 +210,8 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isValid
-                      ? HasakiColors.successLight
-                      : HasakiColors.dealRedLight,
+                      ? AppColors.successLight
+                      : AppColors.dealRedLight,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -220,21 +220,30 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: isValid
-                        ? HasakiColors.success
-                        : HasakiColors.dealRed,
+                        ? AppColors.success
+                        : AppColors.dealRed,
                   ),
                 ),
               ),
             ],
           ),
-          const Divider(height: 20, color: HasakiColors.borderSubtle),
+          const Divider(height: 20, color: AppColors.borderSubtle),
 
-          Text('Đang giữ: ${ticket.reservedSessions} lượt'),
-          if (!ticket.nameSnapshot)
-            const Text('Tên hiện tại; vé cũ chưa lưu tên lúc mua.'),
+          if (ticket.reservedSessions > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'Đang đặt lịch: ${ticket.reservedSessions} buổi',
+                style: const TextStyle(fontSize: 12, color: AppColors.primary),
+              ),
+            ),
           ...ticket.services.map(
-            (s) => Text(
-              '${s['serviceName']}: ${s['available']} ${isValid ? 'khả dụng' : 'chưa dùng (vé không khả dụng)'} · ${s['used']} đã dùng/mất · ${s['reserved']} đang giữ',
+            (s) => Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                '${s['serviceName']}: Còn ${s['available']} buổi',
+                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
             ),
           ),
           TextButton(
@@ -252,7 +261,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
-              color: HasakiColors.getTextMain(context),
+              color: AppColors.getTextMain(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -262,7 +271,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
               const Icon(
                 Icons.confirmation_number_outlined,
                 size: 16,
-                color: HasakiColors.textMuted,
+                color: AppColors.textMuted,
               ),
               const SizedBox(width: 6),
               Text(
@@ -270,7 +279,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  color: HasakiColors.primary,
+                  color: AppColors.primary,
                 ),
               ),
             ],
@@ -282,20 +291,20 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                 const Icon(
                   Icons.event_available,
                   size: 16,
-                  color: HasakiColors.textMuted,
+                  color: AppColors.textMuted,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   'Hạn sử dụng: ${ticket.expiresAt}',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: HasakiColors.textMuted,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
             ),
           ],
-          const Divider(height: 20, color: HasakiColors.borderSubtle),
+          const Divider(height: 20, color: AppColors.borderSubtle),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -305,18 +314,18 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                 icon: const Icon(
                   Icons.qr_code,
                   size: 16,
-                  color: HasakiColors.primary,
+                  color: AppColors.primary,
                 ),
                 label: const Text(
                   'THÔNG TIN VÉ',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: HasakiColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: HasakiColors.primary),
+                  side: const BorderSide(color: AppColors.primary),
                 ),
               ),
             ],

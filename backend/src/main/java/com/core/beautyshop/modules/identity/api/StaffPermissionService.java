@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Set;
 
-/** Fine-grained grants within the existing STAFF role; no additional account roles. */
 @Service("staffPermissions") @RequiredArgsConstructor
 public class StaffPermissionService {
     public static final List<String> KNOWN=List.of("ORDERS","CATALOG","INVENTORY","PROCUREMENT","CRM","SPA_RECEPTION","SPA_EXECUTION","REPORTS");

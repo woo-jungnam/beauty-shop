@@ -9,9 +9,11 @@ import { spaErrorMessage } from '../utils/spaMessages';
 import './spa-visit-checkout.css';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { SpaRefundDialog } from '../../features/spa/SpaRefundDialog';
+import { BankPaymentInstruction } from './BankPaymentInstruction';
 
 export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSpaReception } = useAuth();
+  const canManage = isSpaReception || isAdmin;
   const [refundOpen, setRefundOpen] = useState(false);
   const [invoice, setInvoice] = useState(null);
   const [method, setMethod] = useState('BANK');
@@ -56,7 +58,6 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
     if (!pendingBank || busy) return;
     const controller = new AbortController();
     let timer;
-    // Refresh from the server until payment is confirmed.
     const poll = async () => {
       let keepPolling = true;
       try {
@@ -99,7 +100,6 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
       setError('Số tiền thu phải là số nguyên dương, không vượt quá số tiền còn thiếu.');
       return;
     }
-    // Keep the same receipt payload/key on an uncertain network result to prevent double collection.
     if (receipt.current && receipt.current.amount !== value) {
       setError('Phiếu thu trước chưa xác nhận. Giữ nguyên số tiền để thử lại hoặc mở lại hóa đơn kiểm tra.');
       return;
@@ -136,7 +136,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
 
   const instruction = invoice?.paymentInstruction;
   const paid = invoice?.paymentStatus === 'PAID';
-  const canCollect = invoice?.paymentStatus === 'PENDING' && Number(invoice?.amountDue) > 0 && Number(invoice?.refundedAmount) === 0;
+  const canCollect = canManage && invoice?.paymentStatus === 'PENDING' && Number(invoice?.amountDue) > 0 && Number(invoice?.refundedAmount) === 0;
   return (
     <div className="spa-visit-checkout">
       {refundOpen && <SpaRefundDialog appointmentId={appointment.id} onClose={() => setRefundOpen(false)} onUpdated={refresh} />}
@@ -146,7 +146,11 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
       {error && <p role="alert" className="checkout-feedback error">{error}</p>}
       {message && <p role="status" className="checkout-feedback success">{message}</p>}
       {loading ? <p>Đang tra cứu hóa đơn...</p> : !invoice ? (
-        loadFailed ? <Button type="button" onClick={refresh} loading={busy}>Thử tải lại hóa đơn</Button> : <>
+        loadFailed ? <Button type="button" onClick={refresh} loading={busy}>Thử tải lại hóa đơn</Button> : !canManage ? (
+          <p className="checkout-explainer">Hóa đơn buổi chăm sóc chưa được nhân viên lễ tân lập.</p>
+        ) : appointment?.status !== 'COMPLETED' ? (
+          <p className="checkout-explainer">Chỉ có thể lập hóa đơn sau khi buổi hẹn hoàn thành.</p>
+        ) : <>
           <p className="checkout-explainer">Hóa đơn tính các dịch vụ đã thực hiện ngoài vé liệu trình, gồm dịch vụ phát sinh được ghi nhận trong ca.</p>
           <Select label="Phương thức thanh toán" value={method} disabled={busy} onChange={(e) => setMethod(e.target.value)} options={[
             { value: 'BANK', label: 'Chuyển khoản VietQR / SePay' },
@@ -158,16 +162,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
         <div className="checkout-invoice-heading"><span>Hóa đơn <strong>{invoice.orderNumber}</strong></span><span role="status" className={`checkout-payment-state ${paid ? 'paid' : ''}`}>{paid ? 'Thanh toán hoàn tất' : `Trạng thái: ${getPaymentStatusBadge(invoice.paymentStatus).text}`}</span></div>
         <ul className="checkout-service-lines">{(invoice.items || []).map(item => <li key={item.appointmentItemId}><span>{item.serviceName}</span><strong>{formatCurrency(item.unitPrice)}</strong></li>)}</ul>
         <div className="checkout-totals"><div><span>Tổng tiền</span><strong>{formatCurrency(invoice.totalAmount)}</strong></div><div><span>Đã thu</span><strong>{formatCurrency(invoice.paidAmount)}</strong></div><div className="amount-due"><span>Còn cần thu</span><strong>{formatCurrency(invoice.amountDue)}</strong></div></div>
-        {pendingBank && instruction && <div className="checkout-bank">
-          <h4>Quét VietQR để thanh toán</h4>
-          {instruction.qrCodeUrl && !qrFailed && <img src={instruction.qrCodeUrl} alt="Mã VietQR thanh toán hóa đơn Spa" onError={() => setQrFailed(true)} style={{ width: 280, maxWidth: '100%', height: 'auto' }} />}
-          {qrFailed && <p role="alert">Không tải được QR. Chuyển khoản theo thông tin dưới đây.</p>}
-          <p>Ngân hàng: <strong>{instruction.bankName}</strong></p>
-          <p>Chủ tài khoản: <strong>{instruction.bankAccountName}</strong></p>
-          <p>Số tài khoản: <strong>{instruction.bankAccountNumber}</strong> <Button type="button" size="sm" variant="outline" onClick={() => copy(instruction.bankAccountNumber)}>Sao chép số tài khoản</Button></p>
-          <p>Nội dung: <strong>{instruction.transferSyntax}</strong> <Button type="button" size="sm" variant="outline" onClick={() => copy(instruction.transferSyntax)}>Sao chép nội dung</Button></p>
-          <p>Chuyển đúng nội dung. Hệ thống tự kiểm tra mỗi 5 giây; chỉ hoàn tất khi nhận xác nhận thanh toán.</p>
-        </div>}
+        {pendingBank && instruction && <BankPaymentInstruction instruction={instruction} label="Mã VietQR thanh toán hóa đơn Spa" />}
         <Button type="button" variant="outline" onClick={refresh} loading={busy}>Kiểm tra thanh toán</Button>
         {canCollect && <form onSubmit={collectCash} className="checkout-cash-form">
           <h4>Thu tiền mặt tại quầy</h4><p>Nhập đúng số tiền đã nhận từ khách. Có thể thu từng phần.</p>

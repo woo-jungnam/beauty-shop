@@ -11,7 +11,6 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Optional public catalog filters. Dimensions are combined with AND; IDs within a dimension use OR. */
 @Getter
 @Setter
 public class ProductSearchRequest {
@@ -91,8 +90,6 @@ public class ProductSearchRequest {
     @Schema(description = "Các ID vấn đề da được sản phẩm hỗ trợ (OR)")
     private List<@NotNull @Positive Long> skinConcernIds;
 
-    // Validate raw pagination rather than accepting Spring's silent clamping of invalid values.
-    // Pageable supplies these parameters in OpenAPI and supports repeated sort fields.
     @NotNull @Min(0)
     @Schema(hidden = true)
     private Integer page = 0;

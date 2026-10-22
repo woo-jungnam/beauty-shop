@@ -7,10 +7,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/**
- * Schema metadata for Flyway validation and isolated create-drop environments.
- * The preparation service writes its append-only evidence through JDBC in the appointment transaction.
- */
 public final class SpaPreparationEntities {
     private SpaPreparationEntities() {}
 

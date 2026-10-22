@@ -24,7 +24,6 @@ export const ReviewsPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Reply Modal
   const [replyModalOpen, setReplyModalOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState(null);
   const [replyContent, setReplyContent] = useState('');
@@ -255,7 +254,6 @@ export const ReviewsPage = () => {
         onPageChange={(p) => fetchReviews(p)}
       />
 
-      {/* Reply Modal */}
       <Modal
         isOpen={replyModalOpen}
         onClose={() => setReplyModalOpen(false)}

@@ -71,3 +71,41 @@ test('Existing Spa invoice reopens without recreating; cash collects outstanding
   expect(flow.receipts[0].amount).toBe(201);
   expect(flow.receipts[0].key).toBeTruthy();
 });
+
+test('Customer view only sees invoice if generated, cannot create invoice or collect cash', async ({ page }) => {
+  const customer = { id: 2, username: 'customer-test', fullName: 'Customer Guest', roles: ['ROLE_CUSTOMER'], permissions: [] };
+  await page.addInitScript((user) => {
+    localStorage.setItem('beautyshop_user', JSON.stringify(user));
+    localStorage.setItem('beautyshop_token', 'cust-token');
+  }, customer);
+  let invoice = null;
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    let data = [];
+    if (path.endsWith('/auth/profile')) data = customer;
+    else if (path.endsWith('/invoice')) {
+      if (!invoice) return route.fulfill({ status: 404, json: { message: 'No invoice' } });
+      data = invoice;
+    } else if (path.endsWith('/finance')) {
+      data = {
+        appointmentId: 42, policyVersion: 1, depositRequired: 100, depositCollected: 0, depositDue: 100,
+        appliedToInvoice: 0, assessedFee: 0, feePaid: 0, feeDue: 0, refundable: 0, refunded: 0, closed: false,
+        entries: [], reviewReasons: [],
+        depositPayment: {
+          transferCode: 'SPADEP-11112222333344445555666677778888', canPay: true,
+          paymentInstruction: { bankName: 'MBBank', bankAccountName: 'BEAUTY SHOP', bankAccountNumber: '0000000000', transferSyntax: 'SPADEP-11112222333344445555666677778888', qrCodeUrl: 'https://img.vietqr.io/image/970422-0000000000-compact.jpg?amount=100' }
+        }
+      };
+    } else if (path.includes('/appointments/42')) {
+      data = { id: 42, userId: 2, status: 'COMPLETED', customerName: 'Customer Guest', appointmentDate: '2026-10-08', startTime: '10:00', endTime: '11:00', items: [] };
+    }
+    await route.fulfill({ json: { data } });
+  });
+  await page.goto('/#/profile?tab=appointments&appointment=42');
+  await expect(page.getByText('Quét VietQR để đặt cọc')).toBeVisible();
+  await expect(page.getByText('SPADEP-11112222333344445555666677778888')).toBeVisible();
+  await expect(page.getByText('Hóa đơn buổi chăm sóc chưa được nhân viên lễ tân lập.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lập hóa đơn' })).toHaveCount(0);
+});
+

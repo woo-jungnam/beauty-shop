@@ -26,6 +26,25 @@ class StaffPermissionInterceptorTest {
     boolean request(String method, String path) {
         return interceptor.preHandle(new MockHttpServletRequest(method, path), new MockHttpServletResponse(), new Object());
     }
+    @Test void inventoryTransactionDetailRequiresInventoryGrantAndAllowsAdmin() {
+        String path = "/api/v1/admin/inventory/transactions/10";
+        actor("ROLE_STAFF");
+        assertThrows(AccessDeniedException.class, () -> request("GET", path));
+        when(permissions.has("INVENTORY")).thenReturn(true);
+        assertTrue(request("GET", path));
+        actor("ROLE_ADMIN"); clearInvocations(permissions);
+        assertTrue(request("GET", path)); verifyNoInteractions(permissions);
+    }
+    @Test void procurementLookupNeedsProcurementNotCatalogAndAllowsAdmin() {
+        String path = "/api/v1/admin/procurement/variants/lookup";
+        actor("ROLE_STAFF");
+        assertThrows(AccessDeniedException.class, () -> request("POST", path));
+        when(permissions.has("PROCUREMENT")).thenReturn(true);
+        assertTrue(request("POST", path));
+        verify(permissions, never()).has("CATALOG");
+        actor("ROLE_ADMIN"); clearInvocations(permissions);
+        assertTrue(request("POST", path)); verifyNoInteractions(permissions);
+    }
     @Test void catalogGrantCannotReadOrdersOrMutateStockAndAdminRemainsAuthorized() {
         actor("ROLE_STAFF"); when(permissions.has("CATALOG")).thenReturn(true);
         assertTrue(request("PUT", "/api/v1/admin/products/7"));

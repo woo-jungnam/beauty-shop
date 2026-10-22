@@ -9,4 +9,6 @@ public interface PaymentFacade {
     void recordCodCollection(String orderNumber, java.math.BigDecimal amount);
     boolean recordCashCollection(String orderNumber, java.math.BigDecimal amount, String receiptKey, Long receivedBy);
     PaymentInstruction processPayment(PaymentMethod method, PaymentOrderDto orderDto);
+    com.core.beautyshop.modules.payment.api.dto.BankReceipt lockBankReceipt(String reference);
+    void assignBankReceipt(Long transactionId, String target, String status);
 }

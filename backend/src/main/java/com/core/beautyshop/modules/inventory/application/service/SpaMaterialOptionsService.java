@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
-/** Minimal stock choices for treatment execution. Never exposes costs or customer/order data. */
+
 @Service @RequiredArgsConstructor
 public class SpaMaterialOptionsService {
  private final JdbcTemplate jdbc;

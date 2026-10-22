@@ -11,7 +11,6 @@ import java.sql.Time;
 import java.time.*;
 import java.util.List;
 
-/** One store calendar. Calendar changes and new reservations share the same row mutex. */
 @Service @RequiredArgsConstructor
 public class SpaBusinessCalendarService {
     private final JdbcTemplate jdbc;

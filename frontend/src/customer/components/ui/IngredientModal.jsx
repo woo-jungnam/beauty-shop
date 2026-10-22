@@ -39,7 +39,6 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
           boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.4)'
         }}
       >
-        {/* Close Button */}
         <button
           onClick={onClose}
           aria-label="Đóng bảng giải mã hoạt chất"
@@ -62,7 +61,6 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
           <X size={15} />
         </button>
 
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <span className="badge-dermatology safe" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <FlaskConical size={13} />
@@ -87,7 +85,6 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
           {ingredient.desc}
         </p>
 
-        {/* Scientific Metrics Grid */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -114,7 +111,6 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
           </div>
         </div>
 
-        {/* Combinations Matrix (Nên & Không nên) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
@@ -142,7 +138,6 @@ export const IngredientModal = ({ ingredient, isOpen, onClose, onNavigate }) => 
           </div>
         </div>
 
-        {/* Footer CTA */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button
             onClick={onClose}

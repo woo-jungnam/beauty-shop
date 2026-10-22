@@ -14,7 +14,6 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
-/** Matches Hibernate's hibernate.jdbc.time_zone=UTC, including its legacy JDBC TIME binding. */
 public final class SpaJdbcSupport {
     private SpaJdbcSupport() {}
     public static Calendar utc() { return Calendar.getInstance(TimeZone.getTimeZone("UTC")); }

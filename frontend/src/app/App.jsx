@@ -136,9 +136,7 @@ const AdminShell = ({ tabName, navigationItems }) => {
         "beautyshop_admin_sidebar",
         next ? "collapsed" : "expanded",
       );
-    } catch {
-      /* Keep the session preference. */
-    }
+    } catch {}
     setCollapsed(next);
   };
   const toggleMotion = () => {
@@ -148,9 +146,7 @@ const AdminShell = ({ tabName, navigationItems }) => {
         "beautyshop_admin_motion",
         next ? "full" : "reduced",
       );
-    } catch {
-      /* Keep the session preference. */
-    }
+    } catch {}
     setMotionEnabled(next);
   };
 
@@ -269,12 +265,10 @@ export const App = () => {
     );
   }
 
-  // Explicit login page route
   if (currentHash === "login" || currentHash === "admin/login") {
     return <LoginPage />;
   }
 
-  // Check if current route is for Spa Reception portal
   const isDedicatedReceptionRoute =
     currentHash === "reception" ||
     currentHash === "staff" ||
@@ -283,7 +277,6 @@ export const App = () => {
 
   const isSpaStaffOnly = isSpaReception && !isAdmin;
 
-  // Dedicated Spa Receptionist Portal for direct reception route or staff landing
   const shouldShowReceptionPortal =
     (isDedicatedReceptionRoute || (isSpaStaffOnly && (!currentHash || currentHash === 'home'))) &&
     isAuthenticated &&
@@ -320,12 +313,10 @@ export const App = () => {
     );
   }
 
-  // Determine whether current route is for Admin Management or Customer Storefront
   const isExplicitAdmin =
     currentHash.startsWith("admin") ||
     (currentHash !== "products" && currentHash !== 'treatments' && Object.keys(ADMIN_PAGES).includes(currentHash));
 
-  // If not admin route -> Render the Customer Storefront
   if (!isExplicitAdmin) {
     return (
       <Suspense
@@ -351,7 +342,6 @@ export const App = () => {
     );
   }
 
-  // If admin route requested but not logged in or not an operator -> Show Login Page
   if (!isAuthenticated || !isOperator) {
     return <LoginPage />;
   }
@@ -360,7 +350,6 @@ export const App = () => {
     return <div className="content-container" role="status"><h1>Chưa được phân công nghiệp vụ</h1><p>Quản trị viên cần cấp quyền công việc cho tài khoản nhân viên này.</p><a href="#/home">Về cửa hàng</a></div>;
   }
 
-  // Extract active admin tab
   let tabName =
     currentHash.replace(/^admin\/?/, "") || allowedTabs[0] || "dashboard";
   if (!allowedTabs.includes(tabName)) {

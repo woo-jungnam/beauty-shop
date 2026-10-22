@@ -14,7 +14,7 @@ import 'package:beautyshop_mobile/providers/order_provider.dart';
 import 'package:beautyshop_mobile/data/models/review_model.dart';
 import 'package:beautyshop_mobile/presentation/screens/cart/cart_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/chatbot/ai_chatbot_screen.dart';
-import 'package:beautyshop_mobile/presentation/widgets/hasaki_product_card.dart';
+import 'package:beautyshop_mobile/presentation/widgets/app_product_card.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
@@ -49,11 +49,29 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng đăng nhập để gửi đánh giá sản phẩm'),
-          backgroundColor: HasakiColors.dealRed,
+          backgroundColor: AppColors.dealRed,
         ),
       );
       return;
     }
+
+    final detail = context.read<ProductProvider>().selectedProductDetail;
+    final variantIds = detail != null
+        ? detail.variants.map((v) => v.id).toSet()
+        : <int>{};
+    final orders = context.read<OrderProvider>().orders;
+    final deliveredOrder = orders
+        .where(
+          (o) =>
+              o.status == 'DELIVERED' &&
+              o.items.any(
+                (i) =>
+                    (i.variantId != null && variantIds.contains(i.variantId)) ||
+                    i.productId == widget.productId,
+              ),
+        )
+        .firstOrNull;
+    final hasDelivered = deliveredOrder != null;
 
     int selectedRating = 5;
     final titleController = TextEditingController();
@@ -90,6 +108,52 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ],
               ),
+              if (hasDelivered)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Đã xác nhận mua hàng (${deliveredOrder.orderCode})',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: AppColors.textMuted),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Chưa tìm thấy đơn đã giao trên tài khoản. Đánh giá sẽ ghi nhận dưới dạng nhận xét.',
+                          style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -97,7 +161,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   return IconButton(
                     icon: Icon(
                       index < selectedRating ? Icons.star : Icons.star_border,
-                      color: HasakiColors.star,
+                      color: AppColors.star,
                       size: 32,
                     ),
                     onPressed: () =>
@@ -128,26 +192,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 height: 46,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: HasakiColors.primary,
+                    backgroundColor: AppColors.primary,
                   ),
                   onPressed: () async {
                     if (contentController.text.trim().isEmpty) return;
-                    final orders = context.read<OrderProvider>().orders;
-                    final deliveredOrder = orders
-                        .where(
-                          (o) =>
-                              o.status == 'DELIVERED' &&
-                              o.items.any(
-                                (i) => i.productId == widget.productId,
-                              ),
-                        )
-                        .firstOrNull;
                     final eligibleOrderId = deliveredOrder?.id;
 
                     final req = CreateReviewRequest(
                       productId: widget.productId,
                       orderId: eligibleOrderId,
-                      rating: eligibleOrderId != null ? selectedRating : null,
+                      rating: hasDelivered ? selectedRating : null,
                       title: titleController.text.trim().isEmpty
                           ? 'Đánh giá sản phẩm'
                           : titleController.text.trim(),
@@ -166,8 +220,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 : 'Không thể gửi đánh giá lúc này',
                           ),
                           backgroundColor: ok
-                              ? HasakiColors.primary
-                              : HasakiColors.dealRed,
+                              ? AppColors.primary
+                              : AppColors.dealRed,
                         ),
                       );
                     }
@@ -191,9 +245,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       builder: (context, provider, _) {
         if (provider.isLoadingDetail) {
           return Scaffold(
-            backgroundColor: HasakiColors.getSurface(context),
+            backgroundColor: AppColors.getSurface(context),
             body: const Center(
-              child: CircularProgressIndicator(color: HasakiColors.primary),
+              child: CircularProgressIndicator(color: AppColors.primary),
             ),
           );
         }
@@ -221,15 +275,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         final basePrice = activeVariant != null
             ? (activeVariant.originalPrice ?? activeVariant.price)
             : detail.basePrice;
-        final discountPercent = HasakiFormatters.calculateDiscountPercent(
+        final discountPercent = AppFormatters.calculateDiscountPercent(
           basePrice,
           currentPrice,
         );
 
         return Scaffold(
-          backgroundColor: HasakiColors.getCanvas(context),
+          backgroundColor: AppColors.getCanvas(context),
           appBar: AppBar(
-            backgroundColor: HasakiColors.primary,
+            backgroundColor: AppColors.primary,
             title: Text(detail.brandName ?? 'Chi tiết sản phẩm'),
             actions: [
               CustomerWishlistButton(productId: widget.productId),
@@ -238,7 +292,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   icon: Badge(
                     label: Text('${cart.totalItemsCount}'),
                     isLabelVisible: cart.totalItemsCount > 0,
-                    backgroundColor: HasakiColors.dealRed,
+                    backgroundColor: AppColors.dealRed,
                     child: const Icon(Icons.shopping_bag_outlined),
                   ),
                   onPressed: () {
@@ -255,9 +309,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Image Carousel Gallery
                 Container(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   child: AspectRatio(
                     aspectRatio: 1.0,
                     child: Stack(
@@ -271,16 +324,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               imageUrl: images[idx],
                               fit: BoxFit.contain,
                               placeholder: (_, __) =>
-                                  Container(color: HasakiColors.canvas),
+                                  Container(color: AppColors.canvas),
                               errorWidget: (_, __, ___) => const Icon(
                                 Icons.spa,
                                 size: 50,
-                                color: HasakiColors.textLight,
+                                color: AppColors.textLight,
                               ),
                             );
                           },
                         ),
-                        // Page Count Badge
                         Positioned(
                           bottom: 12,
                           right: 12,
@@ -308,29 +360,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ),
 
-                // 2. Pricing & Title Header Box
                 Container(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Price Row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            HasakiFormatters.formatCurrency(currentPrice),
-                            style: HasakiTypography.priceLarge.copyWith(
+                            AppFormatters.formatCurrency(currentPrice),
+                            style: AppTypography.priceLarge.copyWith(
                               fontSize: 22,
                             ),
                           ),
                           const SizedBox(width: 8),
                           if (discountPercent > 0) ...[
                             Text(
-                              HasakiFormatters.formatCurrency(basePrice),
-                              style: HasakiTypography.priceStrikethrough
+                              AppFormatters.formatCurrency(basePrice),
+                              style: AppTypography.priceStrikethrough
                                   .copyWith(fontSize: 14),
                             ),
                             const SizedBox(width: 8),
@@ -340,16 +390,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: HasakiColors.dealRedLight,
+                                color: AppColors.dealRedLight,
                                 border: Border.all(
-                                  color: HasakiColors.dealRedBorder,
+                                  color: AppColors.dealRedBorder,
                                 ),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '-$discountPercent%',
                                 style: const TextStyle(
-                                  color: HasakiColors.dealRed,
+                                  color: AppColors.dealRed,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -360,24 +410,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      // Product Title
                       Text(
                         detail.name,
-                        style: HasakiTypography.titleLarge.copyWith(
+                        style: AppTypography.titleLarge.copyWith(
                           fontSize: 16,
                           height: 1.3,
                         ),
                       ),
                       const SizedBox(height: 8),
 
-                      // Rating & Sold
                       Wrap(
                         spacing: 6,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Icon(
                             Icons.star,
-                            color: HasakiColors.star,
+                            color: AppColors.star,
                             size: 16,
                           ),
                           const SizedBox(width: 4),
@@ -393,12 +441,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           const SizedBox(width: 6),
                           Text(
                             '(${detail.totalReviews} đánh giá)',
-                            style: HasakiTypography.caption,
+                            style: AppTypography.caption,
                           ),
                           const SizedBox(width: 12),
                           Text(
                             'Đã bán: ${detail.totalSold}',
-                            style: HasakiTypography.caption,
+                            style: AppTypography.caption,
                           ),
                         ],
                       ),
@@ -414,21 +462,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const Padding(
                     padding: EdgeInsets.all(14),
                     child: Text(
-                      'Phân loại đã chọn hiện không khả dụng. Vui lòng tải lại hoặc chọn phân loại khác.',
+                      'Phân loại sản phẩm này tạm hết hàng. Vui lòng chọn phân loại khác.',
                     ),
                   ),
 
-                // 4. Variant Selector (Dung tích / Kích thước)
                 if (detail.variants.isNotEmpty)
                   Container(
-                    color: HasakiColors.getSurface(context),
+                    color: AppColors.getSurface(context),
                     padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Chọn phân loại / dung tích:',
-                          style: HasakiTypography.titleMedium.copyWith(
+                          style: AppTypography.titleMedium.copyWith(
                             fontSize: 13,
                           ),
                         ),
@@ -441,27 +488,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 (activeVariant?.id == variant.id);
                             return ChoiceChip(
                               label: Text(
-                                '${variant.variantName} (${HasakiFormatters.formatCurrency(variant.effectivePrice)})',
+                                '${variant.variantName} (${AppFormatters.formatCurrency(variant.effectivePrice)})',
                               ),
                               selected: isSelected,
                               onSelected: (_) {
                                 setState(() => _selectedVariantId = variant.id);
                               },
-                              selectedColor: HasakiColors.primaryLight,
-                              backgroundColor: HasakiColors.getCanvas(context),
+                              selectedColor: AppColors.primaryLight,
+                              backgroundColor: AppColors.getCanvas(context),
                               labelStyle: TextStyle(
                                 fontSize: 12,
                                 fontWeight: isSelected
                                     ? FontWeight.w800
                                     : FontWeight.w500,
                                 color: isSelected
-                                    ? HasakiColors.primary
-                                    : HasakiColors.getTextMain(context),
+                                    ? AppColors.primary
+                                    : AppColors.getTextMain(context),
                               ),
                               side: BorderSide(
                                 color: isSelected
-                                    ? HasakiColors.primary
-                                    : HasakiColors.border,
+                                    ? AppColors.primary
+                                    : AppColors.border,
                               ),
                             );
                           }).toList(),
@@ -472,12 +519,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 const SizedBox(height: 8),
 
-                // 5. Dermatology & INCI Ingredients Card
                 Container(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Material(
-                    color: HasakiColors.getSurface(context),
+                    color: AppColors.getSurface(context),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -485,13 +531,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           children: [
                             const Icon(
                               Icons.auto_awesome,
-                              color: HasakiColors.primary,
+                              color: AppColors.primary,
                               size: 20,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               'THÀNH PHẦN NỔI BẬT',
-                              style: HasakiTypography.titleMedium.copyWith(
+                              style: AppTypography.titleMedium.copyWith(
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -565,7 +611,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             tilePadding: EdgeInsets.zero,
                             title: Text(
                               ingredient.name,
-                              style: HasakiTypography.bodyMedium,
+                              style: AppTypography.bodyMedium,
                             ),
                             subtitle: Text(
                               [
@@ -618,7 +664,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             children: [
                               SelectableText(
                                 detail.ingredients!,
-                                style: HasakiTypography.bodySmall,
+                                style: AppTypography.bodySmall,
                               ),
                             ],
                           ),
@@ -630,16 +676,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 const SizedBox(height: 8),
 
-                // 6. Detailed Description Accordion
                 Container(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'MÔ TẢ SẢN PHẨM',
-                        style: HasakiTypography.titleMedium.copyWith(
+                        style: AppTypography.titleMedium.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -648,20 +693,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         detail.description ??
                             detail.shortDescription ??
                             'Đang cập nhật nội dung...',
-                        style: HasakiTypography.bodyMedium,
+                        style: AppTypography.bodyMedium,
                       ),
                       if (detail.howToUse != null) ...[
                         const SizedBox(height: 12),
                         Text(
                           'HƯỚNG DẪN SỬ DỤNG',
-                          style: HasakiTypography.titleMedium.copyWith(
+                          style: AppTypography.titleMedium.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           detail.howToUse!,
-                          style: HasakiTypography.bodyMedium,
+                          style: AppTypography.bodyMedium,
                         ),
                       ],
                     ],
@@ -670,9 +715,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 const SizedBox(height: 8),
 
-                // 7. Customer Reviews Section (Đánh Giá Khách Hàng)
                 Container(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -686,13 +730,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             children: [
                               const Icon(
                                 Icons.rate_review_outlined,
-                                color: HasakiColors.primary,
+                                color: AppColors.primary,
                                 size: 20,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 'ĐÁNH GIÁ (${detail.totalReviews})',
-                                style: HasakiTypography.titleMedium.copyWith(
+                                style: AppTypography.titleMedium.copyWith(
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -703,14 +747,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             icon: const Icon(
                               Icons.edit,
                               size: 14,
-                              color: HasakiColors.primary,
+                              color: AppColors.primary,
                             ),
                             label: const Text(
                               'Viết đánh giá',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: HasakiColors.primary,
+                                color: AppColors.primary,
                               ),
                             ),
                           ),
@@ -731,7 +775,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             'Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên đánh giá!',
                             style: TextStyle(
                               fontSize: 12,
-                              color: HasakiColors.textMuted,
+                              color: AppColors.textMuted,
                             ),
                           ),
                         )
@@ -744,7 +788,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               .length,
                           separatorBuilder: (_, __) => const Divider(
                             height: 16,
-                            color: HasakiColors.borderSubtle,
+                            color: AppColors.borderSubtle,
                           ),
                           itemBuilder: (context, idx) {
                             final rev = provider.currentProductReviews[idx];
@@ -770,7 +814,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                               ? Icons.star
                                               : Icons.star_border,
                                           size: 14,
-                                          color: HasakiColors.star,
+                                          color: AppColors.star,
                                         ),
                                       ),
                                     ),
@@ -792,7 +836,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   const SizedBox(height: 3),
                                   Text(
                                     rev.content!,
-                                    style: HasakiTypography.bodySmall,
+                                    style: AppTypography.bodySmall,
                                   ),
                                 ],
                               ],
@@ -805,10 +849,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 const SizedBox(height: 8),
 
-                // 8. Similar Products Section (Sản phẩm tương tự)
                 if (provider.similarProducts.isNotEmpty)
                   Container(
-                    color: HasakiColors.getSurface(context),
+                    color: AppColors.getSurface(context),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -817,7 +860,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           child: Text(
                             'SẢN PHẨM TƯƠNG TỰ GỢI Ý',
-                            style: HasakiTypography.titleMedium.copyWith(
+                            style: AppTypography.titleMedium.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -835,7 +878,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               final p = provider.similarProducts[index];
                               return SizedBox(
                                 width: 145,
-                                child: HasakiProductCard(
+                                child: AppProductCard(
                                   product: p,
                                   onTap: () {
                                     Navigator.pushReplacement(
@@ -867,16 +910,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
 
-                const SizedBox(height: 80), // Padding for sticky bottom bar
+                const SizedBox(height: 80),
               ],
             ),
           ),
 
-          // 9. Sticky Bottom Action Bar (Hasaki Style)
           bottomNavigationBar: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: HasakiColors.getSurface(context),
+              color: AppColors.getSurface(context),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.08),
@@ -888,7 +930,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: SafeArea(
               child: Row(
                 children: [
-                  // Chat AI Consultation Button
                   InkWell(
                     onTap: () {
                       Navigator.push(
@@ -908,7 +949,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         children: [
                           Icon(
                             Icons.smart_toy_outlined,
-                            color: HasakiColors.primary,
+                            color: AppColors.primary,
                             size: 20,
                           ),
                           SizedBox(height: 2),
@@ -917,7 +958,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              color: HasakiColors.primary,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
@@ -927,7 +968,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   const SizedBox(width: 8),
 
-                  // Add to Cart (Outlined)
                   Expanded(
                     child: OutlinedButton(
                       onPressed: !canBuy
@@ -953,7 +993,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   const SizedBox(width: 8),
 
-                  // Buy Now (Solid Red)
                   Expanded(
                     child: ElevatedButton(
                       onPressed: !canBuy
@@ -978,7 +1017,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               );
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: HasakiColors.dealRed,
+                        backgroundColor: AppColors.dealRed,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       child: const Text('Mua ngay'),
@@ -1005,7 +1044,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               label,
               style: const TextStyle(
                 fontSize: 12,
-                color: HasakiColors.textMuted,
+                color: AppColors.textMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1015,7 +1054,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               value,
               style: TextStyle(
                 fontSize: 12,
-                color: HasakiColors.getTextMain(context),
+                color: AppColors.getTextMain(context),
                 fontWeight: FontWeight.w700,
               ),
             ),

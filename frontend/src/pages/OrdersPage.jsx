@@ -16,6 +16,7 @@ import {
   getOrderStatusBadge,
   getPaymentStatusBadge,
   getPaymentMethodLabel,
+  resolveMediaUrl,
 } from '../shared/utils/formatters';
 import { Button } from '../shared/ui/Button';
 import { Input } from '../shared/ui/Input';
@@ -33,18 +34,15 @@ export const OrdersPage = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Filters
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
 
-  // Modals state
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
 
-  // Form states
   const [targetStatus, setTargetStatus] = useState('CONFIRMED');
   const [carrierName, setCarrierName] = useState('');
   const [trackingCode, setTrackingCode] = useState('');
@@ -305,7 +303,6 @@ export const OrdersPage = () => {
       </div>
 
       <CommerceOperationsPanel orders={orders} onChanged={() => fetchOrders(page)} />
-      {/* Filter Control Bar */}
       <div
         className="card"
         style={{ padding: '16px', marginBottom: '20px' }}
@@ -361,7 +358,6 @@ export const OrdersPage = () => {
         </form>
       </div>
 
-      {/* Orders Table */}
       <DataTable
         columns={columns}
         data={orders}
@@ -373,7 +369,6 @@ export const OrdersPage = () => {
         onPageChange={(p) => fetchOrders(p)}
       />
 
-      {/* Order Detail Modal */}
       <Modal
         isOpen={detailModalOpen}
         onClose={() => setDetailModalOpen(false)}
@@ -427,7 +422,6 @@ export const OrdersPage = () => {
               </div>
             </div>
 
-            {/* Line Items List */}
             <div>
               <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Danh sách mặt hàng ({selectedOrder.items?.length || 0})
@@ -436,6 +430,7 @@ export const OrdersPage = () => {
                 <table className="data-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '56px' }}>Ảnh</th>
                       <th>Sản phẩm / Biến thể</th>
                       <th style={{ textAlign: 'right' }}>Đơn giá</th>
                       <th style={{ textAlign: 'center' }}>Số lượng</th>
@@ -443,29 +438,53 @@ export const OrdersPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(selectedOrder.items || []).map((item, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{item.productName}</div>
-                          {item.variantName && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                              Biến thể: {item.variantName} (SKU: {item.sku})
+                    {(selectedOrder.items || []).map((item, idx) => {
+                      const unitPrice = Number(item.price || 0);
+                      const discount = Number(item.discount || 0);
+                      const effectivePrice = Math.max(0, unitPrice - discount);
+                      const lineTotal = effectivePrice * Number(item.quantity || 1);
+                      const img = item.imageUrl ? resolveMediaUrl(item.imageUrl) : null;
+
+                      return (
+                        <tr key={idx}>
+                          <td>
+                            <div style={{ width: 44, height: 44, borderRadius: 4, overflow: 'hidden', backgroundColor: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {img ? (
+                                <img src={img} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+                              ) : (
+                                <Eye size={18} color="var(--text-muted)" />
+                              )}
                             </div>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>{formatCurrency(item.price)}</td>
-                        <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                          {formatCurrency(item.price * item.quantity)}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{item.productName}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                              {item.variantName && <span>Phân loại: <strong>{item.variantName}</strong></span>}
+                              {item.sku && <span>SKU: <code>{item.sku}</code></span>}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            {discount > 0 ? (
+                              <div>
+                                <div style={{ fontWeight: 600 }}>{formatCurrency(effectivePrice)}</div>
+                                <div style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)' }}>{formatCurrency(unitPrice)}</div>
+                              </div>
+                            ) : (
+                              <span>{formatCurrency(unitPrice)}</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>
+                            {formatCurrency(lineTotal)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {/* Spa Visit Items if applicable */}
             {selectedOrder.spaVisitItems && selectedOrder.spaVisitItems.length > 0 && (
               <div style={{ marginTop: '16px' }}>
                 <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>
@@ -498,25 +517,54 @@ export const OrdersPage = () => {
               </div>
             )}
 
-            {/* Summary */}
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '4px',
+                gap: '6px',
                 alignItems: 'flex-end',
-                paddingTop: '12px',
+                paddingTop: '14px',
                 borderTop: '1px solid var(--border-subtle)',
+                fontSize: '13px',
               }}
             >
-              <div>Tổng tiền hàng: <strong>{formatCurrency(selectedOrder.totalAmount)}</strong></div>
-              <div>Đã thanh toán: <strong>{formatCurrency(selectedOrder.paidAmount || 0)}</strong></div>
+              {selectedOrder.subTotal != null && (
+                <div style={{ display: 'flex', gap: 20 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Tạm tính tiền hàng:</span>
+                  <span style={{ fontFamily: 'monospace' }}>{formatCurrency(selectedOrder.subTotal)}</span>
+                </div>
+              )}
+              {selectedOrder.discountAmount != null && Number(selectedOrder.discountAmount) > 0 && (
+                <div style={{ display: 'flex', gap: 20, color: 'var(--color-success-700)' }}>
+                  <span>Chiết khấu / Voucher:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>-{formatCurrency(selectedOrder.discountAmount)}</span>
+                </div>
+              )}
+              {selectedOrder.shippingFee != null && (
+                <div style={{ display: 'flex', gap: 20 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Phí vận chuyển:</span>
+                  <span style={{ fontFamily: 'monospace' }}>{Number(selectedOrder.shippingFee) === 0 ? 'MIỄN PHÍ' : formatCurrency(selectedOrder.shippingFee)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 20, fontSize: '15px', fontWeight: 700, paddingTop: 4, borderTop: '1px dashed var(--border-subtle)' }}>
+                <span>Tổng giá trị đơn:</span>
+                <span style={{ color: 'var(--color-primary-800)', fontFamily: 'monospace' }}>{formatCurrency(selectedOrder.totalAmount)}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 20, color: '#059669' }}>
+                <span>Đã thanh toán:</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{formatCurrency(selectedOrder.paidAmount || 0)}</span>
+              </div>
+              {selectedOrder.refundedAmount != null && Number(selectedOrder.refundedAmount) > 0 && (
+                <div style={{ display: 'flex', gap: 20, color: '#DC2626' }}>
+                  <span>Đã hoàn tiền:</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>-{formatCurrency(selectedOrder.refundedAmount)}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
       </Modal>
 
-      {/* Update Status Modal */}
       <Modal
         isOpen={statusModalOpen}
         onClose={() => setStatusModalOpen(false)}
@@ -600,7 +648,6 @@ export const OrdersPage = () => {
         </form>
       </Modal>
 
-      {/* Refund Confirmation Modal */}
       <Modal
         isOpen={refundModalOpen}
         onClose={() => setRefundModalOpen(false)}

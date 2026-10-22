@@ -34,10 +34,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: HasakiColors.getSurface(context),
+      backgroundColor: AppColors.getSurface(context),
       appBar: AppBar(
         title: const Text('Đăng Ký Tài Khoản'),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -45,13 +45,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Tạo tài khoản BeautyClub',
-              style: HasakiTypography.headlineMedium,
+              'Tạo tài khoản',
+              style: AppTypography.headlineMedium,
             ),
             const SizedBox(height: 4),
             Text(
               'Theo dõi đơn hàng và lịch hẹn của bạn',
-              style: HasakiTypography.bodySmall,
+              style: AppTypography.bodySmall,
             ),
             const SizedBox(height: 20),
 
@@ -125,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     'Đã có tài khoản? ',
                     style: TextStyle(
                       fontSize: 13,
-                      color: HasakiColors.textMuted,
+                      color: AppColors.textMuted,
                     ),
                   ),
                   InkWell(
@@ -137,8 +137,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                     child: Text(
                       'Đăng nhập ngay',
-                      style: HasakiTypography.bodyMedium.copyWith(
-                        color: HasakiColors.primary,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.primary,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -164,7 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(
           label,
-          style: HasakiTypography.bodySmall.copyWith(
+          style: AppTypography.bodySmall.copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),

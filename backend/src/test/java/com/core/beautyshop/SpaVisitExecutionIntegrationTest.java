@@ -35,7 +35,6 @@ class SpaVisitExecutionIntegrationTest extends SpaConcurrencyIntegrityIntegratio
     }
     long itemId(long id) { return tx(() -> appointmentRows.findById(id).orElseThrow().getItems().getFirst().getId()); }
     void readyToStart(long id) {
-        // A previously checked-in visit carried over from yesterday; no fabricated item performance.
         tx(() -> {
             var a = appointmentRows.findById(id).orElseThrow(); a.setAppointmentDate(LocalDate.now(SpaTimeRules.ZONE).minusDays(1));
             a.setCheckedInAt(Instant.now().minusSeconds(60));

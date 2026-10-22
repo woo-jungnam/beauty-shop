@@ -14,6 +14,9 @@ public class WarehouseStockResponse {
     private Long warehouseId;
     private Long productVariantId;
     private String sku;
+    private String productName;
+    private String variantName;
+    private String productThumbnailUrl;
     @Schema(description = "Tồn bán được, có gồm phần reserved; không gồm quarantine")
     private Integer quantity;
     @Schema(description = "Phần quantity đã giữ cho order; tồn khả dụng=quantity−reservedQuantity")

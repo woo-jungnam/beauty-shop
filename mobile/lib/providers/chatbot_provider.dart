@@ -12,7 +12,7 @@ class ChatbotProvider extends ChangeNotifier {
 
   final List<ChatMessage> _messages = [
     ChatMessage.bot(
-      'Xin chào! Tôi là Chuyên Viên Tư Vấn Làm Đẹp AI của BeautyShop. Bạn đang tìm kiếm sản phẩm làm đẹp nào hoặc cần gợi ý chu trình dưỡng da?',
+      'Xin chào! Tôi là Chuyên Viên Tư Vấn Làm Đẹp AI. Bạn đang tìm kiếm sản phẩm làm đẹp nào hoặc cần gợi ý chu trình dưỡng da?',
     ),
   ];
 
@@ -84,7 +84,6 @@ class ChatbotProvider extends ChangeNotifier {
         throw StateError('Empty stream response');
       }
     } catch (_) {
-      // Retry through the non-streaming API; never invent an answer.
       try {
         final fallbackRes = await _apiClient.post(
           ApiConstants.chat,

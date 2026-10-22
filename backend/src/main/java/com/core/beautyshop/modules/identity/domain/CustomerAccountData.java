@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.Instant;
 
-/** Account-owned records are addressed only after checking the authenticated user. */
 public final class CustomerAccountData {
     private CustomerAccountData() {}
 

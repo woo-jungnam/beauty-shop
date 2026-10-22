@@ -7,7 +7,7 @@ const record = (productId, actionType) => {
     apiClient.post(ENDPOINTS.CATALOG.TRACKING_INTERACTION, {
       productId: Number(productId), actionType, sessionId: getGuestSessionId(),
     }).catch(() => {});
-  } catch { /* Browsing remains available when tracking is unavailable. */ }
+  } catch {}
 };
 
 export const recordSearchClick = productId => record(productId, 'SEARCH_CLICK');

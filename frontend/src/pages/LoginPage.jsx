@@ -25,14 +25,12 @@ export const LoginPage = () => {
   const route = window.location.hash.replace(/^#\/?/, '');
   const isAdminRoute = route.startsWith('admin') ||
     ['dashboard', 'inventory', 'procurement', 'crm', 'operations', 'vouchers', 'reviews', 'users'].includes(route);
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [authMode, setAuthMode] = useState('login');
 
-  // Login State
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Register State
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -74,7 +72,6 @@ export const LoginPage = () => {
       return;
     }
 
-    // Login Flow
     if (!username.trim() || !password.trim()) {
       setError('Vui lòng điền đầy đủ tên đăng nhập và mật khẩu.');
       return;
@@ -260,9 +257,7 @@ export const LoginPage = () => {
     >
 
 
-      {/* ================= 1/4 COLUMN: BEAUTY COSMETICS ANIMATION ART ================= */}
       <section className="user-auth-col-art" aria-label="Khám phá BeautyShop">
-        {/* Ambient Glowing Orbs */}
         <div style={{
           position: 'absolute',
           top: '-60px',
@@ -286,7 +281,6 @@ export const LoginPage = () => {
           animation: 'customerAuthPulseGlow 8s ease-in-out infinite'
         }} />
 
-        {/* Brand Header */}
         <div style={{ position: 'relative', zIndex: 4 }}>
           <a href="#/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
             <div
@@ -323,9 +317,7 @@ export const LoginPage = () => {
           </p>
         </div>
 
-        {/* Middle Canvas: Animated Cosmetics Floating Badges */}
         <div style={{ position: 'relative', height: '340px', margin: '20px 0', zIndex: 3 }}>
-          {/* Card 1: Serum & Skincare Routine */}
           <div
             className="beauty-floating-card"
             style={{
@@ -353,7 +345,6 @@ export const LoginPage = () => {
             </div>
           </div>
 
-          {/* Card 2: Makeup & Lipstick */}
           <div
             className="beauty-floating-card"
             style={{
@@ -381,7 +372,6 @@ export const LoginPage = () => {
             </div>
           </div>
 
-          {/* Card 3: Spa Treatment & Mask */}
           <div
             className="beauty-floating-card"
             style={{
@@ -410,7 +400,6 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        {/* Art Column Footer */}
         <div style={{ position: 'relative', zIndex: 4, borderTop: '1px solid #F0DEE3', paddingTop: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#8C2A47', fontWeight: 600 }}>
             <ShieldCheck size={14} color="#059669" />
@@ -422,9 +411,7 @@ export const LoginPage = () => {
         </div>
       </section>
 
-      {/* ================= 3/4 COLUMN: SLIDING FORMS (LOGIN / REGISTER) ================= */}
       <main className="user-auth-col-forms">
-        {/* Top Floating Back Link */}
         <div style={{ width: '100%', maxWidth: '580px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
           <a
             href="#/"
@@ -464,9 +451,7 @@ export const LoginPage = () => {
           </span>
         </div>
 
-        {/* Viewport for smooth transform slide */}
         <div className="auth-slider-viewport">
-          {/* Header Switcher Tabs */}
           <div style={{
             display: 'flex',
             backgroundColor: '#FAF7F8',
@@ -525,17 +510,14 @@ export const LoginPage = () => {
             </button>
           </div>
 
-          {/* Sliding Track: transformX 0% (login) vs -50% (register) */}
           <div
             className="auth-slider-track"
             style={{
               transform: authMode === 'login' ? 'translateX(0%)' : 'translateX(-50%)'
             }}
           >
-            {/* PANE 1: LOGIN FORM */}
             <div className={`auth-slide-pane ${authMode === 'login' ? 'active' : ''}`} inert={authMode !== 'login'}>
               <div>
-                {/* Form Logo Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                   <div style={{
                     width: '36px',
@@ -726,10 +708,8 @@ export const LoginPage = () => {
               </div>
             </div>
 
-            {/* PANE 2: REGISTER FORM */}
             <div className={`auth-slide-pane ${authMode === 'register' ? 'active' : ''}`} inert={authMode !== 'register'}>
               <div>
-                {/* Form Logo Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                   <div style={{
                     width: '36px',

@@ -37,7 +37,6 @@ export const ProductFeaturesModal = ({ product, onClose }) => {
         ]);
         const catalog = await ingredientCatalog((page) => apiClient.get(`${ENDPOINTS.CATALOG.INGREDIENTS}?page=${page}&size=100`));
         const productDetail = dataOf(productResponse);
-        // An older backend must not turn an unsupported field into an empty replacement.
         if (!Array.isArray(productDetail.attributeValues)) throw new Error('Backend chưa hỗ trợ thuộc tính sản phẩm. Cần cập nhật backend trước khi lưu.');
         const attributeRows = productDetail.attributeValues.map((value) => ({
           attributeDefinitionId: String(value.attributeDefinitionId),

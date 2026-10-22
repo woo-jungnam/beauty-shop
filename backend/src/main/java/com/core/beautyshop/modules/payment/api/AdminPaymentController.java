@@ -82,7 +82,6 @@ public class AdminPaymentController {
                 refunded, cod, cash, received.subtract(cod).subtract(cash)));
     }
 
-    /** Incoming collections by recorded time, with COD and reception cash separate from bank receipts. */
     @Schema(description = "Tổng hợp ledger theo thời điểm ghi nhận; số tiền VND, tổng thực thu và số đã hoàn là hai chỉ tiêu riêng")
     public record Summary(@Schema(description = "Tất cả giao dịch trong khoảng, gồm cả out/FAILED/IGNORED") long totalTransactions,
                           @Schema(description = "Tiền vào dương được ghi nhận, không gồm FAILED và chưa trừ hoàn") BigDecimal receivedAmount,

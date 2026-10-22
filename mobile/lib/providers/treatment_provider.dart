@@ -8,8 +8,6 @@ import '../data/models/auth_models.dart';
 import '../data/models/order_model.dart';
 import '../data/models/treatment_model.dart';
 
-/// Server is authoritative for clinical, scheduling and financial state.
-/// No treatment data or queued writes are persisted on the device.
 class TreatmentProvider extends ChangeNotifier {
   TreatmentProvider({ApiClient? apiClient}) : _api = apiClient ?? ApiClient() {
     StorageService.authCleared.addListener(_clearSession);
@@ -47,7 +45,6 @@ class TreatmentProvider extends ChangeNotifier {
         authenticated && user?.hasPermission('SPA_EXECUTION') == true;
     _generation++;
     _purchaseKeys.clear();
-    // ProxyProvider itself notifies dependants after this synchronous update.
   }
 
   int get generation => _generation;
@@ -180,6 +177,45 @@ class TreatmentProvider extends ChangeNotifier {
 
   Future<JsonMap> appointment(int id) =>
       _read('/api/v1/appointments/$id', treatmentMap);
+  Future<JsonMap> finance(int id) =>
+      _read('/api/v1/spa/appointments/$id/finance', treatmentMap);
+
+  Future<JsonMap> createDepositPayment(int id) async {
+    final data = treatmentMap(
+      await write('/api/v1/spa/appointments/$id/deposit-payment', {}),
+    );
+    if (data.isEmpty) {
+      throw const TreatmentFailure('Máy chủ chưa trả về thông tin cọc.');
+    }
+    return data;
+  }
+
+  Future<JsonMap?> invoice(int id) async {
+    if (!authenticated) throw const TreatmentFailure('Vui lòng đăng nhập.');
+    final generation = _generation;
+    try {
+      final response = await _api.get<JsonMap>(
+        '/api/v1/appointments/$id/invoice',
+        fromJsonT: treatmentMap,
+      );
+      _checkSession(generation);
+      if (response.status == 404) return null;
+      if (!response.isSuccess || response.data == null) {
+        throw TreatmentFailure(response.message ?? 'Không thể tải hóa đơn.');
+      }
+      return response.data;
+    } on ApiException catch (error) {
+      _checkSession(generation);
+      if (error.statusCode == 404) return null;
+      throw TreatmentFailure(error.message);
+    }
+  }
+
+  Future<List<String>> appointmentSlots(int id, String date) => _read(
+    '/api/v1/appointments/$id/available-slots',
+    (data) => (data as List).map((slot) => '$slot').toList(),
+    query: {'date': date},
+  );
   Future<List<JsonMap>> preparation(int id) =>
       _read('/api/v1/spa/appointments/$id/preparation', treatmentMaps);
   Future<JsonMap> careSummary(int id) =>
@@ -193,7 +229,6 @@ class TreatmentProvider extends ChangeNotifier {
   Future<List<JsonMap>> staff() =>
       _read('/api/v1/spa/services/staff', treatmentMaps);
 
-  /// Staff.id is a separate identifier from the linked account's User.id.
   Future<Set<int>> currentStaffIds() async {
     if (!canExecuteSpa || isAdmin) return <int>{};
     final people = await staff();

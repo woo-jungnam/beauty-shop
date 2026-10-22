@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
-/** Appointment access follows assigned staff user IDs, never client supplied staff IDs. */
 @Service
 public class SpaAccessService {
     @org.springframework.beans.factory.annotation.Autowired

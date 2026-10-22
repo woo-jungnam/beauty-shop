@@ -5,9 +5,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/cart_actions.dart';
 import '../../../providers/product_provider.dart';
 import '../../../data/models/product_model.dart';
-import '../../widgets/hasaki_app_bar.dart';
-import '../../widgets/hasaki_banner_carousel.dart';
-import '../../widgets/hasaki_product_card.dart';
+import '../../widgets/app_top_bar.dart';
+import '../../widgets/app_banner_carousel.dart';
+import '../../widgets/app_product_card.dart';
 import '../../widgets/catalog_state.dart';
 import '../catalog/product_collection_screen.dart';
 import '../cart/cart_screen.dart';
@@ -75,9 +75,9 @@ class _HomeScreenState extends State<HomeScreen>
             height: 56,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: HasakiColors.getSurface(context),
+              color: AppColors.getSurface(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: HasakiColors.getBorder(context)),
+              border: Border.all(color: AppColors.getBorder(context)),
             ),
             child: url != null && url.isNotEmpty
                 ? CachedNetworkImage(
@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen>
     ),
   );
 
-  Widget _card(ProductItem product) => HasakiProductCard(
+  Widget _card(ProductItem product) => AppProductCard(
     product: product,
     onTap: () => Navigator.push(
       context,
@@ -137,8 +137,8 @@ class _HomeScreenState extends State<HomeScreen>
       _ => provider.errorMessage,
     };
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
-      appBar: HasakiAppBar(
+      backgroundColor: AppColors.getCanvas(context),
+      appBar: AppTopBar(
         onSearchTap: () => widget.onNavigateTab?.call(1),
         onCartTap: () => Navigator.push(
           context,
@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen>
             if (provider.isLoading) const LinearProgressIndicator(),
             const SizedBox(height: 12),
             if (provider.banners.isNotEmpty)
-              HasakiBannerCarousel(
+              AppBannerCarousel(
                 banners: provider.banners
                     .map((banner) => banner.imageUrl)
                     .toList(),
@@ -308,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen>
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           children: [
-            Icon(icon, color: HasakiColors.primary),
+            Icon(icon, color: AppColors.primary),
             const SizedBox(height: 8),
             Text(
               label,

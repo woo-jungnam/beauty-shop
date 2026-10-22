@@ -78,7 +78,6 @@ const compactMoney = (value) =>
         ? `${Number((value / 1e3).toFixed(1))} nghìn`
         : formatNumber(Math.round(value));
 
-// Sparse API buckets become zero only after the revenue request succeeds.
 function normalizeTimeline(records, period, range) {
   if (!Array.isArray(records)) return [];
   const map = new Map(records.map((record) => [record.period, record]));

@@ -75,6 +75,34 @@ public class PaymentFacadeImpl implements PaymentFacade {
                 .status(com.core.beautyshop.modules.payment.domain.enums.TransactionStatus.SUCCESS).build());
     }
 
+    @org.springframework.beans.factory.annotation.Value("${sepay.bank.account-number}")
+    private String bankAccountNumber;
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public com.core.beautyshop.modules.payment.api.dto.BankReceipt lockBankReceipt(String reference) {
+        var tx = transactions.findByReferenceCodeForUpdate(reference).orElseThrow(() ->
+                new com.core.beautyshop.shared.exception.BusinessException("Chưa có giao dịch SePay để đối chiếu"));
+        if (!"SEPAY".equals(tx.getGateway()) || !"in".equalsIgnoreCase(tx.getTransferType())
+                || tx.getAmount().signum() <= 0 || tx.getAmount().stripTrailingZeros().scale() > 0
+                || tx.getAmount().compareTo(new java.math.BigDecimal("99999999")) > 0
+                || bankAccountNumber == null || !bankAccountNumber.equals(tx.getAccountNumber())
+                || tx.getStatus() == com.core.beautyshop.modules.payment.domain.enums.TransactionStatus.FAILED) {
+            throw new com.core.beautyshop.shared.exception.BusinessException("Giao dịch không phải tiền vào SePay hợp lệ");
+        }
+        return new com.core.beautyshop.modules.payment.api.dto.BankReceipt(tx.getId(), tx.getReferenceCode(), tx.getAmount(), tx.getOrderNumber());
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void assignBankReceipt(Long transactionId, String target, String status) {
+        var tx = transactions.findByIdForUpdate(transactionId).orElseThrow();
+        if (!"UNKNOWN".equals(tx.getOrderNumber()) && !target.equals(tx.getOrderNumber()))
+            throw new com.core.beautyshop.shared.exception.BusinessException("Giao dịch đã gắn với mã thanh toán khác");
+        tx.setOrderNumber(target);
+        tx.setStatus(com.core.beautyshop.modules.payment.domain.enums.TransactionStatus.valueOf(status));
+    }
+
     @Override
     public PaymentInstruction processPayment(PaymentMethod method, PaymentOrderDto orderDto) {
         PaymentStrategy strategy = paymentStrategyFactory.getStrategy(method);

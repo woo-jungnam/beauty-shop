@@ -19,7 +19,6 @@ import org.springframework.web.method.HandlerMethod;
 import java.lang.reflect.Method;
 import java.util.*;
 
-/** Documentation follows method authorization and the public routes in SecurityConfig. */
 @Component
 public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, GlobalOpenApiCustomizer {
     private static final List<String> MODULE_ORDER = List.of("identity", "notification", "catalog", "cart", "order", "payment", "spa", "crm", "inventory", "procurement", "promotion", "review", "dashboard", "system", "chatbot");
@@ -60,8 +59,6 @@ public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, Gl
             operation.setSummary(action+" "+path);
         }
         if (get && path.equals("/api/v1/products/search") && operation.getParameters() != null) {
-            // @NotNull rejects explicitly blank pagination values; field defaults allow omitted parameters.
-            // Springdoc otherwise interprets those validation constraints as required query parameters.
             operation.getParameters().stream().filter(parameter -> Set.of("page", "size").contains(parameter.getName()))
                     .forEach(parameter -> parameter.setRequired(false));
         }
@@ -108,7 +105,6 @@ public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, Gl
                 .map(name -> registered.getOrDefault(name, new Tag().name(name))).toList());
         var ordered = new io.swagger.v3.oas.models.Paths();
         api.getPaths().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-            // Springdoc can reuse operations for aliases. Copy before assigning route-specific IDs.
             var item = new io.swagger.v3.oas.models.PathItem();
             BeanUtils.copyProperties(entry.getValue(), item);
             entry.getValue().readOperationsMap().forEach((method, operation) -> {

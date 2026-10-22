@@ -18,7 +18,6 @@ public class IdentityAdministrationGuard {
     private final RoleRepository roles;
     private final UserRepository users;
 
-    /** All changes to admin membership/status serialize on the same existing role row. */
     public void lockAdministration() {
         roles.findByNameForUpdate("ROLE_ADMIN")
                 .orElseThrow(() -> new BusinessException("Vai trò quản trị viên không khả dụng"));

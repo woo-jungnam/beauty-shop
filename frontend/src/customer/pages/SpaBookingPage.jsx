@@ -26,6 +26,7 @@ import {
 import { apiClient } from "../../shared/api/client";
 import { ENDPOINTS } from "../../shared/api/endpoints";
 import { useAuth } from "../../app/providers/AuthProvider";
+import { AppointmentFinance } from "../../features/treatments/AppointmentFinance";
 import {
   getVietnamDateString,
   resolveMediaUrl,
@@ -603,6 +604,15 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               </div>
             </dl>
           </div>
+          {bookingResult.id && (
+            <div style={{ marginTop: 24, textAlign: 'left' }}>
+              <AppointmentFinance
+                appointmentId={bookingResult.id}
+                role="customer"
+                defaultOpen
+              />
+            </div>
+          )}
           <div className="booking-success-actions">
             <button
               type="button"
@@ -635,7 +645,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           <span>Đặt lịch Spa</span>
         </div>
 
-        {/* Compact, purposeful Hero Section */}
         <section className="booking-hero" aria-labelledby="spa-booking-title">
           <div className="booking-hero-copy">
             <h1 id="spa-booking-title">
@@ -683,7 +692,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           </div>
         </section>
 
-        {/* Stepper Progress Bar */}
         <nav className="booking-stepper" aria-label="Các bước đặt lịch">
           {[
             {
@@ -731,7 +739,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           onSubmit={confirmBooking}
         >
           <div className="booking-form-sections">
-            {/* STEP 1: CHOOSE SERVICE */}
             <section
               id="spa-step-1"
               className="booking-section"
@@ -749,7 +756,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 complete={Boolean(selectedService)}
               />
 
-              {/* Service Search Box */}
               <div className="booking-service-search">
                 <Search size={16} />
                 <input
@@ -770,7 +776,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 )}
               </div>
 
-              {/* Category Filter Pills */}
               <div
                 className="booking-category-pills"
                 role="group"
@@ -914,7 +919,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               )}
             </section>
 
-            {/* STEP 2: CHOOSE DATE & SLOTS */}
             <section
               id="spa-step-2"
               className="booking-section"
@@ -973,7 +977,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 ))}
               </div>
 
-              {/* Specialist Selection Dropdown */}
               <details className="booking-provider">
                 <summary>
                   <span>
@@ -1048,7 +1051,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 )}
               </details>
 
-              {/* Slot Heading */}
               <div className="booking-slot-heading">
                 <strong>Khung giờ bắt đầu</strong>
                 <span>
@@ -1139,7 +1141,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               </p>
             </section>
 
-            {/* STEP 3: CONTACT & CONFIRMATION */}
             <section
               id="spa-step-3"
               className="booking-section"
@@ -1221,7 +1222,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 </label>
               </div>
 
-              {/* Skin Condition Tags */}
               <div className="booking-skin-tags">
                 <strong>Tình trạng da cần lưu ý</strong>
                 <span>Chọn các mục phù hợp để chuyên viên chuẩn bị phác đồ an toàn</span>
@@ -1263,7 +1263,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             </section>
           </div>
 
-          {/* ASIDE: STICKY BOOKING SUMMARY */}
           <aside
             className="booking-summary"
             aria-labelledby="spa-summary-title"
@@ -1355,7 +1354,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               </div>
             </div>
 
-            {/* Financial Policy Acceptance Box */}
             {financialPolicy &&
               [
                 financialPolicy.depositAmount,
@@ -1382,7 +1380,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 </div>
               )}
 
-            {/* Error Message Alert */}
             {bookingError && (
               <div
                 id="spa-booking-error"
@@ -1445,7 +1442,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         </div>
       </div>
 
-      {/* Mobile Bottom Fixed Bar */}
       <div className="booking-mobile-bar">
         <div>
           <small>Thanh toán tại Spa</small>

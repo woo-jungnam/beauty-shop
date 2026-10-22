@@ -7,6 +7,7 @@ import 'package:beautyshop_mobile/providers/product_provider.dart';
 import 'package:beautyshop_mobile/data/models/product_model.dart';
 import 'package:beautyshop_mobile/presentation/screens/product_detail/product_detail_screen.dart';
 import '../../widgets/catalog_state.dart';
+import 'image_search_screen.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({Key? key}) : super(key: key);
@@ -63,12 +64,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HasakiColors.getCanvas(context),
+      backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
         title: Container(
           height: 38,
           decoration: BoxDecoration(
-            color: HasakiColors.getSurface(context),
+            color: AppColors.getSurface(context),
             borderRadius: BorderRadius.circular(20),
           ),
           child: TextField(
@@ -79,19 +80,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
               hintText: 'Tìm kiếm mỹ phẩm, thương hiệu...',
               hintStyle: const TextStyle(
                 fontSize: 12.5,
-                color: HasakiColors.textLight,
+                color: AppColors.textLight,
               ),
               prefixIcon: const Icon(
                 Icons.search,
                 size: 18,
-                color: HasakiColors.primary,
+                color: AppColors.primary,
               ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(
                         Icons.clear,
                         size: 16,
-                        color: HasakiColors.textMuted,
+                        color: AppColors.textMuted,
                       ),
                       onPressed: () {
                         _searchController.clear();
@@ -104,8 +105,18 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ),
           ),
         ),
-        backgroundColor: HasakiColors.primary,
+        backgroundColor: AppColors.primary,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.camera_alt_outlined, color: Colors.white),
+            tooltip: 'Tìm kiếm bằng ảnh',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ImageSearchScreen()),
+            ),
+          ),
+        ],
       ),
       body: Consumer<ProductProvider>(
         builder: (context, provider, _) {
@@ -116,11 +127,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
               message: _searchError!,
               onRetry: () => _onSearch(_searchController.text),
             );
-          // If searching with active query, display search results
           if (_searchResults != null) {
             if (_isSearching) {
               return const Center(
-                child: CircularProgressIndicator(color: HasakiColors.primary),
+                child: CircularProgressIndicator(color: AppColors.primary),
               );
             }
             if (_searchResults!.isEmpty) {
@@ -131,17 +141,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     const Icon(
                       Icons.search_off,
                       size: 54,
-                      color: HasakiColors.textLight,
+                      color: AppColors.textLight,
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Không tìm thấy sản phẩm phù hợp',
-                      style: HasakiTypography.titleMedium,
+                      style: AppTypography.titleMedium,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Thử tìm kiếm với từ khóa khác',
-                      style: HasakiTypography.bodySmall,
+                      style: AppTypography.bodySmall,
                     ),
                   ],
                 ),
@@ -181,7 +191,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 categories.length - 1,
               )];
 
-          // Trigger fetch once if category products not cached yet
           final cachedCategoryProducts =
               provider.categoryProductsMap[activeCategory.id];
           if (cachedCategoryProducts == null &&
@@ -203,10 +212,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
           return Row(
             children: [
-              // Left Column: Root Categories List (Hasaki Style)
               Container(
                 width: 95,
-                color: HasakiColors.getCanvas(context),
+                color: AppColors.getCanvas(context),
                 child: ListView.builder(
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
@@ -225,17 +233,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? HasakiColors.getSurface(context)
-                              : HasakiColors.getCanvas(context),
+                              ? AppColors.getSurface(context)
+                              : AppColors.getCanvas(context),
                           border: Border(
                             left: BorderSide(
                               color: isSelected
-                                  ? HasakiColors.primary
+                                  ? AppColors.primary
                                   : Colors.transparent,
                               width: 3.5,
                             ),
                             bottom: BorderSide(
-                              color: HasakiColors.getBorder(context),
+                              color: AppColors.getBorder(context),
                               width: 0.5,
                             ),
                           ),
@@ -249,12 +257,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: isSelected
-                                    ? HasakiColors.getPrimaryLight(context)
-                                    : HasakiColors.getSurface(context),
+                                    ? AppColors.getPrimaryLight(context)
+                                    : AppColors.getSurface(context),
                                 border: Border.all(
                                   color: isSelected
-                                      ? HasakiColors.primary
-                                      : HasakiColors.getBorder(context),
+                                      ? AppColors.primary
+                                      : AppColors.getBorder(context),
                                   width: 0.8,
                                 ),
                               ),
@@ -272,16 +280,16 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                           Icons.spa_outlined,
                                           size: 16,
                                           color: isSelected
-                                              ? HasakiColors.primary
-                                              : HasakiColors.textLight,
+                                              ? AppColors.primary
+                                              : AppColors.textLight,
                                         ),
                                       )
                                     : Icon(
                                         Icons.spa_outlined,
                                         size: 16,
                                         color: isSelected
-                                            ? HasakiColors.primary
-                                            : HasakiColors.textLight,
+                                            ? AppColors.primary
+                                            : AppColors.textLight,
                                       ),
                               ),
                             ),
@@ -294,8 +302,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                     ? FontWeight.w800
                                     : FontWeight.w500,
                                 color: isSelected
-                                    ? HasakiColors.primary
-                                    : HasakiColors.getTextMain(context),
+                                    ? AppColors.primary
+                                    : AppColors.getTextMain(context),
                                 height: 1.2,
                               ),
                               textAlign: TextAlign.center,
@@ -310,23 +318,21 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 ),
               ),
 
-              // Right Column: Products in Category
               Expanded(
                 child: Container(
-                  color: HasakiColors.getSurface(context),
+                  color: AppColors.getSurface(context),
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Category Title
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
                             child: Text(
                               activeCategory.name.toUpperCase(),
-                              style: HasakiTypography.titleMedium.copyWith(
-                                color: HasakiColors.primary,
+                              style: AppTypography.titleMedium.copyWith(
+                                color: AppColors.primary,
                                 fontWeight: FontWeight.w800,
                               ),
                               maxLines: 1,
@@ -335,20 +341,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
                           ),
                           Text(
                             '${displayList.length} SP',
-                            style: HasakiTypography.caption.copyWith(
-                              color: HasakiColors.textMuted,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textMuted,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 10),
 
-                      // Products Grid
                       Expanded(
                         child: provider.isLoadingCategory(activeCategory.id)
                             ? const Center(
                                 child: CircularProgressIndicator(
-                                  color: HasakiColors.primary,
+                                  color: AppColors.primary,
                                 ),
                               )
                             : provider.categoryError(activeCategory.id) != null
@@ -404,9 +409,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: HasakiColors.getSurface(context),
+          color: AppColors.getSurface(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: HasakiColors.getBorder(context)),
+          border: Border.all(color: AppColors.getBorder(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,21 +425,21 @@ class _CategoryScreenState extends State<CategoryScreen> {
                         fit: BoxFit.cover,
                         width: double.infinity,
                         placeholder: (_, __) =>
-                            Container(color: HasakiColors.canvas),
+                            Container(color: AppColors.canvas),
                         errorWidget: (_, __, ___) => Container(
-                          color: HasakiColors.canvas,
+                          color: AppColors.canvas,
                           child: const Icon(
                             Icons.spa_outlined,
-                            color: HasakiColors.textLight,
+                            color: AppColors.textLight,
                             size: 24,
                           ),
                         ),
                       )
                     : Container(
-                        color: HasakiColors.canvas,
+                        color: AppColors.canvas,
                         child: const Icon(
                           Icons.spa_outlined,
-                          color: HasakiColors.textLight,
+                          color: AppColors.textLight,
                           size: 24,
                         ),
                       ),
@@ -453,7 +458,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 Text(
                   '${(p.displayPrice / 1000).toStringAsFixed(0)}K',
                   style: const TextStyle(
-                    color: HasakiColors.dealRed,
+                    color: AppColors.dealRed,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
                   ),
@@ -466,13 +471,13 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       vertical: 1,
                     ),
                     decoration: BoxDecoration(
-                      color: HasakiColors.dealRedLight,
+                      color: AppColors.dealRedLight,
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: Text(
                       '-${p.discountPercent}%',
                       style: const TextStyle(
-                        color: HasakiColors.dealRed,
+                        color: AppColors.dealRed,
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),

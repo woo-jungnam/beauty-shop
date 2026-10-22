@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 
-/** Caller holds the appointment and ticket write locks. State and ledger change in the same transaction. */
 @Service @RequiredArgsConstructor
 public class TicketUsageService {
     private final TicketSessionMovementRepository movements;

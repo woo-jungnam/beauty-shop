@@ -63,7 +63,6 @@ public class AuthServiceImpl implements AuthService {
         UserDetailsImpl authenticated = (UserDetailsImpl) authentication.getPrincipal();
         User user = userRepository.findByIdForUpdate(authenticated.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        // Authentication loaded this entity before the lock; discard that possibly stale state.
         entityManager.refresh(user, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         requireActiveUser(user);
         UserDetailsImpl userDetails = UserDetailsImpl.build(user);

@@ -32,7 +32,6 @@ import java.time.Instant;
 import java.util.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** Versioned, non-clinical questionnaires and explicit customer consent. All evidence is append-only. */
 @Service
 @RequiredArgsConstructor
 public class SpaPreparationService {
@@ -130,14 +129,12 @@ public class SpaPreparationService {
                 (rs, row) -> version(rs.getLong(1)), serviceId));
     }
 
-    /** Called once after booking has persisted item IDs. Even an empty policy gets a snapshot marker. */
     @Transactional
     public void snapshotRequirements(Appointment appointment) {
         for (AppointmentItem item : appointment.getItems()) {
             if (Boolean.TRUE.equals(item.getIsDeleted())) continue;
             if (item.getId() == null) throw new BusinessException("Cần lưu các mục dịch vụ lịch hẹn trước khi lưu biểu mẫu");
             if (!snapshotIds(item.getId()).isEmpty()) continue;
-            // Serialize policy changes with booking; the core also locks service rows when booking.
             services.findByIdForUpdate(item.getService().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
             update("INSERT INTO spa_preparation_snapshots(appointment_item_id,warnings_required,snapshot_at) VALUES (?,?,?)",
@@ -220,12 +217,11 @@ public class SpaPreparationService {
         return new OverrideEvidence(actor, reason, now);
     }
 
-    /** Core calls this under its appointment lock immediately before moving an item to IN_PROGRESS. */
     @Transactional(readOnly = true)
     public void requireReadyForStart(AppointmentItem item) {
         access.requireCanPerformItem(item);
         List<Long> snapshots = snapshotIds(item.getId());
-        if (snapshots.isEmpty()) return; // Legacy bookings have no automatically imposed new requirements.
+        if (snapshots.isEmpty()) return;
         Long snapshotId = snapshots.get(0);
         if (!overrides(snapshotId).isEmpty()) return;
         for (Requirement requirement : requirements(snapshotId)) {

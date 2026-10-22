@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-class HasakiFormatters {
+class AppFormatters {
   static final NumberFormat _currencyFormatter = NumberFormat.currency(
     locale: 'vi_VN',
     symbol: '₫',

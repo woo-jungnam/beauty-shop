@@ -24,12 +24,11 @@ public class CustomerWishlistController {
     @GetMapping @Transactional(readOnly=true) public ApiResponse<List<ProductResponse>> list(){
         var ids=em.createQuery("select w.productId from CustomerWishlistEntry w where w.userId=:uid order by w.id desc",Long.class).setParameter("uid",SecurityUtils.getCurrentUserId()).getResultList();
         List<ProductResponse> result=new ArrayList<>();
-        for(Long id:ids){try{result.add(products.getProductById(id));}catch(ResourceNotFoundException | BusinessException ignored){/* Hidden products are not exposed. */}}
+        for(Long id:ids){try{result.add(products.getProductById(id));}catch(ResourceNotFoundException | BusinessException ignored){}}
         return ApiResponse.success(result);
     }
     @PutMapping("/{productId}") @Transactional public ApiResponse<Void> add(@PathVariable Long productId){
         Long uid=SecurityUtils.getCurrentUserId();
-        // Serialize wishlist changes per owner without crossing module repositories.
         em.createNativeQuery("select id from users where id=:uid for update").setParameter("uid",uid).getSingleResult();
         products.getProductById(productId);
         Long count=em.createQuery("select count(w) from CustomerWishlistEntry w where w.userId=:uid and w.productId=:pid",Long.class).setParameter("uid",uid).setParameter("pid",productId).getSingleResult();

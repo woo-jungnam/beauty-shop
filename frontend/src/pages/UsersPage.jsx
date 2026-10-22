@@ -37,7 +37,6 @@ export const UsersPage = () => {
   const [activeTab, setActiveTab] = useState('users');
   const [permissionUser, setPermissionUser] = useState(null);
 
-  // --- USERS STATE ---
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -47,7 +46,6 @@ export const UsersPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
-  // Status Modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [targetStatus, setTargetStatus] = useState('ACTIVE');
@@ -62,13 +60,11 @@ export const UsersPage = () => {
   const [statusHistoryList, setStatusHistoryList] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // --- RESET PASSWORD STATE ---
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetResult, setResetResult] = useState(null);
   const [resetSubmitting, setResetSubmitting] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
 
-  // --- ROLES STATE ---
   const [roles, setRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -78,7 +74,6 @@ export const UsersPage = () => {
   const [submittingRole, setSubmittingRole] = useState(false);
   const [roleErrorMessage, setRoleErrorMessage] = useState('');
 
-  // Fetch Users
   const fetchUsers = async (p = 0) => {
     setLoadingUsers(true);
     try {
@@ -102,7 +97,6 @@ export const UsersPage = () => {
     }
   };
 
-  // Fetch Roles
   const fetchRoles = async () => {
     setLoadingRoles(true);
     try {
@@ -125,7 +119,6 @@ export const UsersPage = () => {
     }
   }, [activeTab, statusFilter, roleFilter]);
 
-  // Handle User Status Modal
   const handleOpenStatusModal = (user) => {
     setSelectedUser(user);
     setTargetStatus(user.status || 'ACTIVE');
@@ -249,7 +242,6 @@ export const UsersPage = () => {
     }
   };
 
-  // Handle Role Create / Edit Modal
   const handleOpenCreateRole = () => {
     setEditingRole(null);
     setRoleName('');
@@ -309,7 +301,6 @@ export const UsersPage = () => {
     }
   };
 
-  // User Columns
   const userColumns = [
     {
       header: 'ID',
@@ -462,7 +453,6 @@ export const UsersPage = () => {
     },
   ];
 
-  // Role Columns
   const roleColumns = [
     {
       header: 'ID',
@@ -581,7 +571,6 @@ export const UsersPage = () => {
         </div>
       </div>
 
-      {/* Modernist Navigation Tabs */}
       <div
         style={{
           display: 'flex',
@@ -657,7 +646,6 @@ export const UsersPage = () => {
         </button>
       </div>
 
-      {/* Tab 1: Users */}
       {activeTab === 'users' && (
         <div>
           <form
@@ -727,7 +715,6 @@ export const UsersPage = () => {
         </div>
       )}
 
-      {/* Tab 2: Roles */}
       {activeTab === 'roles' && (
         <div>
           <div
@@ -764,7 +751,6 @@ export const UsersPage = () => {
         </div>
       )}
 
-      {/* User Sessions Modal */}
       <Modal isOpen={sessionsModalOpen} onClose={() => setSessionsModalOpen(false)} title={`Phiên đăng nhập: ${selectedUser?.username || ''}`} maxWidth="700px">
         <DataTable columns={[
           { header: 'ID', accessor: 'id', width: '60px' },
@@ -794,7 +780,6 @@ export const UsersPage = () => {
         ]} data={sessions} emptyMessage="Người dùng hiện không có phiên đăng nhập nào." />
       </Modal>
 
-      {/* User Status History Modal */}
       <Modal isOpen={historyModalOpen} onClose={() => setHistoryModalOpen(false)} title={`Lịch sử thay đổi trạng thái: ${selectedUser?.username || ''}`} maxWidth="680px">
         {historyLoading ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Đang tải lịch sử...</div>
@@ -926,7 +911,6 @@ export const UsersPage = () => {
         </form>
       </Modal>
 
-      {/* Role Create / Edit Modal */}
       <Modal
         isOpen={roleModalOpen}
         onClose={() => setRoleModalOpen(false)}
@@ -984,7 +968,6 @@ export const UsersPage = () => {
       </Modal>
 
       {permissionUser && <StaffPermissionEditor user={permissionUser} onClose={() => setPermissionUser(null)} onSaved={() => fetchUsers(page)} />}
-      {/* Reset Password Result Modal */}
       <Modal
         isOpen={resetModalOpen}
         onClose={() => setResetModalOpen(false)}
