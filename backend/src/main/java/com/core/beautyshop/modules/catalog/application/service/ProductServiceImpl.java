@@ -19,6 +19,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -502,8 +504,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductListResponse> getAllProductsForAdmin(Pageable pageable) {
-        return productRepository.findAllAdminProductList(pageable);
+    public Page<ProductListResponse> getAllProductsForAdmin(String keyword, Long categoryId, Long brandId, ProductStatus status, Pageable pageable) {
+        String text = keyword == null ? "" : keyword.trim();
+        String pattern = text.isEmpty() ? null : "%" + text.toLowerCase(java.util.Locale.ROOT)
+                .replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+        Sort sort = pageable.getSort().isUnsorted() ? Sort.by(Sort.Order.desc("createdAt")) : pageable.getSort();
+        if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by(Sort.Order.desc("id")));
+        Pageable sorted = pageable.isPaged() ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort) : Pageable.unpaged(sort);
+        return productRepository.findAllAdminProductList(pattern, categoryId, brandId, status, sorted);
     }
 
     private List<Category> resolveCategories(List<Long> ids) {

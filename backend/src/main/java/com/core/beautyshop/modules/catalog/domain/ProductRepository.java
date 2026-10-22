@@ -51,14 +51,24 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "AND p.status = com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE")
     Page<ProductListResponse> findAllProductList(Pageable pageable);
 
-    @Query("SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
+    @Query(value = "SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
            "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, " +
            "(SELECT MIN(COALESCE(v.discountPrice, v.price)) FROM ProductVariant v WHERE v.product = p AND v.isDeleted = false AND v.isActive = true), " +
            "(SELECT MAX(COALESCE(v.discountPrice, v.price)) FROM ProductVariant v WHERE v.product = p AND v.isDeleted = false AND v.isActive = true), " +
            "p.status, p.isFeatured, p.averageRating, p.totalReviews, p.totalSold, b.name, b.id, " +
            "(SELECT MIN(c.id) FROM p.categories c)) " +
-           "FROM Product p LEFT JOIN p.brand b WHERE p.isDeleted = false")
-    Page<ProductListResponse> findAllAdminProductList(Pageable pageable);
+           "FROM Product p LEFT JOIN p.brand b WHERE p.isDeleted = false " +
+           "AND (:pattern IS NULL OR LOWER(p.name) LIKE :pattern ESCAPE '!') " +
+           "AND (:brandId IS NULL OR b.id = :brandId) " +
+           "AND (:status IS NULL OR p.status = :status) " +
+           "AND (:categoryId IS NULL OR EXISTS (SELECT 1 FROM p.categories c WHERE c.id = :categoryId AND c.isDeleted = false))",
+           countQuery = "SELECT COUNT(p) FROM Product p LEFT JOIN p.brand b WHERE p.isDeleted = false " +
+           "AND (:pattern IS NULL OR LOWER(p.name) LIKE :pattern ESCAPE '!') " +
+           "AND (:brandId IS NULL OR b.id = :brandId) " +
+           "AND (:status IS NULL OR p.status = :status) " +
+           "AND (:categoryId IS NULL OR EXISTS (SELECT 1 FROM p.categories c WHERE c.id = :categoryId AND c.isDeleted = false))")
+    Page<ProductListResponse> findAllAdminProductList(@Param("pattern") String pattern, @Param("categoryId") Long categoryId,
+                                                     @Param("brandId") Long brandId, @Param("status") ProductStatus status, Pageable pageable);
 
     @Query("SELECT new com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse(" +
            "p.id, p.name, p.slug, p.shortDescription, p.thumbnailUrl, " +

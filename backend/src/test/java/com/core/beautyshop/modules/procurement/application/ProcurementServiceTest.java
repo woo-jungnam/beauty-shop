@@ -35,6 +35,34 @@ class ProcurementServiceTest {
     }
 
     @Test
+    void detailIncludesProductLabelsAndKeepsHistoricalLinesWhenVariantIsMissing() {
+        Supplier supplier = Supplier.builder().code("SUP").name("Supplier").build(); supplier.setId(2L);
+        PurchaseOrder order = PurchaseOrder.builder().orderNumber("PO-DETAIL").supplier(supplier).warehouseId(3L)
+                .status(PurchaseOrder.Status.PARTIALLY_RECEIVED).totalAmount(new BigDecimal("40.50")).build(); order.setId(1L);
+        order.getItems().add(PurchaseOrderItem.builder().purchaseOrder(order).productVariantId(4L).quantity(2)
+                .receivedQuantity(1).unitCost(new BigDecimal("10.25")).batchCode("LOT-A").expirationDate(LocalDate.of(2099, 1, 1)).build());
+        order.getItems().add(PurchaseOrderItem.builder().purchaseOrder(order).productVariantId(5L).quantity(1)
+                .receivedQuantity(0).unitCost(new BigDecimal("20.00")).batchCode("LOT-B").build());
+        when(orders.findById(1L)).thenReturn(Optional.of(order));
+        when(catalog.getVariantSummariesForInventory(List.of(4L, 5L))).thenReturn(Map.of(4L,
+                com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto.builder()
+                        .id(4L).productName("Serum").variantName("30ml").sku("000123").isActive(false).build()));
+
+        var result = service.order(1L);
+
+        assertEquals(2, result.items().size());
+        var item = result.items().getFirst();
+        assertEquals("Serum", item.productName()); assertEquals("30ml", item.variantName()); assertEquals("000123", item.sku());
+        assertEquals(2, item.quantity()); assertEquals(1, item.receivedQuantity());
+        assertEquals(new BigDecimal("10.25"), item.unitCost()); assertEquals("LOT-A", item.batchCode());
+        assertEquals(LocalDate.of(2099, 1, 1), item.expirationDate());
+        assertEquals(5L, result.items().get(1).variantId()); assertNull(result.items().get(1).productName());
+        verify(catalog).getVariantSummariesForInventory(List.of(4L, 5L));
+        verifyNoMoreInteractions(catalog);
+        verifyNoInteractions(inventory);
+    }
+
+    @Test
     void rejectsMoneyOutsideDatabasePrecisionBeforeSaving() {
         Supplier supplier = Supplier.builder().code("SUP").name("Supplier").build(); supplier.setId(2L);
         when(suppliers.findById(2L)).thenReturn(Optional.of(supplier));

@@ -5,6 +5,7 @@ import com.core.beautyshop.modules.catalog.application.dto.request.UpdateProduct
 import com.core.beautyshop.modules.catalog.application.dto.request.ProductSearchRequest;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductResponse;
+import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -18,7 +19,7 @@ public interface ProductService {
     ProductResponse getProductBySlug(String slug);
 
     Page<ProductListResponse> getAllProducts(Pageable pageable);
-    Page<ProductListResponse> getAllProductsForAdmin(Pageable pageable);
+    Page<ProductListResponse> getAllProductsForAdmin(String keyword, Long categoryId, Long brandId, ProductStatus status, Pageable pageable);
     Page<ProductListResponse> getFeaturedProducts(Pageable pageable);
 
     Page<ProductListResponse> searchProducts(String keyword, Pageable pageable);

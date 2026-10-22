@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Package,
   Plus,
@@ -27,12 +27,21 @@ import { Button } from '../shared/ui/Button';
 import { Input } from '../shared/ui/Input';
 import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
+import { AlertBanner } from '../shared/ui/AlertBanner';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { ProductFeaturesModal } from './ProductFeaturesModal';
 import { lines, ingredientCatalog } from './productFeatures.js';
 
 const QUICK_SAMPLE_IMAGES = [];
+const EMPTY_PRODUCT_FILTERS = { keyword: '', categoryId: '', brandId: '', status: '' };
+const PRODUCT_STATUSES = {
+  ACTIVE: { label: 'Đang bán', variant: 'success' },
+  INACTIVE: { label: 'Tạm ẩn', variant: 'default' },
+  OUT_OF_STOCK: { label: 'Hết hàng', variant: 'warning' },
+  DISCONTINUED: { label: 'Ngừng kinh doanh', variant: 'danger' },
+  COMING_SOON: { label: 'Sắp ra mắt', variant: 'info' },
+};
 
 const slugify = (value) => value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -46,6 +55,10 @@ export const ProductsPage = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
+  const [draftFilters, setDraftFilters] = useState(EMPTY_PRODUCT_FILTERS);
+  const [productLoadError, setProductLoadError] = useState('');
+  const [catalogLoadError, setCatalogLoadError] = useState('');
+  const productView = useRef({ page: 0, filters: EMPTY_PRODUCT_FILTERS, active: true, request: 0 });
 
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -177,40 +190,60 @@ export const ProductsPage = () => {
   const [dermaSubmitting, setDermaSubmitting] = useState(false);
 
   const fetchCatalogs = async () => {
-    try {
-      const [catRes, brandRes] = await Promise.allSettled([
-        apiClient.get(ENDPOINTS.CATALOG.CATEGORIES),
-        apiClient.get(`${ENDPOINTS.CATALOG.BRANDS}?size=100`),
-      ]);
-      if (catRes.status === 'fulfilled') setCategories(catRes.value.data || catRes.value || []);
-      if (brandRes.status === 'fulfilled') {
-        const bData = brandRes.value.data || brandRes.value;
-        const brandList = [...(bData.content || (Array.isArray(bData) ? bData : []))];
-        const totalPages = bData.totalPages || 1;
-        for (let p = 1; p < totalPages; p++) {
-          const next = await apiClient.get(`${ENDPOINTS.CATALOG.BRANDS}?size=100&page=${p}`);
-          const nextData = next.data || next;
-          brandList.push(...(nextData.content || (Array.isArray(nextData) ? nextData : [])));
-        }
-        setBrands(brandList);
+    setCatalogLoadError('');
+    const loadBrands = async () => {
+      const result = await apiClient.get(`${ENDPOINTS.CATALOG.BRANDS}?size=100`);
+      const data = result.data || result;
+      const rows = [...(data.content || (Array.isArray(data) ? data : []))];
+      for (let p = 1; p < (data.totalPages || 1); p++) {
+        const next = await apiClient.get(`${ENDPOINTS.CATALOG.BRANDS}?size=100&page=${p}`);
+        const nextData = next.data || next;
+        rows.push(...(nextData.content || (Array.isArray(nextData) ? nextData : [])));
       }
-    } catch (e) {
-      console.error(e);
-    }
+      return rows;
+    };
+    const [catRes, brandRes] = await Promise.allSettled([
+      apiClient.get(ENDPOINTS.CATALOG.CATEGORIES), loadBrands(),
+    ]);
+    const failures = [];
+    if (catRes.status === 'fulfilled') setCategories(catRes.value.data || catRes.value || []);
+    else failures.push('danh mục');
+    if (brandRes.status === 'fulfilled') setBrands(brandRes.value);
+    else failures.push('thương hiệu');
+    if (failures.length) setCatalogLoadError(`Không tải được ${failures.join(', ')}. Các lựa chọn lọc có thể chưa đầy đủ.`);
   };
 
-  const fetchProducts = async (p = 0) => {
-    setLoading(true);
+  const fetchProducts = useCallback(async function loadProducts(p = productView.current.page, filters = productView.current.filters) {
+    if (!productView.current.active) return;
+    productView.current.page = p;
+    const request = ++productView.current.request;
+    setLoading(true); setProductLoadError('');
+    const params = new URLSearchParams({ page: String(p), size: '15' });
+    params.append('sort', 'createdAt,desc'); params.append('sort', 'id,desc');
+    Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
     try {
-      const res = await apiClient.get(`${ENDPOINTS.CATALOG.PRODUCTS}?page=${p}&size=15`);
+      const res = await apiClient.get(`${ENDPOINTS.CATALOG.PRODUCTS}?${params}`);
+      if (request !== productView.current.request) return;
       const pageData = res.data || res;
+      const lastPage = Math.max(0, (pageData.totalPages || 1) - 1);
+      if (p > lastPage) { await loadProducts(lastPage, filters); return; }
       setProducts(pageData.content || []);
       setPage(pageData.page ?? p);
-      setTotalPages(pageData.totalPages ?? 1);
+      productView.current.page = pageData.page ?? p;
+      setTotalPages(pageData.totalPages || 1);
       setTotalElements(pageData.totalElements ?? 0);
+    } catch (error) {
+      if (request === productView.current.request) setProductLoadError(error.message || 'Không tải được danh sách sản phẩm.');
     } finally {
-      setLoading(false);
+      if (request === productView.current.request) setLoading(false);
     }
+  }, []);
+
+  const applyProductFilters = filters => {
+    const normalized = { ...filters, keyword: filters.keyword.trim() };
+    setDraftFilters(normalized);
+    productView.current.filters = normalized;
+    fetchProducts(0, normalized);
   };
 
   const fetchIngredients = async () => {
@@ -252,13 +285,20 @@ export const ProductsPage = () => {
   };
 
   useEffect(() => {
-    fetchCatalogs();
-    if (activeTab === 'products') fetchProducts(0);
-    if (activeTab === 'ingredients') fetchIngredients();
-    if (activeTab === 'attributes') fetchAttributes();
-    if (activeTab === 'tags') fetchTags();
-    if (activeTab === 'banners') fetchBanners();
-  }, [activeTab]);
+    const view = productView.current;
+    view.active = activeTab === 'products';
+    const loadTab = async () => {
+      setLoading(false);
+      fetchCatalogs();
+      if (activeTab === 'products') await fetchProducts();
+      if (activeTab === 'ingredients') await fetchIngredients();
+      if (activeTab === 'attributes') await fetchAttributes();
+      if (activeTab === 'tags') await fetchTags();
+      if (activeTab === 'banners') await fetchBanners();
+    };
+    loadTab();
+    return () => { view.active = false; view.request++; };
+  }, [activeTab, fetchProducts]);
 
   const handleOpenCreateProduct = () => {
     setEditingProduct(null);
@@ -440,7 +480,7 @@ export const ProductsPage = () => {
         if (created.id) setFeatureProduct(created);
       }
       setProductModalOpen(false);
-      fetchProducts(page);
+      fetchProducts();
     } catch (err) {
       setProductFormError(err.message || 'Lỗi lưu thông tin sản phẩm');
     } finally {
@@ -452,7 +492,7 @@ export const ProductsPage = () => {
     if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm #${id}?`)) return;
     try {
       await apiClient.delete(ENDPOINTS.CATALOG.PRODUCT_DETAIL(id));
-      fetchProducts(page);
+      fetchProducts();
     } catch (err) {
       alert(err.message || 'Lỗi khi xóa sản phẩm');
     }
@@ -517,7 +557,7 @@ export const ProductsPage = () => {
       const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(selectedProductForVariants.id));
       const pDetail = res.data || res;
       setVariantList(pDetail.variants || []);
-      fetchProducts(page);
+      fetchProducts();
     } catch (err) {
       alert(err.message || 'Lỗi lưu biến thể');
     }
@@ -900,7 +940,7 @@ export const ProductsPage = () => {
       const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(selectedProductForImages.id));
       const pDetail = res.data || res;
       setImageList(pDetail.images || []);
-      fetchProducts(page);
+      fetchProducts();
     } catch (err) {
       alert(err.message || 'Lỗi thêm ảnh vào bộ sưu tập');
     } finally {
@@ -915,7 +955,7 @@ export const ProductsPage = () => {
       const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(selectedProductForImages.id));
       const pDetail = res.data || res;
       setImageList(pDetail.images || []);
-      fetchProducts(page);
+      fetchProducts();
     } catch (err) {
       alert(err.message || 'Lỗi xóa ảnh');
     }
@@ -955,7 +995,7 @@ export const ProductsPage = () => {
         warnings: dermaWarnings.split('\n').map((s) => s.trim()).filter(Boolean),
       });
       setDermaModalOpen(false);
-      fetchProducts(page);
+      fetchProducts();
     } catch (err) {
       alert(err.message || 'Lỗi lưu hướng dẫn sử dụng và da liễu');
     } finally {
@@ -1045,8 +1085,8 @@ export const ProductsPage = () => {
     {
       header: 'Trạng thái',
       accessor: (row) => (
-        <Badge variant={row.status === 'ACTIVE' ? 'success' : 'default'}>
-          {row.status === 'ACTIVE' ? 'Đang bán' : 'Tạm ẩn'}
+        <Badge variant={PRODUCT_STATUSES[row.status]?.variant || 'default'}>
+          {PRODUCT_STATUSES[row.status]?.label || row.status}
         </Badge>
       ),
       width: '100px',
@@ -1459,7 +1499,7 @@ export const ProductsPage = () => {
             variant="outline"
             size="sm"
             onClick={() => {
-              if (activeTab === 'products') fetchProducts(page);
+              if (activeTab === 'products') fetchProducts();
               else if (activeTab === 'categories' || activeTab === 'brands') fetchCatalogs();
               else if (activeTab === 'ingredients') fetchIngredients();
               else if (activeTab === 'attributes') fetchAttributes();
@@ -1528,25 +1568,23 @@ export const ProductsPage = () => {
 
       {activeTab === 'products' && (
         <div className="card">
-          <DataTable
-            columns={productColumns}
-            data={products}
-            loading={loading}
-            emptyMessage="Không tìm thấy sản phẩm nào trong cơ sở dữ liệu."
-          />
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
-              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => fetchProducts(page - 1)}>
-                Trang trước
-              </Button>
-              <span style={{ fontSize: '12px', display: 'flex', alignItems: 'center' }}>
-                Trang {page + 1} / {totalPages}
-              </span>
-              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => fetchProducts(page + 1)}>
-                Trang sau
-              </Button>
+          <form aria-label="Tìm kiếm và lọc sản phẩm" onSubmit={event => { event.preventDefault(); applyProductFilters(draftFilters); }}>
+            <div className="grid-2">
+              <Input label="Tìm theo tên sản phẩm" placeholder="Nhập tên sản phẩm…" maxLength={200} value={draftFilters.keyword} onChange={event => setDraftFilters({ ...draftFilters, keyword: event.target.value })} />
+              <Select label="Lọc danh mục" value={draftFilters.categoryId} onChange={event => setDraftFilters({ ...draftFilters, categoryId: event.target.value })} options={[{ value: '', label: 'Tất cả danh mục' }, ...categories.map(category => ({ value: String(category.id), label: category.name }))]} />
+              <Select label="Lọc thương hiệu" value={draftFilters.brandId} onChange={event => setDraftFilters({ ...draftFilters, brandId: event.target.value })} options={[{ value: '', label: 'Tất cả thương hiệu' }, ...brands.map(brand => ({ value: String(brand.id), label: brand.name }))]} />
+              <Select label="Lọc trạng thái" value={draftFilters.status} onChange={event => setDraftFilters({ ...draftFilters, status: event.target.value })} options={[{ value: '', label: 'Tất cả trạng thái' }, ...Object.entries(PRODUCT_STATUSES).map(([value, meta]) => ({ value, label: meta.label }))]} />
             </div>
-          )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+              <Button type="submit" icon={Search}>Áp dụng</Button>
+              <Button variant="outline" icon={X} onClick={() => applyProductFilters(EMPTY_PRODUCT_FILTERS)}>Xóa bộ lọc</Button>
+            </div>
+          </form>
+          {catalogLoadError && <AlertBanner type="warning" title="Lựa chọn lọc chưa đầy đủ" message={catalogLoadError} action={<Button size="sm" variant="outline" onClick={fetchCatalogs}>Tải lại danh mục và thương hiệu</Button>} />}
+          {productLoadError ? <AlertBanner type="danger" title="Không tải được sản phẩm" message={productLoadError} action={<Button size="sm" variant="outline" onClick={() => fetchProducts()}>Thử lại</Button>} /> : <>
+            <p role="status">{loading ? 'Đang tải sản phẩm…' : `Tìm thấy ${totalElements} sản phẩm`}</p>
+            <DataTable columns={productColumns} data={products} loading={loading} emptyMessage="Không có sản phẩm phù hợp với điều kiện tìm kiếm." page={page} totalPages={totalPages} totalElements={totalElements} onPageChange={fetchProducts} />
+          </>}
         </div>
       )}
 

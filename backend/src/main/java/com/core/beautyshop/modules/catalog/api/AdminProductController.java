@@ -15,6 +15,10 @@ import com.core.beautyshop.shared.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import org.springframework.validation.annotation.Validated;
+import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springdoc.core.annotations.ParameterObject;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Quản lý sản phẩm & Biến thể (Admin)", description = "API dành cho ADMIN hoặc STAFF quản trị sản phẩm, SKU và thư viện ảnh")
 @RestController
+@Validated
 @RequestMapping("/api/v1/admin/products")
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
 @RequiredArgsConstructor
@@ -40,10 +45,15 @@ public class AdminProductController {
         return ApiResponse.success(productAttributeService.replaceProductValues(id, requests));
     }
 
-    @Operation(summary = "Lấy danh sách sản phẩm quản trị (phân trang)", description = "ADMIN hoặc CATALOG_STAFF. Sản phẩm chưa xóa thuộc mọi trạng thái; khác với danh sách public chỉ ACTIVE. page bắt đầu từ 0.")
+    @Operation(summary = "Tìm và lọc sản phẩm quản trị (phân trang)", description = "ADMIN hoặc CATALOG_STAFF. keyword tìm chứa chuỗi trong tên, không phân biệt hoa thường; tối đa 200 ký tự, %, _ là ký tự thường. categoryId/brandId dương, danh mục khớp trực tiếp; các điều kiện kết hợp AND. Không chọn status sẽ thấy mọi trạng thái chưa xóa, kể cả chưa có SKU/hết tồn. page bắt đầu từ 0.")
     @GetMapping
-    public ApiResponse<PageResponse<ProductListResponse>> list(@ParameterObject Pageable pageable) {
-        return ApiResponse.success(PageResponse.of(productService.getAllProductsForAdmin(pageable)));
+    public ApiResponse<PageResponse<ProductListResponse>> list(
+            @RequestParam(required = false) @Size(max = 200) String keyword,
+            @RequestParam(required = false) @Positive Long categoryId,
+            @RequestParam(required = false) @Positive Long brandId,
+            @RequestParam(required = false) ProductStatus status,
+            @ParameterObject Pageable pageable) {
+        return ApiResponse.success(PageResponse.of(productService.getAllProductsForAdmin(keyword, categoryId, brandId, status, pageable)));
     }
 
     @Operation(summary = "Xem chi tiết sản phẩm theo ID")

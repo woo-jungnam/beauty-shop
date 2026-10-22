@@ -1,7 +1,7 @@
 import { ProcurementOperationsPanel } from '../features/commerce/AdminCommercePanels';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { businessToday, downloadTemplate, matchVariants, orderPayload, validDate, validateImportFile, validateItem } from '../features/procurement/procurementImport';
-import { Check, PackageCheck, Plus, RefreshCw, X } from 'lucide-react';
+import { Check, Eye, PackageCheck, Plus, RefreshCw, X } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
 import { Button } from '../shared/ui/Button';
@@ -11,7 +11,7 @@ import { Modal } from '../shared/ui/Modal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
-import { formatCurrency, formatDate } from '../shared/utils/formatters';
+import { formatCurrency, formatDate, formatDateTime } from '../shared/utils/formatters';
 
 const blankItem = () => ({ variantId: '', quantity: 1, unitCost: '', batchCode: '', expirationDate: '' });
 
@@ -28,6 +28,13 @@ export const ProcurementPage = () => {
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [detailId, setDetailId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [detailAttempt, setDetailAttempt] = useState(0);
+  const [receipts, setReceipts] = useState([]);
+  const [receiptError, setReceiptError] = useState('');
   const [supplierForm, setSupplierForm] = useState({ code: '', name: '', contactName: '', email: '', phone: '', address: '', taxCode: '', active: true });
   const [orderForm, setOrderForm] = useState({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] });
   const [importBusy, setImportBusy] = useState(false);
@@ -151,6 +158,33 @@ export const ProcurementPage = () => {
   }, [orderPage]);
   useEffect(() => { const fetchPage = async () => { await load(); }; fetchPage(); }, [load]);
 
+  useEffect(() => {
+    if (detailId === null) return;
+    let cancelled = false;
+    const loadDetail = async () => {
+      const [orderResult, receiptResult] = await Promise.allSettled([
+        apiClient.get(ENDPOINTS.PROCUREMENT.ORDER_DETAIL(detailId)),
+        apiClient.get(`${ENDPOINTS.PROCUREMENT.ORDER_DETAIL(detailId)}/financials`),
+      ]);
+      if (cancelled) return;
+      if (orderResult.status === 'fulfilled') setDetail(orderResult.value.data || orderResult.value);
+      else setDetailError(orderResult.reason.message || 'Không tải được chi tiết phiếu mua.');
+      if (receiptResult.status === 'fulfilled') {
+        const financial = receiptResult.value.data || receiptResult.value;
+        setReceipts((financial.movements || []).filter(m => m.kind === 'RECEIPT').map(m => {
+          try {
+            const lines = JSON.parse(m.linesJson);
+            if (!Array.isArray(lines) || !lines.length || lines.some(line => !line || !line.itemId || !Number.isInteger(line.quantity) || line.quantity <= 0)) throw new Error('Invalid receipt lines');
+            return { ...m, lines };
+          } catch { return { ...m, lines: null }; }
+        }));
+      } else setReceiptError('Không tải được lịch sử nhập thực tế. Thử mở lại chi tiết phiếu.');
+      setDetailLoading(false);
+    };
+    loadDetail();
+    return () => { cancelled = true; };
+  }, [detailId, detailAttempt]);
+
   const handleOpenCreateSupplier = () => {
     setEditingSupplier(null);
     setSupplierForm({ code: '', name: '', contactName: '', email: '', phone: '', address: '', taxCode: '', active: true });
@@ -224,6 +258,10 @@ export const ProcurementPage = () => {
       savingRef.current = false; setOrderSaving(false);
     }
   };
+  const openDetail = id => {
+    setDetail(null); setDetailError(''); setReceiptError(''); setReceipts([]); setDetailLoading(true);
+    setDetailId(id); setDetailAttempt(n => n + 1);
+  };
   const transition = async (endpoint, prompt) => {
     if (!window.confirm(prompt)) return;
     try {
@@ -263,10 +301,38 @@ export const ProcurementPage = () => {
       },
     },
     { header: 'Thao tác', align: 'right', accessor: (row) => <div className="table-actions">
+      <Button size="sm" variant="outline" icon={Eye} onClick={() => openDetail(row.id)} aria-label={`Chi tiết phiếu ${row.orderNumber}`}>Chi tiết</Button>
       {row.status === 'DRAFT' && <Button size="sm" icon={Check} onClick={() => transition(ENDPOINTS.PROCUREMENT.APPROVE(row.id), 'Phê duyệt phiếu mua hàng này?')}>Duyệt</Button>}
       {row.status === 'APPROVED' && <Button size="sm" icon={PackageCheck} onClick={() => transition(ENDPOINTS.PROCUREMENT.RECEIVE(row.id), 'Xác nhận đã nhận đủ hàng? Hàng sẽ được nhập tăng tồn kho theo lô.')}>Nhập kho</Button>}
       {!['RECEIVED','CANCELLED'].includes(row.status) && <Button size="sm" variant="danger" icon={X} onClick={() => transition(ENDPOINTS.PROCUREMENT.CANCEL(row.id), 'Hủy bỏ phiếu mua hàng này?')} title="Hủy phiếu" />}
     </div> },
+  ];
+
+  const itemColumns = [
+    { header: 'Sản phẩm / biến thể', accessor: item => <div><strong>{item.productName || `Biến thể #${item.variantId}`}</strong>{item.variantName && <div>{item.variantName}</div>}<small>SKU: {item.sku || `#${item.variantId}`}</small></div> },
+    { header: 'Mã lô theo phiếu', accessor: item => item.batchCode || 'Không ghi mã lô' },
+    { header: 'Hạn dùng', accessor: item => formatDate(item.expirationDate) },
+    { header: 'SL đặt', accessor: 'quantity', align: 'right' },
+    { header: 'SL đã nhập', accessor: 'receivedQuantity', align: 'right' },
+    { header: 'Đơn giá nhập', accessor: item => formatCurrency(item.unitCost), align: 'right' },
+    { header: 'Thành tiền đặt', accessor: item => formatCurrency(item.quantity * item.unitCost), align: 'right' },
+  ];
+  const receiptColumns = [
+    { header: 'Sản phẩm / biến thể', accessor: line => {
+      const item = detail?.items?.find(i => i.id === line.itemId);
+      return <div><strong>{item?.productName || (item ? `Biến thể #${item.variantId}` : `Dòng hàng #${line.itemId}`)}</strong>{item?.variantName && <div>{item.variantName}</div>}<small>SKU: {item?.sku || (item ? `#${item.variantId}` : 'Không xác định')}</small></div>;
+    } },
+    { header: 'Mã lô thực nhập', accessor: line => line.batchCode || 'Không ghi mã lô' },
+    { header: 'Hạn dùng thực nhập', accessor: line => formatDate(line.expirationDate) },
+    { header: 'SL nhập', accessor: 'quantity', align: 'right' },
+    { header: 'Đơn giá nhập', accessor: line => {
+      const item = detail?.items?.find(i => i.id === line.itemId);
+      return item ? formatCurrency(item.unitCost) : '-';
+    }, align: 'right' },
+    { header: 'Thành tiền nhập', accessor: line => {
+      const item = detail?.items?.find(i => i.id === line.itemId);
+      return item ? formatCurrency(line.quantity * item.unitCost) : '-';
+    }, align: 'right' },
   ];
 
   return <div className="content-container">
@@ -276,6 +342,32 @@ export const ProcurementPage = () => {
     <div className="tabs-header"><button className={`tab-btn ${tab==='orders'?'active':''}`} onClick={() => setTab('orders')}>Phiếu mua hàng</button><button className={`tab-btn ${tab==='suppliers'?'active':''}`} onClick={() => setTab('suppliers')}>Nhà cung cấp</button></div>
     <div className="card"><DataTable columns={tab === 'orders' ? orderColumns : supplierColumns} data={tab === 'orders' ? orders : suppliers} loading={loading} page={tab === 'orders' ? orderPage : 0} totalPages={tab === 'orders' ? orderPages : 1} totalElements={tab === 'orders' ? orderCount : suppliers.length} onPageChange={tab === 'orders' ? setOrderPage : undefined} /></div>
     <Modal isOpen={supplierOpen} onClose={() => setSupplierOpen(false)} title={editingSupplier ? "Cập nhật nhà cung cấp" : "Thêm nhà cung cấp"}><form onSubmit={saveSupplier}><div className="grid-2"><Input label="Mã *" required value={supplierForm.code} onChange={(e)=>setSupplierForm({...supplierForm,code:e.target.value})}/><Input label="Tên *" required value={supplierForm.name} onChange={(e)=>setSupplierForm({...supplierForm,name:e.target.value})}/><Input label="Người liên hệ" value={supplierForm.contactName} onChange={(e)=>setSupplierForm({...supplierForm,contactName:e.target.value})}/><Input label="Số điện thoại" value={supplierForm.phone} onChange={(e)=>setSupplierForm({...supplierForm,phone:e.target.value})}/><Input label="Email" type="email" value={supplierForm.email} onChange={(e)=>setSupplierForm({...supplierForm,email:e.target.value})}/><Input label="Mã số thuế" value={supplierForm.taxCode} onChange={(e)=>setSupplierForm({...supplierForm,taxCode:e.target.value})}/></div><Input label="Địa chỉ" value={supplierForm.address} onChange={(e)=>setSupplierForm({...supplierForm,address:e.target.value})}/><div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}><Button type="submit">Lưu nhà cung cấp</Button></div></form></Modal>
+    <Modal isOpen={detailId !== null} onClose={() => setDetailId(null)} title={`Chi tiết phiếu mua ${detail?.orderNumber || `#${detailId}`}`} maxWidth="1100px" footer={<Button variant="outline" onClick={() => setDetailId(null)}>Đóng</Button>}>
+      {detailLoading && <p role="status">Đang tải chi tiết phiếu mua…</p>}
+      {detailError && <AlertBanner type="danger" title="Không tải được chi tiết" message={detailError} action={<Button size="sm" variant="outline" onClick={() => openDetail(detailId)}>Thử lại</Button>} />}
+      {!detailLoading && detail && <>
+        <dl className="grid-2">
+          <div><dt>Nhà cung cấp</dt><dd>{detail.supplierName}</dd></div>
+          <div><dt>Kho nhận hàng</dt><dd>{warehouses.find(w => w.id === detail.warehouseId)?.name || `Kho #${detail.warehouseId}`}</dd></div>
+          <div><dt>Trạng thái</dt><dd><Badge variant={ORDER_STATUS_MAP[detail.status]?.variant || 'default'}>{ORDER_STATUS_MAP[detail.status]?.label || detail.status}</Badge></dd></div>
+          <div><dt>Ngày tạo</dt><dd>{formatDateTime(detail.createdAt)}</dd></div>
+          <div><dt>Ngày dự kiến nhận</dt><dd>{formatDate(detail.expectedDate)}</dd></div>
+          <div><dt>Lần nhập gần nhất</dt><dd>{formatDateTime(detail.receivedAt)}</dd></div>
+        </dl>
+        {detail.note && <p><strong>Ghi chú:</strong> {detail.note}</p>}
+        <h4>Hàng hóa theo phiếu mua ({detail.items?.length || 0} dòng)</h4>
+        <DataTable columns={itemColumns} data={detail.items || []} emptyMessage="Phiếu mua chưa có hàng hóa." />
+        <p style={{ textAlign: 'right' }}><strong>Tổng tiền đặt: {formatCurrency(detail.totalAmount)}</strong></p>
+        <h4>Chi tiết các đợt nhập thực tế</h4>
+        {receiptError && <AlertBanner type="warning" title="Chưa tải được lịch sử nhập" message={receiptError} />}
+        {!receiptError && receipts.length === 0 && <p>{detail.items?.some(item => item.receivedQuantity > 0) ? 'Phiếu được nhập trực tiếp, không có chứng từ nhận từng đợt. Số lượng đã nhập, mã lô và hạn dùng nằm trong bảng theo phiếu mua ở trên.' : 'Chưa có đợt nhập kho nào được ghi nhận.'}</p>}
+        {receipts.map(receipt => <section key={receipt.id} aria-label={`Đợt nhập ${receipt.reference}`} style={{ borderTop: '1px solid var(--border-subtle)', padding: '12px 0' }}>
+          <h5>{receipt.reference} · {formatDateTime(receipt.createdAt)}</h5>
+          <p>{receipt.reason} · Giá trị nhập: <strong>{formatCurrency(receipt.amount)}</strong></p>
+          {receipt.lines ? <DataTable columns={receiptColumns} data={receipt.lines} /> : <AlertBanner type="danger" title="Không đọc được dòng hàng" message="Chứng từ nhập không có dữ liệu dòng hàng hợp lệ." />}
+        </section>)}
+      </>}
+    </Modal>
     <Modal isOpen={orderOpen} onClose={closeOrder} title="Tạo phiếu mua hàng" maxWidth="900px">
       <form onSubmit={createOrder}>
         <p>Excel chỉ điền sẵn phiếu nháp. Kiểm tra thông tin trước khi lưu; chưa cộng tồn kho.</p>

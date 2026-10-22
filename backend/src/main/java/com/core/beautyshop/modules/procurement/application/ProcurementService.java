@@ -77,8 +77,11 @@ public class ProcurementService {
 
     @Transactional(readOnly = true)
     public PurchaseOrderView order(Long id) {
-        return orders.findById(id).map(this::orderView)
+        PurchaseOrder order = orders.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mua hàng: " + id));
+        var variants = catalog.getVariantSummariesForInventory(order.getItems().stream()
+                .map(PurchaseOrderItem::getProductVariantId).distinct().toList());
+        return orderView(order, variants);
     }
 
     @Transactional
@@ -178,7 +181,17 @@ public class ProcurementService {
 
     private PurchaseOrder locked(Long id) { return orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mua hàng")); }
     private SupplierView supplierView(Supplier s) { return new SupplierView(s.getId(), s.getCode(), s.getName(), s.getContactName(), s.getEmail(), s.getPhone(), s.getAddress(), s.getTaxCode(), s.getActive()); }
-    private PurchaseOrderView orderView(PurchaseOrder o) { return new PurchaseOrderView(o.getId(), o.getOrderNumber(), o.getSupplier().getId(), o.getSupplier().getName(), o.getWarehouseId(), o.getStatus(), o.getExpectedDate(), o.getTotalAmount(), o.getNote(), o.getApprovedAt(), o.getReceivedAt(), o.getCreatedAt(), o.getItems().stream().map(i -> new ItemView(i.getId(), i.getProductVariantId(), i.getQuantity(), i.getReceivedQuantity(), i.getUnitCost(), i.getBatchCode(), i.getExpirationDate())).toList()); }
+    private PurchaseOrderView orderView(PurchaseOrder o) { return orderView(o, Map.of()); }
+    private PurchaseOrderView orderView(PurchaseOrder o, Map<Long, com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto> variants) {
+        var items = o.getItems().stream().map(i -> {
+            var variant = variants.get(i.getProductVariantId());
+            return new ItemView(i.getId(), i.getProductVariantId(), i.getQuantity(), i.getReceivedQuantity(),
+                    i.getUnitCost(), i.getBatchCode(), i.getExpirationDate(),
+                    variant == null ? null : variant.getProductName(), variant == null ? null : variant.getVariantName(),
+                    variant == null ? null : variant.getSku());
+        }).toList();
+        return new PurchaseOrderView(o.getId(), o.getOrderNumber(), o.getSupplier().getId(), o.getSupplier().getName(), o.getWarehouseId(), o.getStatus(), o.getExpectedDate(), o.getTotalAmount(), o.getNote(), o.getApprovedAt(), o.getReceivedAt(), o.getCreatedAt(), items);
+    }
 
     @Schema(description = "Tạo/thay thông tin nhà cung cấp; code/name kiểm bắt buộc tại service; trường tùy chọn thiếu được thay null/mặc định")
     public record SupplierCommand(
@@ -205,7 +218,9 @@ public class ProcurementService {
     @Schema(description = "Dòng phiếu mua; receive hiện nhận toàn bộ phần còn lại")
     public record ItemView(Long id, Long variantId, Integer quantity,
             @Schema(description = "Số đã nhập; sau receive bằng quantity") Integer receivedQuantity,
-            BigDecimal unitCost, String batchCode, LocalDate expirationDate) { }
+            BigDecimal unitCost, String batchCode, LocalDate expirationDate,
+            @Schema(description = "Tên sản phẩm hiện tại; chỉ bổ sung khi xem chi tiết, có thể null nếu đã xóa") String productName,
+            String variantName, String sku) { }
     @Schema(description = "Phiếu mua DRAFT/APPROVED/RECEIVED/CANCELLED; các Instant là UTC")
     public record PurchaseOrderView(Long id, String orderNumber, Long supplierId, String supplierName, Long warehouseId,
             PurchaseOrder.Status status, LocalDate expectedDate,

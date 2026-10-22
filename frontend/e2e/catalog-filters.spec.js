@@ -13,7 +13,7 @@ async function catalog(page, { pagination = false, failed = false, delayed = fal
   const allProducts = pagination ? Array.from({ length: 121 }, (_, i) => ({ ...product, id: 42 + i, name: `Serum ${i + 1}` })) : [product];
   await page.route('**/fonts.googleapis.com/**', route => route.abort());
   await page.route('**/fonts.gstatic.com/**', route => route.abort());
-  await page.route('**/api/**', async route => {
+  await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url());
     let data = [];
     if (url.pathname === '/api/v1/categories' || url.pathname === '/api/v1/categories/root') data = categories;

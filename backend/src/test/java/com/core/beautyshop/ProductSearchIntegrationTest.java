@@ -25,6 +25,7 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** The same HTTP/query invariants run on H2 and the migrated MySQL schema in the subclass. */
@@ -111,6 +112,75 @@ class ProductSearchIntegrationTest {
         assertEquals(ids(page).size(), new HashSet<>(ids(page)).size(), "A product must not occur twice");
     }
     String idList(Long... values) { return String.join(",", Arrays.stream(values).map(String::valueOf).toList()); }
+
+    MockHttpServletRequestBuilder adminSearch(String... keyword) {
+        return get("/api/v1/admin/products").with(user("admin-filter-test").roles("ADMIN"))
+                .param("keyword", keyword.length == 0 ? prefix : keyword[0]);
+    }
+
+    @Test void adminFiltersEveryStatusWithoutSkuOrStockAndNeverDuplicatesCategoryMembership() throws Exception {
+        Brand brand = brand(); Category selected = category(), other = category(); selected.setIsActive(false);
+        List<Product> expected = new ArrayList<>();
+        for (ProductStatus state : ProductStatus.values()) {
+            Product product = product("Serum " + state); product.setStatus(state); product.setBrand(brand);
+            product.setCategories(new ArrayList<>(List.of(selected, other))); expected.add(product);
+        }
+        Product deleted = product("Deleted"); deleted.setIsDeleted(true); deleted.setBrand(brand);
+        deleted.setCategories(new ArrayList<>(List.of(selected)));
+        product("Wrong brand").setCategories(new ArrayList<>(List.of(selected)));
+        Product noBrandOrSku = product("No brand or SKU");
+        product("Wrong category").setBrand(brand);
+        JsonNode unfiltered = page(get("/api/v1/admin/products").with(user("admin-filter-test").roles("ADMIN"))
+                .param("size", "100").param("sort", "id,desc"));
+        assertTrue(ids(unfiltered).containsAll(expected.stream().map(Product::getId).toList()));
+        assertTrue(ids(unfiltered).contains(noBrandOrSku.getId())); assertFalse(ids(unfiltered).contains(deleted.getId()));
+        JsonNode first = page(adminSearch().param("categoryId", selected.getId().toString()).param("brandId", brand.getId().toString()).param("size", "2"));
+        assertEquals(5, first.path("totalElements").asInt()); assertEquals(3, first.path("totalPages").asInt());
+        assertEquals(2, ids(first).size());
+        JsonNode second = page(adminSearch().param("categoryId", selected.getId().toString()).param("brandId", brand.getId().toString()).param("size", "2").param("page", "1"));
+        assertTrue(Collections.disjoint(ids(first), ids(second)));
+        assertEquals(ids(first), ids(page(adminSearch().param("categoryId", selected.getId().toString()).param("brandId", brand.getId().toString()).param("size", "2"))));
+        for (Product product : expected) exactly(page(adminSearch().param("categoryId", selected.getId().toString())
+                .param("brandId", brand.getId().toString()).param("status", product.getStatus().name())), product);
+        assertTrue(page(adminSearch().param("categoryId", "9223372036854775807")).path("content").isEmpty());
+    }
+
+    @Test void adminNameSearchTrimsAndEscapesWildcardsWithoutMatchingSkuOrDescription() throws Exception {
+        for (String literal : List.of("%", "_", "!", "\\")) {
+            String token = prefix + literal + "Serum";
+            Product match = product("Placeholder"); match.setName(token);
+            Product decoy = product("Decoy"); decoy.setName(prefix + "XSerum");
+            Product description = product("Description only"); description.setDescription(token);
+            variant(product("SKU only"), "100", null).setSku(token);
+            exactly(page(adminSearch("  " + token.toUpperCase(Locale.ROOT) + "  ")), match);
+        }
+        Brand brand = brand(); Product blank = product("Blank"); blank.setBrand(brand);
+        exactly(page(adminSearch("   ").param("brandId", brand.getId().toString())), blank);
+    }
+
+    @Test void adminCategoryIsExactAndPricesUseOnlyVisibleSkusWithoutRequiringStock() throws Exception {
+        Category parent = category(), child = category(); child.setParentCategory(parent);
+        Product match = product("Price"); match.setCategories(new ArrayList<>(List.of(child)));
+        variant(match, "200", "150"); variant(match, "300", null);
+        variant(match, "10", null).setIsActive(false); variant(match, "20", null).setIsDeleted(true);
+        JsonNode data = page(adminSearch().param("categoryId", child.getId().toString()));
+        exactly(data, match);
+        assertEquals(0, new BigDecimal("150").compareTo(data.path("content").get(0).path("minPrice").decimalValue()));
+        assertEquals(0, new BigDecimal("300").compareTo(data.path("content").get(0).path("maxPrice").decimalValue()));
+        exactly(page(adminSearch().param("categoryId", parent.getId().toString())));
+        child = categories.findById(child.getId()).orElseThrow(); child.setIsDeleted(true);
+        exactly(page(adminSearch().param("categoryId", child.getId().toString())));
+    }
+
+    @Test void adminFilterValidationAndAccessRemainRestricted() throws Exception {
+        for (String[] invalid : List.of(new String[]{"categoryId", "0"}, new String[]{"brandId", "-1"},
+                new String[]{"categoryId", "abc"}, new String[]{"status", "DRAFT"}, new String[]{"keyword", "x".repeat(201)})) {
+            mvc.perform("keyword".equals(invalid[0]) ? adminSearch(invalid[1]) : adminSearch().param(invalid[0], invalid[1]))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/v1/admin/products").with(user("customer").roles("CUSTOMER"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/products")).andExpect(status().isUnauthorized());
+    }
 
     @Test void anonymousSearchHidesNoSkuAndUnsafeStockUnlessExplicitlySearchingUnavailable() throws Exception {
         Product visible = product("Available"); available(variant(visible, "100", null));
