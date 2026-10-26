@@ -1056,7 +1056,11 @@ export const ProductsPage = () => {
     },
     {
       header: 'Danh mục',
-      accessor: (row) => row.categoryName || 'Mặc định',
+      accessor: (row) => {
+        if (row.categoryName) return row.categoryName;
+        const cat = categories.find((c) => String(c.id) === String(row.categoryId));
+        return cat ? cat.name : (row.categoryId ? `Danh mục #${row.categoryId}` : 'Chưa phân loại');
+      },
       width: '140px',
     },
     {

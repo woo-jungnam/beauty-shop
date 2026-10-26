@@ -67,6 +67,9 @@ public class ProductListResponse implements Serializable {
     @Schema(description = "ID nhỏ nhất trong các danh mục liên kết; có thể null", example = "1")
     private Long categoryId;
 
+    @Schema(description = "Tên danh mục chính của sản phẩm", example = "Kem chống nắng")
+    private String categoryName;
+
     @Schema(description = "Hạn sử dụng sớm nhất của lô hàng cận date (nếu có)", example = "2026-11-20")
     private LocalDate earliestExpirationDate;
 

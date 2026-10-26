@@ -511,7 +511,26 @@ public class ProductServiceImpl implements ProductService {
         Sort sort = pageable.getSort().isUnsorted() ? Sort.by(Sort.Order.desc("createdAt")) : pageable.getSort();
         if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by(Sort.Order.desc("id")));
         Pageable sorted = pageable.isPaged() ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort) : Pageable.unpaged(sort);
-        return productRepository.findAllAdminProductList(pattern, categoryId, brandId, status, sorted);
+        Page<ProductListResponse> page = productRepository.findAllAdminProductList(pattern, categoryId, brandId, status, sorted);
+        enrichCategoryNames(page.getContent());
+        return page;
+    }
+
+    private void enrichCategoryNames(List<ProductListResponse> items) {
+        if (items == null || items.isEmpty()) return;
+        List<Long> categoryIds = items.stream()
+                .map(ProductListResponse::getCategoryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (categoryIds.isEmpty()) return;
+        Map<Long, String> nameMap = categoryRepository.findAllById(categoryIds).stream()
+                .collect(Collectors.toMap(Category::getId, Category::getName, (a, b) -> a));
+        items.forEach(item -> {
+            if (item.getCategoryId() != null) {
+                item.setCategoryName(nameMap.get(item.getCategoryId()));
+            }
+        });
     }
 
     private List<Category> resolveCategories(List<Long> ids) {
