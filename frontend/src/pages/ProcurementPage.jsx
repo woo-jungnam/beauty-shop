@@ -25,6 +25,8 @@ export const ProcurementPage = () => {
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [successNotice, setSuccessNotice] = useState('');
+  const [catalogVariants, setCatalogVariants] = useState([]);
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [orderOpen, setOrderOpen] = useState(false);
@@ -55,6 +57,31 @@ export const ProcurementPage = () => {
     if (savingRef.current) return;
     cancelImport(); setImportBusy(false); setOrderOpen(false);
   };
+  const fetchCatalogVariants = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/v1/admin/products?size=100');
+      const products = res.data?.content || res.content || res || [];
+      const flattened = [];
+      products.forEach(p => {
+        (p.variants || []).forEach(v => {
+          flattened.push({
+            id: v.id,
+            productId: p.id,
+            productName: p.name,
+            variantName: v.variantName || v.volume || 'Tiêu chuẩn',
+            sku: v.sku,
+            price: v.price || p.minPrice || 0,
+          });
+        });
+      });
+      setCatalogVariants(flattened);
+    } catch {
+      // Fallback khi không tải được catalog
+    }
+  }, []);
+  useEffect(() => {
+    if (orderOpen) fetchCatalogVariants();
+  }, [orderOpen, fetchCatalogVariants]);
   const lookupItems = async items => {
     const skus = [...new Set(items.filter(item => item.sku?.trim() && item.sku.trim().length <= 100 && !item.cellErrors?.sku).map(item => item.sku.trim()))];
     if (!skus.length) return matchVariants(items, []);
@@ -249,7 +276,10 @@ export const ProcurementPage = () => {
     }
     savingRef.current = true; setOrderSaving(true); setImportError('');
     try {
-      await apiClient.post(ENDPOINTS.PROCUREMENT.ORDERS, orderPayload(orderForm));
+      const response = await apiClient.post(ENDPOINTS.PROCUREMENT.ORDERS, orderPayload(orderForm));
+      const resData = response?.data || response;
+      const orderNum = resData?.orderNumber ? ` (${resData.orderNumber})` : '';
+      setSuccessNotice(`Tạo phiếu mua hàng${orderNum} thành công.`);
       setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] });
       if (orderPage === 0) load(); else setOrderPage(0);
     } catch (err) {
@@ -336,7 +366,8 @@ export const ProcurementPage = () => {
   ];
 
   return <div className="content-container">
-    <div className="page-header"><div><h1 className="page-title">Nhà cung cấp & Mua hàng</h1><p className="page-subtitle">Kiểm soát phê duyệt, nhận hàng theo lô và cập nhật tồn kho</p></div><div style={{display:'flex',gap:8}}><Button variant="outline" icon={RefreshCw} onClick={load} loading={loading}>Làm mới</Button><Button icon={Plus} onClick={() => tab === 'orders' ? setOrderOpen(true) : handleOpenCreateSupplier()}>{tab === 'orders' ? 'Tạo phiếu mua' : 'Thêm nhà cung cấp'}</Button></div></div>
+    <div className="page-header"><div><h1 className="page-title">Nhà cung cấp & Mua hàng</h1><p className="page-subtitle">Kiểm soát phê duyệt, nhận hàng theo lô và cập nhật tồn kho</p></div><div style={{display:'flex',gap:8}}><Button variant="outline" icon={RefreshCw} onClick={load} loading={loading}>Làm mới</Button><Button icon={Plus} onClick={() => { if (tab === 'orders') { setSuccessNotice(''); setOrderOpen(true); } else { handleOpenCreateSupplier(); } }}>{tab === 'orders' ? 'Tạo phiếu mua' : 'Thêm nhà cung cấp'}</Button></div></div>
+    {successNotice && <AlertBanner type="success" title="Thành công" message={successNotice} action={<Button size="sm" variant="outline" onClick={() => setSuccessNotice('')}>Đóng</Button>} />}
     {loadError && <AlertBanner type="danger" title="Không thể tải đầy đủ dữ liệu" message={loadError} action={<Button size="sm" variant="outline" onClick={load}>Thử lại</Button>} />}
     <ProcurementOperationsPanel orders={orders} onChanged={load} />
     <div className="tabs-header"><button className={`tab-btn ${tab==='orders'?'active':''}`} onClick={() => setTab('orders')}>Phiếu mua hàng</button><button className={`tab-btn ${tab==='suppliers'?'active':''}`} onClick={() => setTab('suppliers')}>Nhà cung cấp</button></div>
@@ -389,16 +420,46 @@ export const ProcurementPage = () => {
               <div className="grid-3">
                 {item.sku !== undefined
                   ? <Input label="SKU *" required maxLength={100} value={item.sku} error={itemErrors[index].sku} helperText={item.variantLabel ? `${item.variantLabel} · ID ${item.variantId}` : 'Sửa SKU rồi bấm Đối chiếu lại SKU.'} onChange={e => editItem(index, 'sku', e.target.value)} />
-                  : <Input label="ID biến thể *" type="number" min="1" step="1" required value={item.variantId} error={itemErrors[index].variantId} onChange={e => editItem(index, 'variantId', e.target.value)} />}
+                  : <Input
+                      label="ID biến thể *"
+                      type="number"
+                      min="1"
+                      step="1"
+                      required
+                      list="procurement-variant-list"
+                      value={item.variantId}
+                      error={itemErrors[index].variantId}
+                      helperText={
+                        catalogVariants.find(v => String(v.id) === String(item.variantId))
+                          ? `${catalogVariants.find(v => String(v.id) === String(item.variantId)).productName} · ${catalogVariants.find(v => String(v.id) === String(item.variantId)).variantName || ''} (${catalogVariants.find(v => String(v.id) === String(item.variantId)).sku || ''})`
+                          : 'Gõ ID biến thể hoặc chọn từ danh mục gợi ý.'
+                      }
+                      onChange={e => {
+                        const val = e.target.value;
+                        editItem(index, 'variantId', val);
+                        const matched = catalogVariants.find(v => String(v.id) === String(val));
+                        if (matched && (!item.unitCost || item.unitCost === '')) {
+                          const estimated = Math.round(Number(matched.price || 0) * 0.7);
+                          if (estimated > 0) editItem(index, 'unitCost', String(estimated));
+                        }
+                      }}
+                    />}
                 <Input label="Số lượng *" type="number" min="1" max="2147483647" step="1" required value={item.quantity} error={itemErrors[index].quantity} onChange={e => editItem(index, 'quantity', e.target.value)} />
-                <Input label="Đơn giá vốn *" type="number" min="0" step="0.01" required value={item.unitCost} error={itemErrors[index].unitCost} onChange={e => editItem(index, 'unitCost', e.target.value)} />
+                <Input label="Đơn giá vốn *" type="number" min="0" step="0.01" required value={item.unitCost} error={itemErrors[index].unitCost} helperText="Ví dụ: 50000 (không dùng dấu chấm/phẩy phân cách nghìn)" onChange={e => editItem(index, 'unitCost', e.target.value)} />
                 <Input label="Mã lô" maxLength={100} value={item.batchCode} error={itemErrors[index].batchCode} onChange={e => editItem(index, 'batchCode', e.target.value)} />
                 <Input label="Hạn dùng" type={itemErrors[index].expirationDate ? 'text' : 'date'} value={item.expirationDate} error={itemErrors[index].expirationDate} onChange={e => editItem(index, 'expirationDate', e.target.value)} />
                 <Button variant="danger" onClick={() => setOrderForm({ ...orderForm, items: orderForm.items.filter((_, i) => i !== index) })}>Xóa dòng</Button>
               </div>
             </section>)}
+            {catalogVariants.length > 0 && <datalist id="procurement-variant-list">
+              {catalogVariants.map(v => <option key={v.id} value={v.id}>{v.productName} · {v.variantName} (SKU: {v.sku})</option>)}
+            </datalist>}
             <Button variant="outline" onClick={() => setOrderForm({ ...orderForm, items: [...orderForm.items, blankItem()] })}>+ Thêm dòng</Button>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><Button type="submit" loading={orderSaving} disabled={!orderForm.items.length || hasItemErrors}>Tạo phiếu nháp</Button></div>
+            {importError && <div style={{ marginTop: 12 }}><AlertBanner type="danger" title="Chưa thể hoàn tất" message={importError} /></div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginTop: 16 }}>
+              {hasItemErrors && <span style={{ color: 'var(--color-danger-600)', fontSize: '13px' }}>Vui lòng kiểm tra các ô báo đỏ ở trên trước khi tạo phiếu.</span>}
+              <Button type="submit" loading={orderSaving} disabled={!orderForm.items.length || hasItemErrors} title="Tạo phiếu">Tạo phiếu nháp</Button>
+            </div>
           </fieldset>
         </fieldset>
         {importBusy && <p role="status">Đang đọc Excel / đối chiếu SKU…</p>}

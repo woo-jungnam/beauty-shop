@@ -38,6 +38,13 @@ const formatDate = (value) => {
   }).format(date);
 };
 
+const maskUserName = (name) => {
+  if (!name || typeof name !== 'string') return 'Khách hàng BeautyShop';
+  const trimmed = name.trim();
+  if (trimmed.length <= 2) return trimmed.charAt(0) + '*';
+  return trimmed.charAt(0) + '*'.repeat(Math.min(trimmed.length - 2, 4)) + trimmed.slice(-1);
+};
+
 const submissionError = (error) => {
   const status = error?.status ?? error?.response?.status;
   if (status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để gửi bình luận.';
@@ -89,6 +96,21 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
   const verifiedCount = Number.isSafeInteger(verifiedCountValue) && verifiedCountValue > 0 ? verifiedCountValue : 0;
   const ratingValue = Number(product.averageRating);
   const hasAverage = verifiedCount > 0 && Number.isFinite(ratingValue) && ratingValue >= 1 && ratingValue <= 5;
+  const [ratingFilter, setRatingFilter] = useState('ALL');
+
+  const starCounts = useMemo(() => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviewPage.rows.forEach((r) => {
+      const s = Number(r.rating);
+      if (s >= 1 && s <= 5) counts[s] = (counts[s] || 0) + 1;
+    });
+    return counts;
+  }, [reviewPage.rows]);
+
+  const displayedReviews = useMemo(() => {
+    if (ratingFilter === 'ALL') return reviewPage.rows;
+    return reviewPage.rows.filter((r) => Number(r.rating) === Number(ratingFilter));
+  }, [reviewPage.rows, ratingFilter]);
 
   const loadReviewPage = useCallback((page) => {
     if (reviewsRequest.current || (page > 0 && page <= loadedPage.current)) return;
@@ -172,19 +194,23 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
     const title = form.title.trim();
     const rating = Number(form.rating);
     const orderId = Number(selectedOrderId);
+    if (!canRate) {
+      setError('Chỉ khách hàng đã mua sản phẩm này và nhận hàng thành công mới có thể gửi đánh giá.');
+      return;
+    }
     if (!content || content.length > 2000) {
-      setError('Vui lòng nhập nội dung bình luận, tối đa 2.000 ký tự.');
+      setError('Vui lòng nhập nội dung đánh giá, tối đa 2.000 ký tự.');
       return;
     }
     if (title.length > 150) {
-      setError('Tiêu đề bình luận không được quá 150 ký tự.');
+      setError('Tiêu đề đánh giá không được quá 150 ký tự.');
       return;
     }
-    if (canRate && !availableOrders.some((order) => Number(order.id) === orderId)) {
+    if (!availableOrders.some((order) => Number(order.id) === orderId)) {
       setError('Vui lòng chọn đơn hàng đã giao phù hợp với sản phẩm.');
       return;
     }
-    if (canRate && (!Number.isInteger(rating) || rating < 1 || rating > 5)) {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
       setError('Vui lòng chọn số sao từ 1 đến 5.');
       return;
     }
@@ -193,8 +219,7 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
     submissionRequest.current = controller;
     setSubmitting(true);
     try {
-      const payload = { productId: Number(productId), title: title || null, content };
-      if (canRate) Object.assign(payload, { orderId, rating });
+      const payload = { productId: Number(productId), orderId, rating, title: title || null, content };
       const response = unwrap(await apiClient.post('/api/v1/reviews', payload, { signal: controller.signal }));
       if (controller.signal.aborted || submissionRequest.current !== controller) return;
       if (!response?.id || Number(response.productId) !== Number(productId)) throw new Error('Chưa xác nhận được kết quả gửi.');
@@ -219,97 +244,122 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
         <h2 id={`${fieldId}-heading`}>Đánh giá và bình luận</h2>
       </header>
       <div className="product-section-body">
-        <div className="pd-review-summary">
-          <div className="pd-rating-summary">
-            <strong className="pd-rating-value">{hasAverage ? `${ratingValue.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} / 5` : 'Chưa có điểm chấm sao'}</strong>
-            {hasAverage && <RatingStars value={ratingValue} size={20} />}
-            <span>{verifiedCount.toLocaleString('vi-VN')} lượt chấm sao từ đơn đã mua</span>
+        <div className="shopee-review-overview">
+          <div className="shopee-rating-overview-score">
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span className="shopee-score-num">{hasAverage ? ratingValue.toFixed(1) : '5.0'}</span>
+              <span className="shopee-score-max">trên 5</span>
+            </div>
+            <RatingStars value={hasAverage ? ratingValue : 5} size={20} />
           </div>
-          <div className="pd-review-total">
-            <MessageSquare size={22} aria-hidden="true" />
-            <span>{reviewPage.total === null ? reviewPage.error ? 'Chưa xác minh tổng bình luận công khai' : 'Đang xác minh tổng bình luận công khai' : `${reviewPage.total.toLocaleString('vi-VN')} đánh giá và bình luận công khai`}</span>
-            <p>Số điểm trung bình chỉ tính các đánh giá mua hàng đã xác thực và được duyệt.</p>
+          <div className="shopee-review-filter-pills" role="tablist" aria-label="Bộ lọc số sao đánh giá">
+            <button
+              type="button"
+              className={`shopee-filter-pill ${ratingFilter === 'ALL' ? 'is-active' : ''}`}
+              onClick={() => setRatingFilter('ALL')}
+            >
+              Tất cả ({reviewPage.rows.length})
+            </button>
+            {[5, 4, 3, 2, 1].map((star) => (
+              <button
+                key={star}
+                type="button"
+                className={`shopee-filter-pill ${ratingFilter === star ? 'is-active' : ''}`}
+                onClick={() => setRatingFilter(star)}
+              >
+                {star} Sao ({starCounts[star] || 0})
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="pd-review-compose">
-          <h3>Chia sẻ trải nghiệm của bạn</h3>
-          <p>Nội dung sẽ hiển thị sau khi BeautyShop duyệt.</p>
+          <h3>Đánh giá từ người mua</h3>
           {success && <div className="pd-review-feedback is-success" role="status">{success}</div>}
           {error && <div className="pd-review-feedback is-error" role="alert">{error}</div>}
           {!isAuthenticated ? (
-            <div className="pd-review-footer">
-              <p>Đăng nhập để bình luận sản phẩm. Khách có đơn đã giao phù hợp có thể chấm sao.</p>
-              <button type="button" className="btn-luxury-primary" onClick={() => onNavigate('login')}>Đăng nhập để bình luận</button>
+            <div className="shopee-review-notice">
+              <p>Chỉ những khách hàng đã mua sản phẩm này và nhận hàng thành công mới có thể gửi đánh giá & chấm sao.</p>
+              <button type="button" className="btn-luxury-primary" onClick={() => onNavigate('login')}>Đăng nhập để đánh giá</button>
+            </div>
+          ) : !canRate ? (
+            <div className="shopee-review-notice">
+              <p>
+                {submittedOrderIds.length > 0
+                  ? 'Cảm ơn bạn! Đánh giá của bạn đã được gửi và đang chờ BeautyShop kiểm duyệt.'
+                  : 'Chỉ những khách hàng đã mua sản phẩm này và đơn hàng đã giao thành công mới có thể gửi đánh giá.'}
+              </p>
+              {eligibility.phase === 'loading' && <small>Đang kiểm tra lịch sử mua hàng của bạn…</small>}
             </div>
           ) : (
             <form className="pd-review-form" onSubmit={submitReview} aria-busy={submitting}>
               <fieldset disabled={submitting} className="pd-review-fields">
-                {canRate ? (
-                  <>
-                    <div className="pd-review-form-row">
-                      <label className="pd-review-field" htmlFor={`${fieldId}-order`}>Đơn hàng đã giao
-                        <select id={`${fieldId}-order`} value={selectedOrderId} onChange={(event) => setForm((previous) => ({ ...previous, orderId: event.target.value }))}>
-                          {availableOrders.map((order) => <option key={order.id} value={order.id}>{order.orderNumber || `Đơn #${order.id}`}{order.createdAt ? ` · ${formatDate(order.createdAt)}` : ''}</option>)}
-                        </select>
+                <div className="pd-review-form-row">
+                  <label className="pd-review-field" htmlFor={`${fieldId}-order`}>Đơn hàng đã giao
+                    <select id={`${fieldId}-order`} value={selectedOrderId} onChange={(event) => setForm((previous) => ({ ...previous, orderId: event.target.value }))}>
+                      {availableOrders.map((order) => <option key={order.id} value={order.id}>{order.orderNumber || `Đơn #${order.id}`}{order.createdAt ? ` · ${formatDate(order.createdAt)}` : ''}</option>)}
+                    </select>
+                  </label>
+                  <fieldset className="pd-review-rating-options">
+                    <legend>Số sao</legend>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <label className="pd-review-radio" key={star}>
+                        <input type="radio" name={`${fieldId}-rating`} value={star} checked={Number(form.rating) === star} onChange={() => setForm((previous) => ({ ...previous, rating: star }))} aria-label={`${star} sao`} />
+                        <Star size={22} fill={star <= Number(form.rating) ? '#C89C46' : 'none'} color="#C89C46" aria-hidden="true" />
                       </label>
-                      <fieldset className="pd-review-rating-options">
-                        <legend>Số sao</legend>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <label className="pd-review-radio" key={star}>
-                            <input type="radio" name={`${fieldId}-rating`} value={star} checked={Number(form.rating) === star} onChange={() => setForm((previous) => ({ ...previous, rating: star }))} aria-label={`${star} sao`} />
-                            <Star size={22} fill={star <= Number(form.rating) ? '#C89C46' : 'none'} color="#C89C46" aria-hidden="true" />
-                          </label>
-                        ))}
-                      </fieldset>
-                    </div>
-                    <p className="pd-review-note">Mỗi sản phẩm trong một đơn hàng được chấm sao một lần. Hệ thống kiểm tra lại quyền đánh giá và nội dung đã gửi khi bạn xác nhận.</p>
-                  </>
-                ) : eligibility.phase === 'loading' ? (
-                  <p className="pd-review-note" role="status">Đang xác minh quyền chấm sao. Bạn vẫn có thể gửi bình luận không kèm số sao.</p>
-                ) : eligibility.phase === 'unknown' ? (
-                  <div className="pd-review-note">
-                    <strong>Chưa xác minh quyền chấm sao</strong>
-                    <p>Chưa thể tải đầy đủ đơn hàng. Bạn vẫn có thể gửi bình luận không kèm số sao.</p>
-                    <button type="button" className="pd-text-button" onClick={() => { setEligibility({ phase: 'loading', orders: [] }); setEligibilityRetry((value) => value + 1); }}>Kiểm tra lại quyền chấm sao</button>
-                  </div>
-                ) : (
-                  <p className="pd-review-note">{submittedOrderIds.length > 0
-                    ? 'Bạn đã gửi đánh giá cho các đơn phù hợp trong phiên này. Bạn vẫn có thể gửi bình luận không kèm số sao.'
-                    : 'Chưa tìm thấy đơn đã giao phù hợp trong dữ liệu hiện có. Bạn có thể gửi bình luận không kèm số sao.'}</p>
-                )}
+                    ))}
+                  </fieldset>
+                </div>
+                <p className="pd-review-note">Đánh giá của bạn sẽ được hiển thị công khai sau khi BeautyShop kiểm duyệt chất lượng.</p>
                 <label className="pd-review-field" htmlFor={`${fieldId}-title`}>Tiêu đề (không bắt buộc)
-                  <input id={`${fieldId}-title`} type="text" value={form.title} maxLength={150} onChange={(event) => setForm((previous) => ({ ...previous, title: event.target.value }))} placeholder="Ấn tượng của bạn về sản phẩm" />
+                  <input id={`${fieldId}-title`} type="text" value={form.title} maxLength={150} onChange={(event) => setForm((previous) => ({ ...previous, title: event.target.value }))} placeholder="Cảm nhận tổng quan về sản phẩm" />
                 </label>
-                <label className="pd-review-field" htmlFor={`${fieldId}-content`}>Nội dung bình luận
-                  <textarea id={`${fieldId}-content`} value={form.content} required maxLength={2000} rows={4} onChange={(event) => setForm((previous) => ({ ...previous, content: event.target.value }))} placeholder="Chia sẻ trải nghiệm hoặc câu hỏi về sản phẩm" aria-describedby={`${fieldId}-length`} />
+                <label className="pd-review-field" htmlFor={`${fieldId}-content`}>Nội dung đánh giá *
+                  <textarea id={`${fieldId}-content`} value={form.content} required maxLength={2000} rows={4} onChange={(event) => setForm((previous) => ({ ...previous, content: event.target.value }))} placeholder="Chia sẻ chất lượng sản phẩm, hiệu quả sử dụng, bao bì..." aria-describedby={`${fieldId}-length`} />
                 </label>
                 <div className="pd-review-footer">
                   <span id={`${fieldId}-length`}>{form.content.length.toLocaleString('vi-VN')}/2.000 ký tự</span>
-                  <button type="submit" className="btn-luxury-primary" disabled={submitting}>{submitting ? 'Đang gửi…' : canRate ? 'Gửi đánh giá' : 'Gửi bình luận'}</button>
+                  <button type="submit" className="btn-luxury-primary" disabled={submitting}>{submitting ? 'Đang gửi…' : 'Gửi đánh giá'}</button>
                 </div>
               </fieldset>
             </form>
           )}
         </div>
 
-        {reviewPage.rows.length > 0 && (
+        {displayedReviews.length > 0 && (
           <div id="product-review-list" className="product-review-list pd-review-list">
-            {reviewPage.rows.map((review) => (
-              <article key={review.id}>
-                <div className="product-review-header">
-                  <div>
-                    <strong>{review.isVerifiedPurchase ? 'Người mua đã xác thực' : 'Khách hàng BeautyShop'}</strong>
-                    <span>{review.isVerifiedPurchase && <CheckCircle2 size={12} aria-hidden="true" />}{review.isVerifiedPurchase ? 'Đã xác thực đơn hàng' : 'Bình luận'}</span>
+            {displayedReviews.map((review) => {
+              const displayName = review.userName || review.customerName || (review.userId ? `Khách hàng #${review.userId}` : 'Khách hàng BeautyShop');
+              const initialLetter = displayName.replace(/[^a-zA-Z0-9À-ɏẠ-ỹ]/g, '').charAt(0).toUpperCase() || 'K';
+              return (
+                <article key={review.id} className="shopee-review-card">
+                  <div className="shopee-review-avatar">{initialLetter}</div>
+                  <div className="shopee-review-main">
+                    <div className="shopee-review-user">
+                      <span className="shopee-review-author">{maskUserName(displayName)}</span>
+                      <span className="shopee-review-verified">
+                        <CheckCircle2 size={13} aria-hidden="true" />
+                        Đã mua hàng từ BeautyShop
+                      </span>
+                    </div>
+                    <div className="shopee-review-rating">
+                      <RatingStars value={review.rating || 5} size={14} />
+                    </div>
+                    <div className="shopee-review-meta">
+                      <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>
+                    </div>
+                    {review.title && <h4 className="shopee-review-title">{review.title}</h4>}
+                    <p className="shopee-review-text">{review.content}</p>
+                    {review.adminReply && (
+                      <div className="shopee-review-reply">
+                        <strong>Phản hồi của BeautyShop:</strong>
+                        <p>{review.adminReply}</p>
+                      </div>
+                    )}
                   </div>
-                  {formatDate(review.createdAt) && <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>}
-                </div>
-                {review.rating != null && Number(review.rating) >= 1 && Number(review.rating) <= 5 && <RatingStars value={review.rating} />}
-                {review.title && <h4>{review.title}</h4>}
-                <p>{review.content}</p>
-                {review.adminReply && <div className="product-review-reply"><strong>BeautyShop phản hồi:</strong> {review.adminReply}</div>}
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
         {reviewPage.loading && <p className="pd-review-note" role="status">{reviewPage.rows.length ? 'Đang tải thêm bình luận…' : 'Đang tải đánh giá và bình luận…'}</p>}

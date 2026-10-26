@@ -872,10 +872,11 @@ export const HomePage = ({ onNavigate }) => {
       >
         <div style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: 'var(--radius-md, 6px)',
-          border: '1px solid var(--c-border)',
+          borderRadius: '2px',
+          border: '1px solid #FECACA',
+          borderTop: '3px solid #DC2626',
           padding: 'clamp(12px, 1.5vw, 20px)',
-          boxShadow: 'var(--shadow-card)'
+          boxShadow: '0 2px 4px rgba(220, 38, 38, 0.04)'
         }}>
           <div style={{
             display: 'flex',
@@ -888,29 +889,16 @@ export const HomePage = ({ onNavigate }) => {
             borderBottom: '1px solid var(--c-border-subtle)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: 'var(--c-deal-red, #E31837)',
+              <h2 style={{
+                margin: 0,
+                color: '#DC2626',
                 fontSize: '20px',
-                fontWeight: 900,
-                fontFamily: 'var(--font-sans)'
-              }}>
-                <Flame size={24} fill="#E31837" />
-                <span>XẢ KHO CẬN DATE • GIÁ SỐC ONLINE</span>
-              </div>
-              <span style={{
-                backgroundColor: '#B45309',
-                color: '#FFFFFF',
-                padding: '3px 8px',
-                borderRadius: '3px',
-                fontSize: '11px',
                 fontWeight: 800,
-                letterSpacing: '0.3px'
+                fontFamily: 'var(--font-sans)',
+                letterSpacing: '-0.01em'
               }}>
-                MINH BẠCH HẠN SỬ DỤNG
-              </span>
+                XẢ KHO CẬN DATE • GIÁ SỐC ONLINE
+              </h2>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
@@ -936,22 +924,22 @@ export const HomePage = ({ onNavigate }) => {
                     <button
                       type="button"
                       className="carousel-nav-btn"
-                      style={{ width: '28px', height: '28px' }}
+                      style={{ width: '28px', height: '28px', borderRadius: '2px', fontSize: '15px' }}
                       onClick={() => setCurrentFlashTab(prev => (prev - 1 + totalFlashTabs) % totalFlashTabs)}
                       aria-label="Nhóm sản phẩm trước"
                       title="Nhóm trước"
                     >
-                      <ChevronLeft size={14} />
+                      ‹
                     </button>
                     <button
                       type="button"
                       className="carousel-nav-btn"
-                      style={{ width: '28px', height: '28px' }}
+                      style={{ width: '28px', height: '28px', borderRadius: '2px', fontSize: '15px' }}
                       onClick={() => setCurrentFlashTab(prev => (prev + 1) % totalFlashTabs)}
                       aria-label="Nhóm sản phẩm tiếp theo"
                       title="Nhóm tiếp theo"
                     >
-                      <ChevronRight size={14} />
+                      ›
                     </button>
                   </div>
                 </div>
@@ -981,7 +969,7 @@ export const HomePage = ({ onNavigate }) => {
                   onClick={() => setCurrentFlashTab(prev => (prev - 1 + totalFlashTabs) % totalFlashTabs)}
                   aria-label="Nhóm sản phẩm trước"
                 >
-                  <ChevronLeft size={20} />
+                  ‹
                 </button>
               )}
               <div
@@ -1000,7 +988,7 @@ export const HomePage = ({ onNavigate }) => {
                   onClick={() => setCurrentFlashTab(prev => (prev + 1) % totalFlashTabs)}
                   aria-label="Nhóm sản phẩm tiếp theo"
                 >
-                  <ChevronRight size={20} />
+                  ›
                 </button>
               )}
             </div>
@@ -1012,8 +1000,16 @@ export const HomePage = ({ onNavigate }) => {
       </section>
 
       <section id="categories-section" className="customer-container">
-        <div className="section-header-editorial">
-          <h2 className="section-title-editorial">
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h2 style={{
+            margin: '0 auto',
+            fontSize: '22px',
+            fontWeight: 800,
+            color: '#8C2A47',
+            display: 'inline-block',
+            paddingBottom: '6px',
+            borderBottom: '2px solid #8C2A47'
+          }}>
             Danh mục sản phẩm
           </h2>
         </div>
@@ -1042,7 +1038,6 @@ export const HomePage = ({ onNavigate }) => {
                 </span>
                 <span className="category-tile-hint">
                   <span>Khám phá</span>
-                  <ArrowRight size={11} />
                 </span>
               </div>
             ))
@@ -1096,30 +1091,48 @@ export const HomePage = ({ onNavigate }) => {
       </section>
 
       <section id="random-picks" className="customer-container">
-        <div className="section-header-editorial">
-          <h2 className="section-title-editorial">
-            Gợi ý cho bạn
-          </h2>
-        </div>
+        <div style={{
+          backgroundColor: '#F8FAFC',
+          borderRadius: '2px',
+          border: '1px solid #CBD5E1',
+          borderTop: '3px solid #1E3A8A',
+          padding: 'clamp(16px, 2vw, 24px)'
+        }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h2 style={{
+              margin: '0 0 4px 0',
+              fontSize: '20px',
+              fontWeight: 800,
+              color: '#1E3A8A',
+              fontFamily: 'var(--font-sans)',
+              letterSpacing: '-0.01em'
+            }}>
+              GỢI Ý CHO BẠN
+            </h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+              Sản phẩm chọn lọc dựa trên xu hướng và thói quen mua sắm
+            </p>
+          </div>
 
-        {loading ? (
-          <div className="customer-product-grid product-skeleton-frame">
-            {Array.from({ length: sectionLimits.recommendations }, (_, n) => (
-              <ProductCardSkeleton key={n} />
-            ))}
-          </div>
-        ) : (
-          <div className="customer-product-grid">
-            {((recommendedProducts && recommendedProducts.length > 0) ? recommendedProducts : randomProducts).slice(0, sectionLimits.recommendations).map((prod) => (
-              <ProductCard
-                key={prod.id}
-                product={prod}
-                onNavigate={onNavigate}
-                onQuickView={setQuickViewProduct}
-              />
-            ))}
-          </div>
-        )}
+          {loading ? (
+            <div className="customer-product-grid product-skeleton-frame">
+              {Array.from({ length: sectionLimits.recommendations }, (_, n) => (
+                <ProductCardSkeleton key={n} />
+              ))}
+            </div>
+          ) : (
+            <div className="customer-product-grid">
+              {((recommendedProducts && recommendedProducts.length > 0) ? recommendedProducts : randomProducts).slice(0, sectionLimits.recommendations).map((prod) => (
+                <ProductCard
+                  key={prod.id}
+                  product={prod}
+                  onNavigate={onNavigate}
+                  onQuickView={setQuickViewProduct}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <section id="store-catalog" className="customer-container" style={{ margin: '52px auto' }}>

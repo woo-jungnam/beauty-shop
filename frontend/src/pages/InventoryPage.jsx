@@ -28,6 +28,7 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { AlertBanner } from '../shared/ui/AlertBanner';
 
 const TRANSACTION_TYPE_MAP = {
   RECEIPT: { label: 'Nhập kho', variant: 'success' },
@@ -68,7 +69,8 @@ const getDaysUntilExpiration = (expDate) => {
 };
 
 export const InventoryPage = () => {
-  const [activeTab, setActiveTab] = useState('ledger');
+  const [activeTab, setActiveTab] = useState('warehouses');
+  const [inventoryNotice, setInventoryNotice] = useState('');
   const inboundKey = useRef(crypto.randomUUID());
   const transferKey = useRef(crypto.randomUUID());
   const [loading, setLoading] = useState(false);
@@ -219,9 +221,9 @@ export const InventoryPage = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 'ledger') fetchLedger(0);
+    if (activeTab === 'warehouses') fetchWarehouses();
     else if (activeTab === 'alerts') fetchAlerts();
-    else if (activeTab === 'warehouses') fetchWarehouses();
+    else if (activeTab === 'ledger') fetchLedger(0);
   }, [activeTab]);
 
   useEffect(() => {
@@ -231,6 +233,7 @@ export const InventoryPage = () => {
   }, [selectedWarehouseId, activeTab]);
 
   const handleOpenInspect = (stock) => {
+    setInventoryNotice('');
     setSelectedStock(stock);
     const maxQty = stock.quarantinedQuantity || 1;
     setInspectQuantity(Math.min(1, maxQty));
@@ -240,14 +243,30 @@ export const InventoryPage = () => {
 
   const handleInspectSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedStock) return;
+    const stockId = selectedStock?.id || selectedStock?.stockId;
+    if (!stockId) {
+      alert('Không tìm thấy thông tin lô hàng hợp lệ.');
+      return;
+    }
+    const cleanQtyStr = String(inspectQuantity).replace(/\./g, '').replace(/,/g, '').trim();
+    const parsedQty = parseInt(cleanQtyStr, 10);
+    const maxQuarantined = selectedStock?.quarantinedQuantity || 0;
+    if (isNaN(parsedQty) || parsedQty <= 0) {
+      alert('Số lượng hàng kiểm định phải là số nguyên lớn hơn 0.');
+      return;
+    }
+    if (parsedQty > maxQuarantined) {
+      alert(`Số lượng xử lý không được vượt quá số lượng hàng đang cách ly (${maxQuarantined}).`);
+      return;
+    }
     setSubmitting(true);
     try {
-      await apiClient.post(ENDPOINTS.INVENTORY.INSPECTION(selectedStock.id || selectedStock.stockId), {
-        quantity: parseInt(inspectQuantity, 10),
+      await apiClient.post(ENDPOINTS.INVENTORY.INSPECTION(stockId), {
+        quantity: parsedQty,
         restock: inspectRestock,
       });
       setInspectModalOpen(false);
+      setInventoryNotice(`Xử lý kiểm định thành công ${parsedQty} sản phẩm hoàn trả (${inspectRestock ? 'Đã nhập lại kho bán' : 'Đã xuất tiêu hủy'}).`);
       if (activeTab === 'warehouses') fetchWarehouseStocks(selectedWarehouseId);
       else fetchAlerts();
     } catch (err) {
@@ -378,6 +397,7 @@ export const InventoryPage = () => {
   };
 
   const handleOpenAdjustModal = (stock) => {
+    setInventoryNotice('');
     const normalizedStock = {
       ...stock,
       id: stock.id || stock.stockId,
@@ -390,14 +410,35 @@ export const InventoryPage = () => {
 
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedStockForAdjust) return;
+    const stockId = selectedStockForAdjust?.id || selectedStockForAdjust?.stockId;
+    if (!stockId) {
+      alert('Không tìm thấy mã lô tồn kho hợp lệ để kiểm kê.');
+      return;
+    }
+    const cleanQtyStr = String(adjustQuantityAfter).replace(/\./g, '').replace(/,/g, '').trim();
+    const parsedQty = parseInt(cleanQtyStr, 10);
+    if (isNaN(parsedQty) || parsedQty < 0) {
+      alert('Số lượng tồn thực tế sau kiểm kê phải là số nguyên không âm.');
+      return;
+    }
+    const reserved = selectedStockForAdjust?.reservedQuantity ?? 0;
+    if (parsedQty < reserved) {
+      alert(`Số lượng sau kiểm kê không được nhỏ hơn số lượng hàng đang giữ chỗ cho đơn (${reserved}).`);
+      return;
+    }
+    if (!adjustReason.trim()) {
+      alert('Vui lòng nhập lý do điều chỉnh kiểm kê.');
+      return;
+    }
     setAdjustSubmitting(true);
     try {
-      await apiClient.put(ENDPOINTS.INVENTORY.STOCK_ADJUSTMENT(selectedStockForAdjust.id), {
-        quantityAfter: parseInt(adjustQuantityAfter, 10),
+      await apiClient.put(ENDPOINTS.INVENTORY.STOCK_ADJUSTMENT(stockId), {
+        quantityAfter: parsedQty,
         reason: adjustReason.trim(),
       });
       setAdjustModalOpen(false);
+      const stockLabel = selectedStockForAdjust.sku || selectedStockForAdjust.batchCode || selectedStockForAdjust.productName || `#${stockId}`;
+      setInventoryNotice(`Ghi nhận kiểm kê kho thành công cho lô ${stockLabel}. Số tồn mới: ${parsedQty}.`);
       if (activeTab === 'warehouses') fetchWarehouseStocks(selectedWarehouseId);
       else fetchAlerts();
     } catch (err) {
@@ -608,7 +649,7 @@ export const InventoryPage = () => {
           size="sm"
           onClick={() => handleOpenAdjustModal(row)}
           icon={ArrowUpRight}
-          title="Kiểm đếm & điều chỉnh số lượng tồn"
+          title="Kiểm kê / Kiểm định số lượng tồn kho"
         >
           Kiểm kê
         </Button>
@@ -779,15 +820,23 @@ export const InventoryPage = () => {
           </Button>
         </div>
       </div>
+      {inventoryNotice && (
+        <AlertBanner
+          type="success"
+          title="Thành công"
+          message={inventoryNotice}
+          action={<Button size="sm" variant="outline" onClick={() => setInventoryNotice('')}>Đóng</Button>}
+        />
+      )}
 
       <InventoryRecallPanel />
       <div className="tabs-header">
         <button
-          className={`tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ledger')}
+          className={`tab-btn ${activeTab === 'warehouses' ? 'active' : ''}`}
+          onClick={() => setActiveTab('warehouses')}
         >
-          <Boxes size={15} />
-          Sổ cái biến động kho ({ledgerTotalElements})
+          <Building2 size={15} />
+          Kho bãi & Quản lý lô tồn ({warehouses.length})
         </button>
         <button
           className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
@@ -797,13 +846,93 @@ export const InventoryPage = () => {
           Cảnh báo tồn kho & Cận hạn ({lowStockList.length + expiringList.length})
         </button>
         <button
-          className={`tab-btn ${activeTab === 'warehouses' ? 'active' : ''}`}
-          onClick={() => setActiveTab('warehouses')}
+          className={`tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ledger')}
         >
-          <Building2 size={15} />
-          Kho bãi & Quản lý lô tồn ({warehouses.length})
+          <Boxes size={15} />
+          Sổ cái biến động kho ({ledgerTotalElements})
         </button>
       </div>
+
+      {activeTab === 'warehouses' && (
+        <div>
+          <div className="admin-warehouse-toolbar">
+            <div className="admin-warehouse-picker">
+              <label htmlFor="admin-warehouse-select" className="form-label">Chọn kho làm việc</label>
+              <Select
+                id="admin-warehouse-select"
+                value={selectedWarehouseId || ''}
+                onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                options={warehouses.map((w) => ({
+                  label: `${w.name} (${w.code}) · ${WAREHOUSE_TYPE_MAP[w.warehouseType] || w.warehouseType || 'Kho'}`,
+                  value: String(w.id),
+                }))}
+                className="admin-warehouse-field"
+              />
+            </div>
+            {selectedWarehouseId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDeleteWarehouse(selectedWarehouseId)}
+                icon={Trash2}
+                title="Xóa kho bãi này"
+              >
+                Xóa kho bãi
+              </Button>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Danh sách các lô tồn kho trong kho đang chọn</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Tổng cộng {warehouseStocks.length} lô hàng
+              </span>
+            </div>
+            <DataTable
+              columns={warehouseStockColumns}
+              data={warehouseStocks}
+              loading={loading}
+              emptyMessage="Kho này hiện chưa có dữ liệu tồn kho. Bấm 'Nhập kho hàng hóa' để thêm."
+            />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'alerts' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <AlertTriangle size={18} color="var(--color-warning-600)" />
+              <h2 style={{ fontSize: '15px', fontWeight: 700, textTransform: 'uppercase' }}>
+                Mặt hàng chạm ngưỡng tồn kho tối thiểu ({lowStockList.length})
+              </h2>
+            </div>
+            <DataTable
+              columns={alertColumns}
+              data={lowStockList}
+              loading={loading}
+              emptyMessage="Không có mặt hàng nào bị cạn kho."
+            />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Clock size={18} color="var(--color-danger-600)" />
+              <h2 style={{ fontSize: '15px', fontWeight: 700, textTransform: 'uppercase' }}>
+                Lô hàng cận hạn sử dụng trong 30 ngày (FEFO) ({expiringList.length})
+              </h2>
+            </div>
+            <DataTable
+              columns={alertColumns}
+              data={expiringList}
+              loading={loading}
+              emptyMessage="Không có lô mỹ phẩm nào cận hạn dùng."
+            />
+          </div>
+        </div>
+      )}
 
       {activeTab === 'ledger' && (
         <div className="card">
@@ -870,86 +999,6 @@ export const InventoryPage = () => {
               </Button>
             </div>
           )}
-        </div>
-      )}
-
-      {activeTab === 'alerts' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <AlertTriangle size={18} color="var(--color-warning-600)" />
-              <h2 style={{ fontSize: '15px', fontWeight: 700, textTransform: 'uppercase' }}>
-                Mặt hàng chạm ngưỡng tồn kho tối thiểu ({lowStockList.length})
-              </h2>
-            </div>
-            <DataTable
-              columns={alertColumns}
-              data={lowStockList}
-              loading={loading}
-              emptyMessage="Không có mặt hàng nào bị cạn kho."
-            />
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <Clock size={18} color="var(--color-danger-600)" />
-              <h2 style={{ fontSize: '15px', fontWeight: 700, textTransform: 'uppercase' }}>
-                Lô hàng cận hạn sử dụng trong 30 ngày (FEFO) ({expiringList.length})
-              </h2>
-            </div>
-            <DataTable
-              columns={alertColumns}
-              data={expiringList}
-              loading={loading}
-              emptyMessage="Không có lô mỹ phẩm nào cận hạn dùng."
-            />
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'warehouses' && (
-        <div>
-          <div className="admin-warehouse-toolbar">
-            <div className="admin-warehouse-picker">
-              <label htmlFor="admin-warehouse-select" className="form-label">Chọn kho làm việc</label>
-              <Select
-                id="admin-warehouse-select"
-                value={selectedWarehouseId || ''}
-                onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                options={warehouses.map((w) => ({
-                  label: `${w.name} (${w.code}) · ${WAREHOUSE_TYPE_MAP[w.warehouseType] || w.warehouseType || 'Kho'}`,
-                  value: String(w.id),
-                }))}
-                className="admin-warehouse-field"
-              />
-            </div>
-            {selectedWarehouseId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDeleteWarehouse(selectedWarehouseId)}
-                icon={Trash2}
-                title="Xóa kho bãi này"
-              >
-                Xóa kho bãi
-              </Button>
-            )}
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">Danh sách các lô tồn kho trong kho đang chọn</span>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Tổng cộng {warehouseStocks.length} lô hàng
-              </span>
-            </div>
-            <DataTable
-              columns={warehouseStockColumns}
-              data={warehouseStocks}
-              loading={loading}
-              emptyMessage="Kho này hiện chưa có dữ liệu tồn kho. Bấm 'Nhập kho hàng hóa' để thêm."
-            />
-          </div>
         </div>
       )}
 
@@ -1158,7 +1207,7 @@ export const InventoryPage = () => {
       <Modal
         isOpen={adjustModalOpen}
         onClose={() => setAdjustModalOpen(false)}
-        title="Điều chỉnh số lượng sau kiểm kê"
+        title="Kiểm kê & Điều chỉnh số lượng tồn kho"
         maxWidth="500px"
       >
         <form onSubmit={handleAdjustSubmit}>
@@ -1187,6 +1236,7 @@ export const InventoryPage = () => {
             min={selectedStockForAdjust?.reservedQuantity ?? 0}
             value={adjustQuantityAfter}
             onChange={(e) => setAdjustQuantityAfter(e.target.value)}
+            helperText="Nhập số nguyên không âm (VD: 50)"
             required
           />
 
@@ -1202,7 +1252,7 @@ export const InventoryPage = () => {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setAdjustModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={adjustSubmitting}>Lưu kết quả kiểm kê</Button>
+            <Button variant="primary" type="submit" loading={adjustSubmitting} title="Ghi nhận kiểm kê">Ghi nhận kiểm kê</Button>
           </div>
         </form>
       </Modal>

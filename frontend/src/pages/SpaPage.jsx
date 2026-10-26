@@ -55,7 +55,7 @@ export const SpaPage = () => {
   const { isAdmin }=useAuth();
   const [workspaceId,setWorkspaceId]=useState(null);
   const [settlementTicket, setSettlementTicket] = useState(null);
-  const [activeTab, setActiveTab] = useState('appointments');
+  const [activeTab, setActiveTab] = useState('services');
   const [loading, setLoading] = useState(false);
 
   const [appointments, setAppointments] = useState([]);
@@ -251,20 +251,22 @@ export const SpaPage = () => {
   };
 
   useEffect(() => {
-    if (activeTab === 'appointments') {
-      fetchAppointments(0);
-      fetchStaff();
-    } else if (activeTab === 'categories') {
+    if (activeTab === 'categories') {
       fetchCategories();
-    } else if (activeTab === 'staff') {
-      fetchStaff();
-      fetchSpaCatalog();
-    } else if (activeTab === 'tickets') {
-      fetchTickets();
     } else if (activeTab === 'facilities') {
       fetchFacilities();
     } else if (activeTab === 'preparation') {
       fetchFormTemplates();
+    } else if (activeTab === 'services') {
+      fetchSpaCatalog();
+    } else if (activeTab === 'staff') {
+      fetchStaff();
+      fetchSpaCatalog();
+    } else if (activeTab === 'appointments') {
+      fetchAppointments(0);
+      fetchStaff();
+    } else if (activeTab === 'tickets') {
+      fetchTickets();
     }
   }, [activeTab, statusFilter]);
 
@@ -290,6 +292,10 @@ export const SpaPage = () => {
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
     if (!selectedApt) return;
+    if (staffNote.trim().length > 500) {
+      alert('Ghi chú của chuyên viên / Lễ tân tối đa 500 ký tự. Vui lòng rút gọn nội dung.');
+      return;
+    }
     setSubmittingStatus(true);
     try {
       await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(selectedApt.id), {
@@ -304,6 +310,7 @@ export const SpaPage = () => {
           : undefined,
       });
       setStatusModalOpen(false);
+      alert(`Cập nhật trạng thái lịch hẹn #${selectedApt.id} thành công!`);
       fetchAppointments(aptPage);
     } catch (err) {
       alert(err.message || 'Lỗi cập nhật lịch hẹn');
@@ -924,11 +931,6 @@ export const SpaPage = () => {
               Thêm danh mục Spa
             </Button>
           )}
-          {activeTab === 'staff' && (
-            <Button variant="primary" size="sm" onClick={() => setCreateStaffModalOpen(true)} icon={Plus}>
-              Thêm chuyên viên mới
-            </Button>
-          )}
           {activeTab === 'facilities' && (
             <Button variant="primary" size="sm" onClick={handleOpenCreateFacility} icon={Plus}>
               Thêm phòng / thiết bị
@@ -939,17 +941,22 @@ export const SpaPage = () => {
               Tạo mẫu khảo sát mới
             </Button>
           )}
-          {activeTab !== 'services' && (
+          {activeTab === 'staff' && (
+            <Button variant="primary" size="sm" onClick={() => setCreateStaffModalOpen(true)} icon={Plus}>
+              Thêm chuyên viên mới
+            </Button>
+          )}
+          {activeTab !== 'services' && activeTab !== 'policy' && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              if (activeTab === 'appointments') fetchAppointments(aptPage);
-              else if (activeTab === 'categories') fetchCategories();
-              else if (activeTab === 'staff') { fetchStaff(); fetchSpaCatalog(); }
-              else if (activeTab === 'tickets') fetchTickets();
+              if (activeTab === 'categories') fetchCategories();
               else if (activeTab === 'facilities') fetchFacilities();
               else if (activeTab === 'preparation') fetchFormTemplates();
+              else if (activeTab === 'staff') { fetchStaff(); fetchSpaCatalog(); }
+              else if (activeTab === 'appointments') fetchAppointments(aptPage);
+              else if (activeTab === 'tickets') fetchTickets();
             }}
             loading={loading}
             icon={RefreshCw}
@@ -962,42 +969,13 @@ export const SpaPage = () => {
 
       {policyFeedback && !policyModalOpen && <div className={`spa-catalog-notice ${policyFeedback.tone}`} role={policyFeedback.tone === 'error' ? 'alert' : 'status'}>{policyFeedback.message}<button type="button" aria-label="Đóng thông báo" onClick={() => setPolicyFeedback(null)}>×</button></div>}
 
-      <SpaOperatingPolicy />
       <div className="tabs-header">
-        <button
-          className={`tab-btn ${activeTab === 'appointments' ? 'active' : ''}`}
-          onClick={() => setActiveTab('appointments')}
-        >
-          <CalendarCheck size={15} />
-          Lịch hẹn Spa ({aptTotalElements})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
-          onClick={() => setActiveTab('services')}
-        >
-          <Sparkles size={15} />
-          Dịch vụ & Gói Liệu trình
-        </button>
         <button
           className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
           onClick={() => setActiveTab('categories')}
         >
           <FolderTree size={15} />
           Danh mục dịch vụ ({spaCategories.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
-          onClick={() => setActiveTab('staff')}
-        >
-          <UserCheck size={15} />
-          Chuyên viên & Kỹ năng ({staffList.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'tickets' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tickets')}
-        >
-          <Ticket size={15} />
-          Vé dịch vụ & Gói khách hàng ({tickets.length})
         </button>
         <button
           className={`tab-btn ${activeTab === 'facilities' ? 'active' : ''}`}
@@ -1013,7 +991,97 @@ export const SpaPage = () => {
           <FileText size={15} />
           Biểu mẫu khảo sát & An toàn ({formTemplates.length})
         </button>
+        <button
+          className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
+          onClick={() => setActiveTab('services')}
+        >
+          <Sparkles size={15} />
+          Dịch vụ & Gói Liệu trình
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
+          onClick={() => setActiveTab('staff')}
+        >
+          <UserCheck size={15} />
+          Chuyên viên & Kỹ năng ({staffList.length})
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'policy' ? 'active' : ''}`}
+          onClick={() => setActiveTab('policy')}
+        >
+          <Clock size={15} />
+          Chính sách & Giờ hoạt động
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'appointments' ? 'active' : ''}`}
+          onClick={() => setActiveTab('appointments')}
+        >
+          <CalendarCheck size={15} />
+          Lịch hẹn Spa ({aptTotalElements})
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'tickets' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tickets')}
+        >
+          <Ticket size={15} />
+          Vé dịch vụ & Gói khách hàng ({tickets.length})
+        </button>
       </div>
+
+      {activeTab === 'categories' && (
+        <div className="card">
+          <DataTable
+            columns={categoryColumns}
+            data={spaCategories}
+            loading={false}
+            emptyMessage="Chưa có danh mục dịch vụ spa nào."
+          />
+        </div>
+      )}
+
+      {activeTab === 'facilities' && (
+        <div className="card">
+          <DataTable
+            columns={facilityColumns}
+            data={facilities}
+            loading={false}
+            emptyMessage="Chưa có cơ sở vật chất hoặc thiết bị spa nào."
+          />
+        </div>
+      )}
+
+      {activeTab === 'preparation' && (
+        <div className="card">
+          <div style={{ marginBottom: 12, color: 'var(--text-muted)', fontSize: 13 }}>
+            Các mẫu biểu câu hỏi khảo sát tiền sử dị ứng & bệnh lý trước khi thực hiện dịch vụ Spa (bất biến sau khi lưu).
+          </div>
+          <DataTable
+            columns={templateColumns}
+            data={formTemplates}
+            loading={false}
+            emptyMessage="Chưa có biểu mẫu khảo sát an toàn tiền liệu trình nào."
+          />
+        </div>
+      )}
+
+      {activeTab === 'services' && <SpaCatalogTab onOpenPolicy={handleOpenPolicyModal} />}
+
+      {activeTab === 'staff' && (
+        <div className="card">
+          <DataTable
+            columns={staffColumns}
+            data={staffList}
+            loading={false}
+            emptyMessage="Chưa có chuyên viên nào. Nhấn 'Thêm chuyên viên mới' để tạo hồ sơ."
+          />
+        </div>
+      )}
+
+      {activeTab === 'policy' && (
+        <div className="card">
+          <SpaOperatingPolicy />
+        </div>
+      )}
 
       {activeTab === 'appointments' && (
         <div className="card">
@@ -1050,30 +1118,6 @@ export const SpaPage = () => {
         </div>
       )}
 
-      {activeTab === 'services' && <SpaCatalogTab onOpenPolicy={handleOpenPolicyModal} />}
-
-      {activeTab === 'categories' && (
-        <div className="card">
-          <DataTable
-            columns={categoryColumns}
-            data={spaCategories}
-            loading={false}
-            emptyMessage="Chưa có danh mục dịch vụ spa nào."
-          />
-        </div>
-      )}
-
-      {activeTab === 'staff' && (
-        <div className="card">
-          <DataTable
-            columns={staffColumns}
-            data={staffList}
-            loading={false}
-            emptyMessage="Chưa có chuyên viên nào. Nhấn 'Thêm chuyên viên mới' để tạo hồ sơ."
-          />
-        </div>
-      )}
-
       {activeTab === 'tickets' && (
         <div className="card">
           <DataTable
@@ -1081,31 +1125,6 @@ export const SpaPage = () => {
             data={tickets}
             loading={false}
             emptyMessage="Không có vé dịch vụ liệu trình nào."
-          />
-        </div>
-      )}
-
-      {activeTab === 'facilities' && (
-        <div className="card">
-          <DataTable
-            columns={facilityColumns}
-            data={facilities}
-            loading={false}
-            emptyMessage="Chưa có cơ sở vật chất hoặc thiết bị spa nào."
-          />
-        </div>
-      )}
-
-      {activeTab === 'preparation' && (
-        <div className="card">
-          <div style={{ marginBottom: 12, color: 'var(--text-muted)', fontSize: 13 }}>
-            Các mẫu biểu câu hỏi khảo sát tiền sử dị ứng & bệnh lý trước khi thực hiện dịch vụ Spa (bất biến sau khi lưu).
-          </div>
-          <DataTable
-            columns={templateColumns}
-            data={formTemplates}
-            loading={false}
-            emptyMessage="Chưa có biểu mẫu khảo sát an toàn tiền liệu trình nào."
           />
         </div>
       )}
@@ -1157,10 +1176,15 @@ export const SpaPage = () => {
             <textarea
               className="form-textarea"
               rows={3}
+              maxLength={500}
               value={staffNote}
               onChange={(e) => setStaffNote(e.target.value)}
               placeholder="VD: Khách hàng hài lòng, liệu trình bước 2..."
             />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: staffNote.length >= 500 ? 'var(--color-danger-600)' : 'var(--text-muted)', marginTop: '4px' }}>
+              <span>Tối đa 500 ký tự</span>
+              <span>{staffNote.length}/500</span>
+            </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setStatusModalOpen(false)}>Hủy</Button>

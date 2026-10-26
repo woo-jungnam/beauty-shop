@@ -613,7 +613,9 @@ export const ProductsPage = () => {
       if (editingCategory) {
         await apiClient.put(`${ENDPOINTS.CATALOG.CATEGORIES}/${editingCategory.id}`, payload);
       } else {
-        await apiClient.post(ENDPOINTS.CATALOG.CATEGORIES, payload);
+        const res = await apiClient.post(ENDPOINTS.CATALOG.CATEGORIES, payload);
+        const created = res?.data || res;
+        if (created?.id) setCategoryId(String(created.id));
       }
       setCategoryModalOpen(false);
       fetchCatalogs();
@@ -668,7 +670,9 @@ export const ProductsPage = () => {
       if (editingBrand) {
         await apiClient.put(`${ENDPOINTS.CATALOG.BRANDS}/${editingBrand.id}`, payload);
       } else {
-        await apiClient.post(ENDPOINTS.CATALOG.BRANDS, payload);
+        const res = await apiClient.post(ENDPOINTS.CATALOG.BRANDS, payload);
+        const created = res?.data || res;
+        if (created?.id) setBrandId(String(created.id));
       }
       setBrandModalOpen(false);
       fetchCatalogs();
@@ -1711,18 +1715,40 @@ export const ProductsPage = () => {
             <Input label="Đường dẫn Slug (tự tạo nếu để trống)" value={slug} onChange={(e) => setSlug(e.target.value)} />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Select
-              label="Danh mục *"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              options={[{ label: '-- Chọn danh mục --', value: '' }, ...categories.map((c) => ({ label: c.name, value: String(c.id) }))]}
-            />
-            <Select
-              label="Thương hiệu *"
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-              options={[{ label: '-- Chọn thương hiệu --', value: '' }, ...brands.map((b) => ({ label: b.name, value: String(b.id) }))]}
-            />
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600 }}>Danh mục *</span>
+                <button
+                  type="button"
+                  onClick={handleOpenCreateCategory}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-primary-600)', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '2px', padding: 0 }}
+                >
+                  <Plus size={12} /> Thêm nhanh
+                </button>
+              </div>
+              <Select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                options={[{ label: '-- Chọn danh mục --', value: '' }, ...categories.map((c) => ({ label: c.name, value: String(c.id) }))]}
+              />
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600 }}>Thương hiệu *</span>
+                <button
+                  type="button"
+                  onClick={handleOpenCreateBrand}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-primary-600)', cursor: 'pointer', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '2px', padding: 0 }}
+                >
+                  <Plus size={12} /> Thêm nhanh
+                </button>
+              </div>
+              <Select
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+                options={[{ label: '-- Chọn thương hiệu --', value: '' }, ...brands.map((b) => ({ label: b.name, value: String(b.id) }))]}
+              />
+            </div>
           </div>
 
           {!editingProduct ? (

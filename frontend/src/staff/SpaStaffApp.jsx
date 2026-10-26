@@ -1275,9 +1275,14 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                           backgroundColor: isBusy ? '#FFF8F9' : isUpcoming ? '#FFFDF7' : isFree ? '#F7FCF9' : '#FAFAFA'
                         }}
                       >
-                        <strong style={{ fontSize: '14px', color: '#111827' }}>
-                          {f.name}
-                        </strong>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <strong style={{ fontSize: '14px', color: '#111827' }}>
+                            {f.name}
+                          </strong>
+                          <span style={{ fontSize: '11px', color: 'var(--sp-text-muted)' }}>
+                            Tiếp nhận: {isBusy ? 0 : (f.capacity || 1)} / {f.capacity || 1} chỗ
+                          </span>
+                        </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{

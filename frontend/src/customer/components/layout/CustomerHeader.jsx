@@ -33,6 +33,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
   const headerRef = useRef(null);
   const dialogRef = useRef(null);
   const searchInputRef = useRef(null);
+  const hoverTimer = useRef(null);
   const closeMobileMenu = () => setMobileOpen(false);
   useCustomerDialog(mobileOpen, dialogRef, closeMobileMenu);
 
@@ -77,6 +78,21 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
     setKeyword(new URLSearchParams(currentRoute.split('?')[1] || '').get('search') || '');
   }, [currentRoute]);
 
+  useEffect(() => () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (openDropdown) setOpenDropdown(null);
+      if (searchOpen) setSearchOpen(false);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [openDropdown, searchOpen]);
+
   useEffect(() => {
     const closeOutside = (event) => {
       if (!headerRef.current?.contains(event.target)) {
@@ -103,6 +119,33 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
       desktop.removeEventListener('change', closeOnDesktop);
     };
   }, [openDropdown]);
+
+  const handleNavMouseEnter = (dropdown) => {
+    if (!dropdown) {
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
+      hoverTimer.current = setTimeout(() => {
+        setOpenDropdown((current) => (current === 'account' ? current : null));
+      }, 150);
+      return;
+    }
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    if (openDropdown && openDropdown !== 'account') {
+      setOpenDropdown(dropdown);
+      setSearchOpen(false);
+    } else {
+      hoverTimer.current = setTimeout(() => {
+        setOpenDropdown(dropdown);
+        setSearchOpen(false);
+      }, 120);
+    }
+  };
+
+  const handleNavMouseLeave = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => {
+      setOpenDropdown((current) => (current === 'account' ? current : null));
+    }, 180);
+  };
 
   const suggestions = useMemo(() => [...new Set([
     ...brands.slice(0, 3).map((brand) => cleanDisplayName(brand.name)),
@@ -225,7 +268,12 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
       <nav className="storefront-nav" aria-label="Điều hướng chính">
         <div className="storefront-container storefront-nav-row">
           {NAV_LINKS.map((link) => (
-            <div className="storefront-nav-group" key={link.id}>
+            <div
+              className="storefront-nav-group"
+              key={link.id}
+              onMouseEnter={() => handleNavMouseEnter(link.dropdown)}
+              onMouseLeave={handleNavMouseLeave}
+            >
               <a className={`storefront-nav-link ${isActive(link) ? 'is-active' : ''}`} href={`#/${link.route}`} aria-current={isActive(link) ? 'page' : undefined}>{link.Icon && <link.Icon size={16} aria-hidden="true" />}{link.label}</a>
               {link.dropdown && <button type="button" className="storefront-dropdown-toggle" data-dropdown={link.dropdown} aria-label={`Mở danh sách ${link.label.toLowerCase()}`} aria-expanded={openDropdown === link.dropdown} aria-controls={`storefront-${link.dropdown}`} onClick={() => { setSearchOpen(false); setOpenDropdown(openDropdown === link.dropdown ? null : link.dropdown); }}><ChevronDown size={14} /></button>}
               {openDropdown === link.dropdown && link.dropdown && renderDropdown(link.dropdown)}

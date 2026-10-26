@@ -69,7 +69,7 @@ const AssignDialog = ({ appointment, checkIn, onClose, onAssign }) => {
 };
 
 export const SpaReceptionPage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const data = useReceptionData();
   const [now, setNow] = useState(() => new Date());
   const [view, setView] = useState(() => { try { return localStorage.getItem('spa_reception_view') === 'list' ? 'list' : 'kanban'; } catch { return 'kanban'; } });
@@ -191,18 +191,18 @@ export const SpaReceptionPage = () => {
     finally { setTicketLoading(false); }
   };
   const actions = appointment => <div className="reception-card-actions">
-    <Button size="sm" variant="outline" onClick={() => setWorkspaceId(appointment.id)}>Chuẩn bị / thực hiện / chăm sóc</Button>
     {['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now)} loading={busy === `check-${appointment.id}`} onClick={() => checkIn(appointment)}><Check size={15} /> Check-in ngay</Button>}
     {appointment.status === 'PENDING' && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Phân ca KTV</Button>}
     {appointment.status === 'CONFIRMED' && appointment.checkedInAt && <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now) || localInstant(appointment.appointmentDate, appointment.startTime) - 3600000 > now.getTime()} loading={busy === `start-${appointment.id}`}
       onClick={() => run(`start-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'IN_PROGRESS', notes: 'Lễ tân bắt đầu ca chăm sóc.' }), 'Đã bắt đầu ca chăm sóc.')}><ArrowRight size={15} /> Bắt đầu ca</Button>}
     {appointment.status === 'IN_PROGRESS' && <Button size="sm" disabled={Boolean(busy)} loading={busy === `finish-${appointment.id}`} onClick={() => canFinish(appointment) ? complete(appointment) : setWorkspaceId(appointment.id)}>Hoàn tất & thu ngân</Button>}
     {appointment.status === 'COMPLETED' && <Button size="sm" onClick={() => setCheckout(appointment)}>Mở thu ngân <ArrowRight size={15} /></Button>}
-    {['PENDING', 'CONFIRMED'].includes(appointment.status) && <details className="reception-more"><summary aria-label={`Thao tác khác cho ${appointmentCode(appointment)}`}><MoreHorizontal size={18} /></summary><div>
-      <button type="button" onClick={() => openEdit(appointment, 'reschedule')}>Đổi lịch hẹn</button>
+    <details className="reception-more"><summary aria-label={`Thao tác khác cho ${appointmentCode(appointment)}`}><MoreHorizontal size={18} /></summary><div>
+      <button type="button" onClick={() => setWorkspaceId(appointment.id)}>Chuẩn bị / thực hiện ca</button>
+      {['PENDING', 'CONFIRMED'].includes(appointment.status) && <button type="button" onClick={() => openEdit(appointment, 'reschedule')}>Đổi lịch hẹn</button>}
       {appointment.status === 'CONFIRMED' && <button type="button" onClick={() => setAssign({ appointment, checkIn: false })}>Đổi chuyên viên</button>}
       {appointment.status === 'CONFIRMED' && <button type="button" onClick={() => openEdit(appointment, 'no-show')}>Ghi nhận vắng mặt</button>}
-    </div></details>}
+    </div></details>
   </div>;
   const columns = [
     { key: 'customer', header: 'Khách hàng', render: appointment => <div className="reception-table-customer"><strong>{appointment.customerName || 'Khách hàng'}</strong><small>{appointment.customerPhone || 'Chưa có SĐT'} · {appointmentCode(appointment)}</small></div> },
@@ -214,7 +214,7 @@ export const SpaReceptionPage = () => {
   return <div className="spa-reception-page">
     {workspaceId && <TreatmentAppointmentDialog appointmentId={workspaceId} role="staff" onClose={() => setWorkspaceId(null)} onSaved={afterAction} />}
     <header className="reception-header"><div className="reception-brand"><span><Sparkles size={22} /></span><div><strong>BeautyShop <em>Atelier Spa</em></strong><small>KHÔNG GIAN CHĂM SÓC · QUẦY LỄ TÂN</small></div></div>
-      <div className="reception-user"><span><strong>{user?.fullName || user?.username || 'Lễ tân'}</strong><small>{spaTime(now)} · {formatDate(today)}</small></span><a href="#/staff/treatments">Lộ trình điều trị</a><a href="#/staff">Ca KTV</a>{user?.roles?.includes('ROLE_ADMIN') && <a href="#/admin/spa">Quản trị Spa</a>}<Button variant="ghost" size="sm" onClick={logout} aria-label="Đăng xuất"><LogOut size={17} /></Button></div>
+      <div className="reception-user"><span><strong>{user?.fullName || user?.username || 'Lễ tân'}</strong><small>{spaTime(now)} · {formatDate(today)}</small></span><a href="#/staff/treatments">Lộ trình điều trị</a><a href="#/staff">Ca KTV</a>{isAdmin && <a href="#/admin/spa">Quản trị Spa</a>}<Button variant="ghost" size="sm" onClick={logout} aria-label="Đăng xuất"><LogOut size={17} /></Button></div>
     </header>
     <main className="reception-main">
       <div className="reception-title-row"><div><span className="reception-eyebrow">ĐIỀU PHỐI & TIẾP ĐÓN</span><h1>Quầy lễ tân Spa</h1><p>Mỗi lượt đón khách, một trải nghiệm chăm sóc trọn vẹn.</p></div><div className="reception-top-actions"><Button variant="outline" onClick={() => { setTicketOpen(true); setTicketError(''); setTicketResult(null); }}><Ticket size={17} /> Tra cứu vé</Button><Button onClick={() => setWalkIn({ facilityId: '' })} disabled={!data.services.length}><Plus size={18} /> Đón khách vãng lai</Button></div></div>
@@ -222,8 +222,8 @@ export const SpaReceptionPage = () => {
       {data.error && <div className="reception-notice error" role="alert">{data.error}</div>}
       <section className="reception-facility-panel" aria-label="Trạng thái phòng và giường">
         <div className="reception-section-heading"><div><h2><BedDouble size={19} /> Phòng & giường trực tiếp <span className={`live-dot ${data.updatedAt ? '' : 'offline'}`} /></h2><p>{data.updatedAt ? `Cập nhật lúc ${spaTime(new Date(data.updatedAt))} · Tự làm mới mỗi 30 giây` : 'Đang chờ dữ liệu phòng / giường'}</p></div><div className="facility-legend"><span className="free">Trống</span><span className="busy">Có khách / giữ chỗ</span><span className="paused">Tạm dừng</span><Button variant="ghost" size="sm" loading={data.refreshing} onClick={data.refresh} aria-label="Làm mới dữ liệu quầy"><RefreshCw size={16} /></Button></div></div>
-        <div className="facility-strip">{currentFacilities.map(facility => <button type="button" key={facility.id} className={`facility-tile ${facility.live.state}`} disabled={facility.live.state !== 'free' || !data.services.length} onClick={() => setWalkIn({ facilityId: String(facility.id) })} aria-label={`${facility.name}: ${facility.live.label}. ${facility.live.detail}`}>
-          <div><span className="facility-icon"><BedDouble size={21} /></span><span className="facility-state-dot" /></div><strong>{facility.name}</strong><span className="facility-label">{facility.live.label}</span><small>{facility.live.detail}</small>{facility.live.state === 'free' && <span className="facility-cta">Đón khách tại đây <Plus size={13} /></span>}
+        <div className="facility-strip">{currentFacilities.map(facility => <button type="button" key={facility.id} className={`facility-tile ${facility.live.state}`} disabled={facility.live.available <= 0 || !data.services.length} onClick={() => setWalkIn({ facilityId: String(facility.id) })} aria-label={`${facility.name}: ${facility.live.label}. ${facility.live.detail}`}>
+          <div><span className="facility-icon"><BedDouble size={21} /></span><span className="facility-state-dot" /></div><strong>{facility.name}</strong><span className="facility-label">Tiếp nhận: {facility.live.available} / {facility.live.capacity} chỗ</span><small>{facility.live.state === 'paused' ? facility.live.label : facility.live.available > 0 ? `Còn trống ${facility.live.available} chỗ` : 'Hết chỗ trống'}</small>{facility.live.available > 0 && <span className="facility-cta">Đón khách tại đây <Plus size={13} /></span>}
         </button>)}</div>
         {!currentFacilities.length && <p className="reception-muted">{data.refreshing ? 'Đang tải phòng / giường…' : 'Chưa có phòng / giường được cấu hình.'}</p>}
       </section>
