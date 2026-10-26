@@ -23,7 +23,7 @@ export const ServicePackages = ({ onNavigate }) => {
       .catch(e => { if (active) setError(errorMessage(e)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [revision]);
-  return <section className="spa-benefits"><h1>Gói dịch vụ nhiều lượt</h1><p>Mua trước quyền sử dụng từng dịch vụ. Lộ trình điều trị có kế hoạch riêng tại mục Điều trị.</p>
+  return <section className="spa-benefits"><h1>Gói dịch vụ nhiều lượt</h1><p>Mua trước quyền sử dụng từng dịch vụ. Lộ trình chăm sóc da có kế hoạch riêng tại mục Liệu trình.</p>
     <div className="spa-benefit-actions"><Button variant="outline" onClick={() => onNavigate('booking')}>Đặt dịch vụ lẻ / dùng vé</Button><Button variant="outline" onClick={() => onNavigate('profile?tab=tickets')}>Vé của tôi</Button></div>
     {loading ? <p role="status">Đang tải gói dịch vụ…</p> : error ? <div role="alert">{error}<Button onClick={() => { setLoading(true); setError(''); setRevision(v => v + 1); }}>Thử lại</Button></div> : <div className="spa-package-grid">{packages.map(pack => <article className="spa-benefit-card" key={pack.id}>
       <h2>{pack.name}</h2><p>{pack.description}</p><strong>{money(pack.price)}</strong><p>{pack.validityDays == null ? 'Không giới hạn hạn dùng' : `${pack.validityDays} ngày từ khi thanh toán`}</p>

@@ -208,7 +208,7 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                 Giỏ hàng của bạn đang trống
               </h4>
               <p style={{ margin: 0, fontSize: '13px' }}>
-                Khám phá các sản phẩm dược mỹ phẩm chính hãng và liệu trình Spa chăm sóc chuyên sâu!
+                Khám phá các sản phẩm mỹ phẩm chính hãng và dịch vụ Spa làm đẹp!
               </p>
               <button 
                 onClick={() => { setCartOpen(false); onNavigate('products'); }}

@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { id: 'brands', label: 'Thương hiệu', route: 'products', dropdown: 'brands' },
   { id: 'deals', label: 'Ưu đãi hôm nay', route: 'products?filter=sale', Icon: Sparkles },
   { id: 'spa', label: 'Dịch vụ Spa', route: 'booking', dropdown: 'services' },
-  { id: 'treatments', label: 'Lộ trình điều trị', route: 'treatments', Icon: Calendar },
+  { id: 'treatments', label: 'Lộ trình chăm sóc', route: 'treatments', Icon: Calendar },
   { id: 'orders', label: 'Tra cứu đơn hàng', route: 'order-lookup', Icon: Package },
 ];
 

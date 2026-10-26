@@ -72,7 +72,7 @@ test('Storefront sends a real chatbot request and recommendation adds the matchi
   expect(['UP', 'ok']).toContain(unwrap(await aiHealth.json()).status);
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Hỏi Bác Sĩ & AI Da Liễu' }).click();
+  await page.getByRole('button', { name: 'Tư Vấn Routine & AI Skincare' }).click();
   await expect(page.getByText('● AI Trực tuyến (RAG)')).toBeVisible();
   await page.getByPlaceholder('Nhập câu hỏi về da, thành phần...').fill(
     process.env.E2E_CHAT_QUERY || 'Tư vấn kem chống nắng cho da dầu dưới 500k',

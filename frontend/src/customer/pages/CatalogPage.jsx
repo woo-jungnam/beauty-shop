@@ -160,7 +160,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
   return (
     <div className="customer-container catalog-page" style={{ padding: '32px 20px 60px' }}>
       <div className="catalog-page-heading">
-        <span>DANH MỤC DƯỢC MỸ PHẨM CHÍNH HÃNG</span>
+        <span>DANH MỤC MỸ PHẨM CHÍNH HÃNG</span>
         <h1>{getBannerTitle()}</h1>
         <p>Chọn nhiều danh mục, thương hiệu và hoạt chất để tìm sản phẩm phù hợp.</p>
         <a href="#/image-search">Tìm sản phẩm bằng ảnh →</a>
@@ -193,7 +193,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
           {brands.length > 0 && <FilterGroup title="Thương hiệu chính hãng" options={brands} selected={filters.brandIds}
             onToggle={id => changeFilters({ brandIds: toggleFilterValue(filters.brandIds, id) })} onClear={() => changeFilters({ brandIds: [] })} />}
           <RadioGroup title="Loại & tình trạng da" name="skinType" options={SKIN_TYPES} selected={filters.skinType} onChange={skinType => changeFilters({ skinType })} />
-          <FilterGroup title="Hoạt chất đặc trị" options={ACTIVE_INGREDIENT_FILTERS} selected={filters.activeIngredients}
+          <FilterGroup title="Hoạt chất chuyên sâu" options={ACTIVE_INGREDIENT_FILTERS} selected={filters.activeIngredients}
             onToggle={id => changeFilters({ activeIngredients: toggleFilterValue(filters.activeIngredients, id) })} onClear={() => changeFilters({ activeIngredients: [] })} />
           <RadioGroup title="Khoảng giá" name="priceRange" options={PRICE_RANGES} selected={filters.priceRange} onChange={priceRange => changeFilters({ priceRange })} />
           <button type="button" className="catalog-filter-apply btn-luxury-primary" onClick={() => setMobileFilterOpen(false)}>

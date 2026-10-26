@@ -303,17 +303,17 @@ export const LoginPage = () => {
                 BEAUTYSHOP
               </div>
               <div style={{ fontSize: '10.5px', color: '#8C2A47', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Dược Mỹ Phẩm & Spa Clinic
+                Mỹ Phẩm & Dịch Vụ Spa
               </div>
             </div>
           </a>
 
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1F2937', lineHeight: 1.35, margin: '0 0 10px 0' }}>
-            Vẻ đẹp khoa học.<br />
-            <span style={{ color: '#D45D79' }}>Chăm sóc chuẩn Y khoa.</span>
+            Vẻ đẹp rạng ngời.<br />
+            <span style={{ color: '#D45D79' }}>Chăm sóc chuyên sâu.</span>
           </h2>
           <p style={{ fontSize: '12.5px', color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
-            Trải nghiệm nền tảng phân phối dược mỹ phẩm chính hãng và liệu trình clinic phục hồi da chuyên sâu.
+            Trải nghiệm nền tảng phân phối mỹ phẩm chính hãng và dịch vụ spa làm đẹp chất lượng cao.
           </p>
         </div>
 
@@ -340,8 +340,8 @@ export const LoginPage = () => {
               <Sparkles size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1F2937' }}>Dược Mỹ Phẩm Serum</div>
-              <div style={{ fontSize: '11px', color: '#6B7280' }}>Phục hồi & Trẻ hóa làn da</div>
+              <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1F2937' }}>Mỹ Phẩm Serum</div>
+              <div style={{ fontSize: '11px', color: '#6B7280' }}>Dưỡng ẩm & Tươi sáng làn da</div>
             </div>
           </div>
 
@@ -394,8 +394,8 @@ export const LoginPage = () => {
               <Sparkles size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1F2937' }}>Spa Clinic Y Khoa</div>
-              <div style={{ fontSize: '11px', color: '#6B7280' }}>Bác sĩ chuyên khoa thăm khám</div>
+              <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1F2937' }}>Dịch Vụ Spa Chuyên Sâu</div>
+              <div style={{ fontSize: '11px', color: '#6B7280' }}>Chuyên viên tư vấn tận tâm</div>
             </div>
           </div>
         </div>
@@ -406,7 +406,7 @@ export const LoginPage = () => {
             <span>Cam kết 100% hàng chính hãng có tem phụ</span>
           </div>
           <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '4px' }}>
-            Hotline tư vấn da liễu miễn phí: 1800 6324
+            Hotline tư vấn routine miễn phí: 1800 6324
           </div>
         </div>
       </section>

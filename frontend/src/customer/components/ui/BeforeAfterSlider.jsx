@@ -76,7 +76,7 @@ export const BeforeAfterSlider = ({
       >
         <img
           src={afterImage}
-          alt="Sau điều trị"
+          alt="Sau chăm sóc"
           style={{
             position: 'absolute',
             top: 0,
@@ -98,7 +98,7 @@ export const BeforeAfterSlider = ({
         }}>
           <img
             src={beforeImage}
-            alt="Trước điều trị"
+            alt="Trước chăm sóc"
             style={{
               width: '100%',
               height: '100%',
@@ -153,7 +153,7 @@ export const BeforeAfterSlider = ({
           pointerEvents: 'none',
           zIndex: 5
         }}>
-          Trước phác đồ
+          Trước chăm sóc
         </div>
 
         <div style={{
@@ -170,7 +170,7 @@ export const BeforeAfterSlider = ({
           pointerEvents: 'none',
           zIndex: 5
         }}>
-          Sau điều trị
+          Sau chăm sóc
         </div>
       </div>
 
@@ -231,14 +231,14 @@ export const BeforeAfterSlider = ({
         borderRadius: '6px',
         marginBottom: '10px'
       }}>
-        <div style={{ fontSize: '11px', color: 'var(--c-text-light)' }}>Chỉ số khảo nghiệm lâm sàng:</div>
+        <div style={{ fontSize: '11px', color: 'var(--c-text-light)' }}>Chỉ số khảo sát trải nghiệm:</div>
         <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--c-safe-green)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
           {stats}
         </div>
       </div>
 
       <div style={{ fontSize: '11.5px', color: 'var(--c-text-muted)', marginTop: 'auto' }}>
-        <strong>Phác đồ ứng dụng:</strong> {routine}
+        <strong>Routine gợi ý:</strong> {routine}
       </div>
     </div>
   );

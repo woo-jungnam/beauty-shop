@@ -214,9 +214,9 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   const navSections = [
     { title: '', items: [{ id: 'overview', label: 'Bảng điều khiển', icon: LayoutDashboard }] },
     {
-      title: 'Chăm sóc & trị liệu',
+      title: 'Chăm sóc da',
       items: [
-        { id: 'appointments', label: 'Lịch hẹn trị liệu', icon: Calendar },
+        { id: 'appointments', label: 'Lịch hẹn chăm sóc da', icon: Calendar },
         { id: 'tickets', label: 'Vé liệu trình điện tử', icon: Ticket },
         { id: 'skin', label: 'Hồ sơ làn da cá nhân', icon: User }
       ]
@@ -242,7 +242,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
     overview: 'Tổng quan tài khoản',
     orders: 'Đơn hàng mua sắm',
     tickets: 'Ví vé liệu trình Spa',
-    appointments: 'Lịch hẹn chăm sóc & Trị liệu',
+    appointments: 'Lịch hẹn chăm sóc da',
     skin: 'Hồ sơ phân tích làn da',
     settings: 'Cài đặt tài khoản & Bảo mật',
     addresses: 'Sổ địa chỉ giao nhận',
@@ -324,7 +324,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
               ))}
               <div className="profile-nav-footer">
                 <a href="#/treatments?tab=courses" className="profile-nav-item">
-                  <span className="profile-nav-item-left"><ExternalLink size={20} /><span>Lộ trình điều trị da y khoa</span></span>
+                  <span className="profile-nav-item-left"><ExternalLink size={20} /><span>Lộ trình chăm sóc da chuyên sâu</span></span>
                 </a>
                 <button type="button" onClick={handleLogout} className="profile-nav-item profile-danger">
                   <span className="profile-nav-item-left"><LogOut size={20} /><span>Đăng xuất tài khoản</span></span>
@@ -347,7 +347,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                 <div className="bento-hero-banner">
                   <div>
                     <h1>Xin chào, {displayName}</h1>
-                    <p>Theo dõi liệu trình điều trị da liễu, vé dịch vụ Spa và tiến độ đơn hàng mua sắm.</p>
+                    <p>Theo dõi liệu trình chăm sóc da, vé dịch vụ Spa và tiến độ đơn hàng mua sắm.</p>
                   </div>
                   <div className="profile-actions">
                     <button onClick={() => onNavigate('booking')} className="btn-editorial-primary"><Calendar size={20} />Đặt hẹn Spa</button>
@@ -409,8 +409,8 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                     ) : (
                       <div className="profile-empty-state">
                         <Calendar size={40} />
-                        <h4>Bạn chưa có lịch hẹn trị liệu nào sắp tới</h4>
-                        <p>Trải nghiệm không gian thư giãn tiêu chuẩn y khoa và các phác đồ làm đẹp độc quyền tại BeautyShop.</p>
+                        <h4>Bạn chưa có lịch hẹn chăm sóc da nào sắp tới</h4>
+                        <p>Trải nghiệm không gian thư giãn tiêu chuẩn cao cấp và các liệu trình làm đẹp độc quyền tại BeautyShop.</p>
                         <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn Spa ngay</button>
                       </div>
                     )}
@@ -478,11 +478,11 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                   <div className="bento-bottom-card profile-care-card">
                     <div>
                       <h2>Hồ sơ chăm sóc cá nhân</h2>
-                      <p>Nhận phân tích tình trạng da từ chuyên gia da liễu và theo dõi hình ảnh tiến trình qua các buổi trị liệu y khoa.</p>
+                      <p>Nhận phân tích tình trạng da từ chuyên gia và theo dõi hình ảnh tiến trình qua các buổi chăm sóc chuyên sâu.</p>
                     </div>
                     <div className="profile-actions">
-                      <button onClick={() => handleTabChange('skin')} className="btn-editorial-outline">Hồ sơ da liễu</button>
-                      <a href="#/treatments?tab=courses" className="btn-editorial-primary">Tiến trình điều trị</a>
+                      <button onClick={() => handleTabChange('skin')} className="btn-editorial-outline">Hồ sơ chăm sóc da</button>
+                      <a href="#/treatments?tab=courses" className="btn-editorial-primary">Tiến trình chăm sóc</a>
                     </div>
                   </div>
                 </div>
@@ -527,7 +527,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
 
             {activeTab === 'appointments' && (
               <div className="profile-detail-stack">
-                <div className="profile-card-heading"><p>Danh sách các buổi hẹn trị liệu và chăm sóc da tại BeautyShop Clinic.</p><button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn mới</button></div>
+                <div className="profile-card-heading"><p>Danh sách các buổi hẹn chăm sóc da tại BeautyShop Spa.</p><button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn mới</button></div>
                 {appointments.length === 0 ? (
                   <div className="account-card profile-empty-state">
                     <Calendar size={40} /><h3>Bạn chưa có lịch hẹn Spa nào</h3>

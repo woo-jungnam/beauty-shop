@@ -283,6 +283,46 @@ export const HomePage = ({ onNavigate }) => {
     return list;
   }, [categories, products.length]);
 
+  const categoryProductCounts = useMemo(() => {
+    const counts = {};
+    if (products && products.length > 0) {
+      products.forEach(p => {
+        if (p.categoryId) {
+          counts[p.categoryId] = (counts[p.categoryId] || 0) + 1;
+        }
+      });
+    }
+    return counts;
+  }, [products]);
+
+  const CATEGORY_PAGE_SIZE = 8;
+  const [currentCategoryTab, setCurrentCategoryTab] = useState(0);
+  const [isCategoryHovered, setIsCategoryHovered] = useState(false);
+
+  const totalCategoryTabs = useMemo(() => {
+    return Math.max(1, Math.ceil(categories.length / CATEGORY_PAGE_SIZE));
+  }, [categories.length]);
+
+  useEffect(() => {
+    if (currentCategoryTab >= totalCategoryTabs) {
+      setCurrentCategoryTab(0);
+    }
+  }, [totalCategoryTabs, currentCategoryTab]);
+
+  useEffect(() => {
+    if (totalCategoryTabs <= 1 || isCategoryHovered) return;
+    const timer = setInterval(() => {
+      setCurrentCategoryTab(prev => (prev + 1) % totalCategoryTabs);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [totalCategoryTabs, isCategoryHovered]);
+
+  const currentCategoryBatch = useMemo(() => {
+    if (!categories || categories.length === 0) return [];
+    const start = currentCategoryTab * CATEGORY_PAGE_SIZE;
+    return categories.slice(start, start + CATEGORY_PAGE_SIZE);
+  }, [categories, currentCategoryTab]);
+
   const getCategoryImage = (cat) => {
     const raw = cat?.imageUrl || cat?.thumbnailUrl || cat?.image;
     if (typeof raw === 'string' && raw.trim().length > 0) {
@@ -310,14 +350,14 @@ export const HomePage = ({ onNavigate }) => {
   const DEFAULT_HERO_SLIDES = [
     {
       badge: 'CHÍNH HÃNG 100%',
-      title: 'Mỹ Phẩm Chính Hãng & Clinic Chuẩn Y Khoa.',
-      description: 'Cam kết 100% hàng thật, date xa rõ ràng, nguồn gốc minh bạch. Dịch vụ khám da với bác sĩ chuyên khoa.',
+      title: 'Mỹ Phẩm Chính Hãng & Dịch Vụ Spa Chuyên Sâu.',
+      description: 'Cam kết 100% hàng thật, date xa rõ ràng, nguồn gốc minh bạch. Dịch vụ tư vấn routine cùng chuyên viên tận tâm.',
       ctaPrimary: 'Mua Sắm Ngay',
       ctaSecondary: 'Xem Tất Cả Mỹ Phẩm',
       targetPrimary: 'products',
       targetSecondary: '#store-catalog',
       stat1: '100% Chính Hãng',
-      stat2: 'FDA Chuẩn Y Khoa',
+      stat2: 'Tiêu Chuẩn Quốc Tế',
       stat3: '24/7 Tư Vấn Tận Tâm',
       image: heroImage,
     },
@@ -335,16 +375,16 @@ export const HomePage = ({ onNavigate }) => {
       image: heroImage,
     },
     {
-      badge: 'CLINIC & SPA',
-      title: 'Dịch Vụ Điều Trị & Chăm Sóc Da Chuẩn Y Khoa.',
-      description: 'Quy trình Aqua Peel làm sạch sâu đa tầng, điện di vi điểm căng bóng và trị mụn chuẩn y khoa với công nghệ hiện đại.',
+      badge: 'BEAUTY & SPA',
+      title: 'Dịch Vụ Phục Hồi & Chăm Sóc Da Chuyên Sâu.',
+      description: 'Quy trình Aqua Peel làm sạch sâu đa tầng, điện di vi điểm căng bóng và chăm sóc da mụn với công nghệ hiện đại.',
       ctaPrimary: 'Đặt Lịch Hẹn Ngay',
       ctaSecondary: 'Xem Bảng Giá Spa',
       targetPrimary: 'booking',
       targetSecondary: '#spa-section',
-      stat1: '100% Bác Sĩ Da Liễu',
-      stat2: 'FDA Chuẩn Y Khoa',
-      stat3: 'Clinic Chuyên Sâu',
+      stat1: '100% Chuyên Viên Spa',
+      stat2: 'Quy Trình Chuyên Sâu',
+      stat3: 'Chăm Sóc Toàn Diện',
       image: '/images/spa/spa-ritual.jpg',
     }
   ];
@@ -360,8 +400,8 @@ export const HomePage = ({ onNavigate }) => {
       Icon: Flame
     },
     {
-      eyebrow: 'SPA & CLINIC',
-      title: 'Soi Da 3D & Điều Trị Chuẩn Y Khoa',
+      eyebrow: 'BEAUTY & SPA',
+      title: 'Soi Da 3D & Chăm Sóc Da Chuyên Sâu',
       desc: 'Đặt lịch Aqua Peel, điện di phục hồi và tư vấn routine cùng chuyên viên.',
       cta: 'Đặt lịch',
       target: 'booking',
@@ -383,7 +423,7 @@ export const HomePage = ({ onNavigate }) => {
           targetPrimary: b.targetUrl || 'products',
           targetSecondary: '#store-catalog',
           stat1: '100% Chính Hãng',
-          stat2: 'FDA Chuẩn Y Khoa',
+          stat2: 'Tiêu Chuẩn Quốc Tế',
           stat3: '24/7 Tư Vấn Tận Tâm',
           image: resolveMediaUrl(b.imageUrl) || heroImage,
         }));
@@ -481,386 +521,385 @@ export const HomePage = ({ onNavigate }) => {
           <div className="customer-container home-banner-block hero-content-grid">
             {(() => {
               const currentSlide = heroSlides[activeHeroSlide] || heroSlides[0] || {};
-              const stat1 = currentSlide.stat1 || '10.000+ Sản Phẩm';
-              const stat2 = currentSlide.stat2 || '100% Chính Hãng';
-              const stat3 = currentSlide.stat3 || 'Giao Nhanh 2H';
 
               return (
                 <div className="home-banner-main" style={{
                   position: 'relative',
                   overflow: 'hidden',
-                  borderRadius: 'calc(var(--radius-lg) - 6px)',
-                  padding: '40px 48px',
-                  minHeight: '420px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  backgroundImage: `linear-gradient(90deg, rgba(31, 22, 20, 0.92) 0%, rgba(140, 42, 71, 0.74) 48%, rgba(140, 42, 71, 0.18) 100%), url(${currentSlide.image})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
+                  borderRadius: '20px',
+                  minHeight: '660px',
+                  background: 'linear-gradient(135deg, #FFF7F9 0%, #FFF0F3 52%, #FDE9EE 100%)',
+                  border: '1px solid #F5E2E8',
+                  boxShadow: '0 8px 30px rgba(140, 42, 71, 0.06)',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 1fr)',
+                  alignItems: 'center'
                 }}>
-                  {currentSlide.badge && (
-                    <div className="hero-eyebrow" style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '5px 12px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                      border: '1px solid rgba(255, 255, 255, 0.35)',
-                      fontSize: '11px',
-                      color: '#FFCCD5',
+                  <div className="home-banner-main-content" style={{
+                    padding: '52px 40px 52px 52px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    zIndex: 2
+                  }}>
+                    {currentSlide.badge && (
+                      <div className="hero-eyebrow" style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 16px',
+                        borderRadius: '9999px',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #F4CBD4',
+                        color: '#8C2A47',
+                        fontSize: '11.5px',
+                        fontWeight: 800,
+                        letterSpacing: '0.06em',
+                        marginBottom: '18px',
+                        boxShadow: '0 2px 6px rgba(140, 42, 71, 0.05)',
+                        alignSelf: 'flex-start'
+                      }}>
+                        <Sparkles size={13} color="#D45D79" />
+                        <span>{currentSlide.badge}</span>
+                      </div>
+                    )}
+
+                    <h1 style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: 'clamp(28px, 3.8vw, 44px)',
+                      lineHeight: 1.24,
                       fontWeight: 800,
-                      letterSpacing: '0.06em',
-                      marginBottom: '16px'
+                      color: '#2A1820',
+                      margin: '0 0 16px 0',
+                      letterSpacing: '-0.02em'
                     }}>
-                      <Sparkles size={13} />
-                      <span>{currentSlide.badge}</span>
+                      {currentSlide.title}
+                    </h1>
+
+                    <p style={{
+                      fontSize: '15px',
+                      lineHeight: 1.7,
+                      color: '#6E5660',
+                      margin: '0 0 28px 0',
+                      maxWidth: '520px'
+                    }}>
+                      {currentSlide.description}
+                    </p>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => {
+                          navigateHeroTarget(currentSlide.targetPrimary || 'products');
+                        }}
+                        style={{
+                          padding: '14px 28px',
+                          fontSize: '14.5px',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          backgroundColor: '#8C2A47',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 14px rgba(140, 42, 71, 0.22)',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                      >
+                        <span>{currentSlide.ctaPrimary || 'Mua Sắm Ngay'}</span>
+                        <ArrowRight size={16} />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigateHeroTarget(currentSlide.targetSecondary || '#store-catalog');
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#8C2A47',
+                          fontSize: '14.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '8px 12px'
+                        }}
+                      >
+                        <span>{currentSlide.ctaSecondary || 'Xem Tất Cả Mỹ Phẩm'}</span>
+                        <ChevronRight size={16} />
+                      </button>
                     </div>
-                  )}
 
-                  <h1 style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: 'clamp(28px, 4vw, 44px)',
-                    lineHeight: 1.2,
-                    fontWeight: 800,
-                    color: '#FFFFFF',
-                    margin: '0 0 16px 0',
-                    letterSpacing: '-0.02em',
-                    maxWidth: '620px'
-                  }}>
-                    {currentSlide.title}
-                  </h1>
-
-                  <p style={{
-                    fontSize: '15px',
-                    lineHeight: 1.65,
-                    color: 'var(--c-text-on-dark-muted)',
-                    margin: '0 0 32px 0',
-                    maxWidth: '680px'
-                  }}>
-                    {currentSlide.description}
-                  </p>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
-                    <button
-                      onClick={() => {
-                        navigateHeroTarget(currentSlide.targetPrimary || 'products');
-                      }}
-                      className="btn-luxury-gold"
-                      style={{ padding: '13px 26px', fontSize: '14px', borderRadius: '4px' }}
-                    >
-                      <span>{currentSlide.ctaPrimary || 'Mua Sắm Ngay'}</span>
-                      <ArrowRight size={16} />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        navigateHeroTarget(currentSlide.targetSecondary || '#store-catalog');
-                      }}
-                      className="btn-luxury-outline"
-                      style={{
-                        padding: '12px 24px',
-                        borderColor: 'rgba(255, 255, 255, 0.25)',
-                        color: '#FFFFFF',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      <Calendar size={16} color="var(--c-gold)" />
-                      <span>{currentSlide.ctaSecondary || 'Xem Tất Cả Mỹ Phẩm'}</span>
-                    </button>
+                    {heroSlides.length > 1 && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginTop: '44px'
+                      }}>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          {heroSlides.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setActiveHeroSlide(idx)}
+                              style={{
+                                width: activeHeroSlide === idx ? '28px' : '8px',
+                                height: '7px',
+                                borderRadius: '9999px',
+                                border: 'none',
+                                backgroundColor: activeHeroSlide === idx ? '#8C2A47' : '#E2CFD5',
+                                cursor: 'pointer',
+                                transition: 'all 0.25s ease',
+                                padding: 0
+                              }}
+                              title={`Slide ${idx + 1}`}
+                            />
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', marginLeft: '6px' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveHeroSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length);
+                            }}
+                            aria-label="Slide trước"
+                            style={{
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '50%',
+                              border: '1px solid #ECCFD6',
+                              backgroundColor: '#FFFFFF',
+                              color: '#8C2A47',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              padding: 0
+                            }}
+                          >
+                            <ChevronLeft size={15} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveHeroSlide(prev => (prev + 1) % heroSlides.length);
+                            }}
+                            aria-label="Slide tiếp theo"
+                            style={{
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '50%',
+                              border: '1px solid #ECCFD6',
+                              backgroundColor: '#FFFFFF',
+                              color: '#8C2A47',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              padding: 0
+                            }}
+                          >
+                            <ChevronRight size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="hero-stats-grid" style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '16px',
-                    marginTop: '40px',
-                    paddingTop: '24px',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.12)'
+                  <div className="home-banner-main-visual" style={{
+                    position: 'relative',
+                    height: '100%',
+                    minHeight: '660px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '32px 36px 32px 0'
                   }}>
-                    <div>
-                      <div style={{
-                        fontSize: '22px',
-                        fontWeight: 800,
-                        color: 'var(--c-gold)',
-                        fontFamily: 'var(--font-mono)'
-                      }}>
-                        {stat1.includes(' ') ? stat1.split(' ')[0] : stat1}
-                      </div>
-                      {stat1.includes(' ') && (
-                        <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 600 }}>
-                          {stat1.substring(stat1.indexOf(' ') + 1)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{
-                        fontSize: '22px',
-                        fontWeight: 800,
-                        color: 'var(--c-gold)',
-                        fontFamily: 'var(--font-mono)'
-                      }}>
-                        {stat2.includes(' ') ? stat2.split(' ')[0] : stat2}
-                      </div>
-                      {stat2.includes(' ') && (
-                        <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 600 }}>
-                          {stat2.substring(stat2.indexOf(' ') + 1)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div style={{
-                        fontSize: '22px',
-                        fontWeight: 800,
-                        color: 'var(--c-gold)',
-                        fontFamily: 'var(--font-mono)'
-                      }}>
-                        {stat3.includes(' ') ? stat3.split(' ')[0] : stat3}
-                      </div>
-                      {stat3.includes(' ') && (
-                        <div style={{ fontSize: '11px', color: '#B8A7A0', marginTop: '2px', fontWeight: 600 }}>
-                          {stat3.substring(stat3.indexOf(' ') + 1)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {heroSlides.length > 1 && (
                     <div style={{
-                      position: 'absolute',
-                      bottom: '24px',
-                      right: '28px',
-                      display: 'flex',
-                      gap: '7px',
-                      zIndex: 3
+                      width: '100%',
+                      height: '560px',
+                      borderRadius: '20px',
+                      overflow: 'hidden',
+                      boxShadow: '0 12px 32px rgba(140, 42, 71, 0.08)',
+                      border: '2px solid #FFFFFF',
+                      position: 'relative'
                     }}>
-                      {heroSlides.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setActiveHeroSlide(idx)}
-                          style={{
-                            width: activeHeroSlide === idx ? '26px' : '7px',
-                            height: '7px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: activeHeroSlide === idx ? 'var(--c-primary, #D45D79)' : 'rgba(255,255,255,0.4)',
-                            cursor: 'pointer',
-                            transition: 'all 0.25s ease',
-                            padding: 0
-                          }}
-                          title={`Slide ${idx + 1}`}
-                        />
-                      ))}
+                      <img
+                        src={currentSlide.image}
+                        alt={currentSlide.title}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: 'center',
+                          display: 'block'
+                        }}
+                      />
                     </div>
-                  )}
-
-                  {heroSlides.length > 1 && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveHeroSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length);
-                        }}
-                        aria-label="Slide trước"
-                        className="hero-carousel-arrow hero-carousel-prev"
-                        style={{
-                          position: 'absolute',
-                          left: '18px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '50%',
-                          backgroundColor: 'rgba(0, 0, 0, 0.40)',
-                          backdropFilter: 'blur(6px)',
-                          border: '1px solid rgba(255, 255, 255, 0.25)',
-                          color: '#FFFFFF',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          zIndex: 4,
-                          transition: 'all 0.2s ease',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = 'var(--c-primary, #D45D79)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1.08)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.40)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                        }}
-                      >
-                        <ChevronLeft size={22} />
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveHeroSlide(prev => (prev + 1) % heroSlides.length);
-                        }}
-                        aria-label="Slide tiếp theo"
-                        className="hero-carousel-arrow hero-carousel-next"
-                        style={{
-                          position: 'absolute',
-                          right: '18px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '50%',
-                          backgroundColor: 'rgba(0, 0, 0, 0.40)',
-                          backdropFilter: 'blur(6px)',
-                          border: '1px solid rgba(255, 255, 255, 0.25)',
-                          color: '#FFFFFF',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          zIndex: 4,
-                          transition: 'all 0.2s ease',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = 'var(--c-primary, #D45D79)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1.08)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.40)';
-                          e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                        }}
-                      >
-                        <ChevronRight size={22} />
-                      </button>
-                    </>
-                  )}
+                  </div>
                 </div>
               );
             })()}
 
             <div className="home-banner-side" style={{ display: 'grid', gap: '16px' }}>
-              {displayedSideBanners.map(({ eyebrow, title, desc, cta, target, image, Icon, slotIndex }, idx) => (
-                <div
-                  key={`${title}-${slotIndex ?? idx}`}
-                  className="home-banner-small"
-                  onClick={() => navigateHeroTarget(target)}
-                  style={{
-                    position: 'relative',
-                    overflow: 'hidden',
-                    minHeight: '202px',
-                    padding: '24px',
-                    borderRadius: 'calc(var(--radius-lg) - 6px)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    backgroundImage: `linear-gradient(135deg, rgba(31, 22, 20, 0.92), rgba(140, 42, 71, 0.58)), url(${image})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    border: '1px solid rgba(255, 255, 255, 0.16)',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1, paddingRight: '12px' }}>
-                      {eyebrow && (
-                        <div style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '7px',
-                          marginBottom: '12px',
-                          color: 'var(--c-gold)',
-                          fontSize: '11px',
+              {displayedSideBanners.map(({ eyebrow, title, desc, cta, target, image, Icon, slotIndex }, idx) => {
+                const isClearance = idx === 0;
+                return (
+                  <div
+                    key={`${title}-${slotIndex ?? idx}`}
+                    className="home-banner-small"
+                    onClick={() => navigateHeroTarget(target)}
+                    style={{
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '322px',
+                      padding: '28px 28px',
+                      borderRadius: '20px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      background: isClearance
+                        ? 'linear-gradient(135deg, #FFF7F4 0%, #FFEDE7 100%)'
+                        : 'linear-gradient(135deg, #F1FBF8 0%, #E2F6F0 100%)',
+                      border: isClearance ? '1px solid #FCD4C8' : '1px solid #C4ECE0',
+                      boxShadow: isClearance
+                        ? '0 4px 16px rgba(234, 88, 12, 0.05)'
+                        : '0 4px 16px rgba(15, 118, 110, 0.05)',
+                      transition: 'all 0.25s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        {eyebrow && (
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '12px',
+                            color: isClearance ? '#C2410C' : '#0F766E',
+                            backgroundColor: '#FFFFFF',
+                            border: isClearance ? '1px solid #FDC3B3' : '1px solid #B4E8DA',
+                            padding: '4px 12px',
+                            borderRadius: '9999px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            letterSpacing: '0.06em'
+                          }}>
+                            <Icon size={13} />
+                            <span>{eyebrow}</span>
+                          </div>
+                        )}
+                        <h3 style={{
+                          color: isClearance ? '#2E1912' : '#132A25',
+                          fontSize: '20px',
                           fontWeight: 800,
-                          letterSpacing: '0.08em'
+                          lineHeight: 1.32,
+                          margin: '0 0 8px 0'
                         }}>
-                          <Icon size={14} />
-                          <span>{eyebrow}</span>
-                        </div>
-                      )}
-                      <h3 style={{ color: '#FFFFFF', fontSize: '19px', fontWeight: 800, lineHeight: 1.25, margin: '0 0 8px 0' }}>
-                        {title}
-                      </h3>
-                      <p style={{ color: '#F3DDE4', fontSize: '12.5px', lineHeight: 1.5, margin: 0 }}>
-                        {desc}
-                      </p>
+                          {title}
+                        </h3>
+                        <p style={{
+                          color: isClearance ? '#7A574D' : '#496E65',
+                          fontSize: '13px',
+                          lineHeight: 1.6,
+                          margin: 0
+                        }}>
+                          {desc}
+                        </p>
+                      </div>
+
+                      <div style={{
+                        width: '92px',
+                        height: '92px',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        border: '2px solid #FFFFFF',
+                        boxShadow: '0 6px 14px rgba(0, 0, 0, 0.07)'
+                      }}>
+                        <img
+                          src={image}
+                          alt={title}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                        />
+                      </div>
                     </div>
 
-                    {heroSideBanners.length > 2 && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
+                    <div style={{ marginTop: '18px' }}>
+                      <span
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          backgroundColor: 'rgba(0,0,0,0.42)',
-                          backdropFilter: 'blur(4px)',
-                          padding: '3px 8px',
-                          borderRadius: '9999px',
-                          border: '1px solid rgba(255,255,255,0.22)',
-                          flexShrink: 0
+                          gap: '6px',
+                          padding: '9px 18px',
+                          borderRadius: '8px',
+                          backgroundColor: '#FFFFFF',
+                          border: isClearance ? '1px solid #F97316' : '1px solid #0D9488',
+                          color: isClearance ? '#C2410C' : '#0F766E',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)'
                         }}
                       >
-                        <span style={{ fontSize: '10px', color: '#FFFFFF', fontWeight: 700, marginRight: '2px' }}>
-                          {(slotIndex ?? idx) + 1}/{heroSideBanners.length}
-                        </span>
-                        <button
-                          onClick={() => setSideSlideOffset(prev => (prev - 1 + heroSideBanners.length) % heroSideBanners.length)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            cursor: 'pointer',
-                            padding: '2px',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                          title="Banner trước"
-                        >
-                          <ChevronLeft size={13} />
-                        </button>
-                        <button
-                          onClick={() => setSideSlideOffset(prev => (prev + 1) % heroSideBanners.length)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            cursor: 'pointer',
-                            padding: '2px',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                          title="Banner tiếp theo"
-                        >
-                          <ChevronRight size={13} />
-                        </button>
-                      </div>
-                    )}
+                        <span>{cta}</span>
+                        <ArrowRight size={14} />
+                      </span>
+                    </div>
                   </div>
-
-                  <button
-                    type="button"
-                    className="btn-luxury-outline"
-                    style={{
-                      alignSelf: 'flex-start',
-                      padding: '8px 14px',
-                      borderColor: 'rgba(255, 255, 255, 0.28)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.10)',
-                      color: '#FFFFFF',
-                      fontSize: '12px'
-                    }}
-                  >
-                    <span>{cta}</span>
-                    <ArrowRight size={14} />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
+          <div className="customer-container">
+            <div className="hero-trust-bar">
+              <div className="hero-trust-item">
+                <div className="hero-trust-icon">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <div className="hero-trust-title">100% Chính Hãng</div>
+                  <div className="hero-trust-desc">Tem phụ & hóa đơn đầy đủ</div>
+                </div>
+              </div>
+              <div className="hero-trust-item">
+                <div className="hero-trust-icon">
+                  <Award size={20} />
+                </div>
+                <div>
+                  <div className="hero-trust-title">Tiêu Chuẩn Quốc Tế</div>
+                  <div className="hero-trust-desc">Mỹ phẩm chính ngạch nguồn gốc minh bạch</div>
+                </div>
+              </div>
+              <div className="hero-trust-item">
+                <div className="hero-trust-icon">
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <div className="hero-trust-title">Tư Vấn Routine</div>
+                  <div className="hero-trust-desc">Chuyên viên tư vấn routine tận tâm</div>
+                </div>
+              </div>
+              <div className="hero-trust-item">
+                <div className="hero-trust-icon">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <div className="hero-trust-title">Giao Nhanh 2H</div>
+                  <div className="hero-trust-desc">Nội thành hỏa tốc nhận liền</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -999,48 +1038,118 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      <section id="categories-section" className="customer-container">
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+      <section
+        id="categories-section"
+        className="customer-container"
+        onMouseEnter={() => setIsCategoryHovered(true)}
+        onMouseLeave={() => setIsCategoryHovered(false)}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 800,
+            color: 'var(--c-gold-hover, #B38E46)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            display: 'block',
+            marginBottom: '4px'
+          }}>
+            Danh mục nổi bật
+          </span>
           <h2 style={{
             margin: '0 auto',
-            fontSize: '22px',
+            fontSize: 'clamp(20px, 2.4vw, 26px)',
             fontWeight: 800,
-            color: '#8C2A47',
-            display: 'inline-block',
-            paddingBottom: '6px',
-            borderBottom: '2px solid #8C2A47'
+            color: '#33262C',
+            letterSpacing: '-0.02em',
+            fontFamily: 'var(--font-sans)'
           }}>
-            Danh mục sản phẩm
+            Danh Mục Sản Phẩm
           </h2>
         </div>
 
-        <div className="category-grid-8">
+        {totalCategoryTabs > 1 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            marginBottom: '20px'
+          }}>
+            <button
+              type="button"
+              className="carousel-nav-btn"
+              onClick={() => setCurrentCategoryTab(prev => (prev - 1 + totalCategoryTabs) % totalCategoryTabs)}
+              aria-label="Lô danh mục trước"
+              title="Lô trước"
+              style={{ width: '28px', height: '28px', borderRadius: '4px', fontSize: '15px' }}
+            >
+              ‹
+            </button>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {Array.from({ length: totalCategoryTabs }, (_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentCategoryTab(idx)}
+                  aria-label={`Lô danh mục ${idx + 1}`}
+                  title={`Lô ${idx + 1}`}
+                  style={{
+                    backgroundColor: currentCategoryTab === idx ? '#8C2A47' : '#E5E7EB',
+                    width: currentCategoryTab === idx ? '28px' : '12px',
+                    height: '5px',
+                    borderRadius: '3px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    padding: 0
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              className="carousel-nav-btn"
+              onClick={() => setCurrentCategoryTab(prev => (prev + 1) % totalCategoryTabs)}
+              aria-label="Lô danh mục tiếp theo"
+              title="Lô tiếp theo"
+              style={{ width: '28px', height: '28px', borderRadius: '4px', fontSize: '15px' }}
+            >
+              ›
+            </button>
+          </div>
+        )}
+
+        <div key={currentCategoryTab} className="category-grid-8 category-batch-animate">
           {loading ? (
-            Array.from({ length: sectionLimits.categories }, (_, n) => (
+            Array.from({ length: 8 }, (_, n) => (
               <div key={n} className="skeleton-shimmer home-category-skeleton" />
             ))
           ) : (
-            categories.slice(0, sectionLimits.categories).map((cat) => (
-              <div
-                key={cat.id}
-                className="category-tile-card"
-                onClick={() => onNavigate(`products?categoryId=${cat.id}&category=${cat.slug}&name=${encodeURIComponent(cat.name)}`)}
-              >
-                <div className="category-tile-avatar">
-                  <img
-                    src={getCategoryImage(cat)}
-                    alt={cat.name}
-                    loading="lazy"
-                  />
+            currentCategoryBatch.map((cat) => {
+              const count = categoryProductCounts[cat.id];
+              return (
+                <div
+                  key={cat.id}
+                  className="category-tile-card"
+                  onClick={() => onNavigate(`products?categoryId=${cat.id}&category=${cat.slug}&name=${encodeURIComponent(cat.name)}`)}
+                >
+                  <div className="category-tile-avatar">
+                    <img
+                      src={getCategoryImage(cat)}
+                      alt={cat.name}
+                      loading="lazy"
+                    />
+                  </div>
+                  <span className="category-tile-title">
+                    {cat.name}
+                  </span>
+                  <span className="category-tile-meta">
+                    {count ? `${count} sản phẩm` : 'Khám phá'}
+                  </span>
                 </div>
-                <span className="category-tile-title">
-                  {cat.name}
-                </span>
-                <span className="category-tile-hint">
-                  <span>Khám phá</span>
-                </span>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </section>
@@ -1284,7 +1393,7 @@ export const HomePage = ({ onNavigate }) => {
         <div className="customer-container">
           <div className="section-header-editorial">
             <h2 className="section-title-editorial">
-              Dịch vụ Spa & Clinic
+              Dịch vụ Spa Làm Đẹp
             </h2>
           </div>
 
@@ -1341,7 +1450,7 @@ export const HomePage = ({ onNavigate }) => {
                 <div className="home-spa-card-body">
                   <div>
                     <span style={{ fontSize: '11px', color: 'var(--c-gold-hover)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {spa.categoryName || 'Trị liệu Y Khoa'}
+                      {spa.categoryName || 'Chăm Sóc Chuyên Sâu'}
                     </span>
                     <h3>
                       {spa.name}

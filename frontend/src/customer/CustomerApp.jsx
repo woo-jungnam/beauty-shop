@@ -39,13 +39,13 @@ export const CustomerApp = () => {
     const updateTitle = (current) => {
       if (current.split('?')[0] === 'image-search') document.title = 'Tìm Sản Phẩm Bằng Ảnh — BeautyShop';
       else if (current.startsWith('product/')) document.title = 'Chi Tiết Sản Phẩm — BeautyShop';
-      else if (current.startsWith('products') || current === 'catalog') document.title = 'Danh Mục Dược Mỹ Phẩm — BeautyShop';
-      else if (current.startsWith('booking') || current === 'spa') document.title = 'Đặt Lịch Hẹn Spa & Trị Liệu — BeautyShop';
+      else if (current.startsWith('products') || current === 'catalog') document.title = 'Danh Mục Mỹ Phẩm — BeautyShop';
+      else if (current.startsWith('booking') || current === 'spa') document.title = 'Đặt Lịch Hẹn Spa & Chăm Sóc Da — BeautyShop';
       else if (current.startsWith('checkout')) document.title = 'Thanh Toán Đơn Hàng — BeautyShop';
       else if (current.startsWith('order-success')) document.title = 'Đặt Hàng Thành Công — BeautyShop';
       else if (current.startsWith('profile')) document.title = 'Hồ Sơ & Vé Spa Điện Tử — BeautyShop';
-      else if (current.startsWith('treatments')) document.title = 'Lộ Trình Điều Trị — BeautyShop';
-      else document.title = 'BeautyShop — Mỹ Phẩm Chính Hãng & Clinic Chuẩn Y Khoa';
+      else if (current.startsWith('treatments')) document.title = 'Lộ Trình Chăm Sóc Da — BeautyShop';
+      else document.title = 'BeautyShop — Mỹ Phẩm Chính Hãng & Spa Chăm Sóc Chuyên Sâu';
     };
 
     updateTitle(route);

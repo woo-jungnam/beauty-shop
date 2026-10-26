@@ -453,27 +453,25 @@
   will-change: transform;
 }
 
-/* Pause smoothly when user hovers any brand logo */
 .brands-marquee-wrapper:hover .brands-marquee-track,
 .brands-marquee-wrapper:active .brands-marquee-track {
   animation-play-state: paused !important;
 }
 
-/* Clean Minimal Brand Logo Tile */
 .customer-home-page .brand-logo-tile {
-  flex: 0 0 170px !important;
-  width: 170px !important;
-  min-width: 170px !important;
-  max-width: 170px !important;
-  height: 84px !important;
-  min-height: 84px !important;
+  flex: 0 0 255px !important;
+  width: 255px !important;
+  min-width: 255px !important;
+  max-width: 255px !important;
+  height: 126px !important;
+  min-height: 126px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   background: #FFFFFF !important;
   border: 1.5px solid #F0E6EB !important;
-  border-radius: 14px !important;
-  padding: 12px 20px !important;
+  border-radius: 18px !important;
+  padding: 16px 26px !important;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -489,8 +487,8 @@
 }
 
 .brand-logo-img {
-  max-width: 130px;
-  max-height: 52px;
+  max-width: 195px;
+  max-height: 78px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -504,7 +502,7 @@
 
 .brand-logo-text {
   font-family: var(--font-sans, sans-serif);
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 800;
   color: #374151;
   text-align: center;
@@ -522,21 +520,21 @@
 
 @media (max-width: 639px) {
   .customer-home-page .brand-logo-tile {
-    flex: 0 0 135px !important;
-    width: 135px !important;
-    min-width: 135px !important;
-    max-width: 135px !important;
-    height: 72px !important;
-    min-height: 72px !important;
-    padding: 8px 12px !important;
-    border-radius: 10px !important;
+    flex: 0 0 202px !important;
+    width: 202px !important;
+    min-width: 202px !important;
+    max-width: 202px !important;
+    height: 108px !important;
+    min-height: 108px !important;
+    padding: 12px 18px !important;
+    border-radius: 14px !important;
   }
   .brand-logo-img {
-    max-width: 105px;
-    max-height: 44px;
+    max-width: 158px;
+    max-height: 66px;
   }
   .brand-logo-text {
-    font-size: 13px;
+    font-size: 17px;
   }
 }
 .customer-app .hero-slider-container { position: relative; padding: 24px 0 0 !important; min-height: 0; background: transparent; }
@@ -545,14 +543,22 @@
 .customer-app .hero-carousel-arrow { top: auto !important; bottom: 14px; transform: none !important; width: 32px !important; height: 32px !important; }
 .customer-app .hero-carousel-prev { left: 24px !important; }
 .customer-app .hero-carousel-next { left: 64px !important; right: auto !important; }
-.customer-app .home-banner-main h1 { font-size: clamp(27px, 3vw, 39px) !important; line-height: 1.22; }
+.customer-app .home-banner-main h1 { font-size: clamp(30px, 3.8vw, 48px) !important; line-height: 1.22; }
 .customer-app .hero-eyebrow { align-self: flex-start; }
-.customer-app .home-banner-main p { max-width: 520px !important; font-size: 13px !important; margin-bottom: 22px !important; }
-.customer-app .hero-stats-grid { margin-top: 24px !important; padding-top: 20px !important; }
-.customer-app .hero-stats-grid > div > div:first-child { color: #ffd4e0 !important; font-size: 22px !important; }
-.customer-app .hero-stats-grid > div > div:last-child { color: #f4dce4 !important; }
-.customer-app .home-banner-small h3 { font-size: 17px !important; }
-.customer-app .home-banner-small p { font-size: 12px !important; }
+.customer-app .home-banner-main p { max-width: 560px !important; font-size: 15px !important; margin-bottom: 26px !important; }
+.customer-app .hero-trust-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #ffffff; border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: 16px 20px; margin-top: 16px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
+.customer-app .hero-trust-item { display: flex; align-items: center; gap: 12px; }
+.customer-app .hero-trust-icon { width: 38px; height: 38px; border-radius: 8px; background: var(--c-primary-light, #FFF0F3); color: var(--c-primary, #D45D79); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.customer-app .hero-trust-title { font-size: 13px; font-weight: 700; color: var(--c-text-main, #1F1614); line-height: 1.3; }
+.customer-app .hero-trust-desc { font-size: 11px; color: var(--c-text-muted, #786B72); margin-top: 2px; }
+@media (max-width: 991px) {
+  .customer-app .hero-trust-bar { grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 14px 16px; }
+}
+@media (max-width: 575px) {
+  .customer-app .hero-trust-bar { grid-template-columns: 1fr; gap: 12px; padding: 12px 14px; }
+}
+.customer-app .home-banner-small h3 { font-size: 20px !important; }
+.customer-app .home-banner-small p { font-size: 13.5px !important; }
 .customer-app .section-header-editorial { margin-bottom: 24px; }
 .customer-app .section-title-editorial { font-size: clamp(22px, 2.3vw, 30px); color: #33262c; }
 .customer-app .section-desc-editorial { max-width: 650px; margin-inline: auto; }
@@ -635,9 +641,12 @@
   .storefront-menu-toggle { display: inline-flex; }
   .storefront-nav { display: none; }
   .customer-app .hero-content-grid { grid-template-columns: minmax(0, 1fr); }
-  .customer-app .home-banner-main { min-height: 360px !important; }
+  .customer-app .home-banner-main { min-height: auto !important; grid-template-columns: minmax(0, 1fr) !important; padding: 36px !important; }
+  .customer-app .home-banner-main-content { padding: 0 !important; }
+  .customer-app .home-banner-main-visual { min-height: auto !important; height: auto !important; padding: 24px 0 0 0 !important; }
+  .customer-app .home-banner-main-visual > div { height: 330px !important; }
   .customer-app .home-banner-side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .customer-app .home-banner-small { min-height: 185px !important; }
+  .customer-app .home-banner-small { min-height: 275px !important; }
   .customer-app .customer-checkout-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .customer-app .customer-checkout-grid > div:last-child { position: static !important; }
 }
@@ -656,13 +665,13 @@
   .storefront-search input::placeholder { font-size: 12px; }
   .customer-app .hero-slider-container { padding-top: 16px !important; }
   .customer-app .hero-content-grid { gap: 12px !important; }
-  .customer-app .home-banner-main { padding: 28px 24px 42px !important; min-height: 390px !important; border-radius: 16px !important; }
-  .customer-app .home-banner-main h1 { font-size: clamp(26px, 7vw, 34px) !important; overflow-wrap: normal; }
-  .customer-app .home-banner-main .btn-luxury-gold, .customer-app .home-banner-main .btn-luxury-outline { padding: 11px 14px !important; font-size: 12px !important; }
+  .customer-app .home-banner-main { padding: 24px !important; min-height: auto !important; border-radius: 18px !important; }
+  .customer-app .home-banner-main-visual > div { height: 260px !important; }
+  .customer-app .home-banner-main h1 { font-size: clamp(24px, 6.5vw, 32px) !important; overflow-wrap: normal; }
   .customer-app .hero-stats-grid { gap: 8px !important; margin-top: 20px !important; }
   .customer-app .hero-stats-grid > div > div:first-child { font-size: 18px !important; }
   .customer-app .hero-stats-grid > div > div:last-child { font-size: 10px !important; }
-  .customer-app .home-banner-small { min-height: 170px !important; padding: 16px !important; border-radius: 12px !important; }
+  .customer-app .home-banner-small { min-height: 235px !important; padding: 20px !important; border-radius: 16px !important; }
   .customer-app .home-banner-small h3 { font-size: 14px !important; }
   .customer-app .home-banner-small p { display: none; }
   .customer-app .home-banner-small button { padding: 6px 10px !important; }
@@ -846,49 +855,158 @@
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.12) !important;
 }
 
-/* 2. Categories Section (#categories-section) — Deep Rose (#8C2A47) */
+@keyframes categoryBatchFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.category-batch-animate {
+  animation: categoryBatchFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.customer-app #categories-section .category-grid-8 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+@media (min-width: 1024px) {
+  .customer-app #categories-section .category-grid-8 {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+  }
+}
 #categories-section .category-tile-card {
-  border-radius: 2px !important;
-  border: 1px solid #E5D5DA !important;
-  background: #FAF5F7 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: 12px 6px 16px !important;
+  border-radius: 20px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
   box-shadow: none !important;
-  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
+  cursor: pointer !important;
+  min-height: auto !important;
+  transition: all 0.25s ease !important;
 }
 #categories-section .category-tile-card::before {
   display: none !important;
 }
 #categories-section .category-tile-card:hover {
-  border-color: #8C2A47 !important;
-  background: #FFFFFF !important;
-  transform: translateY(-3px) !important;
-  box-shadow: 0 4px 10px rgba(140, 42, 71, 0.10) !important;
+  background: transparent !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 #categories-section .category-tile-avatar {
-  width: 76px !important;
-  height: 76px !important;
-  border-radius: 2px !important;
-  border: 1px solid #E5D5DA !important;
-  background: #FFFFFF !important;
-  box-shadow: none !important;
+  width: 126px !important;
+  height: 126px !important;
+  border-radius: 36px !important;
+  border: 1px solid rgba(140, 42, 71, 0.12) !important;
+  background: #FDF6F8 !important;
+  box-shadow: 0 4px 12px rgba(140, 42, 71, 0.05) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 14px !important;
+  overflow: hidden !important;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+#categories-section .category-tile-avatar img {
+  width: 64% !important;
+  height: 64% !important;
+  object-fit: contain !important;
+  transition: transform 0.25s ease !important;
 }
 #categories-section .category-tile-card:hover .category-tile-avatar {
+  transform: translateY(-4px) !important;
   border-color: #8C2A47 !important;
-  box-shadow: none !important;
-  transform: none !important;
+  box-shadow: 0 10px 22px rgba(140, 42, 71, 0.16) !important;
 }
 #categories-section .category-tile-card:hover .category-tile-avatar img {
-  transform: scale(1.05) !important;
+  transform: scale(1.06) !important;
+}
+#categories-section .category-tile-title {
+  font-size: 15.5px !important;
+  font-weight: 600 !important;
+  color: #2E2125 !important;
+  line-height: 1.35 !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  transition: color 0.2s ease !important;
 }
 #categories-section .category-tile-card:hover .category-tile-title {
   color: #8C2A47 !important;
 }
-#categories-section .category-tile-hint {
-  color: #8C2A47 !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
+#categories-section .category-tile-meta {
+  font-size: 12.5px !important;
+  color: #8A7A80 !important;
+  font-weight: 500 !important;
+  margin-top: 4px !important;
+  line-height: 1.2 !important;
 }
 #categories-section .home-category-skeleton {
-  border-radius: 2px !important;
+  border-radius: 36px !important;
+  min-height: 190px !important;
+}
+@media (max-width: 767px) {
+  .customer-app #categories-section .category-grid-8 {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 16px !important;
+    padding-bottom: 14px !important;
+    padding-inline: 4px !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(140, 42, 71, 0.25) transparent;
+  }
+  .customer-app #categories-section .category-grid-8::-webkit-scrollbar {
+    height: 4px;
+  }
+  .customer-app #categories-section .category-grid-8::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 9999px;
+  }
+  .customer-app #categories-section .category-grid-8::-webkit-scrollbar-thumb {
+    background: rgba(140, 42, 71, 0.28);
+    border-radius: 9999px;
+  }
+  #categories-section .category-tile-card {
+    flex: 0 0 132px !important;
+    min-width: 132px !important;
+    scroll-snap-align: start !important;
+    padding: 6px 0 10px !important;
+  }
+  #categories-section .category-tile-avatar {
+    width: 108px !important;
+    height: 108px !important;
+    border-radius: 28px !important;
+    margin-bottom: 10px !important;
+  }
+  #categories-section .category-tile-title {
+    font-size: 14px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+  }
+  #categories-section .category-tile-meta {
+    font-size: 11.5px !important;
+  }
+  #categories-section .home-category-skeleton {
+    flex: 0 0 132px !important;
+    min-width: 132px !important;
+    min-height: 175px !important;
+    border-radius: 28px !important;
+  }
 }
 
 /* 3. Recommendations Section (#random-picks) — Slate Navy (#1E3A8A) */

@@ -538,7 +538,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           </p>
           <div className="booking-confirmation-ticket">
             <div className="booking-confirmation-top">
-              <span>BEAUTYSHOP CLINIC & SPA</span>
+              <span>BEAUTYSHOP BEAUTY & SPA</span>
               <span className="booking-status">
                 {bookingResult.status === "CONFIRMED"
                   ? "Đã xác nhận"
@@ -648,18 +648,18 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         <section className="booking-hero" aria-labelledby="spa-booking-title">
           <div className="booking-hero-copy">
             <h1 id="spa-booking-title">
-              Đặt lịch dịch vụ Spa & Trị liệu da
+              Đặt lịch dịch vụ Spa & Chăm sóc da
               <small className="booking-hero-sub">
                 Một chút thời gian cho làn da được phục hồi chuyên sâu.
               </small>
             </h1>
             <p>
               Chọn dịch vụ và khung giờ phù hợp. Chuyên viên sẽ chuẩn bị phòng và
-              phác đồ tiếp đón chu đáo nhất.
+              quy trình tiếp đón chu đáo nhất.
             </p>
             <div className="booking-hero-benefits">
               <span>
-                <ShieldCheck size={15} /> Chuẩn y khoa
+                <ShieldCheck size={15} /> Chuẩn an toàn
               </span>
               <span>
                 <CalendarDays size={15} /> Chủ động chọn lịch
@@ -677,14 +677,14 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 Gói dịch vụ tiết kiệm →
               </button>
               <a href="#/treatments" className="booking-link-chip">
-                Lộ trình điều trị y khoa →
+                Lộ trình chăm sóc da chuyên sâu →
               </a>
             </div>
           </div>
           <div className="booking-hero-photo">
             <img
               src="/images/spa/spa-ritual.jpg"
-              alt="Không gian thư giãn tại BeautyShop Clinic"
+              alt="Không gian thư giãn tại BeautyShop Spa"
               width="600"
               height="300"
               loading="lazy"
@@ -1224,7 +1224,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
 
               <div className="booking-skin-tags">
                 <strong>Tình trạng da cần lưu ý</strong>
-                <span>Chọn các mục phù hợp để chuyên viên chuẩn bị phác đồ an toàn</span>
+                <span>Chọn các mục phù hợp để chuyên viên chuẩn bị dịch vụ chu đáo</span>
                 <div role="group" aria-label="Thông tin cần lưu ý">
                   {SKIN_TAGS.map((tag) => (
                     <button
@@ -1246,7 +1246,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   id="spa-note"
                   name="notes"
                   rows={3}
-                  placeholder="Mong muốn điều trị, tiền sử phản ứng hoặc yêu cầu đặc biệt…"
+                  placeholder="Nhu cầu chăm sóc da hoặc yêu cầu đặc biệt…"
                   value={contact.note}
                   onChange={(event) =>
                     setContact({ ...contact, note: event.target.value })
@@ -1257,7 +1257,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               <div className="booking-contact-note">
                 <ShieldCheck size={15} />
                 <span>
-                  Thông tin cá nhân chỉ được sử dụng phục vụ cuộc hẹn và hồ sơ da liễu tại Spa.
+                  Thông tin cá nhân chỉ được sử dụng phục vụ cuộc hẹn tại Spa.
                 </span>
               </div>
             </section>
@@ -1436,7 +1436,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         <div className="booking-bottom-note">
           <Leaf size={16} />
           <p>
-            BeautyShop Clinic & Spa cam kết dịch vụ chuẩn y khoa, an toàn và bảo
+            BeautyShop Spa cam kết dịch vụ chăm sóc da chuyên sâu, an toàn và bảo
             mật thông tin khách hàng.
           </p>
         </div>

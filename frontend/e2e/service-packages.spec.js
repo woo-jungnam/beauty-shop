@@ -45,7 +45,7 @@ for (const type of ['SERVICE_PACKAGE', 'TREATMENT_COURSE']) {
       if (path === '/api/v1/orders/800') { await route.fulfill({ json: { data: { id:800, orderNumber:'ORD-PACKAGE-800', servicePackageId:71, spaBenefitType:type, paymentStatus:'PAID', paymentMethod:'BANK', status:'PROCESSING', totalAmount:900000, paidAmount:900000, items:[] } } }); return true; }
     });
     await page.goto('/#/order-success?id=800');
-    await page.getByRole('button', { name: type === 'TREATMENT_COURSE' ? 'Mở lộ trình điều trị của tôi' : 'Mở ví vé Spa của tôi' }).click();
+    await page.getByRole('button', { name: type === 'TREATMENT_COURSE' ? 'Mở lộ trình chăm sóc của tôi' : 'Mở ví vé Spa của tôi' }).click();
     await expect(page).toHaveURL(type === 'TREATMENT_COURSE' ? /treatments\?tab=courses/ : /profile\?tab=tickets/);
   });
 }

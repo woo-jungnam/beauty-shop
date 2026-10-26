@@ -30,7 +30,7 @@ async function mockStorefront(page, { unavailable = false, targetType = 'PRODUCT
     return route.fulfill({ json: success([]) });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Hỏi Bác Sĩ & AI Da Liễu' }).click();
+  await page.getByRole('button', { name: 'Tư Vấn Routine & AI Skincare' }).click();
 }
 
 async function sendQuestion(page) {

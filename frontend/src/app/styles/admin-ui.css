@@ -188,6 +188,13 @@
 .admin-shell .table-pagination { padding: 5px 2px; flex-wrap: wrap; }
 .admin-shell .table-pagination-summary { color: #7b6d88; }
 .admin-shell .table-pagination-divider { padding: 0 7px; }
+.admin-shell .table-pagination-pages { display: inline-flex; align-items: center; gap: 4px; }
+.admin-shell .table-pagination-page-btn { min-width: 34px; padding: 0 8px; justify-content: center; font-size: 11px; font-weight: 600; border-radius: 8px; }
+.admin-shell .table-pagination-page-btn.active { pointer-events: none; }
+.admin-shell .table-pagination-ellipsis { color: #8e7ea3; padding: 0 4px; font-size: 12px; user-select: none; }
+.admin-shell .table-pagination-jump { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #7b6d88; }
+.admin-shell .table-pagination-jump-input { border-radius: 8px; border: 1px solid #e8e3f0; color: #2d2042; font-weight: 600; transition: border-color .15s, box-shadow .15s; }
+.admin-shell .table-pagination-jump-input:focus { border-color: #7b5ce4; box-shadow: 0 0 0 3px rgba(123, 92, 228, .15); outline: none; }
 
 :where(.admin-shell, .admin-auth) .badge {
   gap: 5px;
@@ -344,8 +351,11 @@
   .admin-shell .tab-btn { padding: 10px 13px; font-size: 11px; }
   .admin-shell .table-pagination { justify-content: center !important; gap: 12px !important; }
   .admin-shell .table-pagination-summary { width: 100%; text-align: center; font-size: 11px; }
-  .admin-shell .table-pagination-controls { width: 100%; }
-  .admin-shell .table-pagination-controls .btn { flex: 1; }
+  .admin-shell .table-pagination-controls { width: 100%; justify-content: center; }
+  .admin-shell .table-pagination-controls > .table-pagination-prev,
+  .admin-shell .table-pagination-controls > .table-pagination-next { flex: 1; }
+  .admin-shell .table-pagination-page-btn { flex: 0 0 auto !important; }
+  .admin-shell .table-pagination-jump { width: 100%; justify-content: center; margin-top: 4px; }
   .admin-shell .card > form[style] { flex-wrap: wrap; }
   .admin-shell .card > form[style] > .form-group { flex-basis: calc(100% - 110px); }
   .admin-shell .drilldown-stat-grid { grid-template-columns: 1fr; gap: 10px; }

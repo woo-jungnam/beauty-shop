@@ -177,7 +177,7 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
     {
       id: 1,
       sender: 'bot',
-      text: 'Chào bạn! Tôi là Trợ Lý Da Liễu AI của BeautyShop. Tôi có thể giúp bạn phân tích thành phần INCI, tư vấn routine trị mụn hoặc chọn dịch vụ Spa phù hợp. Bạn đang quan tâm đến vấn đề gì?'
+      text: 'Chào bạn! Tôi là Trợ Lý Làm Đẹp AI của BeautyShop. Tôi có thể giúp bạn tra cứu thành phần, gợi ý routine chăm sóc da hoặc chọn dịch vụ Spa phù hợp. Bạn đang quan tâm đến sản phẩm nào?'
     }
   ]);
   const [input, setInput] = useState('');
@@ -306,7 +306,7 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
             }}
           >
             <Sparkles size={18} color="#FFCCD5" />
-            <span>Hỏi Bác Sĩ & AI Da Liễu</span>
+            <span>Tư Vấn Routine & AI Skincare</span>
           </button>
         )}
       </div>
@@ -557,7 +557,7 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
             {isTyping && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94A3B8' }}>
                 <Bot size={14} color="var(--c-gold)" />
-                <span>Bác sĩ AI đang phân tích dữ liệu thành phần...</span>
+                <span>Trợ lý AI đang phân tích dữ liệu thành phần...</span>
               </div>
             )}
             <div ref={messagesEndRef} />

@@ -55,7 +55,7 @@ function buildStaffAssignments(items, rawAssignments) {
 
 const mockItems = [
   { id: 101, serviceId: 1, serviceName: 'Aqua Peel' },
-  { id: 102, serviceId: 2, serviceName: 'Trị mụn y khoa' }
+  { id: 102, serviceId: 2, serviceName: 'Chăm sóc da mụn chuyên sâu' }
 ];
 const rawAssignments = { 101: '1', 102: '2' };
 const assignments = buildStaffAssignments(mockItems, rawAssignments);

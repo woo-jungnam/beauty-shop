@@ -232,7 +232,7 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
               letterSpacing: '0.04em',
               marginBottom: '4px'
             }}>
-              {product.brandName || product.brand?.name || 'Dược Mỹ Phẩm'}
+              {product.brandName || product.brand?.name || 'Mỹ Phẩm Chính Hãng'}
             </div>
 
             <h2 style={{

@@ -486,7 +486,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
           onClick={() => setActiveTab('resources')}
         >
           <Building2 size={16} />
-          <span>Sơ Đồ Phòng Khám & KTV ({displayFacilities.length})</span>
+          <span>Sơ Đồ Phòng Chăm Sóc & KTV ({displayFacilities.length})</span>
         </button>
         </>}
       </nav>
@@ -637,7 +637,7 @@ export const SpaStaffApp = ({ onSwitchToAdmin }) => {
                     <th>Khung giờ</th>
                     <th>Khách hàng</th>
                     <th>Liệu trình</th>
-                    <th>Chuyên viên / Bác sĩ</th>
+                    <th>Chuyên viên thực hiện</th>
                     <th>Chi phí / Vé</th>
                     <th>Trạng thái</th>
                     <th style={{ textAlign: 'right' }}>Thao tác tiếp đón</th>

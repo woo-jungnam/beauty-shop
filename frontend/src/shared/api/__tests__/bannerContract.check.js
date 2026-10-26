@@ -32,7 +32,7 @@ assert.equal(b1.sortOrder, 1);
 assert.equal(b1.isActive, true);
 
 const b2 = validateBannerPayload({
-  title: 'Spa & Clinic',
+  title: 'Spa & Làm Đẹp',
   imageUrl: 'https://images.unsplash.com/photo-1540555700',
   position: 'HERO_SIDE',
   targetUrl: 'booking'

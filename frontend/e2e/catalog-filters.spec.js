@@ -95,7 +95,7 @@ test('Legacy links, repeated query parameters, reload and browser history preser
 test('Multiple active ingredients use an independent parameter instead of overwriting search', async ({ page }) => {
   const api = await catalog(page);
   await page.goto('/#/products?search=Serum&brandIds=5&categoryIds=4');
-  const group = page.getByRole('group', { name: 'Hoạt chất đặc trị', exact: true });
+  const group = page.getByRole('group', { name: 'Hoạt chất chuyên sâu', exact: true });
   await group.getByRole('checkbox', { name: 'Niacinamide (Làm sáng/Kiềm dầu)' }).check();
   await group.getByRole('checkbox', { name: 'Ceramide (Hàng rào bảo vệ)' }).check();
   await expect.poll(() => ({ keyword: api.requests.at(-1)?.get('keyword'), actives: ids(api.requests.at(-1), 'activeIngredients'), brands: ids(api.requests.at(-1), 'brandIds'), categories: ids(api.requests.at(-1), 'categoryIds') })).toEqual({ keyword: 'Serum', actives: ['ceramide', 'niacinamide'], brands: ['5'], categories: ['4'] });

@@ -304,7 +304,7 @@ export const OrderSuccessPage = ({
                   Đã Nhận Thanh Toán Chuyển Khoản!
                 </h3>
                 <p style={{ fontSize: '13px', color: 'var(--c-text-main)', margin: 0 }}>
-                  {orderDetail?.servicePackageId ? (orderDetail.spaBenefitType === 'TREATMENT_COURSE' ? 'Hệ thống đã xác nhận thanh toán. Mở lộ trình điều trị để theo dõi tiếp nhận và đặt từng buổi.' : 'Hệ thống đã xác nhận thanh toán. Mở ví vé Spa để xem quyền lợi từng dịch vụ và đặt lịch bằng vé.') : 'Hệ thống đã xác nhận thanh toán cho đơn hàng. Mở chi tiết đơn để theo dõi tiến độ xử lý và giao hàng.'}
+                  {orderDetail?.servicePackageId ? (orderDetail.spaBenefitType === 'TREATMENT_COURSE' ? 'Hệ thống đã xác nhận thanh toán. Mở lộ trình chăm sóc để theo dõi tiếp nhận và đặt từng buổi.' : 'Hệ thống đã xác nhận thanh toán. Mở ví vé Spa để xem quyền lợi từng dịch vụ và đặt lịch bằng vé.') : 'Hệ thống đã xác nhận thanh toán cho đơn hàng. Mở chi tiết đơn để theo dõi tiến độ xử lý và giao hàng.'}
                 </p>
               </div>
             ) : (
@@ -522,7 +522,7 @@ export const OrderSuccessPage = ({
           <button onClick={() => onNavigate('products')} className="btn-luxury-outline">
             Tiếp Tục Mua Sắm
           </button>
-          {hasVerifiedOrder && orderDetail?.servicePackageId && <button onClick={() => onNavigate(orderBenefitDestination(orderDetail))} className="btn-luxury-primary">{orderDetail.spaBenefitType === 'TREATMENT_COURSE' ? 'Mở lộ trình điều trị của tôi' : 'Mở ví vé Spa của tôi'} <ArrowRight size={16} /></button>}
+          {hasVerifiedOrder && orderDetail?.servicePackageId && <button onClick={() => onNavigate(orderBenefitDestination(orderDetail))} className="btn-luxury-primary">{orderDetail.spaBenefitType === 'TREATMENT_COURSE' ? 'Mở lộ trình chăm sóc của tôi' : 'Mở ví vé Spa của tôi'} <ArrowRight size={16} /></button>}
           <button onClick={() => onNavigate(targetOrderId ? `order-lookup?id=${targetOrderId}` : 'order-lookup')} className="btn-luxury-primary">
             <span>Theo Dõi Đơn Hàng Của Tôi</span>
             <ArrowRight size={15} />

@@ -16,9 +16,9 @@ export const TicketDetails = ({ ticket, onNavigate }) => {
   const usable = ticket.status === 'ACTIVE' && ticket.remainingSessions > 0 && (!ticket.expiryDate || Date.parse(ticket.expiryDate) > now);
   return <div className="spa-ticket-detail">
     {!ticket.nameSnapshot && <small>Tên hiện tại; vé cũ chưa lưu tên lúc mua.</small>}
-    <p>{ticket.benefitType === 'TREATMENT_COURSE' ? 'Quyền theo lộ trình điều trị' : 'Gói nhiều lượt thông thường'} · Đang giữ: {ticket.reservedSessions ?? 'Chưa xác định'} lượt</p>
+    <p>{ticket.benefitType === 'TREATMENT_COURSE' ? 'Quyền theo lộ trình chăm sóc' : 'Gói nhiều lượt thông thường'} · Đang giữ: {ticket.reservedSessions ?? 'Chưa xác định'} lượt</p>
     <ul>{(ticket.services || []).map(s => <li key={s.serviceId}><strong>{s.serviceName}</strong>: {s.available} {usable ? 'khả dụng' : 'chưa dùng (vé không khả dụng)'} / {s.total} tổng · {s.used} đã dùng hoặc mất lượt · {s.reserved} đang giữ</li>)}</ul>
-    <div className="spa-benefit-actions">{onNavigate && <button type="button" className="btn-luxury-outline" disabled={ticket.benefitType !== 'TREATMENT_COURSE' && !usable} onClick={() => onNavigate(ticketDestination(ticket))}>Mở {ticket.benefitType === 'TREATMENT_COURSE' ? 'lộ trình điều trị' : 'đặt lịch sử dụng vé'}</button>}<button type="button" className="btn-luxury-outline" onClick={() => { setError(''); setOpen(v => !v); }}>{open ? 'Ẩn' : 'Xem'} lịch sử vé</button></div>
+    <div className="spa-benefit-actions">{onNavigate && <button type="button" className="btn-luxury-outline" disabled={ticket.benefitType !== 'TREATMENT_COURSE' && !usable} onClick={() => onNavigate(ticketDestination(ticket))}>Mở {ticket.benefitType === 'TREATMENT_COURSE' ? 'lộ trình chăm sóc' : 'đặt lịch sử dụng vé'}</button>}<button type="button" className="btn-luxury-outline" onClick={() => { setError(''); setOpen(v => !v); }}>{open ? 'Ẩn' : 'Xem'} lịch sử vé</button></div>
     {open && <div aria-live="polite">{error && <p role="alert">{error}<button onClick={() => { setOpen(false); }}>Đóng để thử lại</button></p>}
       {history.map(m => <p key={m.id}>{new Date(m.createdAt).toLocaleString('vi-VN')} · {movementLabel(m.operation)}{m.serviceId ? ` · Dịch vụ #${m.serviceId}` : ''}<br /><small>{m.reason}</small></p>)}
       {!error && !history.length && <p>Chưa có biến động được ghi nhận.</p>}
