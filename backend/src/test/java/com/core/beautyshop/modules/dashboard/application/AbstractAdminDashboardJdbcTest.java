@@ -23,7 +23,7 @@ abstract class AbstractAdminDashboardJdbcTest {
     @BeforeEach
     void schema() {
         jdbc = connect();
-        for (String table : List.of("payment_resolutions", "orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
+        for (String table : List.of("payment_resolutions", "spa_financial_entries", "orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
         jdbc.execute("CREATE TABLE orders (id BIGINT PRIMARY KEY, created_at TIMESTAMP, paid_at TIMESTAMP, total_amount DECIMAL(14,2), paid_amount DECIMAL(14,2), status VARCHAR(30), payment_status VARCHAR(30), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE payment_transactions (id BIGINT PRIMARY KEY, created_at TIMESTAMP, amount DECIMAL(14,2), gateway VARCHAR(30), transfer_type VARCHAR(20), status VARCHAR(40))");
         jdbc.execute("CREATE TABLE refund_confirmations (id BIGINT PRIMARY KEY, confirmed_at TIMESTAMP, amount DECIMAL(14,2))");
@@ -35,6 +35,7 @@ abstract class AbstractAdminDashboardJdbcTest {
         jdbc.execute("CREATE TABLE appointments (id BIGINT PRIMARY KEY, appointment_date DATE, status VARCHAR(30), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE appointment_items (id BIGINT PRIMARY KEY, appointment_id BIGINT, staff_id BIGINT, start_time TIME, end_time TIME, is_deleted BOOLEAN, execution_status VARCHAR(30) DEFAULT 'PLANNED', actual_started_at TIMESTAMP NULL, actual_completed_at TIMESTAMP NULL)");
         jdbc.execute("CREATE TABLE payment_resolutions (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
+        jdbc.execute("CREATE TABLE spa_financial_entries (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
         service = new AdminDashboardService(jdbc);
     }
 
