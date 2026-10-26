@@ -1556,14 +1556,14 @@ export const ProductsPage = () => {
           onClick={() => setActiveTab('attributes')}
         >
           <Sliders size={15} />
-          Thuộc tính mở rộng ({attributes.length})
+          Đặc tính sản phẩm ({attributes.length})
         </button>
         <button
           className={`tab-btn ${activeTab === 'tags' ? 'active' : ''}`}
           onClick={() => setActiveTab('tags')}
         >
           <TagIcon size={15} />
-          Thẻ nhãn sản phẩm ({tags.length})
+          Nhãn gắn (Tags) ({tags.length})
         </button>
         <button
           className={`tab-btn ${activeTab === 'banners' ? 'active' : ''}`}

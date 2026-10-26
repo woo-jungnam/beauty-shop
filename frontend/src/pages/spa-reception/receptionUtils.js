@@ -9,9 +9,9 @@ export const SPA_STATUS = {
   NO_SHOW: { label: 'Khách vắng mặt', tone: 'neutral' },
 };
 export const KANBAN_COLUMNS = [
-  { id: 'PENDING', title: 'Chờ tiếp đón', caption: 'Xác nhận khách và phân ca', tone: 'waiting' },
+  { id: 'PENDING', title: 'Chờ tiếp đón', caption: 'Xác nhận khách và chỉ định KTV', tone: 'waiting' },
   { id: 'CONFIRMED', title: 'Đã check-in', caption: 'Khách tại sảnh / đã xác nhận', tone: 'confirmed' },
-  { id: 'IN_PROGRESS', title: 'Đang làm dịch vụ', caption: 'Theo dõi ca và kỹ thuật viên', tone: 'progress' },
+  { id: 'IN_PROGRESS', title: 'Đang làm dịch vụ', caption: 'Theo dõi dịch vụ và kỹ thuật viên', tone: 'progress' },
   { id: 'COMPLETED', title: 'Hoàn tất / Thu ngân', caption: 'Đối soát vé và khoản cần thu', tone: 'complete' },
 ];
 export const unwrap = response => response?.data ?? response;
@@ -69,5 +69,5 @@ export const facilityState = (facility, appointments, blocks, now, known = true)
     const minutes = Number.isFinite(end) ? Math.ceil((end - now.getTime()) / 60000) : null;
     return { state: 'busy', label: active ? 'Đang phục vụ' : 'Đã giữ chỗ', detail: minutes === null ? 'Chờ xác nhận thời gian' : minutes > 0 ? `Còn khoảng ${minutes} phút` : `Quá dự kiến ${Math.abs(minutes)} phút`, available: Math.max(0, capacity - used), capacity, customer: active?.appointment.customerName };
   }
-  return { state: 'free', label: 'Sẵn sàng nhận khách', detail: `${capacity} ${facility.type === 'ROOM' ? 'chỗ' : 'đơn vị'} đang trống`, available: capacity, capacity };
+  return { state: 'free', label: 'Sẵn sàng nhận khách', detail: `${capacity} ${facility.type === 'ROOM' ? 'giường' : 'chỗ'} đang trống`, available: capacity, capacity };
 };

@@ -109,7 +109,7 @@ const AdminShell = ({ tabName, navigationItems }) => {
       mainRef.current?.focus({ preventScroll: true });
       previousTab.current = tabName;
     }
-    document.title = `${currentTitle} · BeautyShop Atelier`;
+    document.title = `${currentTitle} · BeautyShop Quản trị`;
     return () => {
       document.title = "BeautyShop";
     };

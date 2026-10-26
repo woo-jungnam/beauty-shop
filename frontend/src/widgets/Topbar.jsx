@@ -241,7 +241,7 @@ export const Topbar = ({
         <span className="topbar-location-mark">
           <Gem size={17} strokeWidth={1.7} />
         </span>
-        <span className="topbar-breadcrumb-root">Không gian làm việc</span>
+        <span className="topbar-breadcrumb-root">Quản trị</span>
         <ChevronRight size={13} className="topbar-breadcrumb-divider" />
         <span className="topbar-current">{currentTitle}</span>
       </div>
@@ -255,7 +255,7 @@ export const Topbar = ({
         aria-label="Tìm nhanh phân hệ quản trị"
       >
         <Search size={17} />
-        <span>Tìm nhanh trong quản trị...</span>
+        <span>Tìm chức năng (Ctrl+K)...</span>
         <kbd>{isMac ? <Command size={11} /> : "Ctrl"} K</kbd>
       </button>
       <div className="topbar-actions">

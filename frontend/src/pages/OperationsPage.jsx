@@ -199,7 +199,7 @@ export const OperationsPage = () => {
 
   return <div className="content-container">
     <div className="page-header">
-      <div><h1 className="page-title">Tài chính, Kiểm toán & Cấu hình</h1><p className="page-subtitle">Đối soát giao dịch, truy vết thao tác và quản lý chỉ tiêu vận hành</p></div>
+      <div><h1 className="page-title">Tài chính, Lịch sử thao tác & Cấu hình</h1><p className="page-subtitle">Đối soát giao dịch, truy vết thao tác và quản lý chỉ tiêu vận hành</p></div>
       <div style={{ display: 'flex', gap: 8 }}>
         {tab === 'config' && <Button icon={Plus} onClick={() => setConfigModalOpen(true)}>Thêm cấu hình</Button>}
         {tab !== 'recommendations' && <><Button variant="outline" icon={Download} onClick={() => exportCsv(tab, tab === 'config' ? configs : rows)}>Xuất CSV</Button>
@@ -208,11 +208,11 @@ export const OperationsPage = () => {
     </div>
     <div className="tabs-header">
       {[
-        ['payments', 'Thanh toán'],
-        ['audit', 'Nhật ký kiểm toán'],
-        ['config', 'Cấu hình KPI'],
-        ['chatbot', 'Trợ lý AI & RAG'],
-        ['recommendations', 'Gợi ý Content-Based'],
+        ['payments', 'Thanh toán & Đối soát'],
+        ['audit', 'Nhật ký thao tác'],
+        ['config', 'Chỉ tiêu & Cấu hình'],
+        ['chatbot', 'Trợ lý tư vấn AI'],
+        ['recommendations', 'Gợi ý sản phẩm tương tự'],
       ].map(([id, label]) => (
         <button
           key={id}
@@ -232,10 +232,10 @@ export const OperationsPage = () => {
             <div>
               <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Activity size={18} color="var(--color-primary-600)" />
-                Trạng thái Dịch vụ Chatbot AI Microservice (Port 8000)
+                Trạng thái Trợ lý AI (Microservice)
               </h3>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-                Dịch vụ Python FastAPI cung cấp khả năng hiểu truy vấn NLU, Hybrid Search (BM25 + Dense Qdrant Vector) và tư vấn da liễu.
+                Hệ thống hỗ trợ tư vấn chăm sóc da, giải đáp thành phần mỹ phẩm và gợi ý dịch vụ Spa qua AI.
               </p>
             </div>
             <Button variant="outline" size="sm" icon={RefreshCw} loading={checkingChatbot} onClick={checkChatbotHealth}>
@@ -267,7 +267,7 @@ export const OperationsPage = () => {
                       : 'Chưa kiểm tra trạng thái'}
                 </strong>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  Endpoint kiểm tra: <code style={{ fontSize: 11 }}>GET /api/v1/chatbot/health</code> → <code style={{ fontSize: 11 }}>http://localhost:8000/health</code>
+                  Dịch vụ tư vấn AI tự động trên nền tảng Gemini & Vector Search.
                 </div>
               </div>
             </div>
@@ -282,10 +282,10 @@ export const OperationsPage = () => {
             <div>
               <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Database size={18} color="var(--color-primary-600)" />
-                Đồng bộ Dữ liệu từ MySQL sang Kho Vector RAG (Qdrant & Ingestion)
+                Đồng bộ kiến thức sản phẩm & Spa cho Trợ lý AI
               </h3>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-                Trích xuất danh mục sản phẩm, biến thể, công dụng, thành phần hoạt chất và dịch vụ spa từ MySQL chính để nhúng vector vào Qdrant.
+                Cập nhật danh mục sản phẩm, hoạt chất và dịch vụ spa mới nhất để Trợ lý AI tư vấn chính xác cho khách hàng.
               </p>
             </div>
           </div>
@@ -306,7 +306,7 @@ export const OperationsPage = () => {
               loading={syncingDatabase}
               onClick={handleSyncDatabase}
             >
-              Kích hoạt Đồng bộ MySQL → RAG
+              Kích hoạt đồng bộ kiến thức AI
             </Button>
           </div>
 

@@ -87,7 +87,7 @@ export const Sidebar = ({
             <strong>
               beautyshop<span>.</span>
             </strong>
-            <small>THE ADMIN ATELIER</small>
+            <small>HỆ THỐNG QUẢN TRỊ</small>
           </span>
         </a>
         <button
@@ -112,8 +112,8 @@ export const Sidebar = ({
             <span>B</span>
           </span>
           <div>
-            <strong>BeautyShop Studio</strong>
-            <span>Không gian quản trị</span>
+            <strong>BeautyShop</strong>
+            <span>Quản trị & Vận hành</span>
           </div>
           <ShieldCheck size={15} className="workspace-shield" />
         </div>

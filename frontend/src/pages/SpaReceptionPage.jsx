@@ -48,13 +48,13 @@ const AssignDialog = ({ appointment, checkIn, onClose, onAssign }) => {
       await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'CONFIRMED', staffAssignments: Object.fromEntries(Object.entries(assignments).map(([key, value]) => [key, Number(value)])) });
       if (checkIn) {
         try { await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointment.id)); }
-        catch (err) { onAssign('Đã phân ca và xác nhận lịch. ' + spaErrorMessage(err, 'Chưa check-in được khách. Vui lòng kiểm tra lịch và thử lại.'), 'warning'); onClose(); return; }
+        catch (err) { onAssign('Đã chỉ định KTV và xác nhận lịch. ' + spaErrorMessage(err, 'Chưa check-in được khách. Vui lòng kiểm tra lịch và thử lại.'), 'warning'); onClose(); return; }
       }
-      onAssign(checkIn ? 'Đã phân ca và check-in khách.' : (appointment.status === 'CONFIRMED' ? 'Đã cập nhật chuyên viên KTV.' : 'Đã phân ca KTV và xác nhận lịch.')); onClose();
-    } catch (err) { setError(spaErrorMessage(err, 'Chưa phân ca được. Vui lòng kiểm tra lịch làm việc của KTV.')); }
+      onAssign(checkIn ? 'Đã chỉ định KTV và check-in khách.' : (appointment.status === 'CONFIRMED' ? 'Đã cập nhật kỹ thuật viên.' : 'Đã chỉ định KTV và xác nhận lịch.')); onClose();
+    } catch (err) { setError(spaErrorMessage(err, 'Chưa chỉ định KTV được. Vui lòng kiểm tra lịch làm việc của KTV.')); }
     finally { submitting.current = false; setBusy(false); }
   };
-  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Phân ca & check-in' : (appointment.status === 'CONFIRMED' ? 'Đổi chuyên viên' : 'Phân ca KTV nhanh')} className="reception-dialog">
+  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Chỉ định KTV & check-in' : (appointment.status === 'CONFIRMED' ? 'Đổi chuyên viên' : 'Chỉ định KTV nhanh')} className="reception-dialog">
     <form className="reception-form" onSubmit={submit}>
       <p><strong>{appointment.customerName}</strong> · {appointmentCode(appointment)}<br /><small className="reception-muted">{formatDate(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</small></p>
       {error && <div role="alert" className="reception-notice error">{error}</div>}
@@ -62,8 +62,8 @@ const AssignDialog = ({ appointment, checkIn, onClose, onAssign }) => {
         onChange={event => setAssignments(previous => ({ ...previous, [item.id]: event.target.value }))} options={[
           { value: '', label: choices[item.id] ? 'Chọn KTV đủ chuyên môn' : 'Đang tải KTV…' }, ...(choices[item.id] || []).map(staff => ({ value: String(staff.id), label: `${staff.fullName}${staff.specialty ? ' · ' + staff.specialty : ''}` })),
         ]} />)}
-      <p className="reception-muted">Hệ thống kiểm tra ca làm việc và lịch trùng khi xác nhận phân ca.</p>
-      <Button type="submit" loading={busy} disabled={(appointment.items || []).some(item => !choices[item.id] || !assignments[item.id])}>{checkIn ? 'Xác nhận & check-in' : (appointment.status === 'CONFIRMED' ? 'Lưu thay đổi chuyên viên' : 'Xác nhận phân ca')}</Button>
+      <p className="reception-muted">Hệ thống kiểm tra ca làm việc và lịch trùng khi xác nhận chỉ định KTV.</p>
+      <Button type="submit" loading={busy} disabled={(appointment.items || []).some(item => !choices[item.id] || !assignments[item.id])}>{checkIn ? 'Xác nhận & check-in' : (appointment.status === 'CONFIRMED' ? 'Lưu thay đổi kỹ thuật viên' : 'Xác nhận chỉ định KTV')}</Button>
     </form>
   </Modal>;
 };
@@ -137,8 +137,8 @@ export const SpaReceptionPage = () => {
     }, 'Đã check-in khách tại quầy.');
   };
   const complete = appointment => run(`finish-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), {
-    status: 'COMPLETED', notes: 'Lễ tân xác nhận khách đã hoàn tất ca chăm sóc.',
-  }), 'Đã hoàn tất ca. Có thể đối soát và thu ngân.', response => { setCheckout(unwrap(response) || { ...appointment, status: 'COMPLETED' }); });
+    status: 'COMPLETED', notes: 'Lễ tân xác nhận khách đã hoàn tất dịch vụ.',
+  }), 'Đã hoàn tất dịch vụ. Có thể đối soát và thu ngân.', response => { setCheckout(unwrap(response) || { ...appointment, status: 'COMPLETED' }); });
   const rescheduleDuration = useMemo(() => {
     if (!edit?.appointment?.startTime || !edit?.appointment?.endTime) return 60;
     const [sh, sm] = edit.appointment.startTime.slice(0, 5).split(':').map(Number);
@@ -192,10 +192,10 @@ export const SpaReceptionPage = () => {
   };
   const actions = appointment => <div className="reception-card-actions">
     {['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now)} loading={busy === `check-${appointment.id}`} onClick={() => checkIn(appointment)}><Check size={15} /> Check-in ngay</Button>}
-    {appointment.status === 'PENDING' && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Phân ca KTV</Button>}
+    {appointment.status === 'PENDING' && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Chỉ định KTV</Button>}
     {appointment.status === 'CONFIRMED' && appointment.checkedInAt && <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now) || localInstant(appointment.appointmentDate, appointment.startTime) - 3600000 > now.getTime()} loading={busy === `start-${appointment.id}`}
-      onClick={() => run(`start-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'IN_PROGRESS', notes: 'Lễ tân bắt đầu ca chăm sóc.' }), 'Đã bắt đầu ca chăm sóc.')}><ArrowRight size={15} /> Bắt đầu ca</Button>}
-    {appointment.status === 'IN_PROGRESS' && <Button size="sm" disabled={Boolean(busy)} loading={busy === `finish-${appointment.id}`} onClick={() => canFinish(appointment) ? complete(appointment) : setWorkspaceId(appointment.id)}>Hoàn tất & thu ngân</Button>}
+      onClick={() => run(`start-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'IN_PROGRESS', notes: 'Lễ tân bắt đầu dịch vụ.' }), 'Đã bắt đầu dịch vụ.')} aria-label="Bắt đầu ca"><ArrowRight size={15} /> Bắt đầu dịch vụ</Button>}
+    {appointment.status === 'IN_PROGRESS' && <Button size="sm" disabled={Boolean(busy)} loading={busy === `finish-${appointment.id}`} onClick={() => canFinish(appointment) ? complete(appointment) : setWorkspaceId(appointment.id)} aria-label="Hoàn tất & thu ngân">Xong dịch vụ & Thu ngân</Button>}
     {appointment.status === 'COMPLETED' && <Button size="sm" onClick={() => setCheckout(appointment)}>Mở thu ngân <ArrowRight size={15} /></Button>}
     <details className="reception-more"><summary aria-label={`Thao tác khác cho ${appointmentCode(appointment)}`}><MoreHorizontal size={18} /></summary><div>
       <button type="button" onClick={() => setWorkspaceId(appointment.id)}>Chuẩn bị / thực hiện ca</button>
@@ -207,7 +207,7 @@ export const SpaReceptionPage = () => {
   const columns = [
     { key: 'customer', header: 'Khách hàng', render: appointment => <div className="reception-table-customer"><strong>{appointment.customerName || 'Khách hàng'}</strong><small>{appointment.customerPhone || 'Chưa có SĐT'} · {appointmentCode(appointment)}</small></div> },
     { key: 'time', header: 'Lịch hẹn', render: appointment => <><strong>{appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</strong><small className="reception-block reception-muted">{formatDate(appointment.appointmentDate)}</small></> },
-    { key: 'services', header: 'Dịch vụ / KTV', render: appointment => (appointment.items || []).map(item => <div key={item.id}>{item.serviceName}<small className="reception-block reception-muted">{item.staffName || 'Chờ phân ca'}{item.ticketId ? ' · Vé liệu trình' : ''}</small></div>) },
+    { key: 'services', header: 'Dịch vụ / KTV', render: appointment => (appointment.items || []).map(item => <div key={item.id}>{item.serviceName}<small className="reception-block reception-muted">{item.staffName || 'Chưa chỉ định KTV'}{item.ticketId ? ' · Vé liệu trình' : ''}</small></div>) },
     { key: 'status', header: 'Trạng thái', render: appointment => <Status appointment={appointment} /> },
     { key: 'actions', header: 'Thao tác', render: actions },
   ];
@@ -217,13 +217,13 @@ export const SpaReceptionPage = () => {
       <div className="reception-user"><span><strong>{user?.fullName || user?.username || 'Lễ tân'}</strong><small>{spaTime(now)} · {formatDate(today)}</small></span><a href="#/staff/treatments">Lộ trình điều trị</a><a href="#/staff">Ca KTV</a>{isAdmin && <a href="#/admin/spa">Quản trị Spa</a>}<Button variant="ghost" size="sm" onClick={logout} aria-label="Đăng xuất"><LogOut size={17} /></Button></div>
     </header>
     <main className="reception-main">
-      <div className="reception-title-row"><div><span className="reception-eyebrow">ĐIỀU PHỐI & TIẾP ĐÓN</span><h1>Quầy lễ tân Spa</h1><p>Mỗi lượt đón khách, một trải nghiệm chăm sóc trọn vẹn.</p></div><div className="reception-top-actions"><Button variant="outline" onClick={() => { setTicketOpen(true); setTicketError(''); setTicketResult(null); }}><Ticket size={17} /> Tra cứu vé</Button><Button onClick={() => setWalkIn({ facilityId: '' })} disabled={!data.services.length}><Plus size={18} /> Đón khách vãng lai</Button></div></div>
+      <div className="reception-title-row"><div><span className="reception-eyebrow">ĐIỀU PHỐI & TIẾP ĐÓN</span><h1>Quầy lễ tân Spa</h1><p>Mỗi lượt đón khách, một trải nghiệm chăm sóc trọn vẹn.</p></div><div className="reception-top-actions"><Button variant="outline" onClick={() => { setTicketOpen(true); setTicketError(''); setTicketResult(null); }}><Ticket size={17} /> Tra cứu vé</Button><Button onClick={() => setWalkIn({ facilityId: '' })} disabled={!data.services.length} aria-label="Đón khách vãng lai"><Plus size={18} /> Tạo lịch tại quầy</Button></div></div>
       {notice && <div className={`reception-notice ${notice.tone}`} role={notice.tone === 'error' || notice.tone === 'warning' ? 'alert' : 'status'}>{notice.message}<button type="button" onClick={() => setNotice(null)} aria-label="Đóng thông báo">×</button></div>}
       {data.error && <div className="reception-notice error" role="alert">{data.error}</div>}
       <section className="reception-facility-panel" aria-label="Trạng thái phòng và giường">
-        <div className="reception-section-heading"><div><h2><BedDouble size={19} /> Phòng & giường trực tiếp <span className={`live-dot ${data.updatedAt ? '' : 'offline'}`} /></h2><p>{data.updatedAt ? `Cập nhật lúc ${spaTime(new Date(data.updatedAt))} · Tự làm mới mỗi 30 giây` : 'Đang chờ dữ liệu phòng / giường'}</p></div><div className="facility-legend"><span className="free">Trống</span><span className="busy">Có khách / giữ chỗ</span><span className="paused">Tạm dừng</span><Button variant="ghost" size="sm" loading={data.refreshing} onClick={data.refresh} aria-label="Làm mới dữ liệu quầy"><RefreshCw size={16} /></Button></div></div>
+        <div className="reception-section-heading"><div><h2><BedDouble size={19} /> Phòng & giường trực tiếp <span className={`live-dot ${data.updatedAt ? '' : 'offline'}`} /></h2><p>{data.updatedAt ? `Cập nhật lúc ${spaTime(new Date(data.updatedAt))} · Tự làm mới mỗi 30 giây` : 'Đang chờ dữ liệu phòng / giường'}</p></div><div className="facility-legend"><span className="free">Trống</span><span className="busy">Đang có khách</span><span className="paused">Tạm dừng</span><Button variant="ghost" size="sm" loading={data.refreshing} onClick={data.refresh} aria-label="Làm mới dữ liệu quầy"><RefreshCw size={16} /></Button></div></div>
         <div className="facility-strip">{currentFacilities.map(facility => <button type="button" key={facility.id} className={`facility-tile ${facility.live.state}`} disabled={facility.live.available <= 0 || !data.services.length} onClick={() => setWalkIn({ facilityId: String(facility.id) })} aria-label={`${facility.name}: ${facility.live.label}. ${facility.live.detail}`}>
-          <div><span className="facility-icon"><BedDouble size={21} /></span><span className="facility-state-dot" /></div><strong>{facility.name}</strong><span className="facility-label">Tiếp nhận: {facility.live.available} / {facility.live.capacity} chỗ</span><small>{facility.live.state === 'paused' ? facility.live.label : facility.live.available > 0 ? `Còn trống ${facility.live.available} chỗ` : 'Hết chỗ trống'}</small>{facility.live.available > 0 && <span className="facility-cta">Đón khách tại đây <Plus size={13} /></span>}
+          <div><span className="facility-icon"><BedDouble size={21} /></span><span className="facility-state-dot" /></div><strong>{facility.name}</strong><span className="facility-label">Trống: {facility.live.available} / {facility.live.capacity} giường</span><small>{facility.live.state === 'paused' ? facility.live.label : facility.live.available > 0 ? `Còn trống ${facility.live.available} giường` : 'Hết giường trống'}</small>{facility.live.available > 0 && <span className="facility-cta">Nhận khách phòng này <Plus size={13} /></span>}
         </button>)}</div>
         {!currentFacilities.length && <p className="reception-muted">{data.refreshing ? 'Đang tải phòng / giường…' : 'Chưa có phòng / giường được cấu hình.'}</p>}
       </section>
@@ -234,7 +234,7 @@ export const SpaReceptionPage = () => {
         { label: 'Hoàn tất dịch vụ', value: todayAppointments.filter(appointment => appointment.status === 'COMPLETED').length, icon: CheckCircle2, tone: 'green' },
       ].map(stat => <div key={stat.label} className={`reception-stat ${stat.tone}`}><span><stat.icon size={20} /></span><div><small>{stat.label}</small><strong>{stat.value}</strong></div></div>)}</section>
       <section className="reception-queue" aria-label="Danh sách tiếp đón">
-        <div className="reception-section-heading"><div><h2>Luồng tiếp đón <span className="reception-count">{filtered.length}</span></h2><p>{date ? formatDate(date) : 'Tất cả ngày hẹn'} · Theo dõi từ tiếp đón đến thu ngân</p></div><div className="reception-view-switch" role="group" aria-label="Chế độ hiển thị"><button type="button" aria-pressed={view === 'kanban'} onClick={() => changeView('kanban')}><LayoutGrid size={16} /> Kanban</button><button type="button" aria-pressed={view === 'list'} onClick={() => changeView('list')}><List size={16} /> Danh sách</button></div></div>
+        <div className="reception-section-heading"><div><h2>Luồng tiếp đón <span className="reception-count">{filtered.length}</span></h2><p>{date ? formatDate(date) : 'Tất cả ngày hẹn'} · Theo dõi từ tiếp đón đến thu ngân</p></div><div className="reception-view-switch" role="group" aria-label="Chế độ hiển thị"><button type="button" aria-pressed={view === 'kanban'} onClick={() => changeView('kanban')}><LayoutGrid size={16} /> Bảng tiến độ</button><button type="button" aria-pressed={view === 'list'} onClick={() => changeView('list')}><List size={16} /> Danh sách</button></div></div>
         <div className="reception-filter-bar"><div className="reception-search"><Search size={17} /><Input aria-label="Tìm tên, SĐT hoặc mã lịch hẹn" placeholder="Tìm tên, SĐT, mã lịch…" value={search} onChange={event => setSearch(event.target.value)} /></div><Input aria-label="Lọc ngày hẹn" type="date" value={date} onChange={event => setDate(event.target.value)} /><div className="reception-date-shortcuts"><button type="button" aria-pressed={date === today} onClick={() => setDate(today)}>Hôm nay</button><button type="button" aria-pressed={!date} onClick={() => setDate('')}>Tất cả ngày</button></div><Select aria-label="Lọc trạng thái" value={status} onChange={event => setStatus(event.target.value)} options={[{ value: 'ALL', label: 'Tất cả trạng thái' }, ...Object.entries(SPA_STATUS).map(([value, state]) => ({ value, label: state.label }))]} /></div>
         {data.refreshing && !data.updatedAt && <p className="reception-muted" role="status">Đang tải lịch hẹn…</p>}
         {view === 'kanban' ? <>
@@ -244,7 +244,7 @@ export const SpaReceptionPage = () => {
             return <section className={`kanban-column ${column.tone}`} key={column.id} aria-label={column.title}><header><div><h3>{column.title} <span>{appointments.length}</span></h3><p>{column.caption}</p></div></header><div className="kanban-cards">{appointments.map(appointment => <article key={appointment.id} className="reception-appointment-card" data-appointment-id={appointment.id}>
               <div className="reception-card-top"><span>{appointmentCode(appointment)}</span><Status appointment={appointment} /></div><h4>{appointment.customerName || 'Khách hàng'}</h4><p className="reception-card-phone"><Phone size={13} /> {appointment.customerPhone || 'Chưa có SĐT'}</p>
               <div className="reception-card-time"><Clock3 size={15} /><strong>{appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</strong><span>{formatDate(appointment.appointmentDate)}</span></div>
-              <div className="reception-card-services">{(appointment.items || []).map(item => <div key={item.id}><strong>{item.serviceName}</strong><small>{item.staffName || 'Chờ phân ca'}{item.ticketId ? ' · Vé liệu trình' : ''}</small>{(item.resources || []).length > 0 && <small>{item.resources.map(resource => resource.name).join(' · ')}</small>}</div>)}</div>
+              <div className="reception-card-services">{(appointment.items || []).map(item => <div key={item.id}><strong>{item.serviceName}</strong><small>{item.staffName || 'Chưa chỉ định KTV'}{item.ticketId ? ' · Vé liệu trình' : ''}</small>{(item.resources || []).length > 0 && <small>{item.resources.map(resource => resource.name).join(' · ')}</small>}</div>)}</div>
               {appointment.status === 'COMPLETED' && <div className="reception-card-billing">{appointment.orderId ? 'Đã lập hóa đơn · Mở để đối soát' : 'Chưa lập hóa đơn tại quầy'}<strong>{formatCurrency((appointment.items || []).filter(item => !item.ticketId && item.executionStatus !== 'SKIPPED').reduce((total, item) => total + Number(item.price || 0), 0))}</strong></div>}
               {appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <small className="reception-card-hint">Đã xác nhận lịch · Chờ khách tới quầy</small>}
               {appointment.status === 'IN_PROGRESS' && !canFinish(appointment) && <small className="reception-card-hint">Cần kiểm tra dịch vụ đã thực hiện trước khi hoàn tất</small>}
