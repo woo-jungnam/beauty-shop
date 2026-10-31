@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Building, Clock, Plus, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
-import { apiClient } from '../../shared/api/client';
+import { Building, Clock, Plus, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react';
+import { apiClient, uploadFile } from '../../shared/api/client';
 import { ENDPOINTS } from '../../shared/api/endpoints';
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
@@ -44,7 +44,41 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
   const tabId = useId();
   const request = useRef(null);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
   const update = (key, value) => setForm(previous => ({ ...previous, [key]: value }));
+
+  const handleImageFileChange = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WEBP, GIF, AVIF, BMP).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Kích thước ảnh tối đa 10 MiB.');
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+    try {
+      const res = await uploadFile(ENDPOINTS.ADMIN.MEDIA_UPLOAD, file);
+      const uploadedUrl = res?.url || res?.publicUrl || (typeof res === 'string' ? res : '');
+      if (uploadedUrl) {
+        update('thumbnailUrl', uploadedUrl);
+        setPreviewFailed(false);
+      } else {
+        throw new Error('Máy chủ không phản hồi đường dẫn ảnh hợp lệ.');
+      }
+    } catch (err) {
+      setError('Lỗi tải ảnh lên: ' + (err.message || 'Không thể tải ảnh.'));
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
   const loadResources = async () => {
     request.current?.abort();
     const controller = new AbortController(); request.current = controller;
@@ -145,8 +179,67 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
             <label className="spa-catalog-checkbox"><input type="checkbox" checked={form.requiresCertification} onChange={event => update('requiresCertification', event.target.checked)} />Chỉ giao cho nhân viên có chứng nhận còn hiệu lực</label>
             <label className="spa-catalog-checkbox"><input type="checkbox" checked={form.active} onChange={event => update('active', event.target.checked)} />Đang hoạt động</label>
             <ServiceMaterialsEditor serviceId={service?.id} />
-          </div><aside className="spa-service-preview"><div className="spa-service-preview-image">{form.thumbnailUrl && !previewFailed ? <img src={resolveMediaUrl(form.thumbnailUrl)} alt="Ảnh xem trước dịch vụ" onError={() => setPreviewFailed(true)} /> : <Sparkles size={42} />}</div>
-            <Input label="Ảnh thumbnail (URL)" maxLength={500} value={form.thumbnailUrl} onChange={event => { update('thumbnailUrl', event.target.value); setPreviewFailed(false); }} placeholder="/uploads/anh-dich-vu.jpg" />
+          </div><aside className="spa-service-preview">
+            <div className="spa-service-preview-image" style={{ position: 'relative' }}>
+              {form.thumbnailUrl && !previewFailed ? (
+                <img src={resolveMediaUrl(form.thumbnailUrl)} alt="Ảnh xem trước dịch vụ" onError={() => setPreviewFailed(true)} />
+              ) : (
+                <Sparkles size={42} />
+              )}
+              {uploadingImage && (
+                <div style={{
+                  position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '11px', color: '#AA3F5A', fontWeight: 600, gap: '6px', borderRadius: '9px'
+                }}>
+                  <Upload size={22} className="animate-spin" />
+                  <span>Đang tải ảnh lên…</span>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"
+                style={{ display: 'none' }}
+                onChange={handleImageFileChange}
+                disabled={busy || uploadingImage}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                icon={Upload}
+                disabled={busy || uploadingImage}
+                loading={uploadingImage}
+                onClick={() => fileInputRef.current?.click()}
+                style={{ flex: 1, fontSize: '11.5px', padding: '7px 10px', justifyContent: 'center' }}
+              >
+                Tải tệp ảnh lên
+              </Button>
+              {form.thumbnailUrl && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy || uploadingImage}
+                  onClick={() => { update('thumbnailUrl', ''); setPreviewFailed(false); }}
+                  title="Xóa ảnh"
+                  style={{ padding: '7px 8px' }}
+                >
+                  <Trash2 size={15} />
+                </Button>
+              )}
+            </div>
+            <Input
+              label="Ảnh thumbnail (URL)"
+              maxLength={500}
+              value={form.thumbnailUrl}
+              onChange={event => { update('thumbnailUrl', event.target.value); setPreviewFailed(false); }}
+              placeholder="/uploads/anh-dich-vu.jpg"
+              helperText="Có thể tải tệp trực tiếp hoặc dán đường dẫn ảnh"
+            />
             {previewFailed && <small className="spa-catalog-muted">Chưa tải được ảnh xem trước. Vui lòng kiểm tra đường dẫn.</small>}
             <strong>{form.name || 'Dịch vụ mới'}</strong><span>{formatCurrency(form.basePrice)}</span><p><Clock size={15} />{form.durationMinutes || 0} phút + {form.preparationTimeMinutes || 0}p chuẩn bị</p>
             <small>Tổng thời gian giữ tài nguyên: {Number(form.durationMinutes) + Number(form.preparationTimeMinutes)} phút.</small>

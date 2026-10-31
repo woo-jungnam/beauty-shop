@@ -1180,7 +1180,7 @@ export const HomePage = ({ onNavigate }) => {
               {marqueeBrands.map((brand, idx) => (
                 <div
                   key={`${brand.id}-${idx}`}
-                  className="brand-logo-tile brand-partner-card brand-partner-box"
+                  className="brand-logo-tile brand-partner-box"
                   onClick={() => onNavigate(`products?brandId=${brand.id}&search=${encodeURIComponent(brand.name)}`)}
                   role="button"
                   tabIndex={0}

@@ -1,12 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Clock, Plus, Ticket, Trash2 } from 'lucide-react';
-import { apiClient } from '../../shared/api/client';
+import { Clock, Plus, Ticket, Trash2, Upload } from 'lucide-react';
+import { apiClient, uploadFile } from '../../shared/api/client';
 import { ENDPOINTS } from '../../shared/api/endpoints';
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { formatCurrency } from '../../shared/utils/formatters';
+import { formatCurrency, resolveMediaUrl } from '../../shared/utils/formatters';
 import { spaErrorMessage } from '../../shared/utils/spaMessages';
 
 const positiveInteger = value => /^\d+$/.test(String(value)) && Number.isSafeInteger(Number(value)) && Number(value) > 0;
@@ -30,6 +30,8 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
   const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const serviceMap = useMemo(() => new Map(catalog.map(service => [String(service.id), service])), [catalog]);
@@ -69,6 +71,37 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
     setRows(previous => previous.filter(row => row.key !== key));
     setError('');
   };
+  const handleImageUpload = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WEBP, GIF, AVIF, BMP).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Kích thước ảnh tối đa 10 MiB.');
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+    try {
+      const res = await uploadFile(ENDPOINTS.ADMIN.MEDIA_UPLOAD, file);
+      const uploadedUrl = res?.url || res?.publicUrl || (typeof res === 'string' ? res : '');
+      if (uploadedUrl) {
+        update('thumbnailUrl', uploadedUrl);
+      } else {
+        throw new Error('Máy chủ không phản hồi đường dẫn ảnh hợp lệ.');
+      }
+    } catch (err) {
+      setError('Lỗi tải ảnh lên: ' + (err.message || 'Không thể tải ảnh.'));
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const close = () => { if (!submitting.current) onClose(); };
 
   const save = async event => {
@@ -152,7 +185,49 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
               <label className="form-label" htmlFor="spa-package-description">Mô tả gói liệu trình</label>
               <textarea id="spa-package-description" className="form-input" rows={3} value={form.description} onChange={event => update('description', event.target.value)} disabled={busy || uncertain} placeholder="Mục tiêu chăm sóc và những quyền lợi trong gói" />
             </div>
-            <Input label="Đường dẫn ảnh đại diện" value={form.thumbnailUrl} maxLength={500} onChange={event => update('thumbnailUrl', event.target.value)} disabled={busy || uncertain} error={fieldErrors.thumbnailUrl} placeholder="https://... hoặc /uploads/..." />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <Input label="Ảnh đại diện gói liệu trình" value={form.thumbnailUrl} maxLength={500} onChange={event => update('thumbnailUrl', event.target.value)} disabled={busy || uncertain || uploadingImage} error={fieldErrors.thumbnailUrl} placeholder="/uploads/anh-goi.jpg hoặc URL" helperText="Tải file trực tiếp hoặc dán đường dẫn ảnh" />
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"
+                  style={{ display: 'none' }}
+                  onChange={handleImageUpload}
+                  disabled={busy || uncertain || uploadingImage}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || uncertain || uploadingImage}
+                  loading={uploadingImage}
+                  icon={Upload}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ marginBottom: fieldErrors.thumbnailUrl ? '22px' : '0', height: '42px', whiteSpace: 'nowrap' }}
+                >
+                  Tải ảnh lên
+                </Button>
+                {form.thumbnailUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={busy || uncertain || uploadingImage}
+                    onClick={() => update('thumbnailUrl', '')}
+                    title="Xóa ảnh"
+                    style={{ marginBottom: fieldErrors.thumbnailUrl ? '22px' : '0', height: '42px', padding: '0 10px' }}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
+              </div>
+              {form.thumbnailUrl && (
+                <div style={{ width: '120px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ECE1E6' }}>
+                  <img src={resolveMediaUrl(form.thumbnailUrl)} alt="Ảnh gói liệu trình" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+                </div>
+              )}
+            </div>
             <section className="spa-package-items" aria-labelledby="spa-package-items-title">
               <div className="spa-package-section-heading">
                 <div><h4 id="spa-package-items-title"><Ticket size={18} aria-hidden="true" /> Dịch vụ thành phần</h4><p>Chọn từng dịch vụ và số buổi khách được sử dụng.</p></div>

@@ -425,19 +425,19 @@
   position: relative;
   width: 100%;
   overflow: hidden;
-  padding: 8px 0 16px;
+  padding: 12px 0 20px;
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 36px,
-    black calc(100% - 36px),
+    black 44px,
+    black calc(100% - 44px),
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 36px,
-    black calc(100% - 36px),
+    black 44px,
+    black calc(100% - 44px),
     transparent 100%
   );
 }
@@ -448,7 +448,7 @@
   flex-wrap: nowrap !important;
   align-items: center !important;
   width: max-content !important;
-  gap: 16px !important;
+  gap: 36px !important;
   animation: brandsMarqueeContinuous 76s linear infinite !important;
   will-change: transform;
 }
@@ -458,52 +458,69 @@
   animation-play-state: paused !important;
 }
 
-.customer-home-page .brand-logo-tile {
-  flex: 0 0 255px !important;
-  width: 255px !important;
-  min-width: 255px !important;
-  max-width: 255px !important;
-  height: 126px !important;
-  min-height: 126px !important;
+.customer-home-page .brand-logo-tile,
+.customer-home-page #brand-partners .brand-partner-box,
+.customer-home-page #brand-partners .brand-partner-card {
+  flex: 0 0 180px !important;
+  width: 180px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
+  height: 80px !important;
+  min-height: 80px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #FFFFFF !important;
-  border: 1.5px solid #F0E6EB !important;
-  border-radius: 18px !important;
-  padding: 16px 26px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 8px 14px !important;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.25s ease !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   user-select: none;
 }
 
-.customer-home-page .brand-logo-tile:hover {
+.customer-home-page .brand-logo-tile:hover,
+.customer-home-page #brand-partners .brand-partner-box:hover,
+.customer-home-page #brand-partners .brand-partner-card:hover {
   transform: translateY(-4px) !important;
-  border-color: var(--c-primary, #D45D79) !important;
-  box-shadow: 0 10px 24px rgba(212, 93, 121, 0.15) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.customer-home-page #brand-partners .home-brand-skeleton {
+  min-height: 80px !important;
+  height: 80px !important;
+  border-radius: 8px !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .brand-logo-img {
-  max-width: 195px;
-  max-height: 78px;
+  max-width: 150px;
+  max-height: 56px;
   width: auto;
   height: auto;
   object-fit: contain;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.03));
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
 }
 
-.customer-home-page .brand-logo-tile:hover .brand-logo-img {
-  transform: scale(1.08);
+.customer-home-page .brand-logo-tile:hover .brand-logo-img,
+.customer-home-page #brand-partners .brand-partner-box:hover .brand-logo-img {
+  transform: scale(1.1);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.12));
 }
 
 .brand-logo-text {
   font-family: var(--font-sans, sans-serif);
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   color: #374151;
   text-align: center;
   letter-spacing: -0.3px;
@@ -511,30 +528,39 @@
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 4px;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
-.customer-home-page .brand-logo-tile:hover .brand-logo-text {
+.customer-home-page .brand-logo-tile:hover .brand-logo-text,
+.customer-home-page #brand-partners .brand-partner-box:hover .brand-logo-text {
   color: var(--c-primary, #D45D79);
 }
 
 @media (max-width: 639px) {
-  .customer-home-page .brand-logo-tile {
-    flex: 0 0 202px !important;
-    width: 202px !important;
-    min-width: 202px !important;
-    max-width: 202px !important;
-    height: 108px !important;
-    min-height: 108px !important;
-    padding: 12px 18px !important;
-    border-radius: 14px !important;
+  .brands-marquee-track {
+    gap: 20px !important;
+  }
+  .customer-home-page .brand-logo-tile,
+  .customer-home-page #brand-partners .brand-partner-box,
+  .customer-home-page #brand-partners .brand-partner-card {
+    flex: 0 0 130px !important;
+    width: 130px !important;
+    min-width: 130px !important;
+    max-width: 130px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding: 4px 8px !important;
+  }
+  .customer-home-page #brand-partners .home-brand-skeleton {
+    min-height: 60px !important;
+    height: 60px !important;
   }
   .brand-logo-img {
-    max-width: 158px;
-    max-height: 66px;
+    max-width: 110px;
+    max-height: 44px;
   }
   .brand-logo-text {
-    font-size: 17px;
+    font-size: 14px;
   }
 }
 .customer-app .hero-slider-container { position: relative; padding: 24px 0 0 !important; min-height: 0; background: transparent; }
