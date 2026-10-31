@@ -37,6 +37,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
   Map<String, dynamic>? _financialPolicy;
   bool _financialAccepted = false;
   int? _ticketId;
+  String _paymentOption = 'DEPOSIT_AT_COUNTER';
   String? _policyError;
   bool get _requiresFinancialAcceptance => [
     'depositAmount',
@@ -405,6 +406,28 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                 child: const Text('Tải lại chính sách'),
               ),
             ],
+            if (_ticketId == null) ...[
+              _buildSectionTitle('Hình thức thanh toán:'),
+              RadioListTile<String>(
+                value: 'DEPOSIT_AT_COUNTER',
+                groupValue: _paymentOption,
+                onChanged: (val) => setState(() => _paymentOption = val ?? 'DEPOSIT_AT_COUNTER'),
+                title: const Text('Thanh toán tại quầy'),
+                subtitle: Text(
+                  _financialPolicy != null && (num.tryParse('${_financialPolicy!['depositAmount']}') ?? 0) > 0
+                      ? 'Cọc trước ${AppFormatters.formatCurrency((num.tryParse('${_financialPolicy!['depositAmount']}') ?? 0).toDouble())} qua VietQR, thanh toán phần còn lại sau khi dùng dịch vụ.'
+                      : 'Thanh toán trực tiếp sau khi hoàn tất dịch vụ tại quầy.',
+                ),
+              ),
+              RadioListTile<String>(
+                value: 'PAY_FULL',
+                groupValue: _paymentOption,
+                onChanged: (val) => setState(() => _paymentOption = val ?? 'PAY_FULL'),
+                title: Text('Thanh toán trước 100% (${AppFormatters.formatCurrency(widget.service.price)})'),
+                subtitle: const Text('Chuyển khoản toàn bộ qua VietQR để giữ slot ưu tiên.'),
+              ),
+              const SizedBox(height: 8),
+            ],
             if (_financialPolicy != null && _requiresFinancialAcceptance)
               CheckboxListTile(
                 value: _financialAccepted,
@@ -506,6 +529,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                         acceptedFinancialPolicy: _financialAccepted,
                         financialPolicyVersion:
                             (_financialPolicy!['version'] as num).toInt(),
+                        paymentOption: _ticketId != null ? 'WAIVE_WALK_IN' : _paymentOption,
                       );
 
                   if (!mounted || !context.mounted) return;

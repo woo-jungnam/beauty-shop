@@ -1,0 +1,339 @@
+[
+  {
+    "id": "S1",
+    "category": "SPA",
+    "query": "tư vấn dịch về chăm sóc da mặt bị rổ do nặn mun",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu",
+      "Liệu Trình Điều Trị Mụn Chuẩn Y Khoa",
+      "Cấy Tinh Chất Collagen Tươi Tái Sinh Làn Da"
+    ],
+    "answer_preview": "Sẹo rỗ do nặn mụn là tổn thương đứt gãy sợi collagen sâu dưới da. Danh mục hiện tại chưa có dịch vụ bóc tách đáy sẹo hay laser xâm lấn trị sẹo rỗ triệ",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 11.91
+  },
+  {
+    "id": "S2",
+    "category": "SPA",
+    "query": "Bên mình có dịch vụ nặn mụn y khoa không, chi phí bao nhiêu?",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu",
+      "Liệu Trình Điều Trị Mụn Chuẩn Y Khoa",
+      "Cấy Tinh Chất Collagen Tươi Tái Sinh Làn Da"
+    ],
+    "answer_preview": "Beauty Spa & Clinic có dịch vụ điều trị và nặn mụn chuẩn y khoa phù hợp với nhu cầu của bạn.\n\nThông tin chi tiết dịch vụ:\n- Tên dịch vụ: Liệu Trình Đi",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 11.77
+  },
+  {
+    "id": "S3",
+    "category": "SPA",
+    "query": "Da bị thâm nám tàn nhang nên làm liệu trình nào của spa?",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Liệu Trình Trị Thâm Nám Laser Toning Bio-Cell",
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu",
+      "Liệu Trình Điều Trị Mụn Chuẩn Y Khoa"
+    ],
+    "answer_preview": "Da thâm nám, tàn nhang nên chọn Liệu Trình Trị Thâm Nám Laser Toning Bio-Cell [1].\n\nThông tin chi tiết dịch vụ:\n- Giải pháp: Chuyên trị đốm nâu, thâm ",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 11.08
+  },
+  {
+    "id": "S4",
+    "category": "SPA",
+    "query": "Mình muốn làm sạch sâu bã nhờn và hút mụn cám ở spa",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu",
+      "Liệu Trình Điều Trị Mụn Chuẩn Y Khoa",
+      "Liệu Trình Trị Thâm Nám Laser Toning Bio-Cell"
+    ],
+    "answer_preview": "Dịch vụ phù hợp nhất cho nhu cầu làm sạch bã nhờn và hút mụn cám của bạn:\n\n- Dịch vụ: Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu [1].\n- Giá niêm yết: 450,00",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 11.45
+  },
+  {
+    "id": "S5",
+    "category": "SPA",
+    "query": "Liệu trình trẻ hóa nâng cơ mặt Hifu giá bao nhiêu và thời gian bao lâu?",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Trẻ Hóa Nâng Cơ Siêu Âm Hifu Ultra V-Line",
+      "Cấy Tinh Chất Collagen Tươi Tái Sinh Làn Da",
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu"
+    ],
+    "answer_preview": "Thông tin liệu trình Trẻ Hóa Nâng Cơ Siêu Âm Hifu Ultra V-Line [1]:\n\n- Tên dịch vụ: Trẻ Hóa Nâng Cơ Siêu Âm Hifu Ultra V-Line [1].\n- Giá niêm yết: 1,8",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 6.63
+  },
+  {
+    "id": "S6",
+    "category": "SPA",
+    "query": "Điện di vitamin C giúp da sáng căng bóng bao nhiêu tiền một buổi?",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu",
+      "Điện Di Tinh Chất Vitamin C & Niacinamide Căng Bóng",
+      "Cấy Tinh Chất Collagen Tươi Tái Sinh Làn Da"
+    ],
+    "answer_preview": "Dịch vụ Điện Di Tinh Chất Vitamin C & Niacinamide Căng Bóng [2] có giá 550,000 VND/buổi.\n\nThông tin chi tiết dịch vụ:\n- Tên dịch vụ: Điện Di Tinh Chất",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 6.73
+  },
+  {
+    "id": "S7",
+    "category": "SPA",
+    "query": "Spa có gói cấy collagen tươi phục hồi da khô lão hóa không?",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu",
+      "Điện Di Tinh Chất Vitamin C & Niacinamide Căng Bóng",
+      "Cấy Tinh Chất Collagen Tươi Tái Sinh Làn Da"
+    ],
+    "answer_preview": "Spa có gói dịch vụ phù hợp yêu cầu.\n\nThông tin chi tiết dịch vụ:\n- Tên dịch vụ: Cấy Tinh Chất Collagen Tươi Tái Sinh Làn Da [3].\n- Danh mục: Trẻ Hóa &",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 5.68
+  },
+  {
+    "id": "S8",
+    "category": "SPA",
+    "query": "Dịch vụ massage body thư giãn đá nóng bên bạn giá thế nào?",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Massage Toàn Thân Đá Nóng & Thảo Dược Thụy Điển",
+      "Tắm Trắng Toàn Thân Công Nghệ Phi Thuyền Hoàng Gia",
+      "Mát xa khai trương"
+    ],
+    "answer_preview": "Dịch vụ Massage Toàn Thân Đá Nóng & Thảo Dược Thụy Điển [1] phù hợp chính xác nhu cầu của bạn.\n\nThông tin chi tiết dịch vụ:\n- Giá niêm yết: 480,000 VN",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 7.16
+  },
+  {
+    "id": "S9",
+    "category": "SPA",
+    "query": "Tắm trắng phi thuyền toàn thân bên shop có hiệu quả không, giá bao nhiêu?",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Massage Toàn Thân Đá Nóng & Thảo Dược Thụy Điển"
+    ],
+    "answer_preview": "Cơ sở hiện không có dịch vụ Tắm trắng phi thuyền. Danh mục hiện có dịch vụ Massage Toàn Thân Đá Nóng & Thảo Dược Thụy Điển [1].\n\nThông tin dịch vụ hiệ",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 6.63
+  },
+  {
+    "id": "S10",
+    "category": "SPA",
+    "query": "Tôi muốn đặt lịch soi da và chăm sóc da mặt cuối tuần này",
+    "expected_target": "SERVICE",
+    "actual_target": "SERVICE",
+    "product_names": [
+      "Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu",
+      "Cấy Tinh Chất Collagen Tươi Tái Sinh Làn Da",
+      "Liệu Trình Điều Trị Mụn Chuẩn Y Khoa"
+    ],
+    "answer_preview": "Dịch vụ chăm sóc da mặt cuối tuần phù hợp theo tình trạng da:\n\n- Da dầu, bít tắc lỗ chân lông: Chăm Sóc Da Mặt Aqua Peel Chuyên Sâu [1]. Giá 450,000 V",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 5.81
+  },
+  {
+    "id": "P1",
+    "category": "PRODUCT",
+    "query": "Tư vấn kem chống nắng cho da dầu mụn không nâng tone kiềm dầu tốt",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Kem Chống Nắng Kiềm Dầu Ngừa Mụn SVR Sebiaclear Crème SPF50+ (40ml)",
+      "Kem Chống Nắng Dịu Nhẹ Cho Da Dầu Nhạy Cảm Avène Cleanance Solaire SPF50+ (50ml)"
+    ],
+    "answer_preview": "Sản phẩm phù hợp nhất theo yêu cầu:\n\n- Kem Chống Nắng Kiềm Dầu Ngừa Mụn SVR Sebiaclear Crème SPF50+ (40ml) [1]:\n - Giá: 460,000 VND [1].\n - Đặc tính: ",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 11.62
+  },
+  {
+    "id": "P2",
+    "category": "PRODUCT",
+    "query": "Kem dưỡng phục hồi La Roche-Posay B5 Cicaplast giá bao nhiêu?",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Kem Dưỡng Làm Dịu & Phục Hồi Da La Roche-Posay Cicaplast Baume B5+ (40ml)",
+      "Gel Dưỡng Giảm Mụn, Mờ Thâm SVR Sebiaclear Active Gel (40ml)",
+      "Kem Dưỡng Phục Hồi Hàng Rào Bảo Vệ Da Bioderma Cicabio Crème (40ml)"
+    ],
+    "answer_preview": "Kem Dưỡng Làm Dịu & Phục Hồi Da La Roche-Posay Cicaplast Baume B5+ (40ml) [1] có giá niêm yết: 365,000 VND [1].\n\nThông tin chi tiết:\n- Phân loại: Kem ",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 10.51
+  },
+  {
+    "id": "P3",
+    "category": "PRODUCT",
+    "query": "Serum cấp ẩm phục hồi da nhạy cảm dưới 500k",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Tinh Chất Giảm Mụn Some By Mi AHA-BHA-PHA 30 Days Miracle Serum (50ml)",
+      "Tinh Chất Phục Hồi Tái Tạo Ốc Sên Đen Some By Mi Snail Truecica Miracle Repair Serum 50ml",
+      "Tinh Chất Giảm Mụn Mờ Thâm Gom Cồi La Roche-Posay Effaclar Serum 30ml"
+    ],
+    "answer_preview": "Sản phẩm phù hợp nhất theo yêu cầu:\n\nTinh Chất Phục Hồi Tái Tạo Ốc Sên Đen Some By Mi Snail Truecica Miracle Repair Serum (50ml) [2]\n- Giá: 345,000 VN",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 9.99
+  },
+  {
+    "id": "P4",
+    "category": "PRODUCT",
+    "query": "Sữa rửa mặt tạo bọt dịu nhẹ cho da nhạy cảm CeraVe",
+    "error": "timed out",
+    "is_accurate": false,
+    "latency_s": 689.7301821708679
+  },
+  {
+    "id": "P5",
+    "category": "PRODUCT",
+    "query": "Nước hoa hồng toner Some By Mi trị mụn có sẵn không shop?",
+    "error": "timed out",
+    "is_accurate": false,
+    "latency_s": 2075.0198571681976
+  },
+  {
+    "id": "P6",
+    "category": "PRODUCT",
+    "query": "Tẩy tế bào chết BHA COSRX dùng cho mụn đầu đen có tốt không?",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Mặt Nạ Tẩy Tế Bào Chết Đường Đen Skinfood Black Sugar Mask Wash Off 100g",
+      "Gel Tẩy Tế Bào Chết Dành Cho Da Dầu Mụn Bioderma Sébium Gel Gommant 100ml",
+      "Gel Tẩy Tế Bào Chết Ngừa Mụn Eucerin ProAcne Solution Scrub 100ml"
+    ],
+    "answer_preview": "BHA COSRX (Betaine Salicylate) tốt cho mụn đầu đen. Tan trong dầu, ngấm sâu cổ nang lông, bạt sừng, tan bã nhờn ứ đọng.\n\nTùy chọn thay thế sẵn có từ k",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 14.24
+  },
+  {
+    "id": "P7",
+    "category": "PRODUCT",
+    "query": "Có loại nước tẩy trang Micellar nào sạch sâu không cồn không hương liệu không?",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Nước Tẩy Trang Bioderma Sébium H2O Nắp Xanh Cho Da Dầu Mụn (500ml)",
+      "Nước Tẩy Trang Cấp Ẩm Da Nhạy Cảm La Roche-Posay Micellar Water Ultra (400ml)",
+      "Nước Tẩy Trang Bioderma Sensibio H2O Nắp Hồng Cho Da Nhạy Cảm"
+    ],
+    "answer_preview": "Ba lựa chọn micellar sạch sâu, 0% cồn, không hương liệu theo từng loại da:\n\n- Bioderma Sébium H2O Nắp Xanh (500ml) [1]: Giá 440,000 VND [1]. Công nghệ",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 10.64
+  },
+  {
+    "id": "P8",
+    "category": "PRODUCT",
+    "query": "Serum Niacinamide giảm thâm mụn kiềm dầu của The Ordinary hoặc COSRX",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Tinh Chất Giảm Mụn Mờ Thâm Gom Cồi La Roche-Posay Effaclar Serum 30ml",
+      "Tinh Chất Serum Giảm Thâm Mụn La Roche-Posay Pure Niacinamide 10 Serum (30ml)",
+      "Tinh Chất Giảm Mụn Some By Mi AHA-BHA-PHA 30 Days Miracle Serum (50ml)"
+    ],
+    "answer_preview": "Kho hiện không có sản phẩm của The Ordinary hoặc COSRX. Thay thế tối ưu cùng công dụng Niacinamide giảm thâm, kiềm dầu:\n\n- Tinh Chất Giảm Mụn Mờ Thâm ",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 11.21
+  },
+  {
+    "id": "P9",
+    "category": "PRODUCT",
+    "query": "Kem dưỡng ẩm cho da khô bong tróc vào mùa đông",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Kem Dưỡng Làm Dịu & Phục Hồi Da La Roche-Posay Cicaplast Baume B5+ (40ml)",
+      "Kem Dưỡng Ẩm Chuyên Sâu CeraVe Moisturizing Cream Cho Da Khô Đến Rất Khô (454g)",
+      "Kem Dưỡng Phục Hồi Hàng Rào Bảo Vệ Da Bioderma Cicabio Crème (40ml)"
+    ],
+    "answer_preview": "Sản phẩm phù hợp nhất cho da khô bong tróc mùa đông:\n\n- Kem Dưỡng Ẩm Chuyên Sâu CeraVe Moisturizing Cream [2]: Lựa chọn tối ưu nhất. Ứng dụng công ngh",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 8.11
+  },
+  {
+    "id": "P10",
+    "category": "PRODUCT",
+    "query": "Son dưỡng môi có màu hoặc không màu chống khô nứt nẻ",
+    "expected_target": "PRODUCT",
+    "actual_target": "PRODUCT",
+    "product_names": [
+      "Son Kem Lì Bền Màu Không Lem Khẩu Trang Dior Rouge Dior Forever Liquid 6ml",
+      "Son Kem Lì Lâu Trôi Peripera Ink The Velvet Lip Tint 4g",
+      "Son Thỏi Lì Cao Cấp Chanel Rouge Allure Velvet 3.5g"
+    ],
+    "answer_preview": "Kho hiện không có dòng son dưỡng chuyên sâu thuần túy chống khô nứt nẻ. Các sản phẩm hiện có là son trang điểm (son kem lì, son thỏi lì) có tích hợp t",
+    "target_match": true,
+    "has_expected": true,
+    "has_unexpected": false,
+    "is_accurate": true,
+    "latency_s": 6.95
+  }
+]

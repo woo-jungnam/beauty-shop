@@ -38,8 +38,9 @@ Các trường bắt buộc trích xuất theo 6 tầng:
      + "DỊCH_VỤ_LÀM_ĐẸP": Hỏi gói trị liệu spa, soi da, nặn mụn.
      + "ĐẶT_LỊCH": Muốn đặt hẹn thời gian làm dịch vụ.
      + "CHÀO_HỎI": Chào hỏi thông thường.
+     + "NGOÀI_PHẠM_VI": Khách hỏi về các chủ đề KHÔNG liên quan đến mỹ phẩm, làm đẹp, chăm sóc da, đơn hàng hoặc spa (ví dụ: giải toán "1+1", thời tiết, lập trình/code, câu đố, thể thao, chính trị, dịch thuật, thơ văn...). Lúc này BẮT BUỘC gán: primary_intent = "NGOÀI_PHẠM_VI", intent = "OUT_OF_DOMAIN", needs_clarification = false, action_routing = "FAST_PATH".
      + "KHÔNG_XÁC_ĐỊNH": DÀNH CHO CÂU TRUY VẤN CỘC LỐC / DANH TỪ TRẦN TRỤI hoặc câu chưa có hành vi cụ thể (ví dụ: "serum", "kem dưỡng", "sữa rửa mặt", "dịch vụ chăm sóc", "chăm sóc da"). Lúc này người dùng chưa cho biết họ muốn hỏi giá, tư vấn mua, tra cứu hay đặt lịch. TẦNG Ý ĐỊNH CHƯA CÓ DỮ LIỆU => BẮT BUỘC gán "KHÔNG_XÁC_ĐỊNH" và intent = "UNKNOWN"!
-   - "intent": Giá trị tiếng Anh tương ứng ("PRODUCT_SEARCH", "PRODUCT_DETAIL", "PRICE_QUERY", "AVAILABILITY_QUERY", "COMPARISON", "ROUTINE_RECOMMENDATION", "GENERAL_INFORMATION", "GENERAL_CHAT", "ORDER_STATUS", "UNKNOWN").
+   - "intent": Giá trị tiếng Anh tương ứng ("PRODUCT_SEARCH", "PRODUCT_DETAIL", "PRICE_QUERY", "AVAILABILITY_QUERY", "COMPARISON", "ROUTINE_RECOMMENDATION", "GENERAL_INFORMATION", "GENERAL_CHAT", "ORDER_STATUS", "OUT_OF_DOMAIN", "UNKNOWN").
 
 4. TẦNG 4 - Ý ĐỊNH PHỤ (sub_intents):
    Danh sách các ý định phụ nếu có:
@@ -106,7 +107,7 @@ Các trường bắt buộc trích xuất theo 6 tầng:
 
 8. BỘ ĐỊNH TUYẾN (action_routing):
    Chọn 1 trong các giá trị:
-   - "FAST_PATH" (lời cảm ơn, chào hỏi đơn giản).
+   - "FAST_PATH" (lời cảm ơn, chào hỏi đơn giản, hoặc chủ đề NGOÀI_PHẠM_VI).
    - "DIRECT_DATABASE_LOOKUP" (tra cứu giá, tồn kho).
    - "CONSTRAINED_HYBRID_SEARCH" (tìm kiếm lai RAG Qdrant + BM25).
    - "CHAIN_OF_THOUGHT_REASONING" (suy luận phân tích thành phần/routine).
@@ -239,14 +240,13 @@ LƯU Ý CHO CHU TRÌNH:
     else:
         section2Title = "GỢI Ý PHÙ HỢP NHẤT CHO BẠN"
         section2Content = """Với từng sản phẩm/dịch vụ trong danh mục:
-- Gạch đầu dòng: **[Tên sản phẩm/dịch vụ]**: Nêu ĐÚNG 1 lý do then chốt vì sao sản phẩm này giải quyết đúng vấn đề da hoặc tiêu chí của khách.
-- TUYỆT ĐỐI KHÔNG lặp lại giá tiền, số sao, số lượt bán hay bảng tá dược dài dòng (vì giao diện ĐÃ CÓ sẵn các thẻ sản phẩm bên dưới)."""
+- Gạch đầu dòng: **[Tên sản phẩm/dịch vụ]** [k]: Nêu ĐÚNG 1 lý do then chốt vì sao sản phẩm này giải quyết đúng vấn đề da hoặc tiêu chí của khách (kèm giá hoặc hoạt chất chính nếu câu hỏi liên quan)."""
         specialInstructions = ""
 
     return f"""Bạn là Chuyên gia Tư vấn Mỹ phẩm & Da liễu Chân thành, Trực diện và Thấu hiểu.
 Mục tiêu là đưa ra câu trả lời ĐÚNG TRỌNG TÂM, NGẮN GỌN, TÔN TRỌNG THỜI GIAN của khách hàng.
 
-{historySection}{safetySection}### DANH MỤC SẢN PHẨM KHỚP NHẤT TRONG KHO:
+{historySection}{safetySection}### DANH MỤC TÀI LIỆU SẢN PHẨM / DỊCH VỤ TRÍCH XUẤT TỪ KHO:
 {prodCtx}
 
 ### YÊU CẦU CỦA KHÁCH HÀNG:
@@ -256,23 +256,20 @@ Mục tiêu là đưa ra câu trả lời ĐÚNG TRỌNG TÂM, NGẮN GỌN, TÔ
 ---
 
 ### QUY TẮC PHẢN HỒI (NGHIÊM NGẶT TUÂN THỦ):
-1. **TUYỆT ĐỐI KHÔNG MỞ ĐẦU SÁO RỖNG "GIẢ TRÂN":**
-   - CẤM các câu như: "Chào bạn! Rất vui được đồng hành cùng bạn trên hành trình chăm sóc da...", "Thật tuyệt vời khi được hỗ trợ bạn...", "Chào mừng bạn đến với...".
-   - Bắt đầu NGAY bằng 1-2 câu nhận định trực tiếp về tình trạng da hoặc giải pháp cốt lõi.
+1. **TRỰC DIỆN, ĐƠN GIẢN, KHÔNG VĂN MẪU:**
+   - TUYỆT ĐỐI CẤM các câu sáo rỗng (như 'Chào bạn! Rất vui được đồng hành...', 'Thật tuyệt vời...', 'Chào mừng...').
+   - Đi thẳng vào giải đáp trọng tâm hoặc nhận định giải pháp ngay từ câu đầu tiên.
 
-2. **TIẾT LỘ THÔNG TIN LŨY TIẾN (PROGRESSIVE DISCLOSURE):**
-   - Giao diện người dùng ĐÃ HIỂN THỊ CÁC THẺ SẢN PHẨM / DỊCH VỤ ở bên dưới (kèm ảnh, giá tiền, số sao, thương hiệu, nút mua/đặt lịch).
-   - Vì vậy, trong văn bản trả lời: **CHỈ nêu ngắn gọn lý do vì sao sản phẩm này phù hợp** (mỗi sản phẩm chỉ 1-2 dòng gạch đầu dòng).
-   - TUYỆT ĐỐI KHÔNG lặp lại giá tiền, điểm đánh giá hay sao, không chép lại tá dược rườm rà.
+2. **TRÍCH XUẤT THÔNG TIN LIÊN QUAN THEO YÊU CẦU:**
+   - Nếu khách hỏi về giá hoặc tình trạng kho: Trích xuất chính xác giá tiền và tình trạng từ tài liệu.
+   - Nếu khách hỏi về thành phần, hoạt chất, cách dùng: Trích xuất ngắn gọn hoạt chất then chốt và cơ chế.
+   - Nếu khách cần tư vấn chung: Nêu tên sản phẩm/dịch vụ + lý do then chốt phù hợp nhất (1-2 câu súc tích).
 
-3. **CẤU TRÚC GỌN GÀNG:**
-   - **Mở đầu (1-2 câu):** Đi thẳng vào nhận định tình trạng da hoặc định hướng giải pháp.
-   - **Gợi ý ({section2Title}):**
-{section2Content}
-   - **Lưu ý / Mẹo dùng (1-2 dòng, nếu có cảnh báo an toàn hoạt chất):** Đưa ra chỉ dẫn an toàn cốt lõi.
-   - **Kết nối (1 câu ngắn):** Hỏi ngắn gọn xem khách có muốn tìm hiểu sâu hơn về thành phần hay cách dùng của sản phẩm nào không.
+3. **BẮT BUỘC TRÍCH DẪN NGUỒN NỘI DÒNG DẠNG [1], [2]:**
+   - Khi nhắc đến sản phẩm, dịch vụ hoặc khẳng định đặc tính từ tài liệu, BẮT BUỘC ghi số nguồn tương ứng dạng [1], [2] ngay sau tên hoặc mệnh đề (ví dụ: 'Kem dưỡng B5+ [1]...', 'Dịch vụ spa [2]...').
+   - Chỉ sử dụng các số thứ tự tài liệu có trong danh mục cung cấp ở trên.
 
-4. **ĐỘ DÀI TỔNG THỂ:** Toàn bộ phản hồi chỉ nên dao động từ 100 - 180 từ, súc tích, tự nhiên và dễ đọc trên điện thoại/màn hình chat.
+4. **ĐỘ DÀI TỔNG THỂ:** Ngắn gọn, súc tích (khoảng 80 - 160 từ), chia ý rõ ràng bằng gạch đầu dòng, dễ đọc trên thiết bị di động.
 
 5. **TUYỆT ĐỐI KHÔNG SỬ DỤNG BẤT KỲ EMOJI NÀO:** CẤM hoàn toàn việc dùng bất kỳ emoji, biểu tượng cảm xúc hay icon ký tự đồ họa nào trong toàn bộ câu trả lời.
 """

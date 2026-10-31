@@ -598,7 +598,7 @@ export const UsersPage = () => {
           }}
         >
           <Users size={15} />
-          Tài khoản Người dùng
+          Danh sách tài khoản
           {totalElements > 0 && (
             <span
               style={{
@@ -631,7 +631,7 @@ export const UsersPage = () => {
           }}
         >
           <KeyRound size={15} />
-          Phân quyền & Vai trò (RBAC)
+          Vai trò & Phân quyền tài khoản
           {roles.length > 0 && (
             <span
               style={{

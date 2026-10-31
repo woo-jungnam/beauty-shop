@@ -242,8 +242,12 @@ class ProductReranker:
                     penalties.append(f"Sai lệch ngành hàng ({pCategory})")
         elif tDomain:
             if prodDomain and prodDomain != tDomain:
-                score -= 20.0
-                penalties.append(f"Ngành hàng không khớp nhu cầu ({pCategory})")
+                if tDomain == ProductDomain.SKINCARE and prodDomain == ProductDomain.MAKEUP:
+                    score -= 50.0
+                    penalties.append(f"Sản phẩm trang điểm ({pCategory}) không phù hợp nhu cầu chăm sóc/điều trị da")
+                else:
+                    score -= 30.0
+                    penalties.append(f"Ngành hàng không khớp nhu cầu ({pCategory})")
 
         return score, explanations, penalties
 
@@ -338,6 +342,49 @@ class ProductReranker:
                 score += negScore
                 explanations.extend(negExp)
                 penalties.extend(negPen)
+
+                # Kiểm tra khớp target_type (SERVICE vs PRODUCT)
+                uTargetType = getattr(understanding, "target_type", getattr(understanding, "target", None))
+                if not uTargetType and isinstance(understanding.constraints, dict):
+                    uTargetType = understanding.constraints.get("target_type")
+                pTargetType = getattr(prod, "target_type", getattr(prod, "targetType", "PRODUCT")) or "PRODUCT"
+                if uTargetType:
+                    uTargetTypeUpper = str(uTargetType).upper().strip()
+                    pTargetTypeUpper = str(pTargetType).upper().strip()
+                    if uTargetTypeUpper in ("SERVICE", "PRODUCT"):
+                        if pTargetTypeUpper == uTargetTypeUpper:
+                            score += 8.0
+                            explanations.append(f"Đúng loại hình {'dịch vụ Spa' if uTargetTypeUpper == 'SERVICE' else 'sản phẩm'}")
+                        else:
+                            score -= 40.0
+                            penalties.append(f"Sai lệch loại hình ({pTargetTypeUpper} thay vì {uTargetTypeUpper})")
+
+                # Phân định rõ Face (Da mặt) vs Body (Toàn thân) cho Spa Services
+                rawQLower = (understanding.rawQuery or getattr(understanding, "raw_query", "") or "").lower()
+                pNameLower = (prod.name or "").lower()
+                pCategoryLower = (prod.category or "").lower()
+
+                isFaceQuery = any(k in rawQLower for k in ["da mặt", "mặt", "mụn", "sẹo", "rỗ", "rổ", "nặn", "aqua peel", "soi da", "tàn nhang", "nám"])
+                isBodyQuery = any(k in rawQLower for k in ["toàn thân", "body", "massage", "đá nóng", "tắm trắng", "triệt lông"])
+
+                isBodyService = any(k in pNameLower or k in pCategoryLower for k in ["toàn thân", "body", "massage", "tắm trắng", "phi thuyền"])
+                isFaceService = any(k in pNameLower or k in pCategoryLower for k in ["da mặt", "mặt", "mụn", "aqua peel", "laser", "cấy tinh chất", "hifu", "điều trị da chuyên khoa"])
+
+                if isFaceQuery and not isBodyQuery:
+                    if isBodyService:
+                        score -= 35.0
+                        penalties.append("Dịch vụ Body/Toàn thân không phù hợp nhu cầu chăm sóc da mặt")
+                    elif isFaceService:
+                        score += 12.0
+                        explanations.append("Dịch vụ chuyên sâu vùng da mặt")
+
+                if isBodyQuery and not isFaceQuery:
+                    if isFaceService:
+                        score -= 30.0
+                        penalties.append("Dịch vụ da mặt không phù hợp nhu cầu chăm sóc Body")
+                    elif isBodyService:
+                        score += 12.0
+                        explanations.append("Đúng dịch vụ thư giãn/chăm sóc Body")
 
                 rawQ = (understanding.rawQuery or "").lower()
                 codeMatch = re.search(r"\b(mã\s*\d+)\b", rawQ, re.I)

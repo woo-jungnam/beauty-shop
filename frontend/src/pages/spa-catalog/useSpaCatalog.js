@@ -11,8 +11,9 @@ const allPages = async (endpoint, signal) => {
     const data = unwrap(response);
     if (!Array.isArray(data) && !Array.isArray(data?.content)) throw new Error('Dữ liệu danh mục chưa đúng định dạng. Vui lòng làm mới.');
     rows.push(...asList(response));
-    if (Array.isArray(data) || data.last === true || page + 1 >= (data.totalPages || 1)) return rows;
+    if (Array.isArray(data) || data.last === true || page + 1 >= (data.totalPages || 1)) break;
   }
+  return Array.from(new Map(rows.map(item => [item.id, item])).values());
 };
 
 export const useSpaCatalog = () => {

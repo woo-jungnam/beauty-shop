@@ -218,6 +218,7 @@ class SpaProvider extends ChangeNotifier {
     String? notes,
     bool acceptedFinancialPolicy = false,
     int? financialPolicyVersion,
+    String? paymentOption,
     int? ticketId,
   }) async {
     final generation = _privateGeneration;
@@ -241,6 +242,7 @@ class SpaProvider extends ChangeNotifier {
           'notes': notes ?? '',
           'acceptedFinancialPolicy': acceptedFinancialPolicy,
           'financialPolicyVersion': financialPolicyVersion,
+          'paymentOption': paymentOption ?? (ticketId != null ? 'WAIVE_WALK_IN' : 'DEPOSIT_AT_COUNTER'),
           'items': [
             {
               'serviceId': serviceId,

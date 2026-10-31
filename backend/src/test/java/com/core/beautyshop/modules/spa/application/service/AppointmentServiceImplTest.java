@@ -504,4 +504,49 @@ class AppointmentServiceImplTest {
         assertThrows(BusinessException.class, () -> appointmentService.rescheduleAppointment(100L, request));
         verify(appointmentRepository, never()).save(any());
     }
+
+    @Test
+    void testBookAppointment_WithDepositRequired_SetsPendingExpiresAt() {
+        BeautyService service = BeautyService.builder()
+                .name("Chăm sóc da")
+                .basePrice(new BigDecimal("300000"))
+                .durationMinutes(45)
+                .preparationTimeMinutes(15)
+                .build();
+        service.setId(1L);
+
+        AppointmentItemRequest item = new AppointmentItemRequest();
+        item.setServiceId(1L);
+
+        BookAppointmentRequest request = new BookAppointmentRequest();
+        request.setAppointmentDate(LocalDate.now().plusDays(1));
+        request.setStartTime(LocalTime.of(10, 0));
+        request.setItems(List.of(item));
+        request.setAcceptedFinancialPolicy(true);
+        request.setFinancialPolicyVersion(1);
+        request.setPaymentOption("DEPOSIT_AT_COUNTER");
+
+        UserSummaryDto userSummary = UserSummaryDto.builder()
+                .id(USER_ID)
+                .fullName("Khách Hàng A")
+                .build();
+
+        when(identityFacade.getUserSummaryById(USER_ID)).thenReturn(userSummary);
+        when(beautyServiceRepository.findAvailableByIdForUpdate(1L)).thenReturn(Optional.of(service));
+        when(finance.snapshot(any(), any(), any(), eq("DEPOSIT_AT_COUNTER"), eq(false)))
+                .thenReturn(new BigDecimal("50000"));
+        when(appointmentRepository.saveAndFlush(any(Appointment.class))).thenAnswer(inv -> {
+            Appointment apt = inv.getArgument(0);
+            apt.setId(101L);
+            apt.getItems().getFirst().setId(201L);
+            return apt;
+        });
+
+        AppointmentResponse response = appointmentService.bookAppointment(request);
+
+        assertNotNull(response);
+        assertEquals(101L, response.getId());
+        verify(finance).snapshot(any(), eq(true), eq(1), eq("DEPOSIT_AT_COUNTER"), eq(false));
+        verify(appointmentRepository).save(argThat(a -> a.getPendingExpiresAt() != null));
+    }
 }

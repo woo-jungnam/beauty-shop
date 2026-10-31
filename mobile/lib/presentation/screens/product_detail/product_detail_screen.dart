@@ -246,6 +246,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         if (provider.isLoadingDetail) {
           return Scaffold(
             backgroundColor: AppColors.getSurface(context),
+            appBar: AppBar(
+              backgroundColor: AppColors.primary,
+              title: const Text('Chi tiết sản phẩm'),
+            ),
             body: const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             ),

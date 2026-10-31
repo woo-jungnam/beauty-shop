@@ -49,6 +49,43 @@ async function setup(page) {
   return state;
 }
 
+test('beauty-report: account switch and logout in another tab invalidate the old admin identity', async ({ page, context }) => {
+  const customer = { id: 2, username: 'customer', fullName: 'Khách kiểm thử', roles: ['ROLE_USER'] };
+  let currentSession = 'admin';
+  await page.route('**/api/v1/auth/profile', route => {
+    route.fulfill({
+      status: 200,
+      json: { status: 200, success: true, data: currentSession === 'admin' ? admin : customer }
+    });
+  });
+  await setup(page);
+  await expect(form(page)).toBeVisible();
+  const other = await context.newPage();
+  await other.goto('/#/login');
+  currentSession = 'customer';
+  await other.evaluate(user => {
+    localStorage.setItem('beautyshop_admin_token', 'customer-session');
+    localStorage.setItem('beautyshop_admin_user', JSON.stringify(user));
+  }, customer);
+  await expect(form(page)).toHaveCount(0);
+  await expect(page.locator('.admin-main')).toHaveCount(0);
+  await expect(page.locator('.admin-auth')).toBeVisible();
+  currentSession = 'admin';
+  await other.evaluate(user => {
+    localStorage.setItem('beautyshop_admin_token', 'admin-session');
+    localStorage.setItem('beautyshop_admin_user', JSON.stringify(user));
+  }, admin);
+  await expect(form(page)).toBeVisible();
+  currentSession = 'anonymous';
+  await other.evaluate(() => {
+    localStorage.removeItem('beautyshop_admin_token');
+    localStorage.removeItem('beautyshop_admin_user');
+  });
+  await expect(page.locator('.admin-main')).toHaveCount(0);
+  await expect(page.locator('.admin-auth')).toBeVisible();
+  await other.close();
+});
+
 const form = page => page.getByRole('form', { name: 'Tìm kiếm và lọc sản phẩm' });
 const resultRow = page => page.getByRole('row').filter({ hasText: 'trang một' });
 const latest = state => Object.fromEntries(state.calls.at(-1));

@@ -18,6 +18,7 @@ import com.core.beautyshop.modules.order.domain.OrderItem;
 import com.core.beautyshop.modules.order.domain.OrderRepository;
 import com.core.beautyshop.modules.order.domain.OrderStatusHistory;
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
+import com.core.beautyshop.modules.order.domain.enums.PaymentStatus;
 import com.core.beautyshop.modules.order.api.event.OrderEvents;
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
@@ -415,6 +416,23 @@ public class OrderServiceImpl implements OrderService {
                 .newStatus(saved.getStatus())
                 .build());
 
+        return orderMapper.toOrderResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse manualMarkPaid(Long id, String reference) {
+        Order order = orderRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            return orderMapper.toOrderResponse(order);
+        }
+        order.setPaymentStatus(PaymentStatus.PAID);
+        order.setPaidAmount(order.getTotalAmount());
+        order.setPaidAt(java.time.Instant.now());
+        String ref = reference != null && !reference.isBlank() ? reference.trim() : "MANUAL-TEST-" + System.currentTimeMillis();
+        createStatusHistory(order, order.getStatus(), "Quản trị viên xác nhận thanh toán thành công (Ref: " + ref + ")");
+        Order saved = orderRepository.save(order);
         return orderMapper.toOrderResponse(saved);
     }
 

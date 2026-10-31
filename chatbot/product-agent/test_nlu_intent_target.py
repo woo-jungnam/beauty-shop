@@ -14,6 +14,8 @@ def test_cases():
         ("Tìm serum cấp ẩm phục hồi da dầu mụn", "PRODUCT", False, PrimaryIntent.TU_VAN_SAN_PHAM.value, Intent.PRODUCT_SEARCH),
         ("Bảng giá triệt lông nách bên mình sao ạ?", "SERVICE", False, PrimaryIntent.GIA_NGAN_SACH.value, Intent.PRICE_QUERY),
         ("xin chào shop", "PRODUCT", False, PrimaryIntent.CHAO_HOI.value, Intent.GENERAL_CHAT),
+        ("1+1", "PRODUCT", False, PrimaryIntent.NGOAI_PHAM_VI.value, Intent.OUT_OF_DOMAIN),
+        ("1 + 1 = ?", "PRODUCT", False, PrimaryIntent.NGOAI_PHAM_VI.value, Intent.OUT_OF_DOMAIN),
     ]
 
     for q, exp_target, exp_clarify, exp_p_intent, exp_intent in test_queries:

@@ -7,6 +7,7 @@ import {
   Edit,
   DollarSign,
   RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -37,6 +38,8 @@ export const OrdersPage = () => {
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -62,6 +65,8 @@ export const OrdersPage = () => {
       if (keyword.trim()) params.append('keyword', keyword.trim());
       if (status) params.append('status', status);
       if (paymentStatus) params.append('paymentStatus', paymentStatus);
+      if (fromDate) params.append('from', `${fromDate}T00:00:00Z`);
+      if (toDate) params.append('to', `${toDate}T23:59:59Z`);
 
       const res = await apiClient.get(`${ENDPOINTS.ORDERS.LIST}?${params.toString()}`);
       const pageData = res.data || res;
@@ -78,7 +83,7 @@ export const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders(0);
-  }, [status, paymentStatus]);
+  }, [status, paymentStatus, fromDate, toDate]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -161,6 +166,19 @@ export const OrdersPage = () => {
     }
   };
 
+  const handleConfirmPayment = async (order) => {
+    if (!window.confirm(`Xác nhận đánh dấu đơn hàng ${order.orderCode || '#' + order.id} đã thanh toán (PAID)?`)) return;
+    try {
+      await apiClient.post(ENDPOINTS.ORDERS.CONFIRM_PAYMENT(order.id));
+      if (selectedOrder && selectedOrder.id === order.id) {
+        setSelectedOrder((prev) => ({ ...prev, paymentStatus: 'PAID' }));
+      }
+      fetchOrders(page);
+    } catch (err) {
+      alert(err.message || 'Lỗi khi xác nhận thanh toán đơn hàng');
+    }
+  };
+
   const columns = [
     {
       header: 'Mã đơn / ID',
@@ -235,6 +253,17 @@ export const OrdersPage = () => {
           >
             <Edit size={14} />
           </Button>
+          {row.paymentStatus !== 'PAID' && row.status !== 'CANCELLED' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleConfirmPayment(row)}
+              title="Đánh dấu đã thanh toán (PAID)"
+              style={{ color: '#059669', borderColor: '#059669' }}
+            >
+              <CheckCircle2 size={14} />
+            </Button>
+          )}
           {isAdmin && (row.status === 'CANCELLED' || row.status === 'RETURNED' || row.paymentStatus === 'REFUND_PENDING') &&
             row.paymentStatus !== 'REFUNDED' && (
               <Button
@@ -266,6 +295,17 @@ export const OrdersPage = () => {
           >
             <Edit size={14} />
           </Button>
+          {row.paymentStatus !== 'PAID' && row.status !== 'CANCELLED' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleConfirmPayment(row)}
+              title="Đánh dấu đã thanh toán (PAID)"
+              style={{ color: '#059669', borderColor: '#059669' }}
+            >
+              <CheckCircle2 size={14} />
+            </Button>
+          )}
           {isAdmin && (row.status === 'CANCELLED' || row.status === 'RETURNED' || row.paymentStatus === 'REFUND_PENDING') &&
             row.paymentStatus !== 'REFUNDED' && (
               <Button
@@ -352,9 +392,41 @@ export const OrdersPage = () => {
             <option value="FAILED">Thanh toán thất bại</option>
           </Select>
 
+          <Input
+            label="Từ ngày"
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="form-group-compact"
+          />
+
+          <Input
+            label="Đến ngày"
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="form-group-compact"
+          />
+
           <Button type="submit" variant="primary" icon={Filter}>
             Lọc đơn
           </Button>
+
+          {(keyword || status || paymentStatus || fromDate || toDate) && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setKeyword('');
+                setStatus('');
+                setPaymentStatus('');
+                setFromDate('');
+                setToDate('');
+              }}
+            >
+              Đặt lại
+            </Button>
+          )}
         </form>
       </div>
 
@@ -399,6 +471,19 @@ export const OrdersPage = () => {
                     {getPaymentStatusBadge(selectedOrder.paymentStatus).text}
                   </Badge>
                 </div>
+                {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
+                  <div style={{ marginTop: '8px' }}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleConfirmPayment(selectedOrder)}
+                      style={{ color: '#059669', borderColor: '#059669', fontSize: '12px', padding: '4px 8px' }}
+                    >
+                      <CheckCircle2 size={13} style={{ marginRight: '4px' }} />
+                      Xác nhận đã thanh toán (PAID)
+                    </Button>
+                  </div>
+                )}
                 {selectedOrder.paymentMethod && (
                   <div style={{ marginTop: '8px', fontSize: '12px' }}>
                     Hình thức: <strong>{getPaymentMethodLabel(selectedOrder.paymentMethod)}</strong>

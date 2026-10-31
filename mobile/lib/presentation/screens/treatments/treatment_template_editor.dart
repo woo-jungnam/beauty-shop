@@ -159,8 +159,11 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
     if (_generation != context.read<TreatmentProvider>().generation ||
         !auth.isAuthenticated ||
         (!_revision && auth.currentUser?.isAdmin != true)) {
-      return const Scaffold(
-        body: Center(child: Text('Bạn không có quyền chỉnh sửa mẫu lộ trình.')),
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Mẫu lộ trình'),
+        ),
+        body: const Center(child: Text('Bạn không có quyền chỉnh sửa mẫu lộ trình.')),
       );
     }
     return Scaffold(

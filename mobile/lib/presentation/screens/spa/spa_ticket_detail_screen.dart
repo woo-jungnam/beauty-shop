@@ -132,7 +132,7 @@ class _SpaTicketDetailScreenState extends State<SpaTicketDetailScreen> {
           Text(t.serviceName, style: Theme.of(context).textTheme.titleLarge),
           Text(
             t.benefitType == 'TREATMENT_COURSE'
-                ? 'Lộ trình điều trị y khoa'
+                ? 'Lộ trình chăm sóc chuyên sâu'
                 : 'Gói dịch vụ spa',
             style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
           ),

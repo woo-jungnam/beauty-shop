@@ -85,6 +85,7 @@ class ProductCard(BaseModel):
 
 
 class SourceRef(BaseModel):
+    index: int = Field(default=1, description="Chỉ số trích dẫn [1], [2]")
     productId: str = Field(..., alias="product_id")
     productName: str = Field(..., alias="product_name")
     chunkType: str = Field(..., alias="chunk_type")

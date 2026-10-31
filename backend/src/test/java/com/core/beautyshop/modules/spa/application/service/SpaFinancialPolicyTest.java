@@ -65,4 +65,17 @@ class SpaFinancialPolicyTest {
   verify(orders,times(1)).applySpaVisitAdvance(20L,new BigDecimal("60000"),"SPA-ADVANCE-20");
   assertEquals(0,finance.view(20L).refundable().compareTo(new BigDecimal("40000")));
  }
+ @Test void payFullPrepaymentCalculates100PercentPayableAndAutoConfirmsOnFullDeposit(){
+  BigDecimal depositReq = finance.snapshot(appointment, true, 2, "PAY_FULL", false);
+  assertEquals(0, depositReq.compareTo(new BigDecimal("300000")));
+  assertEquals(AppointmentStatus.PENDING, appointment.getStatus());
+  finance.receipt(20L, receipt("300000", "CASH-FULL"), "full-deposit-1", false);
+  assertEquals(AppointmentStatus.CONFIRMED, appointment.getStatus());
+  assertNull(appointment.getPendingExpiresAt());
+ }
+ @Test void waiveWalkInAllowsZeroDepositForAdmin(){
+  BigDecimal depositReq = finance.snapshot(appointment, true, 2, "WAIVE_WALK_IN", true);
+  assertEquals(0, depositReq.compareTo(BigDecimal.ZERO));
+  assertDoesNotThrow(() -> finance.requireDeposit(appointment));
+ }
 }

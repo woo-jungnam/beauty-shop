@@ -158,6 +158,8 @@ export const ProductsPage = () => {
   const [banners, setBanners] = useState([]);
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const bannerFileInputRef = useRef(null);
   const [bannerForm, setBannerForm] = useState({
     title: '',
     badge: '',
@@ -880,8 +882,40 @@ export const ProductsPage = () => {
     setBannerModalOpen(true);
   };
 
+  const handleUploadBannerImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const localBlob = URL.createObjectURL(file);
+    setBannerForm(prev => ({ ...prev, imageUrl: localBlob }));
+    setBannerUploading(true);
+    try {
+      const data = await uploadFile(ENDPOINTS.CATALOG.MEDIA_UPLOAD, file);
+      const uploaded = data?.url || data?.publicUrl || (typeof data === 'string' ? data : '');
+      if (uploaded) {
+        setBannerForm(prev => ({ ...prev, imageUrl: uploaded }));
+      } else {
+        throw new Error('Máy chủ không phản hồi đường dẫn ảnh hợp lệ');
+      }
+    } catch (err) {
+      alert(err.message || 'Lỗi tải ảnh lên. Hỗ trợ JPG, PNG, WEBP, GIF, AVIF, BMP (Tối đa 10MB)');
+      setBannerForm(prev => ({ ...prev, imageUrl: '' }));
+    } finally {
+      setBannerUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSubmitBanner = async (e) => {
     e.preventDefault();
+    if (bannerUploading) {
+      alert('Ảnh đang được tải lên máy chủ, vui lòng đợi trong giây lát...');
+      return;
+    }
+    if (bannerForm.imageUrl && bannerForm.imageUrl.startsWith('blob:')) {
+      alert('Ảnh chưa được tải lên máy chủ thành công. Vui lòng chọn lại ảnh hoặc nhập link.');
+      return;
+    }
     setBannerSubmitting(true);
     try {
       if (editingBanner) {
@@ -1249,7 +1283,7 @@ export const ProductsPage = () => {
       header: 'Hình ảnh',
       accessor: (row) => (
         <div style={{ width: '84px', height: '48px', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
-          <img src={row.imageUrl} alt={row.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+          <img src={resolveMediaUrl(row.imageUrl)} alt={row.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
         </div>
       ),
       width: '100px'
@@ -1549,7 +1583,7 @@ export const ProductsPage = () => {
           onClick={() => setActiveTab('ingredients')}
         >
           <Sparkles size={15} />
-          Bảng Hoạt chất & Thành phần ({ingredients.length})
+          Hoạt chất & Thành phần mỹ phẩm ({ingredients.length})
         </button>
         <button
           className={`tab-btn ${activeTab === 'attributes' ? 'active' : ''}`}
@@ -1563,14 +1597,14 @@ export const ProductsPage = () => {
           onClick={() => setActiveTab('tags')}
         >
           <TagIcon size={15} />
-          Nhãn gắn (Tags) ({tags.length})
+          Thẻ phân loại sản phẩm ({tags.length})
         </button>
         <button
           className={`tab-btn ${activeTab === 'banners' ? 'active' : ''}`}
           onClick={() => setActiveTab('banners')}
         >
           <Image size={15} />
-          Banner & Slider ({banners.length})
+          Ảnh bìa & Banner quảng cáo ({banners.length})
         </button>
       </div>
 
@@ -2487,14 +2521,67 @@ export const ProductsPage = () => {
               ]}
             />
           </div>
-          <div style={{ marginTop: '12px' }}>
-            <Input
-              label="Đường dẫn ảnh banner (URL) *"
-              value={bannerForm.imageUrl}
-              onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })}
-              required
-              placeholder="VD: /uploads/banners/summer-sale.jpg hoặc https://..."
-            />
+          <div className="form-group" style={{ marginTop: '12px' }}>
+            <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>
+              Hình ảnh banner *
+            </label>
+            <div className="media-upload-zone">
+              <div className="media-preview-box" style={{ width: '100px', height: '60px' }}>
+                {bannerForm.imageUrl ? (
+                  <img
+                    src={resolveMediaUrl(bannerForm.imageUrl)}
+                    alt="Banner preview"
+                    className="media-preview-img"
+                    onError={(e) => { e.currentTarget.style.opacity = '0.3'; }}
+                  />
+                ) : (
+                  <Image size={24} color="var(--text-muted)" />
+                )}
+              </div>
+              <div className="media-upload-meta" style={{ flex: 1 }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                  <input
+                    ref={bannerFileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"
+                    onChange={handleUploadBannerImage}
+                    disabled={bannerUploading}
+                    style={{ display: 'none' }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    icon={Upload}
+                    onClick={() => bannerFileInputRef.current?.click()}
+                    disabled={bannerUploading}
+                  >
+                    {bannerUploading ? 'Đang tải ảnh...' : 'Tải ảnh từ máy tính'}
+                  </Button>
+                  {bannerForm.imageUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setBannerForm(prev => ({ ...prev, imageUrl: '' }))}
+                      style={{ color: 'var(--color-danger-600)', fontSize: '12px' }}
+                    >
+                      Xóa ảnh
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  placeholder="Hoặc dán URL ảnh trực tiếp (/uploads/... hoặc https://...)"
+                  value={bannerForm.imageUrl}
+                  onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })}
+                  required
+                  style={{ fontSize: '12px' }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Hỗ trợ JPG, PNG, WEBP, GIF, AVIF, BMP (Tối đa 10 MB)
+                </span>
+              </div>
+            </div>
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Input
@@ -2541,7 +2628,9 @@ export const ProductsPage = () => {
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setBannerModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={bannerSubmitting}>Lưu banner</Button>
+            <Button variant="primary" type="submit" loading={bannerSubmitting} disabled={bannerUploading}>
+              {bannerUploading ? 'Đang tải ảnh...' : 'Lưu banner'}
+            </Button>
           </div>
         </form>
       </Modal>

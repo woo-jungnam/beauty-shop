@@ -100,7 +100,7 @@ class Appointment {
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
     final items = json['items'] as List<dynamic>? ?? [];
-    String svcName = 'Dịch vụ Spa & Clinic';
+    String svcName = 'Dịch vụ Spa & Chăm Sóc Da';
     int? sId;
     if (items.isNotEmpty) {
       final first = items.first as Map<String, dynamic>;

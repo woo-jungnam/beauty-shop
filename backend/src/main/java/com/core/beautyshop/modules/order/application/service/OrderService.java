@@ -27,5 +27,7 @@ public interface OrderService {
     OrderResponse cancelOrder(Long id);
 
     OrderResponse cancelOrder(Long id, Long userId);
+
+    OrderResponse manualMarkPaid(Long id, String reference);
 }
 

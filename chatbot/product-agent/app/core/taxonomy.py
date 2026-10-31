@@ -32,7 +32,12 @@ DB_CATEGORY_TO_DOMAIN: Dict[str, ProductDomain] = {
     "Dưỡng môi": ProductDomain.LIPCARE,
 
     "Kem nền": ProductDomain.MAKEUP,
+    "kem nền": ProductDomain.MAKEUP,
+    "foundation": ProductDomain.MAKEUP,
+    "makeup": ProductDomain.MAKEUP,
     "Phấn phủ": ProductDomain.MAKEUP,
+    "phấn phủ": ProductDomain.MAKEUP,
+    "cushion": ProductDomain.MAKEUP,
     "Má hồng": ProductDomain.MAKEUP,
     "Kẻ mắt": ProductDomain.MAKEUP,
     "Mascara": ProductDomain.MAKEUP,
@@ -95,9 +100,10 @@ DOMAIN_KEYWORDS: Dict[ProductDomain, List[str]] = {
         "nước hoa", "mùi hương", "thơm lâu", "hương thơm", "lưu hương", "mùi gỗ", "mùi hoa",
     ],
     ProductDomain.SKINCARE: [
-        "da mặt", "da dầu", "da khô", "da mụn", "mụn", "thâm", "nám", "tàn nhang",
-        "lỗ chân lông", "lão hóa", "nếp nhăn", "tàn nhang", "phục hồi da",
-        "da nhạy cảm", "b5", "niacinamide", "retinol", "salicylic acid", "bha", "aha",
+        "da mặt", "da dầu", "da nhờn", "da khô", "da mụn", "da hỗn hợp", "mụn", "thâm", "nám", "tàn nhang",
+        "lỗ chân lông", "lão hóa", "nếp nhăn", "phục hồi da", "khắc phục da", "kiềm dầu", "đổ dầu", "bã nhờn",
+        "da nhạy cảm", "chăm sóc da", "dưỡng da", "b5", "niacinamide", "retinol", "salicylic acid", "bha", "aha",
+        "sữa rửa mặt", "kem dưỡng", "serum", "toner", "tẩy trang", "chống nắng",
     ],
 }
 
@@ -162,6 +168,13 @@ class Taxonomy:
 
         if any(kw in text for kw in ["son môi", "son thỏi", "son kem", "son bóng", "son tint", "dưỡng môi", "son dưỡng"]):
             return ProductDomain.LIPCARE
+
+        if any(kw in text for kw in [
+            "kem nền", "foundation", "cushion", "bb cream", "cc cream",
+            "phấn phủ", "phấn nước", "che khuyết điểm", "concealer",
+            "má hồng", "blush", "mascara", "kẻ mắt", "eyeliner", "chì kẻ mày", "eyebrow"
+        ]):
+            return ProductDomain.MAKEUP
 
         if any(kw in text for kw in ["nước hoa", "perfume", "dầu thơm"]):
             return ProductDomain.FRAGRANCE

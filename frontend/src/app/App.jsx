@@ -269,55 +269,14 @@ export const App = () => {
     return <LoginPage />;
   }
 
-  const isDedicatedReceptionRoute =
-    currentHash === "reception" ||
+  const isStaffOrAdminRoute =
+    currentHash.startsWith("admin") ||
     currentHash === "staff" ||
     currentHash.startsWith("staff/") ||
-    currentHash === "admin/spa-reception";
+    currentHash === "reception" ||
+    (currentHash !== "products" && currentHash !== "treatments" && Object.keys(ADMIN_PAGES).includes(currentHash));
 
-  const isSpaStaffOnly = isSpaReception && !isAdmin;
-
-  const shouldShowReceptionPortal =
-    (isDedicatedReceptionRoute || (isSpaStaffOnly && (!currentHash || currentHash === 'home'))) &&
-    isAuthenticated &&
-    isOperator && (isSpaReception || isSpaTherapist);
-
-  if (shouldShowReceptionPortal) {
-    const ReceptionPage = ADMIN_PAGES['spa-reception'];
-    return (
-      <Suspense
-        fallback={
-          <div
-            role="status"
-            style={{
-              minHeight: "100vh",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-              color: "var(--sp-text-muted, #6B7280)",
-              backgroundColor: "#F9F8F6"
-            }}
-          >
-            <Loader2 size={24} className="animate-spin" aria-hidden="true" />
-            <span>Đang mở Quầy Lễ Tân Spa...</span>
-          </div>
-        }
-      >
-        {(currentHash === 'reception' || currentHash === 'admin/spa-reception') && isSpaReception ? <ReceptionPage /> : <SpaStaffApp
-          onSwitchToAdmin={() => {
-            window.location.hash = "/admin/spa";
-          }}
-        />}
-      </Suspense>
-    );
-  }
-
-  const isExplicitAdmin =
-    currentHash.startsWith("admin") ||
-    (currentHash !== "products" && currentHash !== 'treatments' && Object.keys(ADMIN_PAGES).includes(currentHash));
-
-  if (!isExplicitAdmin) {
+  if (!isStaffOrAdminRoute) {
     return (
       <Suspense
         fallback={
@@ -347,11 +306,20 @@ export const App = () => {
   }
 
   if (!allowedTabs.length) {
-    return <div className="content-container" role="status"><h1>Chưa được phân công nghiệp vụ</h1><p>Quản trị viên cần cấp quyền công việc cho tài khoản nhân viên này.</p><a href="#/home">Về cửa hàng</a></div>;
+    return (
+      <div className="content-container" role="status" style={{ padding: "40px 20px", textAlign: "center" }}>
+        <h1>Chưa được phân công nghiệp vụ</h1>
+        <p>Quản trị viên cần cấp quyền công việc cho tài khoản nhân viên này.</p>
+        <a href="#/home">Về cửa hàng</a>
+      </div>
+    );
   }
 
-  let tabName =
-    currentHash.replace(/^admin\/?/, "") || allowedTabs[0] || "dashboard";
+  let rawTab = currentHash.replace(/^admin\/?/, "").replace(/^staff\/?/, "");
+  let tabName = rawTab === "reception" || currentHash === "staff"
+    ? "spa-reception"
+    : rawTab || allowedTabs[0] || "dashboard";
+
   if (!allowedTabs.includes(tabName)) {
     tabName = allowedTabs[0] || "dashboard";
   }

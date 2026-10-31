@@ -122,6 +122,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const [bookingError, setBookingError] = useState("");
   const [financialPolicy, setFinancialPolicy] = useState(null);
   const [financialAccepted, setFinancialAccepted] = useState(false);
+  const [paymentOption, setPaymentOption] = useState("DEPOSIT_AT_COUNTER");
 
   useEffect(() => {
     apiClient
@@ -153,6 +154,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const servicePrice =
     selectedService?.basePrice ?? selectedService?.price ?? 0;
   const total = selectedTicketId ? 0 : servicePrice;
+  const depositDueEstimate = Math.min(Number(financialPolicy?.depositAmount || 0), total);
+  const remainingAtCounter = Math.max(0, total - depositDueEstimate);
   const selectedStaffName =
     selectedStaff === "AUTO"
       ? "Spa sắp xếp chuyên viên"
@@ -446,6 +449,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       const response = await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, {
         acceptedFinancialPolicy: financialAccepted,
         financialPolicyVersion: financialPolicy.version,
+        paymentOption: selectedTicketId ? "WAIVE_WALK_IN" : paymentOption,
         appointmentDate: selectedDate,
         startTime:
           selectedSlot.length === 5 ? selectedSlot + ":00" : selectedSlot,
@@ -472,6 +476,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         staff: selectedStaffName,
         price: total,
         ticketId: selectedTicketId,
+        paymentOption: selectedTicketId ? "TICKET" : paymentOption,
+        depositEstimate: Math.min(Number(financialPolicy?.depositAmount || 0), total),
         customer: created.customerName || contact.fullName,
         phone: created.customerPhone || contact.phone,
       });
@@ -594,11 +600,28 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 <dd>{bookingResult.staff}</dd>
               </div>
               <div>
-                <dt>Thanh toán tại Spa</dt>
+                <dt>Hình thức thanh toán</dt>
                 <dd>
-                  {formatCurrency(bookingResult.price)}
-                  {bookingResult.ticketId && (
-                    <small>Áp dụng vé #{bookingResult.ticketId}</small>
+                  {bookingResult.ticketId ? (
+                    <>
+                      0 đ
+                      <small>Khấu trừ vé #{bookingResult.ticketId}</small>
+                    </>
+                  ) : bookingResult.paymentOption === "PAY_FULL" ? (
+                    <>
+                      {formatCurrency(bookingResult.price)}
+                      <small>Thanh toán trước 100% qua VietQR</small>
+                    </>
+                  ) : (bookingResult.depositEstimate || 0) > 0 ? (
+                    <>
+                      {formatCurrency(bookingResult.depositEstimate)} (Cọc)
+                      <small>Còn lại thanh toán tại Spa: {formatCurrency(Math.max(0, bookingResult.price - bookingResult.depositEstimate))}</small>
+                    </>
+                  ) : (
+                    <>
+                      {formatCurrency(bookingResult.price)}
+                      <small>Thanh toán tại quầy Spa</small>
+                    </>
                   )}
                 </dd>
               </div>
@@ -1342,17 +1365,77 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 </div>
               )}
               <div className="booking-total">
-                <div>
-                  <strong>Thanh toán tại Spa</strong>
-                  <small>
-                    {selectedTicketId
-                      ? "Khấu trừ 1 buổi từ vé liệu trình"
-                      : "Thanh toán trực tiếp sau khi hoàn tất"}
-                  </small>
-                </div>
-                <b>{selectedService ? formatCurrency(total) : "—"}</b>
+                {selectedTicketId ? (
+                  <>
+                    <div>
+                      <strong>Thanh toán bằng vé liệu trình</strong>
+                      <small>Khấu trừ 1 buổi từ vé #{selectedTicketId}</small>
+                    </div>
+                    <b>0 đ</b>
+                  </>
+                ) : paymentOption === "PAY_FULL" ? (
+                  <>
+                    <div>
+                      <strong>Thanh toán trước (100% qua VietQR)</strong>
+                      <small>Chuyển khoản toàn bộ trước khi đến cơ sở</small>
+                    </div>
+                    <b>{selectedService ? formatCurrency(total) : "—"}</b>
+                  </>
+                ) : depositDueEstimate > 0 ? (
+                  <>
+                    <div>
+                      <strong>Tiền cọc thanh toán ngay</strong>
+                      <small>Còn lại thanh toán tại Spa: {formatCurrency(remainingAtCounter)}</small>
+                    </div>
+                    <b>{formatCurrency(depositDueEstimate)}</b>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <strong>Thanh toán tại quầy Spa</strong>
+                      <small>Thanh toán trực tiếp sau khi hoàn tất trải nghiệm</small>
+                    </div>
+                    <b>{selectedService ? formatCurrency(total) : "—"}</b>
+                  </>
+                )}
               </div>
             </div>
+
+            {!selectedTicketId && total > 0 && (
+              <div className="booking-payment-options">
+                <span className="booking-payment-title">Hình thức thanh toán:</span>
+                <label className={`booking-payment-card ${paymentOption === "DEPOSIT_AT_COUNTER" ? "is-selected" : ""}`}>
+                  <input
+                    type="radio"
+                    name="spaPaymentOption"
+                    value="DEPOSIT_AT_COUNTER"
+                    checked={paymentOption === "DEPOSIT_AT_COUNTER"}
+                    onChange={(e) => setPaymentOption(e.target.value)}
+                  />
+                  <div className="booking-payment-card-copy">
+                    <strong>Thanh toán tại quầy</strong>
+                    <span>
+                      {depositDueEstimate > 0
+                        ? `Đặt cọc trước ${formatCurrency(depositDueEstimate)} qua VietQR, thanh toán phần còn lại ${formatCurrency(remainingAtCounter)} tại quầy.`
+                        : "Thanh toán toàn bộ trực tiếp tại quầy sau khi trải nghiệm dịch vụ."}
+                    </span>
+                  </div>
+                </label>
+                <label className={`booking-payment-card ${paymentOption === "PAY_FULL" ? "is-selected" : ""}`}>
+                  <input
+                    type="radio"
+                    name="spaPaymentOption"
+                    value="PAY_FULL"
+                    checked={paymentOption === "PAY_FULL"}
+                    onChange={(e) => setPaymentOption(e.target.value)}
+                  />
+                  <div className="booking-payment-card-copy">
+                    <strong>Thanh toán trước 100% ({formatCurrency(total)})</strong>
+                    <span>Chuyển khoản toàn bộ qua VietQR SePay để giữ lịch ưu tiên và làm thủ tục check-in nhanh.</span>
+                  </div>
+                </label>
+              </div>
+            )}
 
             {financialPolicy &&
               [

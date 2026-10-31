@@ -836,7 +836,7 @@ export const InventoryPage = () => {
           onClick={() => setActiveTab('warehouses')}
         >
           <Building2 size={15} />
-          Kho bãi & Quản lý lô tồn ({warehouses.length})
+          Kho bãi & Quản lý lô hàng ({warehouses.length})
         </button>
         <button
           className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
@@ -850,7 +850,7 @@ export const InventoryPage = () => {
           onClick={() => setActiveTab('ledger')}
         >
           <Boxes size={15} />
-          Sổ cái biến động kho ({ledgerTotalElements})
+          Sổ cái biến động kho (Lịch sử xuất nhập) ({ledgerTotalElements})
         </button>
       </div>
 

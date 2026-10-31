@@ -107,7 +107,7 @@ export const DataTable = ({
           <span className="table-pagination-summary">
             {totalElements > 0 ? (
               <>
-                Hiển thị <strong style={{ color: 'var(--text-main)' }}>{page * pageSize + 1}–{Math.min((page + 1) * pageSize, totalElements)}</strong> trong số <strong style={{ color: 'var(--text-main)' }}>{totalElements}</strong> bản ghi
+                Hiển thị <strong style={{ color: 'var(--text-main)' }}>{page * pageSize + 1}–{Math.min((page + 1) * pageSize, totalElements)}</strong> của <strong style={{ color: 'var(--text-main)' }}>{totalElements}</strong> bản ghi (Trang <strong style={{ color: 'var(--text-main)' }}>{page + 1}</strong> / {totalPages})
               </>
             ) : (
               <>

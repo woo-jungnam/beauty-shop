@@ -78,7 +78,7 @@ export const CustomerApp = () => {
     if (route.startsWith('recover-password') || route.startsWith('reset-password')) return <PasswordRecoveryPage />;
     if (route.startsWith('treatments')) {
       const params = new URLSearchParams(route.split('?')[1] || '');
-      return <TreatmentWorkspace role="customer" initialCourseId={params.get('course')} initialTab={params.get('tab')} />;
+      return <TreatmentWorkspace role="customer" onNavigate={navigate} initialCourseId={params.get('course')} initialTab={params.get('tab')} />;
     }
     if (route.startsWith('product/')) {
       const id = route.split('/')[1]?.split(/[?#]/)[0];

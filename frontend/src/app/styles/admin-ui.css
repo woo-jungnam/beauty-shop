@@ -244,19 +244,17 @@
 .admin-shell .card > form[style] > .form-group { flex: 1; margin-bottom: 0; }
 
 .admin-shell .tabs-header {
-  gap: 5px;
-  width: fit-content;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
   max-width: 100%;
-  padding: 5px;
+  padding: 6px;
   margin-bottom: 24px;
   border: 1px solid #ebe4f3;
   border-radius: 15px;
   background: #f2edf8;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-
-.admin-shell .tabs-header::-webkit-scrollbar { display: none; }
 .admin-shell .tab-btn { flex-shrink: 0; gap: 7px; border: 0; border-radius: 11px; padding: 10px 17px; font-size: 12px; font-weight: 600; color: #806d90; white-space: nowrap; transition: background-color .2s ease, color .2s ease, box-shadow .2s ease, transform .25s var(--admin-ease); }
 .admin-shell .tab-btn:hover { color: #765298; background: rgba(255,255,255,.55); }
 .admin-shell .tab-btn:active { transform: scale(.97); }

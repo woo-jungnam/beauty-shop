@@ -17,7 +17,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public class BookAppointmentRequest {
     private Boolean acceptedFinancialPolicy;
     private Integer financialPolicyVersion;
-    
+
+    @Schema(description = "Phương thức thanh toán: PAY_FULL (trả trước 100%), DEPOSIT_AT_COUNTER (cọc trước, trả tại quầy), WAIVE_WALK_IN (lễ tân miễn cọc đón tại quầy)", example = "DEPOSIT_AT_COUNTER")
+    private String paymentOption;
+
     @NotNull(message = "Ngày hẹn không được để trống")
     @FutureOrPresent(message = "Ngày hẹn phải từ hôm nay trở đi")
     @Schema(description = "Ngày hẹn tại Asia/Ho_Chi_Minh; kết hợp startTime phải ở tương lai", type = "string", format = "date", example = "2026-10-05")

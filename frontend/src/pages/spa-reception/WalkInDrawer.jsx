@@ -92,7 +92,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
     let bookingAttempted = false;
     try {
       if(!financialPolicy) throw new Error('Cần tải chính sách tài chính trước khi đặt lịch.');
-      if([financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&!financialAccepted)
+      if([financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&!financialAccepted&&!form.autoCheckIn)
         throw new Error('Cần thông báo và ghi nhận khách đồng ý chính sách cọc/phí trước khi đặt.');
       let customerId = form.customerId;
       if (!customerId) {
@@ -103,7 +103,9 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
       bookingAttempted = true;
       appointment = unwrap(await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, {
         targetUserId: Number(customerId), appointmentDate: form.appointmentDate, startTime: form.startTime,
-        acceptedFinancialPolicy:financialAccepted,financialPolicyVersion:financialPolicy.version,
+        acceptedFinancialPolicy: financialAccepted || form.autoCheckIn,
+        financialPolicyVersion: financialPolicy.version,
+        paymentOption: form.autoCheckIn ? 'WAIVE_WALK_IN' : 'DEPOSIT_AT_COUNTER',
         notes: `[Tiếp đón tại quầy] ${form.notes.trim()}`.trim(),
         items: [{ serviceId: Number(form.serviceId), ...(form.staffId ? { staffId: Number(form.staffId) } : {}),
           ...(form.facilityId ? { facilityId: Number(form.facilityId) } : {}), ...(form.ticketId ? { ticketId: Number(form.ticketId) } : {}) }],
@@ -133,7 +135,13 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
   return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title="Đón khách tại quầy" className="reception-dialog" presentation="drawer" maxWidth="580px">
     <form onSubmit={submit} className="walkin-form">
       <p className="reception-muted">Tra cứu khách, chọn dịch vụ và chuẩn bị ca chăm sóc.</p>
-      {financialPolicy&&[financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&<label><input type="checkbox" checked={financialAccepted} onChange={e=>setFinancialAccepted(e.target.checked)}/>Đã thông báo và ghi nhận khách đồng ý chính sách {financialPolicy.version}: cọc tối đa {formatCurrency(financialPolicy.depositAmount)}, phí hủy sau hạn {formatCurrency(financialPolicy.cancellationFee)}, phí vắng hẹn {formatCurrency(financialPolicy.noShowFee)}. Thu cọc trước khi xác nhận lịch.</label>}
+      {form.autoCheckIn ? (
+        <div style={{padding: '8px 12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontSize: '12px', marginBottom: '12px', fontWeight: 600}}>
+          ✓ Tiếp đón trực tiếp tại quầy: Tự động miễn thu cọc và cho phép check-in ca chăm sóc ngay.
+        </div>
+      ) : (
+        financialPolicy&&[financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&<label><input type="checkbox" checked={financialAccepted} onChange={e=>setFinancialAccepted(e.target.checked)}/>Đã thông báo và ghi nhận khách đồng ý chính sách {financialPolicy.version}: cọc tối đa {formatCurrency(financialPolicy.depositAmount)}, phí hủy sau hạn {formatCurrency(financialPolicy.cancellationFee)}, phí vắng hẹn {formatCurrency(financialPolicy.noShowFee)}.</label>
+      )}
       {error && <div className="reception-notice error" role="alert">{error}</div>}
       <fieldset disabled={busy || Boolean(createdAppointment) || uncertainBooking}>
         <div className="drawer-step"><span>01</span><h4><UserRound size={17} /> Hồ sơ khách hàng</h4></div>

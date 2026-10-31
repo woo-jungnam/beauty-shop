@@ -17,6 +17,10 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Nguồn tài liệu trích dẫn dùng làm căn cứ trả lời của AI")
 public class SourceRefResponse {
 
+    @JsonProperty("index")
+    @Schema(description = "Chỉ số trích dẫn nguồn đối ứng [1], [2] trong văn bản", example = "1")
+    private Integer index = 1;
+
     @JsonProperty("product_id")
     @JsonAlias({"productId", "product_id"})
     @Schema(description = "Mã định danh sản phẩm trích dẫn", example = "prod_001")

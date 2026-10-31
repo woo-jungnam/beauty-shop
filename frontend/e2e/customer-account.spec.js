@@ -4,10 +4,10 @@ const user = { id: 7, username: 'khachhang', fullName: 'Nguyễn An', email: 'an
 const product = { id: 12, name: 'Kem dưỡng thử nghiệm', brandName: 'Beauty', price: 120000, minPrice: 120000, thumbnailUrl: '', variants: [{ id: 44, sku: 'TEST-44', price: 120000, isActive: true, stockQuantity: 5, isDefault: true }] };
 const order = { id: 21, orderNumber: 'ORD-21', status: 'DELIVERED', paymentStatus: 'PAID', paymentMethod: 'BANK', totalAmount: 240000, paidAmount: 240000, refundedAmount: 0, items: [{ id: 31, variantId: 44, productName: 'Kem dưỡng thử nghiệm', quantity: 2, price: 120000 }] };
 
-async function setup(page, authenticated = true) {
+async function setup(page, authenticated = true, wishlistProducts = [product]) {
   if (authenticated) await page.addInitScript(profile => { localStorage.setItem('beautyshop_admin_token', 'test-access-token'); localStorage.setItem('beautyshop_admin_user', JSON.stringify(profile)); }, user);
   const requests = [];
-  let wishlist = [product], skin = {}, returns = [], addresses = [];
+  let wishlist = structuredClone(wishlistProducts), skin = {}, returns = [], addresses = [];
   await page.route('**/api/v1/**', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname;
     const body = request.postDataJSON(); requests.push({ path, method: request.method(), body, query: url.search });
@@ -16,7 +16,7 @@ async function setup(page, authenticated = true) {
     else if (path === '/api/v1/users/order-statistics') data = { totalOrders: 21, totalPaid: 240000, totalRefunded: 0, netSpent: 240000 };
     else if (path === '/api/v1/users/skin-profile') { if (request.method() === 'PUT') skin = body; data = skin; }
     else if (path === '/api/v1/users/wishlist') data = wishlist;
-    else if (path === '/api/v1/users/wishlist/12') { wishlist = request.method() === 'DELETE' ? [] : [product]; data = {}; }
+    else if (/^\/api\/v1\/users\/wishlist\/\d+$/.test(path)) { const id = Number(path.split('/').at(-1)); wishlist = request.method() === 'DELETE' ? wishlist.filter(row => row.id !== id) : [...wishlist.filter(row => row.id !== id), { ...product, id }]; data = {}; }
     else if (path === '/api/v1/orders/my-orders') data = { content: url.searchParams.get('page') === '1' ? [{ ...order, id: 22, orderNumber: 'ORD-22' }] : [order], totalPages: 2, totalElements: 21 };
     else if (path === '/api/v1/orders/21') data = order;
     else if (path === '/api/v1/orders/21/returns') { if (request.method() === 'POST') returns.push({ id: 1, ...body, status: 'REQUESTED', refundAmount: 120000 }); data = returns; }
@@ -69,6 +69,43 @@ test('wishlist removal is persisted to the account and survives reload', async (
   await page.reload();
   await expect(page.getByText('Bạn chưa lưu sản phẩm nào.', { exact: false })).toBeVisible();
   expect(requests.some(row => row.path === '/api/v1/users/wishlist/12' && row.method === 'DELETE')).toBeTruthy();
+});
+
+for (const width of [1440, 375, 320]) {
+  for (const count of [1, 2, 8]) {
+    test(`beauty-report: wishlist ${count} cards stay bounded at ${width}px without overflow`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const products = Array.from({ length: count }, (_, index) => ({ ...product, id: 12 + index, name: `${product.name} ${index + 1}` }));
+      await setup(page, true, products);
+      await page.goto('/#/profile?tab=wishlist');
+      const cards = page.locator('.account-product-grid .product-card-resolved');
+      await expect(cards).toHaveCount(count);
+      await expect.poll(() => cards.evaluateAll(elements => elements.every(element => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.width <= 260.5 && rect.left >= 0 && rect.right <= window.innerWidth;
+      }))).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    });
+  }
+}
+
+test('beauty-report: wishlist removal leaves one card at its original bounded width', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const remaining = { ...product, id: 13, name: 'Sản phẩm yêu thích còn lại' };
+  const requests = await setup(page, true, [product, remaining]);
+  await page.goto('/#/profile?tab=wishlist');
+  const cards = page.locator('.account-product-grid .product-card-resolved');
+  await expect(cards).toHaveCount(2);
+  const before = await cards.last().boundingBox();
+  expect(before.width).toBeLessThanOrEqual(260.5);
+  await cards.first().getByRole('button', { name: 'Bỏ yêu thích', exact: true }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(cards).toContainText(remaining.name);
+  await expect.poll(async () => Math.abs((await cards.boundingBox()).width - before.width)).toBeLessThan(0.5);
+  expect(requests.some(row => row.path === '/api/v1/users/wishlist/12' && row.method === 'DELETE')).toBe(true);
+  await page.reload();
+  await expect(cards).toHaveCount(1);
+  expect((await cards.boundingBox()).width).toBeLessThanOrEqual(260.5);
 });
 
 test('address book accepts destinations outside the former hardcoded cities', async ({ page }) => {

@@ -58,6 +58,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @EntityGraph(attributePaths = {"items", "items.service", "items.staff", "items.ticket"})
     List<Appointment> findByUserId(Long userId);
 
+    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.userId = :userId AND a.status = :status AND a.isDeleted = false")
+    long countByUserIdAndStatusAndIsDeletedFalse(@Param("userId") Long userId, @Param("status") com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Appointment a WHERE a.id = :id")
     Optional<Appointment> findByIdForUpdate(@Param("id") Long id);

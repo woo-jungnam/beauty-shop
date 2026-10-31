@@ -64,6 +64,21 @@ class StaffPermissionInterceptorTest {
         assertThrows(AccessDeniedException.class, () -> request("PUT", "/api/v1/appointments/7/check-in"));
         assertThrows(AccessDeniedException.class, () -> request("GET", "/api/v1/admin/dashboard"));
     }
+    @Test void beautyReportAdminBypassesGrantsButStaffNeedsCatalogAndReception() {
+        var paths = List.of("/api/v1/admin/products", "/api/v1/admin/spa/services",
+                "/api/v1/admin/spa/categories", "/api/v1/admin/spa/packages",
+                "/api/v1/admin/staff", "/api/v1/admin/spa/facilities", "/api/v1/appointments/admin/all");
+        actor("ROLE_ADMIN");
+        for (String path : paths) assertTrue(request("GET", path));
+        verifyNoInteractions(permissions);
+        actor("ROLE_STAFF");
+        for (String path : paths) assertThrows(AccessDeniedException.class, () -> request("GET", path));
+        when(permissions.has("CATALOG")).thenReturn(true);
+        assertTrue(request("GET", paths.getFirst()));
+        assertThrows(AccessDeniedException.class, () -> request("GET", paths.get(1)));
+        when(permissions.has("SPA_RECEPTION")).thenReturn(true);
+        for (String path : paths) assertTrue(request("GET", path));
+    }
     @Test void grantChecksRespectContextPathAndPreflightAndLeaveOwnerChecksToCustomerServices() {
         actor("ROLE_STAFF");
         var request = new MockHttpServletRequest("GET", "/beautyshop/api/v1/admin/orders"); request.setContextPath("/beautyshop");

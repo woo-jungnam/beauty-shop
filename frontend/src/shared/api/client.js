@@ -105,7 +105,6 @@ apiClient.interceptors.response.use(
           if (newTokens.refreshToken) {
             localStorage.setItem('beautyshop_admin_refresh_token', newTokens.refreshToken);
           }
-          apiClient.defaults.headers.common.Authorization = `Bearer ${newTokens.accessToken}`;
           originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
           processQueue(null, newTokens.accessToken);
           return apiClient(originalRequest);

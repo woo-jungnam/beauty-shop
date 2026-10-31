@@ -26,6 +26,16 @@ COSMETIC_SYNONYMS = {
     r"\baha\b": "glycolic acid lactic acid aha",
     r"\bniac\b": "niacinamide",
     r"\bngừa mụn\b": "kháng viêm ngừa mụn",
+    r"\brổ\b": "sẹo rỗ",
+    r"\bmun\b": "mụn",
+    r"\bdịch về\b": "dịch vụ",
+    r"\bsẹo rỗ\b": "sẹo rỗ tái tạo mô da",
+    r"\bnặn mụn\b": "lấy nhân mụn nặn mụn y khoa",
+    r"\blấy mụn\b": "lấy nhân mụn y khoa",
+    r"\bchăm sóc da mặt\b": "chăm sóc da mặt facial",
+    r"\bbody\b": "toàn thân body",
+    r"\btắm trắng\b": "tắm trắng phi thuyền body",
+    r"\bmassage\b": "massage thư giãn body",
 }
 
 PRICE_PATTERN = re.compile(

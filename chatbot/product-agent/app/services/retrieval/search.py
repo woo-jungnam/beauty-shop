@@ -474,6 +474,8 @@ class HybridRetrievalService:
             targetType = getattr(constraints, "target_type", None)
         if not targetType and getattr(understanding, "entities", None):
             targetType = getattr(understanding.entities, "target_type", None)
+        if not targetType:
+            targetType = getattr(understanding, "target_type", getattr(understanding, "target", None))
         if targetType:
             targetType = str(targetType).upper().strip()
             if targetType in ("COMBO", "ALL", "NONE"):

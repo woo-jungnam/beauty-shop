@@ -17,11 +17,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+    const handleStorage = (event) => {
+      if (event.storageArea !== localStorage || (event.key !== null && event.key !== 'beautyshop_admin_token')) return;
+      const nextToken = localStorage.getItem('beautyshop_admin_token');
+      if (nextToken === token) return;
+      setLoading(true);
+      setUser(null);
+      setToken(nextToken);
+    };
     const handleLogoutEvent = () => {
       setUser(null);
       setToken(null);
     };
 
+    window.addEventListener('storage', handleStorage);
     window.addEventListener('auth:logout', handleLogoutEvent);
     const onProfileUpdated = () => verifySession();
     window.addEventListener('auth:profile-updated', onProfileUpdated);
@@ -30,23 +40,33 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const res = await apiClient.get(ENDPOINTS.AUTH.PROFILE);
+          if (!active) return;
+          const currentToken = localStorage.getItem('beautyshop_admin_token');
+          if (currentToken !== token) { setToken(currentToken); return; }
           const profile = res.data || res;
           setUser(profile);
           localStorage.setItem('beautyshop_admin_user', JSON.stringify(profile));
         } catch {
+          if (!active) return;
+          const currentToken = localStorage.getItem('beautyshop_admin_token');
+          if (currentToken !== token) { setToken(currentToken); return; }
           setUser(null);
           setToken(null);
           localStorage.removeItem('beautyshop_admin_token');
           localStorage.removeItem('beautyshop_admin_refresh_token');
           localStorage.removeItem('beautyshop_admin_user');
         }
+      } else {
+        setUser(null);
       }
-      setLoading(false);
+      if (active) setLoading(false);
     };
 
     verifySession();
 
     return () => {
+      active = false;
+      window.removeEventListener('storage', handleStorage);
       window.removeEventListener('auth:logout', handleLogoutEvent);
       window.removeEventListener('auth:profile-updated', onProfileUpdated);
     };
@@ -124,6 +144,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('beautyshop_admin_token');
       localStorage.removeItem('beautyshop_admin_refresh_token');
       localStorage.removeItem('beautyshop_admin_user');
+      delete apiClient.defaults.headers.common.Authorization;
       setToken(null);
       setUser(null);
     }

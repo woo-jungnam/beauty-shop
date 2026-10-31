@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Bell, CalendarDays, Clock, Plus, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, CalendarDays, Clock, Plus, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { Button } from '../../shared/ui/Button';
 import { apiClient } from '../../shared/api/client';
@@ -13,7 +13,7 @@ import './treatments.css';
 
 const reportFields = { totalCourses: 'Tổng hồ sơ', pendingIntake: 'Chờ tiếp nhận', activeCourses: 'Đang điều trị', pausedCourses: 'Tạm dừng', completedCourses: 'Hoàn thành', expiredCourses: 'Hết hiệu lực', sessionsDue: 'Buổi đến hạn', customersWithoutNextBooking: 'Khách chưa đặt buổi tiếp', collectedAmount: 'Đã thu', refundedAmount: 'Đã hoàn', unusedEntitlementAmount: 'Quyền lợi chưa sử dụng' };
 
-export const TreatmentWorkspace = ({ role = 'customer', initialCourseId = null, initialTab = null }) => {
+export const TreatmentWorkspace = ({ role = 'customer', onNavigate, initialCourseId = null, initialTab = null }) => {
   const { isAuthenticated, user } = useAuth();
   const admin = role === 'admin';
   const customer = role === 'customer';
@@ -85,7 +85,15 @@ export const TreatmentWorkspace = ({ role = 'customer', initialCourseId = null, 
   };
   if (!customer && !isAuthenticated) return <div className="treatment-workspace"><div className="treatment-empty"><h1>Vui lòng đăng nhập</h1><a href="#/login">Đăng nhập để mở hồ sơ điều trị</a></div></div>;
   return <section className="treatment-workspace" aria-label={customer ? 'Lộ trình điều trị của khách hàng' : 'Quản lý lộ trình điều trị'}>
-    {!courseId && <><header className="treatment-heading"><div><span className="treatment-eyebrow">BEAUTYSHOP · HÀNH TRÌNH CHĂM SÓC</span><h1>{customer ? 'Điều trị theo lộ trình' : 'Quản lý lộ trình điều trị'}</h1><p>{customer ? 'Chọn kế hoạch có sẵn, được tiếp nhận riêng và theo dõi kết quả từng buổi.' : 'Tiếp nhận, điều phối và theo dõi hồ sơ xuyên suốt các buổi điều trị.'}</p></div><div className="treatment-actions">{admin && <Button onClick={() => setEditor({ template: null })}><Plus size={16} />Tạo mẫu lộ trình</Button>}<Button variant="outline" loading={refreshing} onClick={() => refresh()}><RefreshCw size={16} />Làm mới</Button></div></header>
+    {!courseId && <>{customer && (
+      <nav className="treatment-breadcrumb" aria-label="Đường dẫn lộ trình" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--c-text-light, #716762)', marginBottom: 16 }}>
+        <button type="button" onClick={() => onNavigate ? onNavigate('') : (window.location.hash = '#/')} style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <ArrowLeft size={14} /> Trang chủ
+        </button>
+        <span aria-hidden="true">/</span>
+        <span style={{ color: 'var(--c-primary, #721B29)', fontWeight: 600 }}>Điều trị theo lộ trình</span>
+      </nav>
+    )}<header className="treatment-heading"><div><span className="treatment-eyebrow">BEAUTYSHOP · HÀNH TRÌNH CHĂM SÓC</span><h1>{customer ? 'Điều trị theo lộ trình' : 'Quản lý lộ trình điều trị'}</h1><p>{customer ? 'Chọn kế hoạch có sẵn, được tiếp nhận riêng và theo dõi kết quả từng buổi.' : 'Tiếp nhận, điều phối và theo dõi hồ sơ xuyên suốt các buổi điều trị.'}</p></div><div className="treatment-actions">{admin && <Button onClick={() => setEditor({ template: null })}><Plus size={16} />Tạo mẫu lộ trình</Button>}<Button variant="outline" loading={refreshing} onClick={() => refresh()}><RefreshCw size={16} />Làm mới</Button></div></header>
       <div className="treatment-toolbar"><nav className="treatment-tabs" aria-label="Nội dung lộ trình"><button type="button" aria-pressed={tab === 'catalog'} onClick={() => selectTab('catalog')}>{admin ? 'Mẫu & phiên bản' : 'Lộ trình có sẵn'}</button><button type="button" aria-pressed={tab === 'courses'} onClick={() => selectTab('courses')}>{customer ? 'Lộ trình của tôi' : 'Hồ sơ điều trị'}</button>{customer && <button type="button" aria-pressed={tab === 'notifications'} onClick={() => selectTab('notifications')}>Thông báo {notifications.some(row => !row.readAt) ? `(${notifications.filter(row => !row.readAt).length})` : ''}</button>}{admin && <button type="button" aria-pressed={tab === 'report'} onClick={() => selectTab('report')}>Báo cáo</button>}</nav>{customer && <a className="treatment-link" href="#/booking">Đặt dịch vụ một lần →</a>}</div></>}
     {notice && <div className={`treatment-notice ${notice.tone === 'success' ? '' : notice.tone}`} role={notice.tone === 'success' ? 'status' : 'alert'}>{notice.message}<Button size="sm" variant="ghost" onClick={() => setNotice(null)} aria-label="Đóng thông báo lộ trình">×</Button></div>}
     {error && <div className="treatment-notice error" role="alert">{error}<div className="treatment-actions"><Button variant="outline" disabled={refreshing} onClick={() => refresh()}>Thử tải lại</Button></div></div>}

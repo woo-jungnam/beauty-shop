@@ -117,10 +117,11 @@ class AgentOrchestrator:
     @staticmethod
     def formatSources(candidates: List[RerankedCandidate]) -> List[SourceRef]:
         sources: List[SourceRef] = []
-        for cand in candidates:
+        for idx, cand in enumerate(candidates, 1):
             p = cand.product
             sources.append(
                 SourceRef(
+                    index=idx,
                     productId=p.id,
                     productName=p.name,
                     chunkType="product_details",

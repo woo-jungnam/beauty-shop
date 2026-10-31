@@ -54,6 +54,14 @@ class GenerationGuardrail:
                     issues.append(f"Price mismatch: {numP:,.0f} VND")
 
         sanitized = botResponse
+        foundCitations = [int(m) for m in re.findall(r"\[(\d+)\]", botResponse)]
+        numCandidates = len(candidates)
+        invalidCitations = [c for c in foundCitations if c < 1 or c > numCandidates]
+        if invalidCitations:
+            issues.append(f"Invalid citation indices: {invalidCitations}")
+            for inv in invalidCitations:
+                sanitized = re.sub(rf"\[{inv}\]", "", sanitized)
+
         isValid = len(issues) == 0 or (matchedAnyBrand or matchedAnyName)
         return isValid, sanitized, issues
 

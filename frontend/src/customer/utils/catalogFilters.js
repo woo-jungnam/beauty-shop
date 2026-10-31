@@ -45,13 +45,17 @@ export const readCatalogFilters = (query = '') => {
 
 export const catalogRoute = (filters) => {
   const params = new URLSearchParams();
-  if (filters.keyword.trim()) params.set('search', filters.keyword.trim());
+  if (filters.keyword && filters.keyword.trim()) params.set('search', filters.keyword.trim());
   for (const key of ['categoryIds', 'brandIds', 'activeIngredients']) {
-    if (filters[key].length) params.set(key, filters[key].join(','));
+    if (filters[key] && filters[key].length) params.set(key, filters[key].join(','));
   }
-  if (filters.skinType !== 'ALL') params.set('skinType', filters.skinType);
-  if (filters.priceRange !== 'ALL') params.set('priceRange', filters.priceRange);
-  if (filters.sortBy !== 'popular') params.set('sort', filters.sortBy);
+  if (filters.categorySlug) params.set('category', filters.categorySlug);
+  if (filters.categoryName) params.set('name', filters.categoryName);
+  if (filters.brandSlug) params.set('brand', filters.brandSlug);
+  if (filters.brandName) params.set('brandName', filters.brandName);
+  if (filters.skinType && filters.skinType !== 'ALL') params.set('skinType', filters.skinType);
+  if (filters.priceRange && filters.priceRange !== 'ALL') params.set('priceRange', filters.priceRange);
+  if (filters.sortBy && filters.sortBy !== 'popular') params.set('sort', filters.sortBy);
   if (filters.activeFilter) params.set('filter', filters.activeFilter);
   if (filters.page > 0) params.set('page', String(filters.page));
   return `products${params.size ? `?${params}` : ''}`;

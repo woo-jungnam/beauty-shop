@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const today = '2026-10-13';
-const profile = { id: 99, username: 'reception-test', fullName: 'Lễ tân BeautyShop', roles: ['ROLE_STAFF'] };
+const profile = { id: 99, username: 'reception-test', fullName: 'Lễ tân BeautyShop', roles: ['ROLE_STAFF'], permissions: ['SPA_RECEPTION'] };
 const customer = { id: 501, fullName: 'Nguyễn Lan', phone: '+84981234567', membershipTier: 'GOLD', status: 'ACTIVE' };
 const staff = [{ id: 11, fullName: 'Mai Anh', specialty: 'Chăm sóc da' }, { id: 12, fullName: 'Thu Hà' }];
 const facility = (id, active = true) => ({ id, name: `Giường ${id}`, type: 'BED', capacity: 1, active });
@@ -19,7 +19,7 @@ async function setup(page, options = {}) {
     appointment(2, 'CONFIRMED', { items: [item(2, { staffId: 11, staffName: 'Mai Anh' })] }),
     appointment(3, 'IN_PROGRESS', { checkedInAt: '2026-10-13T03:00:00Z', items: [item(3, { executionStatus: 'IN_PROGRESS', resources: [{ facilityId: 2, name: 'Giường 2', quantity: 1 }] })] }),
     appointment(4, 'COMPLETED', { orderId: 401, items: [item(4, { executionStatus: 'PERFORMED', ticketId: 88, ticketUsageState: 'REDEEMED' })] }), appointment(5, 'CANCELLED')];
-  await page.route('**/api/**', async route => {
+  await page.route('**/api/v1/**', async route => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -60,6 +60,184 @@ async function setup(page, options = {}) {
   await expect(page.locator('[data-appointment-id="4"]')).toBeVisible();
   return calls;
 }
+
+const reportAppointment = appointment(21, 'PENDING', {
+  appointmentDate: '2026-10-30', startTime: '12:30:00', endTime: '13:30:00', customerName: 'Khách báo cáo 21',
+  items: [item(21, { startTime: '12:30:00', endTime: '13:30:00', staffId: null, staffName: null })],
+});
+
+async function setupBeautyReport(page, { admin = false, rows = [appointment(1, 'PENDING'), reportAppointment] } = {}) {
+  await page.clock.install({ time: new Date('2026-10-30T12:00:00+07:00') });
+  const user = admin ? { ...profile, roles: ['ROLE_ADMIN'] } : profile;
+  await page.addInitScript(value => {
+    localStorage.setItem('beautyshop_admin_token', 'test-token');
+    localStorage.setItem('beautyshop_admin_user', JSON.stringify(value));
+  }, user);
+  const state = { appointmentsFail: false, facilitiesFail: false, blocksFail: false, calls: [], pending: [], hold: null };
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    let data = [];
+    if (path.endsWith('/auth/profile')) data = user;
+    else if (path.endsWith('/appointments/admin/all')) {
+      const index = Number(url.searchParams.get('page') || 0);
+      const status = url.searchParams.get('status') || '';
+      state.calls.push({ page: index, status });
+      if (state.hold?.({ page: index, status })) {
+        await new Promise(resolve => state.pending.push({ page: index, status, release: resolve }));
+      }
+      if (state.appointmentsFail) return route.fulfill({ status: 500, json: { message: 'Database unavailable' } });
+      const filtered = rows.filter(row => !status || row.status === status);
+      data = { content: filtered.slice(index, index + 1), page: index, totalPages: filtered.length,
+        totalElements: filtered.length, last: index + 1 >= filtered.length };
+    } else if (path.endsWith('/spa/facilities')) {
+      if (state.facilitiesFail) return route.fulfill({ status: 500, json: { message: 'Database unavailable' } });
+      data = [facility(1), facility(2)];
+    } else if (path.endsWith('/blocks')) {
+      if (state.blocksFail && path.includes('/1/')) return route.fulfill({ status: 500, json: { message: 'Database unavailable' } });
+    } else if (path.endsWith('/spa/services')) data = [{ id: 101, name: 'Chăm sóc da chuyên sâu', durationMinutes: 60, basePrice: 350000 }];
+    else if (path.endsWith('/admin/staff') || path.endsWith('/services/staff')) data = staff;
+    await route.fulfill({ json: { data } });
+  });
+  return state;
+}
+
+test('beauty-report: search four appointment aliases across all API pages without changing display codes', async ({ page }) => {
+  const state = await setupBeautyReport(page);
+  await page.goto('/#/reception');
+  const card = page.locator('[data-appointment-id="21"]');
+  await expect(card).toBeVisible();
+  expect(state.calls.some(call => call.page === 1)).toBe(true);
+  for (const code of [' spa-21 ', 'SPA-00021', 'spa-apt-#21', '21']) {
+    await page.getByLabel('Tìm tên, SĐT hoặc mã lịch hẹn').fill(code);
+    await expect(page.locator('[data-appointment-id]')).toHaveCount(1);
+    await expect(card).toContainText('SPA-00021');
+    await expect(card).toContainText('12:30');
+    await expect(card).toContainText('30/10/2026');
+    await expect(card).toContainText('Chưa chỉ định KTV');
+  }
+  await page.getByRole('button', { name: 'Danh sách', exact: true }).click();
+  await expect(page.getByRole('cell', { name: /Khách báo cáo 21/ })).toBeVisible();
+});
+
+test('beauty-report: facility failure retains appointments and disables stale room assignment', async ({ page }) => {
+  const state = await setupBeautyReport(page);
+  await page.goto('/#/reception');
+  await expect(page.getByRole('button', { name: /Giường 1: Sẵn sàng/ })).toBeEnabled();
+  state.facilitiesFail = true;
+  await page.getByRole('button', { name: 'Làm mới dữ liệu quầy' }).click();
+  await expect(page.getByRole('alert')).toContainText('Chưa tải được phòng / giường');
+  await expect(page.locator('[data-appointment-id="21"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Giường 1: Chưa xác minh/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Giường 2: Chưa xác minh/ })).toBeDisabled();
+  state.facilitiesFail = false;
+  await page.getByRole('button', { name: 'Làm mới dữ liệu quầy' }).click();
+  await expect(page.getByRole('button', { name: /Giường 1: Sẵn sàng/ })).toBeEnabled();
+});
+
+test('beauty-report: initial facility failure still loads every appointment page', async ({ page }) => {
+  const state = await setupBeautyReport(page);
+  state.facilitiesFail = true;
+  await page.goto('/#/reception');
+  await expect(page.locator('[data-appointment-id="21"]')).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('Chưa tải được phòng / giường');
+  await expect(page.getByText('Chưa có phòng / giường được cấu hình.')).toHaveCount(0);
+  await expect(page.locator('.facility-tile:not(:disabled)')).toHaveCount(0);
+  expect(state.calls.some(call => call.page === 1)).toBe(true);
+});
+
+test('beauty-report: appointment failure has retry instead of successful empty queue', async ({ page }) => {
+  const state = await setupBeautyReport(page);
+  state.appointmentsFail = true;
+  await page.goto('/#/reception');
+  await expect(page.getByRole('alert')).toContainText('Chưa tải được lịch hẹn');
+  await expect(page.getByText('Chưa có lịch trong cột này')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Danh sách', exact: true }).click();
+  await expect(page.getByText('Chưa có dữ liệu', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Giường 1: Chưa xác minh/ })).toBeDisabled();
+  state.appointmentsFail = false;
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
+  await expect(page.getByRole('cell', { name: /Khách báo cáo 21/ })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('beauty-report: failed appointment refresh keeps old rows with warning and unknown rooms', async ({ page }) => {
+  const state = await setupBeautyReport(page);
+  await page.goto('/#/reception');
+  await expect(page.locator('[data-appointment-id="21"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Giường 1: Sẵn sàng/ })).toBeEnabled();
+  state.appointmentsFail = true;
+  await page.getByRole('button', { name: 'Làm mới dữ liệu quầy' }).click();
+  await expect(page.getByRole('alert')).toContainText('đang hiển thị lần tải thành công trước đó');
+  await expect(page.locator('[data-appointment-id="21"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Giường 1: Chưa xác minh/ })).toBeDisabled();
+});
+
+test('beauty-report: block failure locks only the unverified room', async ({ page }) => {
+  const state = await setupBeautyReport(page);
+  state.blocksFail = true;
+  await page.goto('/#/reception');
+  await expect(page.getByRole('alert')).toContainText('Chưa tải được lịch tạm dừng');
+  await expect(page.getByRole('button', { name: /Giường 1: Chưa xác minh/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Giường 2: Sẵn sàng/ })).toBeEnabled();
+  await expect(page.locator('[data-appointment-id="21"]')).toBeVisible();
+});
+
+test('beauty-report: SpaPage counter stays unknown until success; loading and error never show empty', async ({ page }) => {
+  const state = await setupBeautyReport(page, { admin: true, rows: [] });
+  state.hold = () => true;
+  state.appointmentsFail = true;
+  await page.goto('/#/admin/spa');
+  const tab = page.getByRole('button', { name: /^Lịch hẹn Spa/ });
+  await expect(tab).toHaveText('Lịch hẹn Spa (—)');
+  expect(state.calls).toHaveLength(0);
+  await tab.click();
+  await expect.poll(() => state.pending.length).toBe(1);
+  await expect(page.getByText('Đang nạp dữ liệu…', { exact: true })).toBeVisible();
+  await expect(page.getByText('Không có lịch hẹn spa nào phù hợp.', { exact: true })).toHaveCount(0);
+  state.pending.shift().release();
+  await expect(page.getByRole('alert')).toContainText('Chưa tải được lịch hẹn');
+  await expect(tab).toHaveText('Lịch hẹn Spa (—)');
+  await expect(page.getByText('Chưa có dữ liệu', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Không có lịch hẹn spa nào phù hợp.', { exact: true })).toHaveCount(0);
+  state.appointmentsFail = false;
+  state.hold = null;
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
+  await expect(tab).toHaveText('Lịch hẹn Spa (0)');
+  await expect(page.getByText('Không có lịch hẹn spa nào phù hợp.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mở quầy Lễ tân', exact: true })).toHaveCount(1);
+});
+
+test('beauty-report: SpaPage ignores stale filter and page responses', async ({ page }) => {
+  const rows = [appointment(1, 'PENDING'), appointment(2, 'PENDING'), reportAppointment, appointment(3, 'CONFIRMED')];
+  const state = await setupBeautyReport(page, { admin: true, rows });
+  state.hold = ({ status }) => !status;
+  await page.goto('/#/admin/spa');
+  const tab = page.getByRole('button', { name: /^Lịch hẹn Spa/ });
+  await tab.click();
+  await expect.poll(() => state.pending.length).toBe(1);
+  const oldFilter = state.pending.shift();
+  const filter = page.getByLabel('Lọc trạng thái lịch hẹn');
+  await filter.selectOption('CONFIRMED');
+  await expect(page.getByRole('cell', { name: /Khách 3/ })).toBeVisible();
+  await expect(tab).toHaveText('Lịch hẹn Spa (1)');
+  state.hold = null;
+  oldFilter.release();
+  await filter.selectOption('PENDING');
+  await expect(page.getByRole('cell', { name: /Khách 1/ })).toBeVisible();
+  await expect(tab).toHaveText('Lịch hẹn Spa (3)');
+  state.hold = ({ status, page: index }) => status === 'PENDING' && index === 1;
+  await page.getByRole('button', { name: 'Sau', exact: true }).click();
+  await expect.poll(() => state.pending.length).toBe(1);
+  const oldPage = state.pending.shift();
+  await filter.selectOption('CONFIRMED');
+  await expect(page.getByRole('cell', { name: /Khách 3/ })).toBeVisible();
+  oldPage.release();
+  await page.getByRole('button', { name: 'Làm mới', exact: true }).click();
+  await expect(page.getByRole('cell', { name: /Khách 3/ })).toBeVisible();
+  await expect(page.getByRole('cell', { name: /Khách 2/ })).toHaveCount(0);
+  await expect(tab).toHaveText('Lịch hẹn Spa (1)');
+});
 
 test('all pages load; facility strip respects occupancy and cleaning independently of queue filters', async ({ page }) => {
   await setup(page);

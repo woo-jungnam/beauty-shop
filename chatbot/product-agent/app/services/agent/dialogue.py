@@ -173,6 +173,11 @@ class ConversationContext(BaseModel):
         curTargetType: str = "PRODUCT",
         **kwargs: Any,
     ) -> None:
+        uIntent = getattr(current.intent, "value", str(current.intent))
+        pIntent = getattr(current.primary_intent, "value", str(current.primary_intent or ""))
+        if uIntent == "OUT_OF_DOMAIN" or pIntent in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI"):
+            return
+
         tCat = targetCat if targetCat is not None else kwargs.get("target_cat")
         cTargetType = curTargetType if "curTargetType" in kwargs or curTargetType != "PRODUCT" else kwargs.get("cur_target_type", curTargetType)
 
@@ -300,6 +305,10 @@ class ConversationContextManager:
 
         ctx = self.getOrCreate(sId)
         uIntent = getattr(cur.intent, "value", str(cur.intent))
+        pIntent = getattr(cur.primary_intent, "value", str(cur.primary_intent or ""))
+
+        if uIntent == "OUT_OF_DOMAIN" or pIntent in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI"):
+            return cur
 
         if uIntent in ("COMPARISON", "PRODUCT_COMPARISON", "ROUTINE_RECOMMENDATION", "ROUTINE"):
             curC = cur.constraints.model_dump(exclude_none=True) if hasattr(cur.constraints, "model_dump") else (cur.constraints or {})

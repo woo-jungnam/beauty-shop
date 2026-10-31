@@ -25,6 +25,13 @@ class TestCart extends CartProvider {
   Future<void> fetchCart() async {}
 }
 
+class TestProductsLoading extends ProductProvider {
+  @override
+  bool get isLoadingDetail => true;
+  @override
+  Future<void> loadInitialData() async {}
+}
+
 void main() {
   testWidgets('Missing facts stay unknown on a narrow dark product screen', (
     tester,
@@ -176,5 +183,26 @@ void main() {
     expect(product.ingredientsList.first.concerns, ['Lưu ý']);
     expect(product.ingredientsList.last.concentrationLabel, '');
     expect(product.ingredientsList.last.benefits, isEmpty);
+  });
+
+  testWidgets('ProductDetailScreen displays AppBar with title while loading', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ProductProvider>(
+            create: (_) => TestProductsLoading(),
+          ),
+          ChangeNotifierProvider<CartProvider>(create: (_) => TestCart()),
+        ],
+        child: const MaterialApp(
+          home: ProductDetailScreen(productId: 1),
+        ),
+      ),
+    );
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.text('Chi tiết sản phẩm'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 }

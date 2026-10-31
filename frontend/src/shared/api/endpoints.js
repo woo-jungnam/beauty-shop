@@ -42,6 +42,7 @@ export const ENDPOINTS = {
     CANCEL: (id) => `/api/v1/orders/${id}/cancel`,
     LIST: '/api/v1/admin/orders',
     UPDATE_STATUS: (id) => `/api/v1/admin/orders/${id}/status`,
+    CONFIRM_PAYMENT: (id) => `/api/v1/admin/orders/${id}/confirm-payment`,
     CONFIRM_REFUND: (id) => `/api/v1/admin/orders/${id}/refund-confirmation`,
   },
 
@@ -150,6 +151,7 @@ export const ENDPOINTS = {
 
   CHATBOT: {
     CHAT: '/api/v1/chatbot/chat',
+    STREAM: '/api/v1/chatbot/chat/stream',
     HEALTH: '/api/v1/chatbot/health',
     SYNC_DATABASE: '/api/v1/chatbot/sync/database',
     TEST_UNDERSTAND: '/api/v1/chatbot/test/understand',

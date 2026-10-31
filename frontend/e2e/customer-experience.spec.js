@@ -352,3 +352,42 @@ test('Customer login and registration expose only the active form to keyboard us
   await page.getByRole('button', { name: 'Đăng Nhập', exact: true }).click();
   await expect(page.getByLabel('Tên đăng nhập hoặc Email *', { exact: true })).toBeVisible();
 });
+
+test('navigation breadcrumb: OrderLookupPage, ServicePackages, TreatmentWorkspace, CatalogPage and Profile prompt provide home return paths', async ({ page }) => {
+  await storefront(page);
+
+  // 1. OrderLookupPage
+  await page.goto('/#/order-lookup');
+  const lookupHomeBtn = page.getByRole('navigation', { name: 'Đường dẫn tra cứu' }).getByRole('button', { name: 'Trang chủ' });
+  await expect(lookupHomeBtn).toBeVisible();
+  await lookupHomeBtn.click();
+  await expect(page).toHaveURL(/#\/?$/);
+
+  // 2. ServicePackages
+  await page.goto('/#/service-packages');
+  const packageHomeBtn = page.getByRole('navigation', { name: 'Đường dẫn gói dịch vụ' }).getByRole('button', { name: 'Trang chủ' });
+  await expect(packageHomeBtn).toBeVisible();
+  await packageHomeBtn.click();
+  await expect(page).toHaveURL(/#\/?$/);
+
+  // 3. TreatmentWorkspace (customer)
+  await page.goto('/#/treatments');
+  const treatmentHomeBtn = page.getByRole('navigation', { name: 'Đường dẫn lộ trình' }).getByRole('button', { name: 'Trang chủ' });
+  await expect(treatmentHomeBtn).toBeVisible();
+  await treatmentHomeBtn.click();
+  await expect(page).toHaveURL(/#\/?$/);
+
+  // 4. CatalogPage
+  await page.goto('/#/products');
+  const catalogHomeBtn = page.getByRole('navigation', { name: 'Đường dẫn danh mục' }).getByRole('button', { name: 'Trang chủ' });
+  await expect(catalogHomeBtn).toBeVisible();
+  await catalogHomeBtn.click();
+  await expect(page).toHaveURL(/#\/?$/);
+
+  // 5. CustomerProfilePage unauthenticated prompt
+  await page.goto('/#/profile');
+  const profilePromptHomeBtn = page.getByRole('button', { name: 'Về trang chủ' });
+  await expect(profilePromptHomeBtn).toBeVisible();
+  await profilePromptHomeBtn.click();
+  await expect(page).toHaveURL(/#\/?$/);
+});

@@ -60,4 +60,13 @@ public class AdminOrderController {
         OrderResponse order = orderService.updateOrderStatus(id, request);
         return ResponseEntity.ok(ApiResponse.success(order));
     }
+
+    @Operation(summary = "Xác nhận thanh toán thủ công cho đơn hàng (Kiểm thử / Đối soát)")
+    @PostMapping("/{id}/confirm-payment")
+    public ResponseEntity<ApiResponse<OrderResponse>> confirmPayment(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reference) {
+        OrderResponse order = orderService.manualMarkPaid(id, reference);
+        return ResponseEntity.ok(ApiResponse.success(order));
+    }
 }

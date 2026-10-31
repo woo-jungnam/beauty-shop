@@ -36,10 +36,18 @@ class QueryRouter:
             "vấn đề da (mụn, thâm, lão hóa, phục hồi) và mức ngân sách mong muốn. "
             "Hôm nay bạn cần tìm sản phẩm chăm sóc da nào ạ?"
         ),
+        Intent.OUT_OF_DOMAIN: (
+            "Dạ, tôi là chuyên gia AI chuyên biệt về tư vấn mỹ phẩm, chăm sóc da và dịch vụ làm đẹp tại spa. "
+            "Câu hỏi của bạn hiện nằm ngoài phạm vi chuyên môn của tôi. "
+            "Nếu bạn cần tư vấn sản phẩm chăm sóc da hoặc đặt lịch dịch vụ spa, xin vui lòng cho tôi biết nhé!"
+        ),
     }
 
     def shouldRetrieve(self, understanding: UnderstandingResult) -> bool:
         pIntent = getattr(understanding.primary_intent, "value", str(understanding.primary_intent or ""))
+        if pIntent in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI") or understanding.intent == Intent.OUT_OF_DOMAIN:
+            return False
+
         hasValidIntent = (
             pIntent not in (PrimaryIntent.KHONG_XAC_DINH.value, "KHÔNG_XÁC_ĐỊNH", "KHONG_XAC_DINH", "")
             and understanding.intent not in (Intent.UNKNOWN, "UNKNOWN")
@@ -86,9 +94,12 @@ class QueryRouter:
     should_retrieve = shouldRetrieve
 
     def handleNonRetrieval(self, understanding: UnderstandingResult) -> Optional[str]:
+        intent = understanding.intent
+        pIntent = getattr(understanding.primary_intent, "value", str(understanding.primary_intent or ""))
+        if intent == Intent.OUT_OF_DOMAIN or pIntent in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI"):
+            return self.CANNED_RESPONSES[Intent.OUT_OF_DOMAIN]
         if understanding.needs_clarification and understanding.clarification_question:
             return understanding.clarification_question
-        intent = understanding.intent
         return self.CANNED_RESPONSES.get(intent) or (
             self.CANNED_RESPONSES[Intent.GENERAL_CHAT]
             if intent in (Intent.GENERAL_INFORMATION, Intent.UNKNOWN, "UNKNOWN")
@@ -107,11 +118,24 @@ class FastPathParser:
         r"alo(\s+shop)?(\s+nhé|\s+nha)?)$",
         re.I,
     )
+    OUT_OF_DOMAIN_PATTERNS = (
+        re.compile(r"^\s*(\d+\s*[\+\-\*\/xX\=]\s*[\d\s\+\-\*\/xX\=\?]*|[\d\s\+\-\*\/xX\=\?]+\=[\d\s\+\-\*\/xX\=\?]*)\s*$", re.I),
+        re.compile(r"(\d+\s*(cộng|trừ|nhân|chia)\s*\d+|bằng\s+mấy|bằng\s+bao\s+nhiêu\s*(\?|$))", re.I),
+        re.compile(r"^(thời tiết|dự báo thời tiết|hôm nay mưa không|mấy giờ rồi|bây giờ là mấy giờ|hôm nay thứ mấy|viết code|lập trình python|dịch bài này|kể chuyện|hát đi)", re.I),
+    )
     PRICE_KEYWORDS = ("dưới", "tầm", "khoảng", "rẻ hơn", "ngân sách", "tiền", "<=")
     CATEGORY_PREFIXES = ("đổi sang ", "chuyển sang ", "sang ", "qua ", "loại ", "chọn ")
 
     def tryParse(self, message: str, ctx) -> Optional[UnderstandingResult]:
         clean = message.strip().lower()
+        for pat in self.OUT_OF_DOMAIN_PATTERNS:
+            if pat.search(clean):
+                res = self.buildResult(Intent.OUT_OF_DOMAIN, message, message)
+                res.primary_intent = PrimaryIntent.NGOAI_PHAM_VI.value
+                res.action_routing = ActionRouting.FAST_PATH.value
+                res.needs_clarification = False
+                return res
+
         if self.THANKS_PATTERN.search(clean):
             return self.buildResult(Intent.GENERAL_INFORMATION, message, message)
 

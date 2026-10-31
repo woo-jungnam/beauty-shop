@@ -18,11 +18,20 @@ class ContextBuilder:
     def buildProductContext(
         candidates: List[RerankedCandidate],
         maxProducts: int = 5,
+        understanding: Optional[UnderstandingResult] = None,
         **kwargs,
     ) -> str:
         maxProds = maxProducts if "maxProducts" in kwargs or maxProducts != 5 else kwargs.get("max_products", maxProducts)
+        und = understanding if understanding is not None else kwargs.get("understanding")
         if not candidates:
             return "Không tìm thấy sản phẩm nào phù hợp với các tiêu chí tìm kiếm."
+
+        uIntentVal = getattr(getattr(und, "intent", None), "value", str(getattr(und, "intent", "") or ""))
+        pIntentVal = getattr(getattr(und, "primary_intent", None), "value", str(getattr(und, "primary_intent", "") or ""))
+
+        isPriceQuery = uIntentVal in ("PRICE_QUERY", "AVAILABILITY_QUERY") or pIntentVal == "GIÁ_NGÂN_SÁCH"
+        isIngredientQuery = pIntentVal in ("THÔNG_TIN_THÀNH_PHẦN", "TÁC_DỤNG_THÀNH_PHẦN", "TƯƠNG_THÍCH_THÀNH_PHẦN")
+        isComparisonOrRoutine = uIntentVal in ("COMPARISON", "PRODUCT_COMPARISON", "ROUTINE_RECOMMENDATION", "ROUTINE")
 
         blocks: List[str] = []
         for idx, cand in enumerate(candidates[:maxProds], 1):
@@ -30,44 +39,73 @@ class ContextBuilder:
             priceFmt = f"{p.price:,.0f} VND"
             skins = ", ".join(p.skinType) if p.skinType else "Mọi loại da"
             concerns = ", ".join(p.concerns) if p.concerns else "Không chỉ định"
-            reviewsCnt = getattr(p, "totalReviews", 0) or getattr(p, "total_reviews", 0) or 0
-            soldCnt = getattr(p, "totalSold", 0) or getattr(p, "total_sold", 0) or 0
             pType = getattr(p, "targetType", "PRODUCT") or getattr(p, "target_type", "PRODUCT") or "PRODUCT"
             duration = getattr(p, "durationMinutes", 0) or getattr(p, "duration_minutes", 0) or 0
+            relevanceExpl = cand.relevanceExplanation or getattr(cand, "relevance_explanation", "") or "Phù hợp với tiêu chí của bạn"
 
-            ingr = (p.ingredients[:250] + "...") if len(p.ingredients) > 250 else p.ingredients
-            ben = (p.benefits[:250] + "...") if len(p.benefits) > 250 else p.benefits
-            usg = (p.usage[:200] + "...") if len(p.usage) > 200 else p.usage
+            ingr = (p.ingredients[:160] + "...") if len(p.ingredients) > 160 else p.ingredients
+            ben = (p.benefits[:160] + "...") if len(p.benefits) > 160 else p.benefits
 
-            relevanceExpl = cand.relevanceExplanation or getattr(cand, "relevance_explanation", "") or "Phù hợp với nhu cầu của bạn"
-
-            if pType == "SERVICE":
-                durationStr = f" | **Thời lượng**: {duration} phút" if duration else ""
+            if isPriceQuery:
+                if pType == "SERVICE":
+                    durationStr = f" | Thời lượng: {duration} phút" if duration else ""
+                    block = (
+                        f"### [Tài liệu {idx}]: {p.name}\n"
+                        f"- Cơ sở: {p.brand} | Danh mục: {p.category}{durationStr}\n"
+                        f"- Giá dịch vụ niêm yết: {priceFmt}\n"
+                        f"- Điểm tương thích: {relevanceExpl}"
+                    )
+                else:
+                    block = (
+                        f"### [Tài liệu {idx}]: {p.name}\n"
+                        f"- Thương hiệu: {p.brand} | Danh mục: {p.category}\n"
+                        f"- Giá niêm yết: {priceFmt}\n"
+                        f"- Tình trạng kho: Còn hàng\n"
+                        f"- Điểm tương thích: {relevanceExpl}"
+                    )
+            elif isIngredientQuery:
                 block = (
-                    f"### [Dịch vụ Spa {idx}]: {p.name}\n"
-                    f"- **Phân loại**: Dịch vụ Spa / Liệu trình làm đẹp | **Cơ sở**: {p.brand} | **Danh mục**: {p.category}{durationStr}\n"
-                    f"- **Giá dịch vụ niêm yết**: {priceFmt}\n"
-                    f"- **Đánh giá khách hàng**: {p.rating} sao ({reviewsCnt:,} đánh giá, {soldCnt:,} lượt phục vụ)\n"
-                    f"- **Chỉ định loại da**: {skins}\n"
-                    f"- **Tình trạng giải quyết**: {concerns}\n"
-                    f"- **Công nghệ & Tinh chất sử dụng**: {ingr}\n"
-                    f"- **Lợi ích & Hiệu quả mang lại**: {ben}\n"
-                    f"- **Quy trình thực hiện chi tiết**: {usg}\n"
-                    f"- **Điểm tương thích nổi bật**: {relevanceExpl}"
+                    f"### [Tài liệu {idx}]: {p.name}\n"
+                    f"- Thương hiệu: {p.brand}\n"
+                    f"- Thành phần cốt lõi: {p.ingredients}\n"
+                    f"- Chỉ định loại da: {skins}\n"
+                    f"- Vấn đề giải quyết: {concerns}\n"
+                    f"- Công dụng chính: {ben}\n"
+                    f"- Điểm tương thích: {relevanceExpl}"
+                )
+            elif isComparisonOrRoutine:
+                block = (
+                    f"### [Tài liệu {idx}]: {p.name}\n"
+                    f"- Thương hiệu: {p.brand} | Danh mục: {p.category}\n"
+                    f"- Giá niêm yết: {priceFmt}\n"
+                    f"- Chỉ định loại da: {skins}\n"
+                    f"- Hoạt chất chính: {ingr}\n"
+                    f"- Công dụng & Lợi ích: {ben}\n"
+                    f"- Điểm tương thích: {relevanceExpl}"
                 )
             else:
-                block = (
-                    f"### [Sản phẩm {idx}]: {p.name}\n"
-                    f"- **Thương hiệu**: {p.brand} | **Danh mục**: {p.category}\n"
-                    f"- **Giá niêm yết**: {priceFmt}\n"
-                    f"- **Đánh giá tín nhiệm**: {p.rating} sao ({reviewsCnt:,} đánh giá, {soldCnt:,} đã bán)\n"
-                    f"- **Chỉ định loại da**: {skins}\n"
-                    f"- **Giải quyết vấn đề**: {concerns}\n"
-                    f"- **Thành phần cốt lõi**: {ingr}\n"
-                    f"- **Công dụng & Lợi ích chính**: {ben}\n"
-                    f"- **Cách dùng khuyến nghị**: {usg}\n"
-                    f"- **Điểm tương thích nổi bật**: {relevanceExpl}"
-                )
+                if pType == "SERVICE":
+                    durationStr = f" | Thời lượng: {duration} phút" if duration else ""
+                    block = (
+                        f"### [Tài liệu {idx}]: {p.name}\n"
+                        f"- Cơ sở: {p.brand} | Danh mục: {p.category}{durationStr}\n"
+                        f"- Giá dịch vụ niêm yết: {priceFmt}\n"
+                        f"- Chỉ định loại da: {skins}\n"
+                        f"- Vấn đề giải quyết: {concerns}\n"
+                        f"- Công nghệ / Hoạt chất: {ingr}\n"
+                        f"- Điểm tương thích: {relevanceExpl}"
+                    )
+                else:
+                    block = (
+                        f"### [Tài liệu {idx}]: {p.name}\n"
+                        f"- Thương hiệu: {p.brand} | Danh mục: {p.category}\n"
+                        f"- Giá niêm yết: {priceFmt}\n"
+                        f"- Chỉ định loại da: {skins}\n"
+                        f"- Vấn đề giải quyết: {concerns}\n"
+                        f"- Hoạt chất chính: {ingr}\n"
+                        f"- Công dụng: {ben}\n"
+                        f"- Điểm tương thích: {relevanceExpl}"
+                    )
             blocks.append(block)
 
         return "\n\n".join(blocks)
@@ -87,7 +125,7 @@ class ContextBuilder:
         cands = candidates if candidates is not None else kwargs.get("candidates", [])
         convHist = conversationHistory or kwargs.get("conversation_history", "")
 
-        productContext = ContextBuilder.buildProductContext(cands)
+        productContext = ContextBuilder.buildProductContext(cands, understanding=und)
         safetyWarnings = ingredientSafetyEngine.checkCandidatesSafety(cands, userMsg)
         return buildDermatologyGenerationPrompt(
             userMessage=userMsg,
@@ -137,7 +175,8 @@ class GroundedGenerationService:
                         "Bạn là Chuyên viên Tư vấn Mỹ phẩm & Da liễu Chân thành, Ngắn gọn và Trực diện. "
                         "Tuyệt đối KHÔNG mở đầu sáo rỗng giả trân (như 'rất vui được đồng hành...'). "
                         "Đi thẳng vào trọng tâm vấn đề, giải thích súc tích và tôn trọng thời gian của khách hàng. "
-                        "Giao diện đã có sẵn Thẻ sản phẩm (ảnh, giá, sao), do đó bạn không lặp lại giá hay sao trong văn bản mà chỉ nêu lý do then chốt vì sao sản phẩm phù hợp. "
+                        "Trích xuất thông tin liên quan theo đúng câu hỏi (giá, thành phần, cách dùng). "
+                        "BẮT BUỘC ghi số nguồn tương ứng dạng [1], [2] ngay sau tên sản phẩm hoặc thông tin trích dẫn. "
                         "Tuyệt đối KHÔNG sử dụng bất kỳ emoji hay biểu tượng icon nào trong câu trả lời."
                     ),
                     max_tokens=600,
@@ -168,7 +207,7 @@ class GroundedGenerationService:
         for idx, cand in enumerate(candidates[:3], 1):
             p = cand.product
             relevanceExpl = cand.relevanceExplanation or getattr(cand, "relevance_explanation", "") or p.benefits
-            lines.append(f"- **{p.name}** ({p.brand}): {relevanceExpl}")
+            lines.append(f"- **{p.name}** [{idx}] ({p.brand}): {relevanceExpl}")
 
         if safeWarn:
             lines.append("")
@@ -214,7 +253,8 @@ class GroundedGenerationService:
                     "Bạn là Chuyên viên Tư vấn Mỹ phẩm & Da liễu Chân thành, Ngắn gọn và Trực diện. "
                     "Tuyệt đối KHÔNG mở đầu sáo rỗng giả trân (như 'rất vui được đồng hành...'). "
                     "Đi thẳng vào trọng tâm vấn đề, giải thích súc tích và tôn trọng thời gian của khách hàng. "
-                    "Giao diện đã có sẵn Thẻ sản phẩm (ảnh, giá, sao), do đó bạn không lặp lại giá hay sao trong văn bản mà chỉ nêu lý do then chốt vì sao sản phẩm phù hợp. "
+                    "Trích xuất thông tin liên quan theo đúng câu hỏi (giá, thành phần, cách dùng). "
+                    "BẮT BUỘC ghi số nguồn tương ứng dạng [1], [2] ngay sau tên sản phẩm hoặc thông tin trích dẫn. "
                     "Tuyệt đối KHÔNG sử dụng bất kỳ emoji hay biểu tượng icon nào trong câu trả lời."
                 ),
                 max_tokens=600,

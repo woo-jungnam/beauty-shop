@@ -41,7 +41,7 @@ export const ADMIN_SECTIONS = [
       {
         id: "products",
         label: "Danh mục sản phẩm",
-        description: "Sản phẩm, phân loại SKU & đặc tính",
+        description: "Sản phẩm, phân loại mẫu mã & đặc tính",
         icon: Package,
         role: "ROLE_STAFF",
         keywords:
@@ -57,7 +57,7 @@ export const ADMIN_SECTIONS = [
       },
       {
         id: "procurement",
-        label: "Nhập hàng từ NCC",
+        label: "Nhập hàng nhà cung cấp",
         description: "Nhà cung cấp & phiếu nhập kho",
         icon: ClipboardList,
         role: "ROLE_STAFF",
@@ -147,18 +147,22 @@ const TAB_PERMISSIONS = { dashboard: 'REPORTS', orders: 'ORDERS', products: 'CAT
 
 export const getAdminSections = (roles = [], permissions = []) => {
   const isAdmin = roles.includes("ROLE_ADMIN") || roles.includes("ADMIN");
+  const isStaff = roles.includes("ROLE_STAFF") || roles.includes("STAFF");
+  const permList = Array.isArray(permissions) ? permissions : [];
   return ADMIN_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter(
-      (item) =>
-        isAdmin ||
-        (item.role &&
-          (Array.isArray(TAB_PERMISSIONS[item.id]) ? TAB_PERMISSIONS[item.id].some(permission => permissions.includes(permission)) : permissions.includes(TAB_PERMISSIONS[item.id])) &&
-          (Array.isArray(item.role)
-            ? item.role.some((r) => roles.includes(r))
-            : roles.includes(item.role))),
-    ),
-  })).filter((section) => section.items.length);
+    items: section.items.filter((item) => {
+      if (isAdmin) return true;
+      if (!isStaff) return false;
+      if (!item.role) return false;
+      if (permList.length === 0) return true;
+      const required = TAB_PERMISSIONS[item.id];
+      if (!required) return true;
+      return Array.isArray(required)
+        ? required.some((p) => permList.includes(p))
+        : permList.includes(required);
+    }),
+  })).filter((section) => section.items.length > 0);
 };
 
 export const normalizeSearch = (value = "") =>

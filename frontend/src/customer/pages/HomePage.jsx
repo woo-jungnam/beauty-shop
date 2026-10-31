@@ -26,6 +26,7 @@ import { ENDPOINTS } from '../../shared/api/endpoints';
 import { resolveMediaUrl } from '../../shared/utils/formatters';
 import { getGuestSessionId } from '../../shared/utils/session';
 import { useHomeSectionLimits } from '../components/ui/useHomeSectionLimits';
+import { Modal } from '../../shared/ui/Modal';
 import heroImage from '../../assets/hero.png';
 
 const formatCurrency = (val) => {
@@ -99,6 +100,8 @@ export const HomePage = ({ onNavigate }) => {
   const [loadingCategoryProducts, setLoadingCategoryProducts] = useState(false);
   const [catalogSearchTerm, setCatalogSearchTerm] = useState('');
   const [catalogSortBy, setCatalogSortBy] = useState('DEFAULT');
+  const [allBrandsModalOpen, setAllBrandsModalOpen] = useState(false);
+  const [brandSearch, setBrandSearch] = useState('');
 
   const [activeSpaCategory, setActiveSpaCategory] = useState('ALL');
 
@@ -436,7 +439,7 @@ export const HomePage = ({ onNavigate }) => {
     if (backendBanners && backendBanners.length > 0) {
       const sides = backendBanners.filter(b => b.position === 'HERO_SIDE');
       if (sides.length > 0) {
-        return sides.map((b, idx) => ({
+        const mapped = sides.map((b, idx) => ({
           eyebrow: b.badge || '',
           title: b.title,
           desc: b.description || '',
@@ -445,6 +448,10 @@ export const HomePage = ({ onNavigate }) => {
           image: resolveMediaUrl(b.imageUrl) || (idx === 0 ? heroImage : '/images/spa/facial-care.jpg'),
           Icon: idx === 0 ? Flame : Calendar
         }));
+        if (mapped.length === 1) {
+          return [mapped[0], DEFAULT_SIDE_BANNERS[1]];
+        }
+        return mapped;
       }
     }
     return DEFAULT_SIDE_BANNERS;
@@ -527,7 +534,7 @@ export const HomePage = ({ onNavigate }) => {
                   position: 'relative',
                   overflow: 'hidden',
                   borderRadius: '20px',
-                  minHeight: '660px',
+                  minHeight: '460px',
                   background: 'linear-gradient(135deg, #FFF7F9 0%, #FFF0F3 52%, #FDE9EE 100%)',
                   border: '1px solid #F5E2E8',
                   boxShadow: '0 8px 30px rgba(140, 42, 71, 0.06)',
@@ -536,7 +543,7 @@ export const HomePage = ({ onNavigate }) => {
                   alignItems: 'center'
                 }}>
                   <div className="home-banner-main-content" style={{
-                    padding: '52px 40px 52px 52px',
+                    padding: '36px 32px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
@@ -712,15 +719,15 @@ export const HomePage = ({ onNavigate }) => {
                   <div className="home-banner-main-visual" style={{
                     position: 'relative',
                     height: '100%',
-                    minHeight: '660px',
+                    minHeight: '460px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '32px 36px 32px 0'
+                    padding: '24px 28px 24px 0'
                   }}>
                     <div style={{
                       width: '100%',
-                      height: '560px',
+                      height: '380px',
                       borderRadius: '20px',
                       overflow: 'hidden',
                       boxShadow: '0 12px 32px rgba(140, 42, 71, 0.08)',
@@ -755,8 +762,8 @@ export const HomePage = ({ onNavigate }) => {
                     style={{
                       position: 'relative',
                       overflow: 'hidden',
-                      minHeight: '322px',
-                      padding: '28px 28px',
+                      minHeight: '218px',
+                      padding: '20px 24px',
                       borderRadius: '20px',
                       cursor: 'pointer',
                       display: 'flex',
@@ -1189,7 +1196,7 @@ export const HomePage = ({ onNavigate }) => {
 
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
           <button
-            onClick={() => onNavigate('products')}
+            onClick={() => setAllBrandsModalOpen(true)}
             className="btn-luxury-outline"
             style={{ padding: '9px 24px', fontSize: '13px' }}
           >
@@ -1500,6 +1507,70 @@ export const HomePage = ({ onNavigate }) => {
         onClose={() => setQuickViewProduct(null)}
         onNavigate={onNavigate}
       />
+
+      <Modal
+        isOpen={allBrandsModalOpen}
+        onClose={() => { setAllBrandsModalOpen(false); setBrandSearch(''); }}
+        title="Tất cả thương hiệu chính hãng đối tác"
+        maxWidth="800px"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="search"
+              placeholder="Tìm kiếm thương hiệu..."
+              value={brandSearch}
+              onChange={(e) => setBrandSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 14px 10px 38px',
+                borderRadius: '8px',
+                border: '1px solid var(--c-border, #E5E7EB)',
+                fontSize: '13.5px'
+              }}
+            />
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+            gap: 12,
+            maxHeight: '440px',
+            overflowY: 'auto',
+            padding: '4px'
+          }}>
+            {brands
+              .filter(b => !brandSearch.trim() || b.name.toLowerCase().includes(brandSearch.trim().toLowerCase()))
+              .map(brand => (
+                <div
+                  key={brand.id}
+                  onClick={() => {
+                    setAllBrandsModalOpen(false);
+                    setBrandSearch('');
+                    onNavigate(`products?brandId=${brand.id}&search=${encodeURIComponent(brand.name)}`);
+                  }}
+                  style={{
+                    padding: '14px 10px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--c-border, #E5E7EB)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    background: '#FFFFFF',
+                    transition: 'all 0.2s ease',
+                    minHeight: '80px'
+                  }}
+                >
+                  <BrandCardLogo brand={brand} logoUrl={getBrandImage(brand)} />
+                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px', color: '#1F2937' }}>{brand.name}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </Modal>
 
       <ToastNotification
         toasts={toasts}

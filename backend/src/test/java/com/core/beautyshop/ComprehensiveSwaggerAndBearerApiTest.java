@@ -8,6 +8,8 @@ import com.core.beautyshop.modules.identity.domain.RoleRepository;
 import com.core.beautyshop.modules.identity.domain.User;
 import com.core.beautyshop.modules.identity.domain.UserRepository;
 import com.core.beautyshop.modules.identity.domain.enums.Gender;
+import com.core.beautyshop.modules.spa.domain.Appointment;
+import com.core.beautyshop.modules.spa.domain.AppointmentRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,8 +25,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
@@ -48,6 +53,9 @@ public class ComprehensiveSwaggerAndBearerApiTest {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private AppointmentRepository appointmentRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -233,6 +241,44 @@ public class ComprehensiveSwaggerAndBearerApiTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200));
+    }
+
+    @Test
+    @DisplayName("Beauty report: Bearer admin truy cập sản phẩm và Spa; khách hàng vẫn bị chặn")
+    public void testBeautyReport_AdminProductsAndSpaAccess() throws Exception {
+        var endpoints = List.of(
+                "/api/v1/admin/products",
+                "/api/v1/admin/spa/services",
+                "/api/v1/admin/spa/categories",
+                "/api/v1/admin/spa/packages",
+                "/api/v1/admin/staff",
+                "/api/v1/admin/spa/facilities",
+                "/api/v1/appointments/admin/all"
+        );
+        for (String endpoint : endpoints) {
+            mockMvc.perform(get(endpoint).header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk());
+            mockMvc.perform(get(endpoint).header("Authorization", "Bearer " + customerToken))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Beauty report: lịch PENDING chưa gán KTV vẫn xuất hiện trong danh sách admin")
+    public void testBeautyReport_UnassignedPendingAppointmentRemainsVisibleToAdmin() throws Exception {
+        var pending = appointmentRepository.saveAndFlush(
+                Appointment.builder()
+                        .userId(userRepository.findByUsername("swagger_customer").orElseThrow().getId())
+                        .appointmentDate(LocalDate.of(2026, 10, 30))
+                        .startTime(LocalTime.of(12, 30))
+                        .endTime(LocalTime.of(13, 30))
+                        .build());
+        mockMvc.perform(get("/api/v1/appointments/admin/all")
+                        .param("date", "2026-10-30").param("status", "PENDING")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[*].id").value(hasItem(pending.getId().intValue())));
     }
 
     @Test

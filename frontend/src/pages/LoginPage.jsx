@@ -17,6 +17,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { useAuth } from '../app/providers/AuthProvider';
+import { getAdminSections } from '../app/adminNavigation';
 import { Button } from '../shared/ui/Button';
 import '../customer/styles/customer-auth.css';
 
@@ -24,7 +25,7 @@ export const LoginPage = () => {
   const { login, register } = useAuth();
   const route = window.location.hash.replace(/^#\/?/, '');
   const isAdminRoute = route.startsWith('admin') ||
-    ['dashboard', 'inventory', 'procurement', 'crm', 'operations', 'vouchers', 'reviews', 'users'].includes(route);
+    ['dashboard', 'inventory', 'procurement', 'crm', 'operations', 'vouchers', 'reviews', 'users', 'spa-reception', 'treatments', 'orders', 'products', 'spa', 'staff'].includes(route);
   const [authMode, setAuthMode] = useState('login');
 
   const [username, setUsername] = useState('');
@@ -87,7 +88,9 @@ export const LoginPage = () => {
       if (isAdmin) {
         window.location.hash = '#/admin/dashboard';
       } else if (isStaff) {
-        window.location.hash = '#/staff';
+        const sections = getAdminSections(roles, loggedUser?.permissions || []);
+        const firstTab = sections[0]?.items[0]?.id;
+        window.location.hash = firstTab ? `#/admin/${firstTab}` : '#/admin';
       } else {
         window.location.hash = '#/profile';
       }

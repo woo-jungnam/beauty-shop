@@ -41,6 +41,7 @@ class PrimaryIntent(str, Enum):
     DICH_VU_LAM_DEP = "DỊCH_VỤ_LÀM_ĐẸP"
     DAT_LICH = "ĐẶT_LỊCH"
     CHAO_HOI = "CHÀO_HỎI"
+    NGOAI_PHAM_VI = "NGOÀI_PHẠM_VI"
     KHONG_XAC_DINH = "KHÔNG_XÁC_ĐỊNH"
 
 
@@ -82,6 +83,7 @@ class Intent(str, Enum):
     GENERAL_INFORMATION = "GENERAL_INFORMATION"
     GENERAL_CHAT = "GENERAL_CHAT"
     ORDER_STATUS = "ORDER_STATUS"
+    OUT_OF_DOMAIN = "OUT_OF_DOMAIN"
     UNKNOWN = "UNKNOWN"
 
 
@@ -105,6 +107,7 @@ PRIMARY_TO_LEGACY_INTENT = {
     PrimaryIntent.DICH_VU_LAM_DEP.value: Intent.PRODUCT_SEARCH,
     PrimaryIntent.DAT_LICH.value: Intent.PRODUCT_SEARCH,
     PrimaryIntent.CHAO_HOI.value: Intent.GENERAL_CHAT,
+    PrimaryIntent.NGOAI_PHAM_VI.value: Intent.OUT_OF_DOMAIN,
     PrimaryIntent.KHONG_XAC_DINH.value: Intent.UNKNOWN,
 }
 
@@ -118,6 +121,7 @@ LEGACY_TO_PRIMARY_INTENT = {
     Intent.GENERAL_INFORMATION: PrimaryIntent.HOI_DAP_SAN_PHAM.value,
     Intent.GENERAL_CHAT: PrimaryIntent.CHAO_HOI.value,
     Intent.ORDER_STATUS: PrimaryIntent.HO_TRO_DON_HANG.value,
+    Intent.OUT_OF_DOMAIN: PrimaryIntent.NGOAI_PHAM_VI.value,
     Intent.UNKNOWN: PrimaryIntent.KHONG_XAC_DINH.value,
 }
 
@@ -381,6 +385,10 @@ def checkBareOrMissingIntent(rawQuery: str, data: dict | None = None) -> tuple[b
     if cleaned in greetings:
         return False, "PRODUCT", None
 
+    # Bỏ qua nếu là biểu thức toán học hoặc ký tự số học
+    if re.match(r"^[\d\s\+\-\*\/\=\.\,\(\)\%xX\?]+$", cleaned):
+        return False, "PRODUCT", None
+
     if len(cleaned.split()) <= 3:
         isService = any(w in cleaned for w in ["spa", "dịch vụ", "chăm sóc", "làm đẹp"])
         return True, "SERVICE" if isService else "PRODUCT", cleaned
@@ -395,6 +403,11 @@ def calculateInformationScore(data: dict, raw_query: str = "") -> float:
     ngay lập tức với lượng thông tin đó mà không cần hỏi thêm người dùng.
     """
     q = (raw_query or str(data.get("raw_query") or "")).lower().strip()
+
+    pInt = data.get("primary_intent")
+    pIntVal = pInt.value if hasattr(pInt, "value") else str(pInt or "")
+    if pIntVal in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI") or data.get("intent") in (Intent.OUT_OF_DOMAIN, "OUT_OF_DOMAIN"):
+        return 0.0
 
     # Nếu câu truy vấn là danh từ trần trụi chưa rõ ý định (như 'serum', 'dịch vụ chăm sóc'):
     # Phần ý định chưa có dữ liệu -> Điểm độ đầy đủ bằng 0.0 để bắt buộc làm rõ ý định!
@@ -605,9 +618,29 @@ class UnderstandingResult(BaseModel):
 
         curP = data.get("primary_intent")
         curPVal = curP.value if hasattr(curP, "value") else str(curP or "")
+        legI = data.get("intent")
+        legIVal = legI.value if hasattr(legI, "value") else str(legI or "")
         entitiesDict = data.get("entities")
         if not isinstance(data.get("constraints"), dict):
             data["constraints"] = {}
+
+        # 0. XỬ LÝ TRUY VẤN NGOÀI PHẠM VI (Out of Domain)
+        if (
+            curPVal in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI")
+            or legIVal in (Intent.OUT_OF_DOMAIN.value, "OUT_OF_DOMAIN")
+            or re.match(r"^[\d\s\+\-\*\/\=\.\,\(\)\%xX\?]+$", rawQLower)
+        ):
+            data["primary_intent"] = PrimaryIntent.NGOAI_PHAM_VI.value
+            data["intent"] = Intent.OUT_OF_DOMAIN
+            data["needs_clarification"] = False
+            data["action_routing"] = ActionRouting.FAST_PATH.value
+            data["information_score"] = 0.0
+            data["clarification_question"] = None
+            if not isinstance(data.get("dialogue_state"), dict):
+                data["dialogue_state"] = {}
+            data["dialogue_state"]["needs_clarification"] = False
+            data["dialogue_state"]["clarification_question"] = None
+            return data
 
         # 1. XỬ LÝ TRUY VẤN DANH TỪ TRẦN TRỤI CHƯA RÕ Ý ĐỊNH (Bare / Missing Intent)
         isBare, detectedTarget, bareName = checkBareOrMissingIntent(rawQLower, data)

@@ -176,6 +176,30 @@ class OrderServiceImplTest {
         verify(eventPublisher).publishEvent(any(OrderEvents.OrderReturnedEvent.class));
     }
 
+    @Test
+    void manualMarkPaidUpdatesPaymentStatusToPaid() {
+        Order order = Order.builder()
+                .orderNumber("ORD-TEST-PAY")
+                .status(OrderStatus.CONFIRMED)
+                .paymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PENDING)
+                .totalAmount(new BigDecimal("250000"))
+                .items(new ArrayList<>())
+                .statusHistories(new ArrayList<>())
+                .build();
+        order.setId(12L);
+
+        when(orderRepository.findByIdForUpdate(12L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(orderMapper.toOrderResponse(order)).thenReturn(new OrderResponse());
+
+        orderService.manualMarkPaid(12L, "TEST-REF-123");
+
+        assertEquals(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID, order.getPaymentStatus());
+        assertEquals(new BigDecimal("250000"), order.getPaidAmount());
+        org.junit.jupiter.api.Assertions.assertNotNull(order.getPaidAt());
+        verify(orderRepository).save(order);
+    }
+
     private void asCustomer(Long userId) {
         var principal = new UserDetailsImpl(userId, "customer", "customer@example.test", "unused",
                 List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")));

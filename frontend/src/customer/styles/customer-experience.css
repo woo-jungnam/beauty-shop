@@ -449,7 +449,7 @@
   align-items: center !important;
   width: max-content !important;
   gap: 16px !important;
-  animation: brandsMarqueeContinuous 38s linear infinite !important;
+  animation: brandsMarqueeContinuous 76s linear infinite !important;
   will-change: transform;
 }
 
@@ -1020,4 +1020,16 @@
   transform: translateY(-3px) !important;
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.12) !important;
 }
+
+@keyframes chatbotFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 

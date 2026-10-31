@@ -61,7 +61,10 @@ export const SpaPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [aptPage, setAptPage] = useState(0);
   const [aptTotalPages, setAptTotalPages] = useState(1);
-  const [aptTotalElements, setAptTotalElements] = useState(0);
+  const [aptTotalElements, setAptTotalElements] = useState(null);
+  const [aptError, setAptError] = useState('');
+  const aptRequest = useRef(null);
+  const aptRequestedPage = useRef(0);
   const [statusFilter, setStatusFilter] = useState('');
 
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -154,21 +157,31 @@ export const SpaPage = () => {
   const [selectedAptForInvoice, setSelectedAptForInvoice] = useState(null);
 
   const fetchAppointments = async (p = 0) => {
+    aptRequest.current?.abort();
+    const request = new AbortController();
+    aptRequest.current = request;
+    aptRequestedPage.current = p;
     setLoading(true);
+    setAptError('');
+    setAppointments([]);
+    setAptTotalElements(null);
     try {
       const params = new URLSearchParams();
       params.append('page', p);
       params.append('size', 15);
       if (statusFilter) params.append('status', statusFilter);
 
-      const res = await apiClient.get(`${ENDPOINTS.SPA.APPOINTMENTS}?${params.toString()}`);
+      const res = await apiClient.get(`${ENDPOINTS.SPA.APPOINTMENTS}?${params.toString()}`, { signal: request.signal });
+      if (request.signal.aborted) return;
       const pageData = res.data || res;
       setAppointments(pageData.content || []);
       setAptPage(pageData.page ?? p);
       setAptTotalPages(pageData.totalPages ?? 1);
       setAptTotalElements(pageData.totalElements ?? 0);
+    } catch (err) {
+      if (!request.signal.aborted) setAptError(spaErrorMessage(err, 'Chưa tải được lịch hẹn. Vui lòng thử lại.'));
     } finally {
-      setLoading(false);
+      if (!request.signal.aborted) setLoading(false);
     }
   };
 
@@ -251,14 +264,13 @@ export const SpaPage = () => {
   };
 
   useEffect(() => {
+    if (activeTab !== 'appointments') setLoading(false);
     if (activeTab === 'categories') {
       fetchCategories();
     } else if (activeTab === 'facilities') {
       fetchFacilities();
     } else if (activeTab === 'preparation') {
       fetchFormTemplates();
-    } else if (activeTab === 'services') {
-      fetchSpaCatalog();
     } else if (activeTab === 'staff') {
       fetchStaff();
       fetchSpaCatalog();
@@ -267,7 +279,9 @@ export const SpaPage = () => {
       fetchStaff();
     } else if (activeTab === 'tickets') {
       fetchTickets();
+      if (!services.length) fetchSpaCatalog();
     }
+    return () => aptRequest.current?.abort();
   }, [activeTab, statusFilter]);
 
   const handleOpenStatusModal = (apt) => {
@@ -1017,7 +1031,7 @@ export const SpaPage = () => {
           onClick={() => setActiveTab('appointments')}
         >
           <CalendarCheck size={15} />
-          Lịch hẹn Spa ({aptTotalElements})
+          Lịch hẹn Spa ({aptTotalElements ?? '—'})
         </button>
         <button
           className={`tab-btn ${activeTab === 'tickets' ? 'active' : ''}`}
@@ -1085,8 +1099,13 @@ export const SpaPage = () => {
 
       {activeTab === 'appointments' && (
         <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '10px 14px', background: 'var(--color-primary-50)', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '13px', flexWrap: 'wrap', gap: '8px' }}>
+            <span>Để tiếp đón khách trực tiếp, xếp phòng và thu ngân hôm nay, mở màn hình <strong>Lễ tân & Thu ngân quầy</strong>.</span>
+            <Button size="sm" variant="outline" onClick={() => { window.location.hash = '#/admin/spa-reception'; }}>Mở quầy Lễ tân</Button>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
             <Select
+              aria-label="Lọc trạng thái lịch hẹn"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               options={[
@@ -1102,13 +1121,17 @@ export const SpaPage = () => {
             />
           </div>
 
-          <DataTable
+          {aptError && <div className="spa-catalog-notice error" role="alert">
+            {aptError}
+            <Button size="sm" variant="outline" onClick={() => fetchAppointments(aptRequestedPage.current)}>Thử lại</Button>
+          </div>}
+          {!aptError && <DataTable
             columns={appointmentColumns}
             data={appointments}
-            loading={loading}
+            loading={loading || aptTotalElements === null}
             emptyMessage="Không có lịch hẹn spa nào phù hợp."
-          />
-          {aptTotalPages > 1 && (
+          />}
+          {!loading && !aptError && aptTotalElements !== null && aptTotalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 16 }}>
               <Button variant="outline" size="sm" disabled={aptPage === 0} onClick={() => fetchAppointments(aptPage - 1)}>Trước</Button>
               <span>Trang {aptPage + 1}/{aptTotalPages}</span>
@@ -1120,6 +1143,10 @@ export const SpaPage = () => {
 
       {activeTab === 'tickets' && (
         <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '10px 14px', background: 'var(--color-primary-50)', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '13px', flexWrap: 'wrap', gap: '8px' }}>
+            <span>Để tra cứu nhanh vé liệu trình của khách tại sảnh theo SĐT, mở màn hình <strong>Lễ tân & Thu ngân quầy</strong>.</span>
+            <Button size="sm" variant="outline" onClick={() => { window.location.hash = '#/admin/spa-reception'; }}>Mở tra cứu vé tại quầy</Button>
+          </div>
           <DataTable
             columns={ticketColumns}
             data={tickets}

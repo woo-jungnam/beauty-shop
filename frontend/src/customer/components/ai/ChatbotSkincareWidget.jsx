@@ -3,6 +3,7 @@ import { Sparkles, X, Send, Bot, ShoppingBag, CalendarCheck } from 'lucide-react
 import { useCustomerCart } from '../../stores/customerCartStore';
 import { apiClient } from '../../../shared/api/client';
 import { ENDPOINTS } from '../../../shared/api/endpoints';
+import { serverBaseUrl } from '../../../shared/api/baseUrl';
 import { formatCurrency, resolveMediaUrl } from '../../../shared/utils/formatters';
 
 const escapeHtml = (text) => {
@@ -233,45 +234,175 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
     setInput('');
     setIsTyping(true);
 
+    const botMsgId = Date.now() + 1;
+    let botMsgCreated = false;
+    let accumulatedText = '';
+    let accumulatedProducts = undefined;
+
     try {
-      const res = await apiClient.post(ENDPOINTS.CHATBOT.CHAT, {
-        sessionId: chatSessionId,
-        message: query.trim(),
-      }, { timeout: 125000 });
-      const data = res?.data || res;
-      const botResponse = data?.answer || data?.message || '';
-      const rawProducts = Array.isArray(data?.products) ? data.products : [];
-      const recommendedProducts = rawProducts.map((p) => ({
-        id: String(p.id ?? '').replace(/^(mysql_|service_)/, ''),
-        name: p.name,
-        brand: p.brand || 'BeautyShop',
-        price: p.price || 0,
-        image: p.imageUrl || p.image_url || '',
-        reason: p.reasonForRecommendation || p.reason_for_recommendation || '',
-        targetType: p.targetType || p.target_type || 'PRODUCT',
-      }));
+      const url = `${serverBaseUrl(import.meta.env.VITE_API_BASE_URL)}${ENDPOINTS.CHATBOT.STREAM}`;
+      const token = localStorage.getItem('beautyshop_admin_token');
+      const guestSessionId = localStorage.getItem('beautyshop_guest_session_id');
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (guestSessionId) headers['X-Guest-Session-Id'] = guestSessionId;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          sessionId: chatSessionId,
+          message: query.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
       setAiConnected(true);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'bot',
-          text: botResponse || 'Tôi đã tiếp nhận câu hỏi của bạn. Bạn có muốn tư vấn thêm về sản phẩm cụ thể không?',
-          products: recommendedProducts.length > 0 ? recommendedProducts : undefined,
-          product: recommendedProducts[0] || null,
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const jsonStr = trimmed.slice(5).trim();
+          if (!jsonStr) continue;
+
+          try {
+            const payload = JSON.parse(jsonStr);
+
+            if (payload.type === 'metadata') {
+              const rawProducts = Array.isArray(payload.products) ? payload.products : [];
+              accumulatedProducts = rawProducts.map((p) => ({
+                id: String(p.id ?? '').replace(/^(mysql_|service_)/, ''),
+                name: p.name,
+                brand: p.brand || 'BeautyShop',
+                price: p.price || 0,
+                image: p.imageUrl || p.image_url || '',
+                reason: p.reasonForRecommendation || p.reason_for_recommendation || '',
+                targetType: p.targetType || p.target_type || 'PRODUCT',
+              }));
+              // Chỉ lưu danh sách sản phẩm, KHÔNG hiển thị ngay để đợi text stream xong
+            } else if (payload.type === 'token') {
+              setIsTyping(false);
+              accumulatedText += (payload.content || '');
+
+              if (!botMsgCreated) {
+                botMsgCreated = true;
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: botMsgId,
+                    sender: 'bot',
+                    text: accumulatedText,
+                    products: undefined,
+                    product: null,
+                  }
+                ]);
+              } else {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === botMsgId
+                      ? { ...m, text: accumulatedText }
+                      : m
+                  )
+                );
+              }
+            } else if (payload.type === 'done') {
+              // Khi hoàn thành sinh text, mới kích hoạt hiển thị các thẻ sản phẩm
+              if (accumulatedProducts && accumulatedProducts.length > 0) {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === botMsgId
+                      ? {
+                          ...m,
+                          products: accumulatedProducts,
+                          product: accumulatedProducts[0] || null,
+                        }
+                      : m
+                  )
+                );
+              }
+            } else if (payload.type === 'error') {
+              throw new Error(payload.detail || 'Lỗi xử lý luồng AI');
+            }
+          } catch (e) {
+            if (e.message && e.message.includes('Lỗi xử lý luồng AI')) throw e;
+          }
         }
-      ]);
+      }
+
+      // Đảm bảo gắn thẻ sản phẩm khi stream kết thúc
+      if (accumulatedProducts && accumulatedProducts.length > 0) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMsgId
+              ? {
+                  ...m,
+                  products: accumulatedProducts,
+                  product: accumulatedProducts[0] || null,
+                }
+              : m
+          )
+        );
+      }
+
+      if (!botMsgCreated || !accumulatedText.trim()) {
+        const fallbackText = 'Tôi đã tiếp nhận câu hỏi của bạn. Bạn có muốn tư vấn thêm về sản phẩm cụ thể không?';
+        if (!botMsgCreated) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: botMsgId,
+              sender: 'bot',
+              text: fallbackText,
+            }
+          ]);
+        } else {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === botMsgId && !m.text.trim()
+                ? { ...m, text: fallbackText }
+                : m
+            )
+          );
+        }
+      }
     } catch {
       setAiConnected(false);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'bot',
-          text: 'Trợ lý AI hiện chưa kết nối được. Vui lòng gửi lại câu hỏi sau ít phút.',
-        }
-      ]);
+      if (!botMsgCreated) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            sender: 'bot',
+            text: 'Trợ lý AI hiện chưa kết nối được. Vui lòng gửi lại câu hỏi sau ít phút.',
+          }
+        ]);
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMsgId && !m.text.trim()
+              ? { ...m, text: 'Trợ lý AI gặp sự cố gián đoạn luồng trả lời. Vui lòng thử lại.' }
+              : m
+          )
+        );
+      }
     } finally {
       requestInFlight.current = false;
       setIsTyping(false);
@@ -448,7 +579,14 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                     const recItems = (msg.products && msg.products.length > 0) ? msg.products : (msg.product ? [msg.product] : []);
                     if (recItems.length === 0) return null;
                     return (
-                      <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--c-border)' }}>
+                      <div
+                        style={{
+                          marginTop: '12px',
+                          paddingTop: '10px',
+                          borderTop: '1px dashed var(--c-border)',
+                          animation: 'chatbotFadeIn 0.35s ease-out forwards',
+                        }}
+                      >
                         <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-primary)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.4px' }}>
                           Gợi ý phù hợp cho bạn ({recItems.length}):
                         </div>

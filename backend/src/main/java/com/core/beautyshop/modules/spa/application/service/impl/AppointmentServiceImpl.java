@@ -81,6 +81,10 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         if (!canManageAppointments()) {
             validateDateTimeNotPast(request.getAppointmentDate(), request.getStartTime());
+            long pendingCount = appointmentRepository.countByUserIdAndStatusAndIsDeletedFalse(bookingUserId, AppointmentStatus.PENDING);
+            if (pendingCount >= 2) {
+                throw new BusinessException("Bạn đang có " + pendingCount + " lịch hẹn đang chờ xác nhận. Vui lòng hoàn tất hoặc hủy lịch cũ trước khi đặt thêm lịch mới.");
+            }
         } else {
             LocalDate today = LocalDate.now(SpaTimeRules.ZONE);
             if (request.getAppointmentDate().isBefore(today)) {
@@ -235,7 +239,11 @@ public class AppointmentServiceImpl implements AppointmentService {
                 treatments.linkBooking(item.getTreatmentSessionItemId(), item.getId());
         preparation.snapshotRequirements(saved);
         materials.snapshot(saved);
-        finance.snapshot(saved,request.getAcceptedFinancialPolicy(),request.getFinancialPolicyVersion());
+        BigDecimal depositRequired = finance.snapshot(saved, request.getAcceptedFinancialPolicy(), request.getFinancialPolicyVersion(), request.getPaymentOption(), canManageAppointments());
+        if (depositRequired != null && depositRequired.compareTo(BigDecimal.ZERO) > 0) {
+            saved.setPendingExpiresAt(Instant.now().plus(15, java.time.temporal.ChronoUnit.MINUTES));
+            appointmentRepository.save(saved);
+        }
         for (AppointmentItem item : saved.getItems()) { usage.reserve(item); usage.recordReservation(item); }
         appendHistory(saved, null, "BOOK", null, saved.getStatus().name(), "Policy: " + policies.forAppointment(saved).version());
         var staffNames = resolveStaffNames(List.of(saved));
@@ -289,6 +297,14 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) return;
         if (appointment.getStatus() != AppointmentStatus.PENDING && appointment.getStatus() != AppointmentStatus.CONFIRMED)
             throw new BusinessException("Chỉ có thể hủy lịch hẹn đang chờ xác nhận hoặc đã xác nhận");
+        if (appointment.getCheckedInAt() != null) {
+            if (!canManageAppointments()) {
+                throw new BusinessException("Khách hàng đã check-in tại cơ sở, không thể tự hủy lịch. Vui lòng liên hệ quầy tiếp đón!");
+            }
+            if (reason == null || reason.trim().length() < 10) {
+                throw new BusinessException("Hủy lịch hẹn đã check-in bắt buộc phải nhập lý do cụ thể (tối thiểu 10 ký tự) để phục vụ đối soát.");
+            }
+        }
         if (!canManageAppointments()) requireCutoff(appointment, policies.forAppointment(appointment).cancelCutoffMinutes());
         else if (!appointment.getUserId().equals(SecurityUtils.getCurrentUserId()) || !Instant.now().isBefore(scheduledStart(appointment)
                 .minusSeconds(policies.forAppointment(appointment).cancelCutoffMinutes() * 60L)))
@@ -366,6 +382,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (!valid) throw new BusinessException("Chuyển trạng thái lịch hẹn không hợp lệ");
         if (assignments && next != AppointmentStatus.CONFIRMED) throw new BusinessException("Vui lòng phân công chuyên viên trước khi bắt đầu dịch vụ");
         if (next == AppointmentStatus.CANCELLED) {
+            if (appointment.getCheckedInAt() != null && (request.getNotes() == null || request.getNotes().trim().length() < 10)) {
+                throw new BusinessException("Hủy lịch hẹn đã check-in bắt buộc phải nhập lý do cụ thể (tối thiểu 10 ký tự) để đối soát.");
+            }
             requireActionReason(request.getNotes());
             cancelLocked(appointment, request.getNotes(), "CANCEL");
             return response(appointment);
@@ -698,8 +717,13 @@ public class AppointmentServiceImpl implements AppointmentService {
     private void requireTicketExpiry(UserServiceTicket ticket, LocalDate date, LocalTime start) {
         Instant expiry = ticket.getExpiryDate();
         if (expiry == null) return;
-        Instant target = "SERVICE_START".equals(ticket.getExpiryCheckMode()) ? date.atTime(start).atZone(SpaTimeRules.ZONE).toInstant() : Instant.now();
-        if (!target.isBefore(expiry)) throw new BusinessException("Hạn sử dụng của vé không đủ dài cho lịch đặt này");
+        Instant serviceTime = date.atTime(start).atZone(SpaTimeRules.ZONE).toInstant();
+        if (!serviceTime.isBefore(expiry)) {
+            throw new BusinessException("Hạn sử dụng của vé không đủ dài cho thời điểm thực hiện dịch vụ này (" + date + " " + start + ")");
+        }
+        if (!"SERVICE_START".equals(ticket.getExpiryCheckMode()) && !Instant.now().isBefore(expiry)) {
+            throw new BusinessException("Vé liệu trình đã hết hạn sử dụng");
+        }
     }
     private void lockItemTickets(List<AppointmentItem> items) {
         var locked = lockTicketsInOrder(items);

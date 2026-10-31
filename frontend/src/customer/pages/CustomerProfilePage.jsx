@@ -146,9 +146,19 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   if (!isAuthenticated) {
     return (
       <div className="customer-profile-page profile-login-prompt">
+        <nav className="profile-breadcrumb" aria-label="Đường dẫn tài khoản" style={{ marginBottom: 16 }}>
+          <button type="button" onClick={() => onNavigate('')} style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <ArrowLeft size={14} /> Trang chủ
+          </button>
+          <span aria-hidden="true">/</span>
+          <strong>Tài khoản</strong>
+        </nav>
         <h2>Vui lòng đăng nhập</h2>
         <p>Đăng nhập để xem vé liệu trình, lịch sử đơn hàng và thông tin thành viên.</p>
-        <button onClick={() => onNavigate('login')} className="btn-editorial-primary">Đăng nhập ngay</button>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button onClick={() => onNavigate('login')} className="btn-editorial-primary">Đăng nhập ngay</button>
+          <button onClick={() => onNavigate('')} className="btn-editorial-outline">Về trang chủ</button>
+        </div>
       </div>
     );
   }

@@ -85,7 +85,10 @@ public class CustomerAccountService {
         User u=lockCurrent(); if(!encoder.matches(c.currentPassword(),u.getPasswordHash()))throw new BusinessException("Mật khẩu hiện tại không đúng");
         setPassword(u,c.newPassword());
     }
-    @Transactional public void forgotPassword(String email){
+    @Transactional public void forgotPassword(String email) {
+        forgotPassword(email, null);
+    }
+    @Transactional public void forgotPassword(String email, String clientOrigin){
         if(!mailEnabled || mail.isEmpty())throw new BusinessException("Khôi phục qua email chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ");
         var found=users.findByEmailIgnoreCase(email.trim());
         if(found.isEmpty() || Boolean.TRUE.equals(found.get().getIsDeleted()) || found.get().getStatus()!=AccountStatus.ACTIVE)return;
@@ -98,7 +101,8 @@ public class CustomerAccountService {
         var record=new PasswordRecovery(); record.setTokenHash(hash(token)); record.setUserId(u.getId()); record.setCreatedAt(now); record.setExpiresAt(now.plusSeconds(1800)); em.persist(record);
         SimpleMailMessage message=new SimpleMailMessage(); message.setFrom(from); message.setTo(u.getEmail());
         message.setSubject("Đặt lại mật khẩu BeautyShop");
-        message.setText("Bạn đã yêu cầu đặt lại mật khẩu. Liên kết có hiệu lực 30 phút và chỉ dùng một lần:\n"+customerUrl.replaceAll("/$","")+"/#/reset-password?token="+token+"\nNếu bạn không yêu cầu, hãy bỏ qua email này.");
+        String baseUrl = (clientOrigin != null && !clientOrigin.isBlank()) ? clientOrigin.trim().replaceAll("/+$", "") : customerUrl.replaceAll("/+$", "");
+        message.setText("Bạn đã yêu cầu đặt lại mật khẩu. Liên kết có hiệu lực 30 phút và chỉ dùng một lần:\n"+baseUrl+"/#/reset-password?token="+token+"\nNếu bạn không yêu cầu, hãy bỏ qua email này.");
         try {mail.get().send(message);} catch(org.springframework.mail.MailException ex){
             org.slf4j.LoggerFactory.getLogger(getClass()).error("Password recovery mail delivery failed; check SMTP configuration");
             em.remove(record);

@@ -232,14 +232,14 @@ export const OperationsPage = () => {
             <div>
               <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Activity size={18} color="var(--color-primary-600)" />
-                Trạng thái Trợ lý AI (Microservice)
+                Trạng thái máy chủ Trợ lý AI
               </h3>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
                 Hệ thống hỗ trợ tư vấn chăm sóc da, giải đáp thành phần mỹ phẩm và gợi ý dịch vụ Spa qua AI.
               </p>
             </div>
             <Button variant="outline" size="sm" icon={RefreshCw} loading={checkingChatbot} onClick={checkChatbotHealth}>
-              Kiểm tra kết nối Live
+              Kiểm tra kết nối trực tiếp
             </Button>
           </div>
 
@@ -261,13 +261,13 @@ export const OperationsPage = () => {
               <div>
                 <strong>
                   {chatbotStatus?.status === 'ok' || chatbotStatus?.status === 'UP'
-                    ? 'Máy chủ Chatbot AI đang hoạt động bình thường (Online)'
+                    ? 'Máy chủ Trợ lý AI đang hoạt động bình thường'
                     : chatbotStatus?.status === 'DOWN'
-                      ? 'Không thể kết nối tới Chatbot AI Microservice (Offline / Down)'
+                      ? 'Không thể kết nối tới máy chủ Trợ lý AI (Mất kết nối)'
                       : 'Chưa kiểm tra trạng thái'}
                 </strong>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  Dịch vụ tư vấn AI tự động trên nền tảng Gemini & Vector Search.
+                  Dịch vụ tư vấn AI tự động giúp giải đáp thắc mắc và gợi ý sản phẩm cho khách hàng.
                 </div>
               </div>
             </div>
@@ -326,10 +326,10 @@ export const OperationsPage = () => {
           <div style={{ marginBottom: 14 }}>
             <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Sparkles size={18} color="var(--color-primary-600)" />
-              Kiểm thử NLU 6 tầng & Phân tích Ý định Người dùng (NLU Test)
+              Thử nghiệm phân tích câu hỏi của khách hàng
             </h3>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-              Mô phỏng bộ trích xuất ý định (Intent), loại da (Skin Types), vấn đề da liễu (Concerns) và thực thể mỹ phẩm từ truy vấn tiếng Việt.
+              Mô phỏng cách AI hiểu ý định, loại da, vấn đề cần chăm sóc và tên sản phẩm từ câu hỏi tiếng Việt của khách hàng.
             </p>
           </div>
 

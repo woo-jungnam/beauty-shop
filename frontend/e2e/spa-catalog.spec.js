@@ -32,6 +32,7 @@ const fixtureStaff = [
 const clone = (value) => structuredClone(value);
 const serviceCard = (page, id) => page.locator(`article[data-service-id="${id}"]`);
 const packageCard = (page, id) => page.locator(`article[data-package-id="${id}"]`);
+const catalogEndpoints = { services: '/api/v1/admin/spa/services', categories: '/api/v1/admin/spa/categories', packages: '/api/v1/admin/spa/packages', staff: '/api/v1/admin/staff', facilities: '/api/v1/admin/spa/facilities' };
 
 async function setup(page, options = {}) {
   await page.addInitScript(user => {
@@ -50,13 +51,16 @@ async function setup(page, options = {}) {
   let releasePolicyA;
   const pendingPolicyA = new Promise(resolve => { releasePolicyA = resolve; });
   await page.route('**/images/spa-catalog-fixture.svg', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420"><rect width="640" height="420" fill="#F1D5DB"/><circle cx="320" cy="210" r="110" fill="#D45D79"/></svg>' }));
-  await page.route('**/api/**', async route => {
+  await page.route('**/api/v1/**', async route => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
     const method = request.method();
     const body = method === 'GET' || method === 'DELETE' ? null : request.postDataJSON();
     if (method !== 'GET') calls.push({ path, method, body: clone(body) });
+    const source = Object.keys(catalogEndpoints).find(key => catalogEndpoints[key] === path);
+    const failure = method === 'GET' && source && options.catalogFailures?.[source];
+    if (failure) return route.fulfill({ status: failure.status || 403, json: { message: failure.message || 'Forbidden' } });
     let data = [];
     if (path.endsWith('/auth/profile')) data = profile;
     else if (path.endsWith('/appointments/admin/all')) data = { content: [], page: 0, totalElements: 0, totalPages: 1, last: true };
@@ -127,7 +131,8 @@ async function setup(page, options = {}) {
   await page.goto('/#/admin/spa');
   await page.getByRole('button', { name: /Dịch vụ & Gói Liệu trình/i }).click();
   await expect(page.getByRole('heading', { name: 'Dịch vụ & gói liệu trình', exact: true })).toBeVisible();
-  await expect(serviceCard(page, 904)).toBeVisible();
+  if (options.catalogFailures?.services) await expect(page.locator('.spa-catalog [role="alert"]').first()).toBeVisible();
+  else await expect(serviceCard(page, 904)).toBeVisible();
   return { calls, requirements, getServices: () => clone(services), getStaff: () => clone(staff), releasePolicyA };
 }
 
@@ -350,6 +355,102 @@ test('an unavailable skill API keeps an explicit unknown state rather than a fal
   await expect(serviceCard(page, 901)).toContainText('Chưa tải kỹ năng KTV');
   await expect(serviceCard(page, 901)).not.toContainText('0 KTV đủ điều kiện');
   await expect(page.locator('article[data-service-id]')).toHaveCount(4);
+});
+
+test('beauty-report: five catalog 403 responses show one actionable banner without false zero or empty data', async ({ page }) => {
+  await setup(page, { catalogFailures: Object.fromEntries(Object.keys(catalogEndpoints).map(key => [key, { status: 403 }])) });
+  const catalog = page.locator('.spa-catalog');
+  await expect(catalog.getByRole('alert')).toHaveCount(1);
+  await expect(catalog.getByRole('alert')).toContainText('(403)');
+  await expect(catalog.getByRole('alert')).toContainText('kiểm tra phiên đăng nhập và quyền truy cập');
+  await expect(catalog.getByRole('alert')).not.toContainText('SPA_RECEPTION');
+  await expect(catalog.locator('.spa-catalog-stat strong')).toHaveText(['—', '—', '—', '—']);
+  await expect(catalog.locator('.spa-catalog-view button span')).toHaveText(['—', '—']);
+  await expect(catalog.locator('.spa-catalog-results')).toContainText('Chưa tải được dữ liệu');
+  await expect(catalog.locator('.spa-catalog-empty')).toHaveCount(0);
+  await expect(catalog.locator('article')).toHaveCount(0);
+  await expect(catalog.getByRole('button', { name: 'Thêm dịch vụ', exact: true })).toBeDisabled();
+  await expect(catalog.getByRole('button', { name: 'Tạo gói liệu trình', exact: true })).toBeDisabled();
+  await catalog.getByRole('button', { name: /^Gói liệu trình\b/ }).click();
+  await expect(catalog.locator('.spa-catalog-results')).toContainText('Chưa tải được dữ liệu');
+  await expect(catalog.locator('.spa-catalog-empty')).toHaveCount(0);
+});
+
+test('beauty-report: packages remain available when services return 403 and tab counts stay independent', async ({ page }) => {
+  await setup(page, { catalogFailures: { services: { status: 403 } } });
+  const catalog = page.locator('.spa-catalog');
+  await expect(catalog.locator('.spa-catalog-stat strong')).toHaveText(['—', '—', '1', '3']);
+  await expect(catalog.locator('.spa-catalog-view button span')).toHaveText(['—', '1']);
+  await expect(catalog.locator('.spa-catalog-results')).toContainText('Chưa tải được dữ liệu');
+  await expect(catalog.locator('.spa-catalog-empty')).toHaveCount(0);
+  await catalog.getByRole('button', { name: /^Gói liệu trình\b/ }).click();
+  await expect(packageCard(page, 910)).toBeVisible();
+  await expect(catalog.locator('.spa-catalog-results > span')).toHaveText('1 gói liệu trình');
+  await expect(packageCard(page, 910).getByRole('button', { name: 'Sửa gói Liệu trình da khỏe', exact: true })).toBeDisabled();
+  await expect(packageCard(page, 910).locator('.spa-package-discount, del')).toHaveCount(0);
+  await catalog.getByLabel('Lọc nhóm liệu trình').selectOption('801');
+  await expect(catalog.locator('.spa-catalog-results')).toContainText('Chưa tải được dữ liệu');
+  await expect(catalog.locator('.spa-catalog-empty')).toHaveCount(0);
+  await expect(packageCard(page, 910)).toHaveCount(0);
+  await catalog.getByLabel('Lọc nhóm liệu trình').selectOption('ALL');
+  await expect(packageCard(page, 910)).toBeVisible();
+  await catalog.getByRole('button', { name: /^Dịch vụ lẻ/ }).click();
+  await expect(catalog.locator('article[data-service-id]')).toHaveCount(0);
+  await expect(catalog.locator('.spa-catalog-results')).toContainText('Chưa tải được dữ liệu');
+});
+
+test('beauty-report: a staff 403 preserves ready services without inventing eligibility', async ({ page }) => {
+  await setup(page, { catalogFailures: { staff: { status: 403 } } });
+  const catalog = page.locator('.spa-catalog');
+  await expect(catalog.getByRole('alert')).toHaveCount(1);
+  await expect(catalog.locator('.spa-catalog-stat strong')).toHaveText(['4', '4', '1', '—']);
+  await expect(catalog.locator('.spa-catalog-results > span')).toHaveText('4 dịch vụ · 4 nhóm liệu trình');
+  await expect(catalog.locator('article[data-service-id]')).toHaveCount(4);
+  await expect(serviceCard(page, 901).getByRole('button', { name: /^Ma trận KTV\b/ })).toBeDisabled();
+  await expect(serviceCard(page, 901)).toContainText('Chưa tải kỹ năng KTV');
+  await expect(serviceCard(page, 901)).not.toContainText('0 KTV đủ điều kiện');
+});
+
+test('beauty-report: deduplication retains distinct source errors alongside the 403 banner', async ({ page }) => {
+  await setup(page, { catalogFailures: {
+    services: { status: 403 }, categories: { status: 403 }, facilities: { status: 403 },
+    packages: { status: 500, message: 'Gói liệu trình tạm thời gián đoạn.' },
+    staff: { status: 500, message: 'Kỹ năng KTV đang bảo trì.' },
+  } });
+  const alerts = page.locator('.spa-catalog').getByRole('alert');
+  await expect(alerts).toHaveCount(3);
+  await expect(alerts.filter({ hasText: '(403)' })).toHaveCount(1);
+  await expect(alerts.filter({ hasText: 'Gói liệu trình tạm thời gián đoạn.' })).toHaveCount(1);
+  await expect(alerts.filter({ hasText: 'Kỹ năng KTV đang bảo trì.' })).toHaveCount(1);
+});
+
+test('beauty-report: failed refresh hides stale catalog data and retry restores current results', async ({ page }) => {
+  const failures = {};
+  await setup(page, { catalogFailures: failures });
+  const catalog = page.locator('.spa-catalog');
+  await catalog.getByRole('button', { name: /^Gói liệu trình\b/ }).click();
+  await expect(packageCard(page, 910)).toBeVisible();
+  await expect(packageCard(page, 910).locator('.spa-package-discount')).toBeVisible();
+  Object.assign(failures, Object.fromEntries(Object.keys(catalogEndpoints).map(key => [key, { status: 403 }])));
+  await catalog.getByRole('button', { name: 'Làm mới danh mục Spa', exact: true }).click();
+  await expect(catalog.getByRole('alert')).toHaveCount(1);
+  await expect(catalog.locator('.spa-catalog-stat strong')).toHaveText(['—', '—', '—', '—']);
+  await expect(packageCard(page, 910)).toHaveCount(0);
+  await expect(catalog.locator('.spa-catalog-empty')).toHaveCount(0);
+  await expect(catalog.getByLabel('Lọc nhóm liệu trình').locator('option[value="801"]')).toHaveCount(0);
+  await catalog.getByRole('button', { name: /^Dịch vụ lẻ/ }).click();
+  await expect(catalog.locator('article[data-service-id]')).toHaveCount(0);
+  await expect(catalog.locator('.spa-catalog-results')).toContainText('Chưa tải được dữ liệu');
+  for (const key of Object.keys(failures)) delete failures[key];
+  await catalog.getByRole('button', { name: 'Làm mới danh mục Spa', exact: true }).click();
+  await expect(catalog.getByRole('alert')).toHaveCount(0);
+  await expect(catalog.locator('.spa-catalog-stat strong')).toHaveText(['4', '4', '1', '3']);
+  await expect(catalog.locator('.spa-catalog-view button span')).toHaveText(['4', '1']);
+  await expect(serviceCard(page, 901)).toBeVisible();
+  await expect(catalog.locator('.spa-catalog-results > span')).toHaveText('4 dịch vụ · 4 nhóm liệu trình');
+  await catalog.getByRole('button', { name: /^Gói liệu trình\b/ }).click();
+  await expect(packageCard(page, 910)).toBeVisible();
+  await expect(packageCard(page, 910).locator('.spa-package-discount')).toBeVisible();
 });
 
 test('deletion requires confirmation and retains the service when backend obligations reject deletion', async ({ page }) => {

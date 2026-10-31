@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AlertCircle, Filter, SlidersHorizontal, RefreshCw, X, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Filter, SlidersHorizontal, RefreshCw, X, Sparkles } from 'lucide-react';
 import { ProductCard } from '../components/product/ProductCard';
 import { ProductGridSkeleton } from '../components/product/ProductCardSkeleton';
 import { apiClient } from '../../shared/api/client';
@@ -13,7 +13,15 @@ import {
 const FilterGroup = ({ title, options, selected, onToggle, onClear, className = '' }) => (
   <fieldset className={`catalog-filter-group ${className}`}>
     <legend>{title}</legend>
-    <button type="button" className="catalog-filter-all" onClick={onClear} aria-pressed={!selected.length}>Tất cả</button>
+    <button
+      type="button"
+      className="catalog-filter-all"
+      onClick={onClear}
+      aria-pressed={!selected.length}
+      style={{ cursor: 'pointer' }}
+    >
+      {selected.length > 0 ? 'Tất cả (Bỏ lọc)' : 'Tất cả'}
+    </button>
     <div className="catalog-filter-options">
       {options.map(option => (
         <label key={option.id} className={`catalog-filter-option ${selected.includes(String(option.id)) ? 'is-selected' : ''}`} style={{ '--category-depth': option.depth || 0 }}>
@@ -66,8 +74,8 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
     const brand = brands.find(item => item.slug === routeFilters.brandSlug);
     return {
       ...routeFilters,
-      categoryIds: routeFilters.categoryIds.length ? routeFilters.categoryIds : category ? [String(category.id)] : [],
-      brandIds: routeFilters.brandIds.length ? routeFilters.brandIds : brand ? [String(brand.id)] : [],
+      categoryIds: routeFilters.categoryIds.length ? routeFilters.categoryIds : (routeFilters.categorySlug && category ? [String(category.id)] : []),
+      brandIds: routeFilters.brandIds.length ? routeFilters.brandIds : (routeFilters.brandSlug && brand ? [String(brand.id)] : []),
     };
   }, [routeFilters, categoryOptions, brands]);
   const searchParams = useMemo(() => catalogSearchParams(filters), [filters]);
@@ -159,6 +167,13 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
 
   return (
     <div className="customer-container catalog-page" style={{ padding: '32px 20px 60px' }}>
+      <nav className="catalog-breadcrumb" aria-label="Đường dẫn danh mục" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--c-text-light, #716762)', marginBottom: 16 }}>
+        <button type="button" onClick={() => onNavigate?.('')} style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <ArrowLeft size={14} /> Trang chủ
+        </button>
+        <span aria-hidden="true">/</span>
+        <span style={{ color: 'var(--c-primary, #721B29)', fontWeight: 600 }}>Sản phẩm</span>
+      </nav>
       <div className="catalog-page-heading">
         <span>DANH MỤC MỸ PHẨM CHÍNH HÃNG</span>
         <h1>{getBannerTitle()}</h1>
@@ -189,9 +204,9 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
           </div>
           <p className="catalog-filter-help">Có thể chọn nhiều mục trong cùng nhóm.</p>
           {categoryOptions.length > 0 && <FilterGroup title="Danh mục sản phẩm" options={categoryOptions} selected={filters.categoryIds}
-            onToggle={id => changeFilters({ categoryIds: toggleFilterValue(filters.categoryIds, id) })} onClear={() => changeFilters({ categoryIds: [] })} />}
+            onToggle={id => changeFilters({ categoryIds: toggleFilterValue(filters.categoryIds, id) })} onClear={() => changeFilters({ categoryIds: [], categorySlug: '', categoryName: '' })} />}
           {brands.length > 0 && <FilterGroup title="Thương hiệu chính hãng" options={brands} selected={filters.brandIds}
-            onToggle={id => changeFilters({ brandIds: toggleFilterValue(filters.brandIds, id) })} onClear={() => changeFilters({ brandIds: [] })} />}
+            onToggle={id => changeFilters({ brandIds: toggleFilterValue(filters.brandIds, id) })} onClear={() => changeFilters({ brandIds: [], brandSlug: '', brandName: '' })} />}
           <RadioGroup title="Loại & tình trạng da" name="skinType" options={SKIN_TYPES} selected={filters.skinType} onChange={skinType => changeFilters({ skinType })} />
           <FilterGroup title="Hoạt chất chuyên sâu" options={ACTIVE_INGREDIENT_FILTERS} selected={filters.activeIngredients}
             onToggle={id => changeFilters({ activeIngredients: toggleFilterValue(filters.activeIngredients, id) })} onClear={() => changeFilters({ activeIngredients: [] })} />
@@ -219,8 +234,8 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
 
           {hasActiveFilters && <div className="catalog-filter-chips" aria-label="Bộ lọc đang chọn">
             <span>Bộ lọc đang chọn:</span>
-            {filters.categoryIds.map(id => <FilterChip key={`category-${id}`} label={`Danh mục: ${categoryName(id)}`} onRemove={() => changeFilters({ categoryIds: filters.categoryIds.filter(value => value !== id) })} />)}
-            {filters.brandIds.map(id => <FilterChip key={`brand-${id}`} label={`Thương hiệu: ${brandName(id)}`} onRemove={() => changeFilters({ brandIds: filters.brandIds.filter(value => value !== id) })} />)}
+            {filters.categoryIds.map(id => <FilterChip key={`category-${id}`} label={`Danh mục: ${categoryName(id)}`} onRemove={() => changeFilters({ categoryIds: filters.categoryIds.filter(value => value !== id), categorySlug: '', categoryName: '' })} />)}
+            {filters.brandIds.map(id => <FilterChip key={`brand-${id}`} label={`Thương hiệu: ${brandName(id)}`} onRemove={() => changeFilters({ brandIds: filters.brandIds.filter(value => value !== id), brandSlug: '', brandName: '' })} />)}
             {filters.activeIngredients.map(id => <FilterChip key={`active-${id}`} label={`Hoạt chất: ${ACTIVE_INGREDIENT_FILTERS.find(item => item.id === id)?.label || id}`} onRemove={() => changeFilters({ activeIngredients: filters.activeIngredients.filter(value => value !== id) })} />)}
             {keyword && <FilterChip label={`Từ khóa: "${keyword}"`} onRemove={() => { setKeyword(''); changeFilters({ keyword: '' }); }} />}
             {filters.skinType !== 'ALL' && <FilterChip label={`Loại da: ${SKIN_TYPES.find(item => item.id === filters.skinType)?.label || filters.skinType}`} onRemove={() => changeFilters({ skinType: 'ALL' })} />}
