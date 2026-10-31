@@ -82,6 +82,9 @@ public class ProductListResponse implements Serializable {
     @Schema(description = "SKU xả kho chính xác: price là giá gốc, discountPrice là giá admin hợp lệ, stockQuantity là tổng tồn an toàn; null ngoài clearance")
     private ProductResponse.VariantResponse clearanceVariant;
 
+    @Schema(description = "Tổng số lượng tồn kho khả dụng của tất cả biến thể của sản phẩm", example = "150")
+    private Integer totalStock;
+
     public ProductListResponse(Long id, String name, String slug, String shortDescription,
                                String thumbnailUrl, BigDecimal minPrice, BigDecimal maxPrice,
                                ProductStatus status, Boolean isFeatured, Double averageRating,

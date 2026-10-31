@@ -22,17 +22,32 @@ import java.util.Optional;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
     private final IdentityFacade identityFacade;
     private final NotificationReceiptRepository receiptRepository;
     private final Optional<JavaMailSender> mailSender;
+    private final com.core.beautyshop.modules.order.api.OrderFacade orderFacade;
+    private final com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerNotifications;
+
+    public NotificationServiceImpl(IdentityFacade identityFacade,
+                                   NotificationReceiptRepository receiptRepository,
+                                   Optional<JavaMailSender> mailSender) {
+        this(identityFacade, receiptRepository, mailSender, null, null);
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbc;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerNotifications;
+    public NotificationServiceImpl(IdentityFacade identityFacade,
+                                   NotificationReceiptRepository receiptRepository,
+                                   Optional<JavaMailSender> mailSender,
+                                   com.core.beautyshop.modules.order.api.OrderFacade orderFacade,
+                                   com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerNotifications) {
+        this.identityFacade = identityFacade;
+        this.receiptRepository = receiptRepository;
+        this.mailSender = mailSender;
+        this.orderFacade = orderFacade;
+        this.customerNotifications = customerNotifications;
+    }
 
     @Value("${app.mail.enabled:false}")
     private boolean mailEnabled;
@@ -93,18 +108,19 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private void deliverOrder(Long orderId, String event, String title, String body) {
-        var recipients = jdbc.query("select user_id, customer_email, customer_name, updated_at from orders where id=? and is_deleted=false",
-                (rs, row) -> new OrderRecipient(rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
-                        rs.getString("customer_email"), rs.getString("customer_name"), String.valueOf(rs.getTimestamp("updated_at"))), orderId);
-        if (recipients.isEmpty()) return;
-        var recipient = recipients.getFirst();
+        if (orderFacade == null) return;
+        var recipientOpt = orderFacade.findOrderRecipient(orderId);
+        if (recipientOpt.isEmpty()) return;
+        var recipient = recipientOpt.get();
         String email = recipient.email();
         String name = recipient.name();
         if (recipient.userId() != null) {
             var account = identityFacade.findUserSummaryById(recipient.userId()).orElse(null);
             if (account != null && (email == null || email.isBlank())) email = account.getEmail();
             String eventKey = "order:" + orderId + ":" + event + (event.startsWith("STATUS_") ? ":" + recipient.updatedAt() : "");
-            customerNotifications.publish(recipient.userId(), eventKey, "ORDER", title, body, "profile?tab=orders&order=" + orderId);
+            if (customerNotifications != null) {
+                customerNotifications.publish(recipient.userId(), eventKey, "ORDER", title, body, "profile?tab=orders&order=" + orderId);
+            }
         }
         if (email == null || email.isBlank()) return;
         sendEmail(EmailMessageDto.builder().recipientEmail(email).recipientName(name).subject(title)
@@ -118,7 +134,6 @@ public class NotificationServiceImpl implements NotificationService {
             case "RETURN_TO_SENDER" -> "Đang hoàn về cửa hàng"; case "COMPLETED" -> "Đã hoàn tất"; default -> status;
         };
     }
-    private record OrderRecipient(Long userId, String email, String name, String updatedAt) {}
 
     @Override
     @Transactional

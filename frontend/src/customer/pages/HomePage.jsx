@@ -91,6 +91,8 @@ export const HomePage = ({ onNavigate }) => {
   const [isHeroHovered, setIsHeroHovered] = useState(false);
 
   const [clearanceProducts, setClearanceProducts] = useState([]);
+  const [curatedFlashProducts, setCuratedFlashProducts] = useState([]);
+  const [flashFilterType, setFlashFilterType] = useState('ALL'); // 'ALL' | 'CURATED' | 'CLEARANCE'
   const [clearanceLoading, setClearanceLoading] = useState(true);
   const [clearanceError, setClearanceError] = useState('');
   const [clearanceAttempt, setClearanceAttempt] = useState(0);
@@ -109,9 +111,23 @@ export const HomePage = ({ onNavigate }) => {
   const [currentFlashTab, setCurrentFlashTab] = useState(0);
   const [isFlashHovered, setIsFlashHovered] = useState(false);
 
+  const allFlashProducts = useMemo(() => {
+    if (flashFilterType === 'CLEARANCE') return clearanceProducts;
+    if (flashFilterType === 'CURATED') return curatedFlashProducts;
+    const seen = new Set();
+    const merged = [];
+    for (const p of [...curatedFlashProducts, ...clearanceProducts]) {
+      if (p?.id && !seen.has(p.id)) {
+        seen.add(p.id);
+        merged.push(p);
+      }
+    }
+    return merged;
+  }, [clearanceProducts, curatedFlashProducts, flashFilterType]);
+
   const totalFlashTabs = useMemo(() => {
-    return Math.max(1, Math.ceil(clearanceProducts.length / FLASH_PAGE_SIZE));
-  }, [clearanceProducts.length]);
+    return Math.max(1, Math.ceil(allFlashProducts.length / FLASH_PAGE_SIZE));
+  }, [allFlashProducts.length]);
 
   useEffect(() => {
     if (currentFlashTab >= totalFlashTabs) {
@@ -128,10 +144,10 @@ export const HomePage = ({ onNavigate }) => {
   }, [totalFlashTabs, isFlashHovered]);
 
   const currentFlashProducts = useMemo(() => {
-    if (!clearanceProducts || clearanceProducts.length === 0) return [];
+    if (!allFlashProducts || allFlashProducts.length === 0) return [];
     const start = currentFlashTab * FLASH_PAGE_SIZE;
-    return clearanceProducts.slice(start, start + FLASH_PAGE_SIZE);
-  }, [clearanceProducts, currentFlashTab]);
+    return allFlashProducts.slice(start, start + FLASH_PAGE_SIZE);
+  }, [allFlashProducts, currentFlashTab]);
 
   const marqueeBrands = useMemo(() => {
     if (!brands || brands.length === 0) return [];
@@ -195,17 +211,25 @@ export const HomePage = ({ onNavigate }) => {
     const controller = new AbortController();
     setClearanceLoading(true);
     setClearanceError('');
-    apiClient.get('/api/v1/products/expiring-soon?limit=8&thresholdDays=90', { signal: controller.signal })
-      .then(response => {
-        const data = response?.data ?? response;
-        const list = Array.isArray(data) ? data : data?.content;
-        if (response?.success === false || !Array.isArray(list)) throw new Error('Invalid clearance response');
-        if (!controller.signal.aborted) setClearanceProducts(list);
+    Promise.allSettled([
+      apiClient.get('/api/v1/products/expiring-soon?limit=12&thresholdDays=90', { signal: controller.signal }),
+      apiClient.get('/api/v1/products/search?onSale=true&size=12', { signal: controller.signal }),
+    ])
+      .then(([expiringRes, onSaleRes]) => {
+        if (controller.signal.aborted) return;
+        const expiringData = expiringRes.status === 'fulfilled' ? (expiringRes.value?.data ?? expiringRes.value) : [];
+        const expiringList = Array.isArray(expiringData) ? expiringData : expiringData?.content || [];
+        setClearanceProducts(expiringList);
+
+        const onSaleData = onSaleRes.status === 'fulfilled' ? (onSaleRes.value?.data ?? onSaleRes.value) : [];
+        const onSaleList = Array.isArray(onSaleData) ? onSaleData : onSaleData?.content || [];
+        setCuratedFlashProducts(onSaleList);
       })
       .catch(() => {
         if (!controller.signal.aborted) {
           setClearanceProducts([]);
-          setClearanceError('Chưa tải được sản phẩm xả kho. Vui lòng thử lại.');
+          setCuratedFlashProducts([]);
+          setClearanceError('Chưa tải được sản phẩm Flash Sale. Vui lòng thử lại.');
         }
       })
       .finally(() => { if (!controller.signal.aborted) setClearanceLoading(false); });
@@ -943,13 +967,67 @@ export const HomePage = ({ onNavigate }) => {
                 fontFamily: 'var(--font-sans)',
                 letterSpacing: '-0.01em'
               }}>
-                XẢ KHO CẬN DATE • GIÁ SỐC ONLINE
+                FLASH SALE & XẢ KHO • GIÁ SỐC ONLINE
               </h2>
+              <div style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FEE2E2', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  style={{
+                    border: 0,
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    backgroundColor: flashFilterType === 'ALL' ? '#DC2626' : 'transparent',
+                    color: flashFilterType === 'ALL' ? '#FFFFFF' : '#991B1B',
+                  }}
+                  onClick={() => { setFlashFilterType('ALL'); setCurrentFlashTab(0); }}
+                >
+                  Tất cả ({allFlashProducts.length})
+                </button>
+                {curatedFlashProducts.length > 0 && (
+                  <button
+                    type="button"
+                    style={{
+                      border: 0,
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      backgroundColor: flashFilterType === 'CURATED' ? '#DC2626' : 'transparent',
+                      color: flashFilterType === 'CURATED' ? '#FFFFFF' : '#991B1B',
+                    }}
+                    onClick={() => { setFlashFilterType('CURATED'); setCurrentFlashTab(0); }}
+                  >
+                    Flash Sale tuyển chọn ({curatedFlashProducts.length})
+                  </button>
+                )}
+                {clearanceProducts.length > 0 && (
+                  <button
+                    type="button"
+                    style={{
+                      border: 0,
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      backgroundColor: flashFilterType === 'CLEARANCE' ? '#DC2626' : 'transparent',
+                      color: flashFilterType === 'CLEARANCE' ? '#FFFFFF' : '#991B1B',
+                    }}
+                    onClick={() => { setFlashFilterType('CLEARANCE'); setCurrentFlashTab(0); }}
+                  >
+                    Cận date ({clearanceProducts.length})
+                  </button>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
-                Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.
+                {flashFilterType === 'CLEARANCE' ? 'Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.' : flashFilterType === 'CURATED' ? 'Sản phẩm khuyến mãi sốc được tuyển chọn đặc biệt.' : 'Ưu đãi Flash Sale tuyển chọn và lô cận date chính hãng.'}
               </p>
 
               {totalFlashTabs > 1 && (
@@ -1004,8 +1082,8 @@ export const HomePage = ({ onNavigate }) => {
               <p>{clearanceError}</p>
               <button type="button" className="btn-luxury-outline" onClick={() => setClearanceAttempt(value => value + 1)}>Thử lại sản phẩm xả kho</button>
             </div>
-          ) : clearanceProducts.length === 0 ? (
-            <p role="status">Hiện chưa có sản phẩm xả kho đủ điều kiện.</p>
+          ) : allFlashProducts.length === 0 ? (
+            <p role="status">Hiện chưa có sản phẩm Flash Sale hoặc xả kho khả dụng.</p>
           ) : (
             <div className="horizontal-carousel-wrapper">
               {totalFlashTabs > 1 && (
@@ -1561,7 +1639,7 @@ export const HomePage = ({ onNavigate }) => {
                     textAlign: 'center',
                     background: '#FFFFFF',
                     transition: 'all 0.2s ease',
-                    minHeight: '80px'
+                    minHeight: '110px'
                   }}
                 >
                   <BrandCardLogo brand={brand} logoUrl={getBrandImage(brand)} />

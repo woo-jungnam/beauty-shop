@@ -58,4 +58,35 @@ public class Appointment extends Base {
     @OrderBy("startTime ASC, id ASC")
     @Builder.Default
     private List<AppointmentItem> items = new java.util.ArrayList<>();
+
+    public void checkIn(Long staffUserId) {
+        if (this.status != AppointmentStatus.CONFIRMED && this.status != AppointmentStatus.PENDING) {
+            throw new com.core.beautyshop.shared.exception.BusinessException("Chỉ có thể check-in lịch hẹn đã xác nhận hoặc đang chờ duyệt");
+        }
+        this.checkedInAt = java.time.Instant.now();
+        this.checkedInByUserId = staffUserId;
+    }
+
+    public void startService() {
+        if (this.checkedInAt == null) {
+            throw new com.core.beautyshop.shared.exception.BusinessException("Khách cần check-in tại quầy trước khi bắt đầu dịch vụ");
+        }
+        this.status = AppointmentStatus.IN_PROGRESS;
+        if (this.actualStartedAt == null) {
+            this.actualStartedAt = java.time.Instant.now();
+        }
+    }
+
+    public void completeService() {
+        if (this.status != AppointmentStatus.IN_PROGRESS) {
+            throw new com.core.beautyshop.shared.exception.BusinessException("Chỉ có thể hoàn tất lịch hẹn đang được thực hiện");
+        }
+        this.status = AppointmentStatus.COMPLETED;
+        this.actualCompletedAt = java.time.Instant.now();
+    }
+
+    public void markNoShow(String reason) {
+        this.status = AppointmentStatus.NO_SHOW;
+        this.notes = (this.notes != null && !this.notes.isBlank() ? this.notes + "; " : "") + "[Vắng hẹn] " + (reason != null ? reason.trim() : "");
+    }
 }

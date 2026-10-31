@@ -34,7 +34,7 @@ import { ProductFeaturesModal } from './ProductFeaturesModal';
 import { lines, ingredientCatalog } from './productFeatures.js';
 
 const QUICK_SAMPLE_IMAGES = [];
-const EMPTY_PRODUCT_FILTERS = { keyword: '', categoryId: '', brandId: '', status: '' };
+const EMPTY_PRODUCT_FILTERS = { keyword: '', categoryId: '', brandId: '', status: '', onSale: '' };
 const PRODUCT_STATUSES = {
   ACTIVE: { label: 'Đang bán', variant: 'success' },
   INACTIVE: { label: 'Tạm ẩn', variant: 'default' },
@@ -94,6 +94,10 @@ export const ProductsPage = () => {
   const [variantsModalOpen, setVariantsModalOpen] = useState(false);
   const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
   const [variantList, setVariantList] = useState([]);
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [selectedProductForStock, setSelectedProductForStock] = useState(null);
+  const [stockDetailList, setStockDetailList] = useState([]);
+  const [stockDetailLoading, setStockDetailLoading] = useState(false);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState(null);
   const [varSku, setVarSku] = useState('');
@@ -510,6 +514,22 @@ export const ProductsPage = () => {
       setVariantList([]);
     }
     setVariantsModalOpen(true);
+  };
+
+  const handleOpenStockDetail = async (product) => {
+    setSelectedProductForStock(product);
+    setStockDetailLoading(true);
+    setStockDetailList([]);
+    setStockModalOpen(true);
+    try {
+      const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(product.id));
+      const pDetail = res.data || res;
+      setStockDetailList(pDetail.variants || []);
+    } catch {
+      setStockDetailList([]);
+    } finally {
+      setStockDetailLoading(false);
+    }
   };
 
   const handleOpenCreateVariant = () => {
@@ -1081,7 +1101,19 @@ export const ProductsPage = () => {
       header: 'Tên sản phẩm',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{row.name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{row.name}</span>
+            {row.isFeatured && (
+              <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
+                NỔI BẬT
+              </span>
+            )}
+            {(row.onSale || (row.discountPrice != null && Number(row.discountPrice) < Number(row.price))) && (
+              <span style={{ fontSize: '10px', background: '#FEE2E2', color: '#DC2626', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
+                FLASH SALE
+              </span>
+            )}
+          </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
             /{row.slug}
           </div>
@@ -1123,6 +1155,39 @@ export const ProductsPage = () => {
       },
       align: 'right',
       width: '140px',
+    },
+    {
+      header: 'Tồn kho',
+      accessor: (row) => {
+        const total = row.totalStock != null ? row.totalStock : 0;
+        const isOut = total <= 0;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{
+              fontWeight: 700,
+              fontSize: '12.5px',
+              fontVariantNumeric: 'tabular-nums',
+              color: isOut ? 'var(--color-danger-700)' : 'var(--color-success-700)',
+              backgroundColor: isOut ? '#FEE2E2' : '#ECFDF5',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              border: `1px solid ${isOut ? '#FCA5A5' : '#A7F3D0'}`
+            }}>
+              {isOut ? 'Hết hàng (0)' : `${total} SP`}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); handleOpenStockDetail(row); }}
+              title="Xem số lượng tồn kho từng biến thể"
+              style={{ fontSize: '11px', padding: '2px 7px', minHeight: '26px' }}
+            >
+              Chi tiết
+            </Button>
+          </div>
+        );
+      },
+      width: '160px',
     },
     {
       header: 'Trạng thái',
@@ -1616,6 +1681,7 @@ export const ProductsPage = () => {
               <Select label="Lọc danh mục" value={draftFilters.categoryId} onChange={event => setDraftFilters({ ...draftFilters, categoryId: event.target.value })} options={[{ value: '', label: 'Tất cả danh mục' }, ...categories.map(category => ({ value: String(category.id), label: category.name }))]} />
               <Select label="Lọc thương hiệu" value={draftFilters.brandId} onChange={event => setDraftFilters({ ...draftFilters, brandId: event.target.value })} options={[{ value: '', label: 'Tất cả thương hiệu' }, ...brands.map(brand => ({ value: String(brand.id), label: brand.name }))]} />
               <Select label="Lọc trạng thái" value={draftFilters.status} onChange={event => setDraftFilters({ ...draftFilters, status: event.target.value })} options={[{ value: '', label: 'Tất cả trạng thái' }, ...Object.entries(PRODUCT_STATUSES).map(([value, meta]) => ({ value, label: meta.label }))]} />
+              <Select label="Lọc Flash Sale / Khuyến mãi" value={draftFilters.onSale} onChange={event => setDraftFilters({ ...draftFilters, onSale: event.target.value })} options={[{ value: '', label: 'Tất cả sản phẩm' }, { value: 'true', label: 'Đang Flash Sale / Giảm giá' }]} />
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
               <Button type="submit" icon={Search}>Áp dụng</Button>
@@ -1963,6 +2029,7 @@ export const ProductsPage = () => {
               <th>Tên biến thể</th>
               <th>Dung tích / Màu</th>
               <th>Giá bán</th>
+              <th style={{ textAlign: 'center' }}>Tồn kho</th>
               <th>Barcode</th>
               <th>Thao tác</th>
             </tr>
@@ -1970,32 +2037,134 @@ export const ProductsPage = () => {
           <tbody>
             {variantList.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
                   Chưa có biến thể SKU nào. Nhấn "Thêm biến thể SKU" để cấu hình.
                 </td>
               </tr>
             ) : (
-              variantList.map((v) => (
-                <tr key={v.id}>
-                  <td>
-                    <code style={{ fontWeight: 700, color: 'var(--color-accent-700)' }}>{v.sku}</code>
-                    {v.isDefault && <Badge variant="info" style={{ marginLeft: '6px', fontSize: '9px' }}>Mặc định</Badge>}
-                  </td>
-                  <td>{v.variantName}</td>
-                  <td>{v.volume || v.color || 'Mặc định'}</td>
-                  <td><strong>{formatCurrency(v.price)}</strong></td>
-                  <td>{v.barcode || 'N/A'}</td>
-                  <td>
-                    <div className="table-actions">
-                      <Button variant="outline" size="sm" icon={Edit} onClick={() => handleOpenEditVariant(v)} title="Sửa biến thể" />
-                      <Button variant="outline" size="sm" icon={Trash2} onClick={() => handleDeleteVariant(v.id)} title="Xóa biến thể" />
-                    </div>
-                  </td>
-                </tr>
-              ))
+              variantList.map((v) => {
+                const qty = v.stockQuantity != null ? v.stockQuantity : 0;
+                const inStock = qty > 0;
+                return (
+                  <tr key={v.id}>
+                    <td>
+                      <code style={{ fontWeight: 700, color: 'var(--color-accent-700)' }}>{v.sku}</code>
+                      {v.isDefault && <Badge variant="info" style={{ marginLeft: '6px', fontSize: '9px' }}>Mặc định</Badge>}
+                    </td>
+                    <td>{v.variantName}</td>
+                    <td>{v.volume || v.color || 'Mặc định'}</td>
+                    <td><strong>{formatCurrency(v.price)}</strong></td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{
+                        fontWeight: 700,
+                        fontSize: '12px',
+                        color: inStock ? 'var(--color-success-700)' : 'var(--color-danger-700)',
+                        backgroundColor: inStock ? '#ECFDF5' : '#FEE2E2',
+                        padding: '2px 7px',
+                        borderRadius: '4px',
+                      }}>
+                        {qty}
+                      </span>
+                    </td>
+                    <td>{v.barcode || 'N/A'}</td>
+                    <td>
+                      <div className="table-actions">
+                        <Button variant="outline" size="sm" icon={Edit} onClick={() => handleOpenEditVariant(v)} title="Sửa biến thể" />
+                        <Button variant="outline" size="sm" icon={Trash2} onClick={() => handleDeleteVariant(v.id)} title="Xóa biến thể" />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
+      </Modal>
+
+      <Modal
+        isOpen={stockModalOpen}
+        onClose={() => setStockModalOpen(false)}
+        title={`Chi tiết tồn kho: ${selectedProductForStock?.name}`}
+        maxWidth="720px"
+      >
+        <div style={{ marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              Mã sản phẩm: <strong>#{selectedProductForStock?.id}</strong> · Tổng số lượng: <strong style={{ color: (selectedProductForStock?.totalStock > 0) ? 'var(--color-success-700)' : 'var(--color-danger-700)', fontSize: '15px' }}>{selectedProductForStock?.totalStock ?? 0} sản phẩm</strong>
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setStockModalOpen(false);
+              handleOpenVariants(selectedProductForStock);
+            }}
+          >
+            Quản lý biến thể SKU
+          </Button>
+        </div>
+
+        {stockDetailLoading ? (
+          <p style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>Đang tải số lượng tồn kho từng biến thể…</p>
+        ) : (
+          <table className="data-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>Mã SKU</th>
+                <th>Tên biến thể</th>
+                <th>Phân loại</th>
+                <th style={{ textAlign: 'right' }}>Giá bán</th>
+                <th style={{ textAlign: 'center' }}>Tồn kho khả dụng</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stockDetailList.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
+                    Chưa có biến thể SKU nào cho sản phẩm này.
+                  </td>
+                </tr>
+              ) : (
+                stockDetailList.map((v) => {
+                  const qty = v.stockQuantity != null ? v.stockQuantity : 0;
+                  const inStock = qty > 0;
+                  return (
+                    <tr key={v.id}>
+                      <td>
+                        <code style={{ fontWeight: 700, color: 'var(--color-accent-700)' }}>{v.sku}</code>
+                        {v.isDefault && <Badge variant="info" style={{ marginLeft: '6px', fontSize: '9px' }}>Mặc định</Badge>}
+                      </td>
+                      <td>{v.variantName}</td>
+                      <td>{v.volume || v.color || 'Tiêu chuẩn'}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <strong>{formatCurrency(v.discountPrice ?? v.price)}</strong>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span style={{
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          color: inStock ? 'var(--color-success-700)' : 'var(--color-danger-700)',
+                          backgroundColor: inStock ? '#ECFDF5' : '#FEE2E2',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                        }}>
+                          {qty}
+                        </span>
+                      </td>
+                      <td>
+                        <Badge variant={inStock ? 'success' : 'danger'}>
+                          {inStock ? 'Còn hàng' : 'Hết hàng'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        )}
       </Modal>
 
       <Modal
@@ -2009,9 +2178,14 @@ export const ProductsPage = () => {
             <Input label="Mã SKU *" value={varSku} onChange={(e) => setVarSku(e.target.value)} required placeholder="VD: LRP-50ML" />
             <Input label="Tên biến thể *" value={varName} onChange={(e) => setVarName(e.target.value)} required placeholder="VD: Chai 50ML" />
           </div>
-          <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Input label="Giá bán (VNĐ) *" type="number" value={varPrice} onChange={(e) => setVarPrice(e.target.value)} required />
-            <Input label="Giá khuyến mãi" type="number" value={varDiscountPrice} onChange={(e) => setVarDiscountPrice(e.target.value)} />
+          <div className="grid-2" style={{ marginTop: '12px', alignItems: 'flex-start' }}>
+            <Input label="Giá bán niêm yết (VNĐ) *" type="number" value={varPrice} onChange={(e) => setVarPrice(e.target.value)} required />
+            <div>
+              <Input label="Giá Flash Sale / Khuyến mãi (VNĐ)" type="number" value={varDiscountPrice} onChange={(e) => setVarDiscountPrice(e.target.value)} placeholder="Nhập để đưa vào Flash Sale" />
+              <small style={{ color: '#DC2626', fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                Nhập giá nhỏ hơn giá niêm yết để sản phẩm này tự động tham gia cụm Flash Sale trên Trang chủ.
+              </small>
+            </div>
           </div>
           <div className="grid-3" style={{ marginTop: '12px' }}>
             <Input label="Dung tích" value={varVolume} onChange={(e) => setVarVolume(e.target.value)} placeholder="50ml" />

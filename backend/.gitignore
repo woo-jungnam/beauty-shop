@@ -3,7 +3,9 @@ target/
 target-spa-validation/
 .spa-validation-pom.xml
 spa-*-tests.log
+logs/
 *.log
+.*.log
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

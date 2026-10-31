@@ -388,6 +388,20 @@ public class OrderFacadeImpl implements OrderFacade {
                 String.valueOf(command.getNotes())));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OrderRecipientDto> findOrderRecipient(Long orderId) {
+        if (orderId == null) return Optional.empty();
+        return orderRepository.findById(orderId)
+                .filter(o -> !Boolean.TRUE.equals(o.getIsDeleted()))
+                .map(o -> new OrderRecipientDto(
+                        o.getUserId(),
+                        o.getCustomerEmail(),
+                        o.getCustomerName(),
+                        String.valueOf(o.getUpdatedAt() != null ? o.getUpdatedAt() : o.getCreatedAt())
+                ));
+    }
+
     private String sha256(String value) {
         try {
             return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")

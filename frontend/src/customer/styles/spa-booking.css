@@ -742,6 +742,36 @@
   font-weight: 400;
 }
 
+.spa-booking-page .booking-provider-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--booking-rose-light);
+  color: var(--booking-rose);
+  border: 1px solid var(--booking-line);
+}
+
+.spa-booking-page .booking-staff-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--booking-ink);
+  margin-top: 3px;
+}
+
+.spa-booking-page .booking-staff-rating small {
+  display: inline;
+  color: var(--booking-muted);
+  font-size: 10.5px;
+  font-weight: 400;
+  margin: 0;
+}
+
 .spa-booking-page .booking-provider[open] summary > svg {
   transform: rotate(180deg);
 }
@@ -1760,6 +1790,28 @@
   flex-wrap: wrap;
   gap: 16px;
   margin-top: 26px;
+}
+
+.spa-booking-page .booking-calendar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 22px;
+  background: #FFFFFF;
+  border: 1.5px solid #1A73E8;
+  color: #1A73E8;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.spa-booking-page .booking-calendar-button:hover {
+  background: #F1F6FD;
+  box-shadow: 0 3px 12px rgba(26, 115, 232, 0.15);
 }
 
 /* =========================================================

@@ -76,6 +76,7 @@ export const SpaReceptionPage = () => {
   const [view, setView] = useState(() => { try { return localStorage.getItem('spa_reception_view') === 'list' ? 'list' : 'kanban'; } catch { return 'kanban'; } });
   const [date, setDate] = useState('');
   const [status, setStatus] = useState('ALL');
+  const [staffFilter, setStaffFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [walkIn, setWalkIn] = useState(null);
@@ -104,21 +105,44 @@ export const SpaReceptionPage = () => {
   const [busy, setBusy] = useState('');
   const actionLock = useRef(false);
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 10000); return () => clearInterval(timer); }, []);
-  useEffect(() => { setPage(0); }, [date, status, search]);
+  useEffect(() => { setPage(0); }, [date, status, search, staffFilter]);
   useEffect(() => { setCheckout(previous => previous ? data.appointments.find(appointment => appointment.id === previous.id) || previous : null); }, [data.appointments]);
   const changeView = next => { setView(next); try { localStorage.setItem('spa_reception_view', next); } catch {} };
   const afterAction = (message, tone = 'success') => { setNotice({ message, tone }); data.refresh(); };
   const today = getVietnamDateString(now);
+  const currentStaffId = useMemo(() => {
+    if (!user?.id || !data.staff?.length) return null;
+    const found = data.staff.find(s => String(s.userId) === String(user.id));
+    return found ? String(found.id) : null;
+  }, [user?.id, data.staff]);
   const currentFacilities = useMemo(() => data.facilities.map(facility => ({ ...facility,
     live: facilityState(facility, data.appointments, data.blocks[facility.id], now,
       Boolean(data.updatedAt) && now.getTime() - data.updatedAt < 90000 && data.blocks[facility.id] !== undefined),
   })), [data.facilities, data.appointments, data.blocks, data.updatedAt, now]);
   const filtered = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('vi');
-    return data.appointments.filter(appointment => (!date || appointment.appointmentDate === date) && (status === 'ALL' || appointment.status === status)
-      && (!term || [appointment.customerName, appointment.customerPhone, appointmentCode(appointment), `SPA-${appointment.id}`, `SPA-APT-#${appointment.id}`, ...((appointment.items || []).map(item => item.serviceName))].some(value => String(value || '').toLocaleLowerCase('vi').includes(term))))
-      .sort((a, b) => localInstant(a.appointmentDate, a.startTime) - localInstant(b.appointmentDate, b.startTime) || a.id - b.id);
-  }, [data.appointments, date, status, search]);
+    return data.appointments.filter(appointment => {
+      if (date && appointment.appointmentDate !== date) return false;
+      if (status !== 'ALL' && appointment.status !== status) return false;
+      if (staffFilter !== 'ALL') {
+        const matchesStaff = (appointment.items || []).some(item => String(item.staffId) === String(staffFilter));
+        if (!matchesStaff) return false;
+      }
+      if (term) {
+        const matches = [
+          appointment.customerName,
+          appointment.customerPhone,
+          appointmentCode(appointment),
+          `SPA-${appointment.id}`,
+          `SPA-APT-#${appointment.id}`,
+          ...((appointment.items || []).map(item => item.serviceName)),
+          ...((appointment.items || []).map(item => item.staffName)),
+        ].some(value => String(value || '').toLocaleLowerCase('vi').includes(term));
+        if (!matches) return false;
+      }
+      return true;
+    }).sort((a, b) => localInstant(a.appointmentDate, a.startTime) - localInstant(b.appointmentDate, b.startTime) || a.id - b.id);
+  }, [data.appointments, date, status, search, staffFilter]);
   const todayAppointments = data.appointments.filter(appointment => appointment.appointmentDate === today);
   const checkedInCount = todayAppointments.filter(a => a.status === 'CONFIRMED' && Boolean(a.checkedInAt)).length;
   const inProgressCount = todayAppointments.filter(a => a.status === 'IN_PROGRESS').length;
@@ -485,7 +509,7 @@ export const SpaReceptionPage = () => {
 
           <section className="reception-queue" aria-label="Danh sách tiếp đón">
             <div className="reception-section-heading"><div><h2>Luồng tiếp đón <span className="reception-count">{filtered.length}</span></h2><p>{date ? formatDate(date) : 'Tất cả ngày hẹn'} · Theo dõi từ tiếp đón đến thu ngân</p></div><div className="reception-view-switch" role="group" aria-label="Chế độ hiển thị"><button type="button" aria-pressed={view === 'kanban'} onClick={() => changeView('kanban')}><LayoutGrid size={16} /> Bảng tiến độ</button><button type="button" aria-pressed={view === 'list'} onClick={() => changeView('list')}><List size={16} /> Danh sách</button></div></div>
-            <div className="reception-filter-bar"><div className="reception-search"><Search size={17} /><Input id="reception-search-input" aria-label="Tìm tên, SĐT hoặc mã lịch hẹn" placeholder="Tìm tên, SĐT, mã lịch… (/)" value={search} onChange={event => setSearch(event.target.value)} /><kbd className="reception-search-kbd">/</kbd></div><Input aria-label="Lọc ngày hẹn" type="date" value={date} onChange={event => setDate(event.target.value)} /><div className="reception-date-shortcuts"><button type="button" aria-pressed={date === today} onClick={() => setDate(today)}>Hôm nay</button><button type="button" aria-pressed={!date} onClick={() => setDate('')}>Tất cả ngày</button></div><Select aria-label="Lọc trạng thái" value={status} onChange={event => setStatus(event.target.value)} options={[{ value: 'ALL', label: 'Tất cả trạng thái' }, ...Object.entries(SPA_STATUS).map(([value, state]) => ({ value, label: state.label }))]} /></div>
+            <div className="reception-filter-bar"><div className="reception-search"><Search size={17} /><Input id="reception-search-input" aria-label="Tìm tên, SĐT hoặc mã lịch hẹn" placeholder="Tìm tên, SĐT, mã lịch… (/)" value={search} onChange={event => setSearch(event.target.value)} /><kbd className="reception-search-kbd">/</kbd></div><Input aria-label="Lọc ngày hẹn" type="date" value={date} onChange={event => setDate(event.target.value)} /><div className="reception-date-shortcuts"><button type="button" aria-pressed={date === today} onClick={() => setDate(today)}>Hôm nay</button><button type="button" aria-pressed={!date} onClick={() => setDate('')}>Tất cả ngày</button>{currentStaffId && <button type="button" aria-pressed={staffFilter === currentStaffId} onClick={() => setStaffFilter(prev => prev === currentStaffId ? 'ALL' : currentStaffId)}>Ca của tôi</button>}</div><Select aria-label="Lọc trạng thái" value={status} onChange={event => setStatus(event.target.value)} options={[{ value: 'ALL', label: 'Tất cả trạng thái' }, ...Object.entries(SPA_STATUS).map(([value, state]) => ({ value, label: state.label }))]} /><Select aria-label="Lọc kỹ thuật viên" value={staffFilter} onChange={event => setStaffFilter(event.target.value)} options={[{ value: 'ALL', label: 'Tất cả KTV' }, ...(currentStaffId ? [{ value: currentStaffId, label: `Ca của tôi (${user?.fullName || 'Tôi'})` }] : []), ...(data.staff || []).map(s => ({ value: String(s.id), label: s.fullName || `KTV #${s.id}` }))]} /></div>
             {data.refreshing && <p className="reception-muted" role="status">Đang tải lịch hẹn…</p>}
             {data.appointmentsReady && (!data.appointmentsError || filtered.length > 0) && (view === 'kanban' ? <>
               {exceptions > 0 && <div className="reception-exceptions">Có {exceptions} lịch đã hủy / vắng mặt trong bộ lọc. <button type="button" onClick={() => changeView('list')}>Xem trong danh sách</button></div>}

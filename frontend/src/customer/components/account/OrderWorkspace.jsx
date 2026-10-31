@@ -22,10 +22,17 @@ export function OrderWorkspace({ onNavigate, initialOrderId }) {
       <h3>Đơn hàng của tôi</h3>
       {error && <p role="alert">{error}</p>}
       <button onClick={load} disabled={loading}>Cập nhật đơn hàng</button>
-      {listRows(data).map(order => (
+      {listRows(data).map(order => {
+        const isSpa = order.servicePackageId != null || order.appointmentId != null || (order.spaVisitItems && order.spaVisitItems.length > 0);
+        return (
         <article className="account-card" key={order.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 8 }}>
-            <strong>{order.orderNumber}</strong>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <strong>{order.orderNumber}</strong>
+              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: isSpa ? '#FCE7F3' : '#F3F4F6', color: isSpa ? '#9D174D' : '#374151', fontWeight: 600 }}>
+                {isSpa ? 'Dịch vụ Spa' : 'Đơn sản phẩm'}
+              </span>
+            </div>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-primary)' }}>
               {statuses[order.status] || order.status} · {statuses[order.paymentStatus] || order.paymentStatus}
             </span>
@@ -55,7 +62,8 @@ export function OrderWorkspace({ onNavigate, initialOrderId }) {
             <button className="btn-luxury-outline" style={{ padding: '6px 14px', fontSize: 12 }} onClick={() => setSelected(order.id)}>Chi tiết & thao tác</button>
           </div>
         </article>
-      ))}
+        );
+      })}
       {!loading && !error && !listRows(data).length && <p>Bạn chưa có đơn hàng.</p>}
       <Pagination page={page} totalPages={data.totalPages || 1} onChange={setPage} />
       {selected && <OrderDetailDialog orderId={selected} onClose={() => setSelected(null)} onChanged={load} onNavigate={onNavigate} />}
@@ -128,6 +136,17 @@ export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
                 </div>
               )}
             </div>
+
+            {order.servicePackageId && (
+              <div style={{ padding: '10px 14px', backgroundColor: '#FDF2F8', border: '1px solid #FBCFE8', borderRadius: 6, fontSize: 13, color: '#9D174D' }}>
+                <strong>Đơn dịch vụ Spa / Liệu trình</strong>: Mã gói #{order.servicePackageId}
+                {order.spaBenefitType && (
+                  <span style={{ display: 'block', fontSize: 12, marginTop: 2 }}>
+                    Quyền lợi: {order.spaBenefitType === 'TREATMENT_COURSE' ? 'Lộ trình chăm sóc da chuyên sâu' : 'Gói dịch vụ Spa'}
+                  </span>
+                )}
+              </div>
+            )}
 
             <table className="account-order-lines" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -248,7 +267,7 @@ export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
                   Tiếp tục thanh toán
                 </button>
               )}
-              {order.items?.length > 0 && (
+              {order.items?.length > 0 && !order.servicePackageId && !order.appointmentId && (
                 <button disabled={busy} onClick={() => run(reorder)}>
                   Mua lại theo giá hiện tại
                 </button>

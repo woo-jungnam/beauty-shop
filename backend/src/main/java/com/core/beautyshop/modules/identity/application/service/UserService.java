@@ -25,4 +25,5 @@ public interface UserService {
     UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason);
     UserProfileResponse updateRoles(Long userId, java.util.List<Long> roleIds);
     com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse resetPassword(Long userId);
+    java.util.List<com.core.beautyshop.modules.identity.api.AdminUserController.SessionView> getUserSessions(Long userId);
 }

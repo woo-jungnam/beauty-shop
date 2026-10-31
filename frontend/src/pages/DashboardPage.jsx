@@ -99,6 +99,8 @@ function normalizeTimeline(records, period, range) {
           ? `Tháng ${cursor.getUTCMonth() + 1}/${cursor.getUTCFullYear()}`
           : formatDate(`${key}T12:00:00+07:00`),
       revenue: record ? numberOrNull(record.revenue) : 0,
+      productRevenue: record ? numberOrNull(record.productRevenue) : 0,
+      spaRevenue: record ? numberOrNull(record.spaRevenue) : 0,
       orderCount: record ? numberOrNull(record.orderCount) : 0,
       refundedAmount: record ? numberOrNull(record.refundedAmount) : 0,
       receiptCount: record ? numberOrNull(record.receiptCount) : 0,
@@ -253,7 +255,7 @@ function MetricCard({
   );
 }
 
-function RevenueChart({ points, onSelect }) {
+function RevenueChart({ points, onSelect, metricKey = "revenue" }) {
   const [activeIndex, setActiveIndex] = useState(null);
   const [size, setSize] = useState({ width: 820, height: 285 });
   const containerRef = useRef(null);
@@ -280,7 +282,7 @@ function RevenueChart({ points, onSelect }) {
     right = 18,
     top = 28,
     bottom = 36;
-  const max = Math.max(...points.map((point) => point.revenue || 0), 1);
+  const max = Math.max(...points.map((point) => point[metricKey] || 0), 1);
   const ceiling = max === 1 ? 1 : Math.ceil(max / 4) * 4;
   const coordinates = points.map((point, index) => ({
     ...point,
@@ -288,7 +290,7 @@ function RevenueChart({ points, onSelect }) {
     y:
       height -
       bottom -
-      ((point.revenue || 0) / ceiling) * (height - top - bottom),
+      ((point[metricKey] || 0) / ceiling) * (height - top - bottom),
   }));
   const path = coordinates.reduce((result, point, index) => {
     if (!index) return `M ${point.x},${point.y}`;
@@ -463,16 +465,19 @@ function RevenueChart({ points, onSelect }) {
           }}
         >
           <span>{selected.fullDate}</span>
-          <strong>{currency(selected.revenue)}</strong>
-          <small>
-            {number(selected.orderCount)} đơn thanh toán · Nhấp / Enter xem chi
-            tiết
+          <strong>{currency(selected[metricKey])}</strong>
+          <div style={{ fontSize: "11px", color: "#6B7280", marginTop: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+            <span>Mỹ phẩm: {currency(selected.productRevenue)}</span>
+            <span>Spa: {currency(selected.spaRevenue)}</span>
+          </div>
+          <small style={{ marginTop: 4 }}>
+            {number(selected.orderCount)} đơn thanh toán · Nhấp để xem
           </small>
         </div>
       )}
       <span className="atelier-sr-only" role="status">
         {selected &&
-          `${selected.fullDate}: ${currency(selected.revenue)}, ${number(selected.orderCount)} đơn thanh toán.`}
+          `${selected.fullDate}: ${currency(selected[metricKey])}, ${number(selected.orderCount)} đơn thanh toán.`}
       </span>
     </div>
   );
@@ -510,11 +515,12 @@ const OrderStatus = ({ status }) => {
 };
 
 function ReportDialog({ report, onClose, data, range, points, loading }) {
-  const { overview, spa, products, orders } = data;
+  const { overview, spa, products, services, orders } = data;
   const title = {
-    REVENUE: "Dòng tiền trong kỳ",
+    REVENUE: "Dòng tiền & Phân rã Doanh thu trong kỳ",
     ORDERS: "Đơn hàng trong kỳ",
-    PRODUCTS: "Hiệu suất sản phẩm",
+    PRODUCTS: "Hiệu suất sản phẩm mỹ phẩm",
+    SERVICES: "Top Dịch vụ Spa thực hiện",
     SPA: "Hiệu suất lịch hẹn Spa",
     ORDER: `Đơn hàng ${report?.order ? orderCode(report.order) : ""}`,
   }[report?.type];
@@ -553,6 +559,24 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
       align: "right",
     },
   ];
+  const serviceColumns = [
+    { header: "Dịch vụ Spa", accessor: "serviceName" },
+    {
+      header: "Số ca hoàn tất",
+      accessor: (row) => `${number(row.performedSessions)} ca`,
+      align: "right",
+    },
+    {
+      header: "Thời lượng",
+      accessor: (row) => `${number(row.performedMinutes)} phút`,
+      align: "right",
+    },
+    {
+      header: "Doanh thu ước tính",
+      accessor: (row) => currency(row.estimatedRevenue),
+      align: "right",
+    },
+  ];
   const stat = (label, value) => (
     <div className="atelier-report-stat" key={label}>
       <span>{label}</span>
@@ -581,10 +605,25 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
               )}
               {stat("Giao dịch tiền vào", number(overview?.receiptCount))}
             </div>
+            <div style={{ marginTop: 12, marginBottom: 16, padding: "12px 16px", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "10px" }}>
+              <strong style={{ fontSize: "13px", color: "#374151", display: "block", marginBottom: 8 }}>
+                Phân rã theo mảng kinh doanh:
+              </strong>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: "12.5px" }}>
+                <div style={{ borderLeft: "3px solid #8B5CF6", paddingLeft: 8 }}>
+                  <div style={{ fontWeight: 600, color: "#4B5563" }}>Bán lẻ Mỹ phẩm:</div>
+                  <div>Doanh thu: <strong>{currency(overview?.productRevenue)}</strong> ({number(overview?.productPaidOrders)} đơn)</div>
+                  <div>AOV: <strong>{currency(overview?.productAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.productRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.productRefunds)}</strong></div>
+                </div>
+                <div style={{ borderLeft: "3px solid #EC4899", paddingLeft: 8 }}>
+                  <div style={{ fontWeight: 600, color: "#4B5563" }}>Dịch vụ & Liệu trình Spa:</div>
+                  <div>Doanh thu: <strong>{currency(overview?.spaRevenue)}</strong> ({number(overview?.spaPaidOrders)} đơn/gói)</div>
+                  <div>AOV: <strong>{currency(overview?.spaAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.spaRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.spaRefunds)}</strong></div>
+                </div>
+              </div>
+            </div>
             <p className="atelier-report-note">
-              Tiền vào được ghi nhận từ sổ giao dịch, gồm tiền mặt, chuyển khoản
-              và COD. Tiền hoàn hiển thị riêng. Số đơn thanh toán được thống kê
-              theo ngày thanh toán.
+              Tiền vào được ghi nhận từ sổ giao dịch (tiền mặt, chuyển khoản và COD). Doanh thu sản phẩm và Spa được phân rã theo loại đơn hàng thanh toán thành công trong kỳ.
             </p>
             {report.point && (
               <div className="atelier-report-selection">
@@ -608,8 +647,18 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
               columns={[
                 { header: "Kỳ", accessor: "fullDate" },
                 {
-                  header: "Tiền vào",
+                  header: "Tổng tiền vào",
                   accessor: (row) => currency(row.revenue),
+                  align: "right",
+                },
+                {
+                  header: "Doanh thu SP",
+                  accessor: (row) => currency(row.productRevenue),
+                  align: "right",
+                },
+                {
+                  header: "Doanh thu Spa",
+                  accessor: (row) => currency(row.spaRevenue),
                   align: "right",
                 },
                 {
@@ -618,7 +667,7 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
                   align: "right",
                 },
                 {
-                  header: "Đơn thanh toán",
+                  header: "Đơn TT",
                   accessor: (row) => number(row.orderCount),
                   align: "right",
                 },
@@ -693,6 +742,36 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
             </a>
           </>
         )}
+        {report?.type === "SERVICES" && (
+          <>
+            <div className="atelier-report-stats">
+              {stat("Tổng lượt phục vụ", number(services?.reduce((sum, s) => sum + Number(s.performedSessions || 0), 0)) + " ca")}
+              {stat(
+                "Tổng doanh thu ước tính",
+                currency(services?.reduce((sum, s) => sum + Number(s.estimatedRevenue || 0), 0)),
+              )}
+            </div>
+            <p className="atelier-report-note">
+              Xếp hạng theo số ca dịch vụ đã hoàn thành thực tế (PERFORMED) của nhân viên trong kỳ đã chọn.
+            </p>
+            {services === null ? (
+              <EmptyState
+                unavailable
+                title="Chưa tải được hiệu suất dịch vụ Spa"
+              />
+            ) : (
+              <DataTable
+                columns={serviceColumns}
+                data={services}
+                loading={loading}
+                emptyMessage="Chưa có ca dịch vụ nào hoàn thành trong kỳ này."
+              />
+            )}
+            <a className="atelier-text-link" href="#/admin/spa">
+              Mở điều phối Spa <ArrowRight size={15} />
+            </a>
+          </>
+        )}
         {report?.type === "SPA" && (
           <>
             <div className="atelier-report-stats">
@@ -757,10 +836,13 @@ export const DashboardPage = () => {
     [draftRange, setDraftRange] = useState(makeRange);
   const [period, setPeriod] = useState("day"),
     [refresh, setRefresh] = useState(0);
+  const [revenueMetricKey, setRevenueMetricKey] = useState("revenue");
+  const [rankingTab, setRankingTab] = useState("products");
   const [data, setData] = useState({
     overview: null,
     revenue: null,
     products: null,
+    services: null,
     spa: null,
     orders: null,
   });
@@ -798,6 +880,11 @@ export const DashboardPage = () => {
           `${ENDPOINTS.DASHBOARD.TOP_PRODUCTS}?${params}`,
         ],
         [
+          "services",
+          "Dịch vụ Spa",
+          `${ENDPOINTS.DASHBOARD.TOP_SERVICES}?${params}`,
+        ],
+        [
           "spa",
           "Lịch hẹn Spa",
           `${ENDPOINTS.DASHBOARD.SPA_OCCUPANCY}?${spaParams}`,
@@ -826,7 +913,7 @@ export const DashboardPage = () => {
             : Array.isArray(payload)
               ? payload
               : null;
-        if (["revenue", "products"].includes(key) && !Array.isArray(payload))
+        if (["revenue", "products", "services"].includes(key) && !Array.isArray(payload))
           next[key] = null;
         if (
           ["overview", "spa"].includes(key) &&
@@ -859,9 +946,14 @@ export const DashboardPage = () => {
     ? Math.max(...points.map((point) => point.revenue || 0), 0)
     : null;
   const products = data.products?.slice(0, 5),
+    services = data.services?.slice(0, 5),
     recentOrders = data.orders?.slice(0, 5);
   const maxUnits = Math.max(
     ...(data.products || []).map((product) => Number(product.unitsSold) || 0),
+    1,
+  );
+  const maxServiceSessions = Math.max(
+    ...(data.services || []).map((service) => Number(service.performedSessions) || 0),
     1,
   );
   const openReport = (type, extra = {}) => setReport({ type, ...extra });
@@ -874,7 +966,9 @@ export const DashboardPage = () => {
     const rows = [
       [
         "Kỳ",
-        "Tiền vào (VND)",
+        "Tổng tiền vào (VND)",
+        "Doanh thu Mỹ phẩm (VND)",
+        "Doanh thu Spa (VND)",
         "Tiền hoàn (VND)",
         "Đơn thanh toán",
         "Giao dịch tiền vào",
@@ -882,6 +976,8 @@ export const DashboardPage = () => {
       ...points.map((point) => [
         point.key,
         point.revenue ?? "",
+        point.productRevenue ?? "",
+        point.spaRevenue ?? "",
         point.refundedAmount ?? "",
         point.orderCount ?? "",
         point.receiptCount ?? "",
@@ -1131,38 +1227,148 @@ export const DashboardPage = () => {
           index={3}
         />
       </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px", marginTop: "16px", marginBottom: "20px" }}>
+        <div style={{ background: "#FFFFFF", borderRadius: "14px", border: "1px solid #E5E7EB", borderLeft: "4px solid #8B5CF6", padding: "18px 20px", display: "flex", flexDirection: "column", gap: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#F5F3FF", color: "#8B5CF6", display: "grid", placeItems: "center" }}>
+                <Package size={17} />
+              </span>
+              <div>
+                <strong style={{ fontSize: "14px", color: "#1F2937", display: "block" }}>Doanh thu Bán lẻ Mỹ phẩm</strong>
+                <span style={{ fontSize: "11px", color: "#6B7280" }}>Đơn hàng đóng gói & giao vận</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: "4px 8px", fontSize: "12px", color: "#8B5CF6" }}
+              onClick={() => openReport("REVENUE")}
+            >
+              Chi tiết <ArrowUpRight size={13} />
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+            <span style={{ fontSize: "24px", fontWeight: 750, color: "#1F2937" }}>
+              {loading ? "—" : currency(overview?.productRevenue)}
+            </span>
+            <span style={{ fontSize: "12px", color: "#6B7280" }}>
+              ({number(overview?.productPaidOrders)} đơn đã thanh toán)
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", borderTop: "1px dashed #E5E7EB", paddingTop: "10px", fontSize: "12px" }}>
+            <div>
+              <span style={{ color: "#6B7280", display: "block" }}>AOV Mỹ phẩm:</span>
+              <strong style={{ color: "#374151" }}>{loading ? "—" : currency(overview?.productAov)}</strong>
+            </div>
+            <div>
+              <span style={{ color: "#6B7280", display: "block" }}>Tiền hoàn trả hàng:</span>
+              <strong style={{ color: Number(overview?.productRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>
+                {loading ? "—" : currency(overview?.productRefunds)}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: "#FFFFFF", borderRadius: "14px", border: "1px solid #E5E7EB", borderLeft: "4px solid #EC4899", padding: "18px 20px", display: "flex", flexDirection: "column", gap: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FDF2F8", color: "#EC4899", display: "grid", placeItems: "center" }}>
+                <Flower2 size={17} />
+              </span>
+              <div>
+                <strong style={{ fontSize: "14px", color: "#1F2937", display: "block" }}>Doanh thu Dịch vụ & Liệu trình Spa</strong>
+                <span style={{ fontSize: "11px", color: "#6B7280" }}>Vé gói liệu trình & hóa đơn tại quầy</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: "4px 8px", fontSize: "12px", color: "#EC4899" }}
+              onClick={() => openReport("REVENUE")}
+            >
+              Chi tiết <ArrowUpRight size={13} />
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+            <span style={{ fontSize: "24px", fontWeight: 750, color: "#1F2937" }}>
+              {loading ? "—" : currency(overview?.spaRevenue)}
+            </span>
+            <span style={{ fontSize: "12px", color: "#6B7280" }}>
+              ({number(overview?.spaPaidOrders)} đơn/gói đã thanh toán)
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", borderTop: "1px dashed #E5E7EB", paddingTop: "10px", fontSize: "12px" }}>
+            <div>
+              <span style={{ color: "#6B7280", display: "block" }}>AOV Gói & Buổi Spa:</span>
+              <strong style={{ color: "#374151" }}>{loading ? "—" : currency(overview?.spaAov)}</strong>
+            </div>
+            <div>
+              <span style={{ color: "#6B7280", display: "block" }}>Tiền hoàn Spa:</span>
+              <strong style={{ color: Number(overview?.spaRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>
+                {loading ? "—" : currency(overview?.spaRefunds)}
+              </strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="atelier-main-grid">
         <section
           className="atelier-panel atelier-revenue-panel atelier-reveal"
           style={{ "--reveal-delay": "230ms" }}
         >
-          <div className="atelier-panel-header">
+          <div className="atelier-panel-header" style={{ flexWrap: "wrap", gap: "12px" }}>
             <div>
               <div className="atelier-panel-kicker">
                 <span className="atelier-color-dot" />
                 THE BIG PICTURE
               </div>
-              <h2>Chuyển động dòng tiền</h2>
+              <h2>Chuyển động dòng tiền & Doanh thu</h2>
             </div>
-            <div
-              className="atelier-period-control"
-              aria-label="Độ chia biểu đồ"
-            >
-              {[
-                ["day", "Theo ngày"],
-                ["month", "Theo tháng"],
-              ].map(([value, label]) => (
-                <button
-                  type="button"
-                  key={value}
-                  aria-pressed={period === value}
-                  className={period === value ? "is-active" : ""}
-                  disabled={loading}
-                  onClick={() => setPeriod(value)}
-                >
-                  {label}
-                </button>
-              ))}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div
+                className="atelier-period-control"
+                aria-label="Chế độ dòng tiền"
+              >
+                {[
+                  ["revenue", "Tất cả"],
+                  ["productRevenue", "Mỹ phẩm"],
+                  ["spaRevenue", "Spa"],
+                ].map(([val, lbl]) => (
+                  <button
+                    type="button"
+                    key={val}
+                    aria-pressed={revenueMetricKey === val}
+                    className={revenueMetricKey === val ? "is-active" : ""}
+                    disabled={loading}
+                    onClick={() => setRevenueMetricKey(val)}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              <div
+                className="atelier-period-control"
+                aria-label="Độ chia biểu đồ"
+              >
+                {[
+                  ["day", "Theo ngày"],
+                  ["month", "Theo tháng"],
+                ].map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    aria-pressed={period === value}
+                    className={period === value ? "is-active" : ""}
+                    disabled={loading}
+                    onClick={() => setPeriod(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className="atelier-revenue-summary">
@@ -1170,12 +1376,22 @@ export const DashboardPage = () => {
               {loading ? (
                 <span className="atelier-skeleton atelier-skeleton-chart-value" />
               ) : (
-                currency(overview?.revenue)
+                currency(
+                  revenueMetricKey === "productRevenue"
+                    ? overview?.productRevenue
+                    : revenueMetricKey === "spaRevenue"
+                      ? overview?.spaRevenue
+                      : overview?.revenue,
+                )
               )}
             </strong>
             <span>
               <span className="atelier-color-dot" />
-              Tiền vào trong kỳ
+              {revenueMetricKey === "productRevenue"
+                ? "Doanh thu Mỹ phẩm trong kỳ"
+                : revenueMetricKey === "spaRevenue"
+                  ? "Doanh thu Dịch vụ Spa trong kỳ"
+                  : "Tổng tiền vào trong kỳ"}
             </span>
             <button
               type="button"
@@ -1201,8 +1417,9 @@ export const DashboardPage = () => {
             />
           ) : (
             <RevenueChart
-              key={`${period}-${range.from}-${range.to}`}
+              key={`${period}-${range.from}-${range.to}-${revenueMetricKey}`}
               points={points}
+              metricKey={revenueMetricKey}
               onSelect={(point) => openReport("REVENUE", { point })}
             />
           )}
@@ -1332,71 +1549,143 @@ export const DashboardPage = () => {
           className="atelier-panel atelier-products-panel atelier-reveal"
           style={{ "--reveal-delay": "350ms" }}
         >
-          <div className="atelier-panel-header">
+          <div className="atelier-panel-header" style={{ flexWrap: "wrap", gap: "8px" }}>
             <div>
               <div className="atelier-panel-kicker">THE BEAUTY EDIT</div>
-              <h2>Sản phẩm được yêu thích</h2>
+              <h2>{rankingTab === 'products' ? 'Sản phẩm bán chạy' : 'Dịch vụ Spa thực hiện nhiều nhất'}</h2>
             </div>
-            <button
-              type="button"
-              className="atelier-text-link"
-              onClick={() => openReport("PRODUCTS")}
-            >
-              Top 10 <ArrowUpRight size={16} />
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div className="atelier-period-control">
+                <button
+                  type="button"
+                  className={rankingTab === 'products' ? 'is-active' : ''}
+                  aria-pressed={rankingTab === 'products'}
+                  onClick={() => setRankingTab('products')}
+                >
+                  Mỹ phẩm
+                </button>
+                <button
+                  type="button"
+                  className={rankingTab === 'services' ? 'is-active' : ''}
+                  aria-pressed={rankingTab === 'services'}
+                  onClick={() => setRankingTab('services')}
+                >
+                  Spa
+                </button>
+              </div>
+              <button
+                type="button"
+                className="atelier-text-link"
+                onClick={() => openReport(rankingTab === 'products' ? "PRODUCTS" : "SERVICES")}
+              >
+                Top 10 <ArrowUpRight size={16} />
+              </button>
+            </div>
           </div>
           <p className="atelier-panel-description">
-            Xếp hạng theo số lượng bán từ các đơn đã giao trong kỳ.
+            {rankingTab === 'products'
+              ? 'Xếp hạng theo số lượng bán từ các đơn đã giao trong kỳ.'
+              : 'Xếp hạng theo số ca dịch vụ đã hoàn thành thực tế (PERFORMED) trong kỳ.'}
           </p>
           {loading ? (
             <ListSkeleton />
-          ) : products === undefined ? (
-            <EmptyState unavailable title="Chưa tải được sản phẩm bán chạy" />
-          ) : !products.length ? (
-            <EmptyState
-              title="Bộ sưu tập đang chờ dấu ấn mới"
-              description="Sản phẩm xuất hiện khi có đơn đã giao trong kỳ này."
-            />
-          ) : (
-            <div className="atelier-product-list">
-              {products.map((product, index) => (
-                <button
-                  type="button"
-                  key={product.productId}
-                  className="atelier-product-row"
-                  onClick={() => openReport("PRODUCTS")}
-                >
-                  <span
-                    className={`atelier-product-rank ${index === 0 ? "is-first" : ""}`}
+          ) : rankingTab === 'products' ? (
+            products === undefined ? (
+              <EmptyState unavailable title="Chưa tải được sản phẩm bán chạy" />
+            ) : !products.length ? (
+              <EmptyState
+                title="Bộ sưu tập đang chờ dấu ấn mới"
+                description="Sản phẩm xuất hiện khi có đơn đã giao trong kỳ này."
+              />
+            ) : (
+              <div className="atelier-product-list">
+                {products.map((product, index) => (
+                  <button
+                    type="button"
+                    key={product.productId}
+                    className="atelier-product-row"
+                    onClick={() => openReport("PRODUCTS")}
                   >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span
-                    className={`atelier-product-avatar atelier-product-avatar-${index % 3}`}
-                  >
-                    <Package size={23} strokeWidth={1.4} />
-                  </span>
-                  <div className="atelier-product-description">
-                    <strong>{product.productName}</strong>
-                    <span>{number(product.unitsSold)} sản phẩm đã bán</span>
-                    <div className="atelier-product-track">
-                      <i
-                        style={{
-                          width: `${Math.min(100, (Number(product.unitsSold) / maxUnits) * 100)}%`,
-                        }}
-                      />
+                    <span
+                      className={`atelier-product-rank ${index === 0 ? "is-first" : ""}`}
+                    >
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span
+                      className={`atelier-product-avatar atelier-product-avatar-${index % 3}`}
+                    >
+                      <Package size={23} strokeWidth={1.4} />
+                    </span>
+                    <div className="atelier-product-description">
+                      <strong>{product.productName}</strong>
+                      <span>{number(product.unitsSold)} sản phẩm đã bán</span>
+                      <div className="atelier-product-track">
+                        <i
+                          style={{
+                            width: `${Math.min(100, (Number(product.unitsSold) / maxUnits) * 100)}%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <strong className="atelier-product-sales">
-                    {currency(product.grossSales)}
-                  </strong>
-                  <ArrowUpRight size={16} className="atelier-product-arrow" />
-                </button>
-              ))}
-            </div>
+                    <strong className="atelier-product-sales">
+                      {currency(product.grossSales)}
+                    </strong>
+                    <ArrowUpRight size={16} className="atelier-product-arrow" />
+                  </button>
+                ))}
+              </div>
+            )
+          ) : (
+            services === undefined ? (
+              <EmptyState unavailable title="Chưa tải được dịch vụ Spa" />
+            ) : !services?.length ? (
+              <EmptyState
+                title="Chưa có ca dịch vụ nào trong kỳ"
+                description="Dịch vụ xuất hiện khi có ca chăm sóc hoàn thành thực tế (PERFORMED)."
+              />
+            ) : (
+              <div className="atelier-product-list">
+                {services.map((service, index) => (
+                  <button
+                    type="button"
+                    key={service.serviceId}
+                    className="atelier-product-row"
+                    onClick={() => openReport("SERVICES")}
+                  >
+                    <span
+                      className={`atelier-product-rank ${index === 0 ? "is-first" : ""}`}
+                    >
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span
+                      className={`atelier-product-avatar atelier-product-avatar-${index % 3}`}
+                      style={{ background: "#FDF2F8", color: "#EC4899" }}
+                    >
+                      <Flower2 size={23} strokeWidth={1.4} />
+                    </span>
+                    <div className="atelier-product-description">
+                      <strong>{service.serviceName}</strong>
+                      <span>{number(service.performedSessions)} ca hoàn thành · {number(service.performedMinutes)} phút</span>
+                      <div className="atelier-product-track">
+                        <i
+                          style={{
+                            width: `${Math.min(100, (Number(service.performedSessions) / maxServiceSessions) * 100)}%`,
+                            background: "#EC4899",
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <strong className="atelier-product-sales" style={{ color: "#BE185D" }}>
+                      {currency(service.estimatedRevenue)}
+                    </strong>
+                    <ArrowUpRight size={16} className="atelier-product-arrow" />
+                  </button>
+                ))}
+              </div>
+            )
           )}
-          <a className="atelier-panel-bottom-link" href="#/admin/products">
-            Khám phá danh mục sản phẩm <ArrowRight size={16} />
+          <a className="atelier-panel-bottom-link" href={rankingTab === 'products' ? "#/admin/products" : "#/admin/spa"}>
+            {rankingTab === 'products' ? 'Khám phá danh mục sản phẩm' : 'Quản lý lịch hẹn & danh mục Spa'} <ArrowRight size={16} />
           </a>
         </section>
         <section

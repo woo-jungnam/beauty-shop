@@ -13,6 +13,7 @@ public interface InventoryFacade {
     boolean isStockAvailable(Long variantId, int requiredQuantity);
     int getAvailableQuantity(Long variantId);
     int getAvailableQuantity(Long variantId, LocalDate businessDate);
+    java.util.Map<Long, Integer> getAvailableQuantities(java.util.Collection<Long> variantIds);
     List<ExpiringVariantStockDto> getExpiringVariantStocks(LocalDate businessDate, int thresholdDays, int page, int size);
     Predicate hasAvailableStock(CriteriaBuilder builder, CommonAbstractCriteria query, Expression<Long> variantId, LocalDate businessDate);
     void reserveStock(String orderNumber, Long variantId, int quantityToReserve);

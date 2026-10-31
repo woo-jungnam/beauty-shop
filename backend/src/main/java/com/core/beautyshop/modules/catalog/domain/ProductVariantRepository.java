@@ -44,6 +44,10 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     List<ProductVariant> findByProductIdAndIsDeletedFalse(@Param("productId") Long productId);
 
     @Query("SELECT v FROM ProductVariant v JOIN v.product p " +
+            "WHERE p.id IN :productIds AND v.isDeleted = false AND p.isDeleted = false")
+    List<ProductVariant> findByProductIdInAndIsDeletedFalse(@Param("productIds") Collection<Long> productIds);
+
+    @Query("SELECT v FROM ProductVariant v JOIN v.product p " +
             "WHERE v.id = :id AND v.isDeleted = false AND p.isDeleted = false")
     Optional<ProductVariant> findByIdAndIsDeletedFalse(@Param("id") Long id);
 

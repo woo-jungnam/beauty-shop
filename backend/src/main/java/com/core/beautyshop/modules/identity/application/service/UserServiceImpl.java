@@ -31,6 +31,7 @@ public class UserServiceImpl implements UserService {
     private final com.core.beautyshop.modules.identity.domain.RoleRepository roleRepository;
     private final IdentityAdministrationGuard administrationGuard;
     private final AuthService authService;
+    private final com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository sessionRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     private String getAuthenticatedUsername() {
@@ -207,6 +208,16 @@ public class UserServiceImpl implements UserService {
                 .temporaryPassword(tempPassword)
                 .message("Mật khẩu tạm thời đã được tạo thành công. Toàn bộ phiên làm việc cũ đã bị thu hồi.")
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<com.core.beautyshop.modules.identity.api.AdminUserController.SessionView> getUserSessions(Long userId) {
+        getUserById(userId);
+        return sessionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(session -> new com.core.beautyshop.modules.identity.api.AdminUserController.SessionView(
+                        session.getId(), session.getFamilyId(), session.getCreatedAt(), session.getExpiresAt(), session.getRevokedAt()))
+                .toList();
     }
 
     private String generateSecurePassword() {

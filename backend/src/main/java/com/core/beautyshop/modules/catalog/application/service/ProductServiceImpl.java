@@ -513,7 +513,32 @@ public class ProductServiceImpl implements ProductService {
         Pageable sorted = pageable.isPaged() ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort) : Pageable.unpaged(sort);
         Page<ProductListResponse> page = productRepository.findAllAdminProductList(pattern, categoryId, brandId, status, sorted);
         enrichCategoryNames(page.getContent());
+        enrichTotalStock(page.getContent());
         return page;
+    }
+
+    private void enrichTotalStock(List<ProductListResponse> items) {
+        if (items == null || items.isEmpty()) return;
+        List<Long> productIds = items.stream()
+                .map(ProductListResponse::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (productIds.isEmpty()) return;
+        List<ProductVariant> variants = productVariantRepository.findByProductIdInAndIsDeletedFalse(productIds);
+        if (variants.isEmpty()) {
+            items.forEach(item -> item.setTotalStock(0));
+            return;
+        }
+        List<Long> variantIds = variants.stream().map(ProductVariant::getId).toList();
+        Map<Long, Integer> stockByVariant = inventoryFacade.getAvailableQuantities(variantIds);
+        Map<Long, Integer> stockByProduct = new HashMap<>();
+        for (ProductVariant v : variants) {
+            Long pid = v.getProduct().getId();
+            int qty = stockByVariant.getOrDefault(v.getId(), 0);
+            stockByProduct.put(pid, stockByProduct.getOrDefault(pid, 0) + qty);
+        }
+        items.forEach(item -> item.setTotalStock(stockByProduct.getOrDefault(item.getId(), 0)));
     }
 
     private void enrichCategoryNames(List<ProductListResponse> items) {

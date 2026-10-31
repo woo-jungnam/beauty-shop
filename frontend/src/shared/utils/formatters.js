@@ -70,8 +70,38 @@ export const getOrderStatusBadge = (status) => {
       return { variant: 'danger', text: 'Đã hủy đơn' };
     case 'RETURNED':
       return { variant: 'danger', text: 'Đã hoàn trả hàng' };
+    case 'REQUESTED':
+      return { variant: 'warning', text: 'Yêu cầu đổi trả' };
+    case 'APPROVED':
+      return { variant: 'info', text: 'Đã duyệt đổi trả' };
+    case 'RECEIVED':
+      return { variant: 'info', text: 'Đã nhận hàng trả' };
+    case 'REJECTED':
+      return { variant: 'danger', text: 'Từ chối đổi trả' };
+    case 'REFUNDED':
+      return { variant: 'success', text: 'Đã hoàn tiền' };
     default:
       return { variant: 'default', text: status || 'Chưa xác định' };
+  }
+};
+
+export const getOrderType = (order) => {
+  if (!order) return 'PRODUCT';
+  if (order.servicePackageId != null) return 'SPA_PACKAGE';
+  if (order.appointmentId != null || (order.spaVisitItems && order.spaVisitItems.length > 0)) return 'SPA_VISIT';
+  return 'PRODUCT';
+};
+
+export const getOrderTypeBadge = (order) => {
+  const type = typeof order === 'string' ? order : getOrderType(order);
+  switch (type) {
+    case 'SPA_PACKAGE':
+      return { variant: 'info', text: 'Gói liệu trình Spa' };
+    case 'SPA_VISIT':
+      return { variant: 'warning', text: 'Hóa đơn tại quầy' };
+    case 'PRODUCT':
+    default:
+      return { variant: 'default', text: 'Sản phẩm mỹ phẩm' };
   }
 };
 
@@ -139,6 +169,14 @@ export const getPaymentMethodLabel = (method) => {
       return 'Ví tiền tài khoản';
     case 'CASH':
       return 'Tiền mặt tại quầy';
+    case 'WAIVE_WALK_IN':
+      return 'Miễn cọc tại quầy';
+    case 'DEPOSIT_AT_COUNTER':
+      return 'Đặt cọc tại quầy';
+    case 'PAY_FULL':
+      return 'Thanh toán đủ 100% (VietQR)';
+    case 'TICKET':
+      return 'Khấu trừ vé liệu trình';
     default:
       return method || 'Chưa chọn';
   }
@@ -185,6 +223,12 @@ export const getPaymentStatusBadge = (status) => {
       return { variant: 'success', text: 'Đã thanh toán' };
     case 'PENDING':
       return { variant: 'warning', text: 'Chờ thanh toán' };
+    case 'PARTIALLY_PAID':
+      return { variant: 'info', text: 'Thanh toán một phần' };
+    case 'UNPAID':
+      return { variant: 'warning', text: 'Chưa thanh toán' };
+    case 'OVERDUE':
+      return { variant: 'danger', text: 'Quá hạn thanh toán' };
     case 'FAILED':
       return { variant: 'danger', text: 'Thất bại' };
     case 'REFUND_PENDING':
@@ -193,6 +237,36 @@ export const getPaymentStatusBadge = (status) => {
       return { variant: 'default', text: 'Đã hoàn tiền' };
     default:
       return { variant: 'default', text: status || '-' };
+  }
+};
+
+export const getReturnStatusBadge = (status) => {
+  switch (status) {
+    case 'REQUESTED':
+      return { variant: 'warning', text: 'Chờ xét duyệt' };
+    case 'APPROVED':
+      return { variant: 'info', text: 'Đã chấp thuận' };
+    case 'RECEIVED':
+      return { variant: 'info', text: 'Đã nhận hàng trả' };
+    case 'REFUNDED':
+      return { variant: 'success', text: 'Đã hoàn tiền' };
+    case 'REJECTED':
+      return { variant: 'danger', text: 'Từ chối' };
+    default:
+      return { variant: 'default', text: status || 'Chưa xác định' };
+  }
+};
+
+export const getOutreachStatusBadge = (status) => {
+  switch (status) {
+    case 'OPEN':
+      return { variant: 'warning', text: 'Chưa liên hệ' };
+    case 'CONTACTED':
+      return { variant: 'info', text: 'Đã liên hệ' };
+    case 'RESOLVED':
+      return { variant: 'success', text: 'Đã xử lý xong' };
+    default:
+      return { variant: 'default', text: status || 'Chưa xử lý' };
   }
 };
 
@@ -255,6 +329,21 @@ export const getVietnamDateString = (date = new Date()) => {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+};
+
+export const buildGoogleCalendarUrl = ({ title, date, startTime, durationMinutes = 60, details = '', location = '123 Đồng Khởi, Quận 1, TP.HCM' }) => {
+  if (!date || !startTime) return '';
+  try {
+    const timeClean = startTime.length === 5 ? `${startTime}:00` : startTime;
+    const start = new Date(`${date}T${timeClean}+07:00`);
+    if (isNaN(start.getTime())) return '';
+    const end = new Date(start.getTime() + durationMinutes * 60000);
+    const formatIsoUtc = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const dates = `${formatIsoUtc(start)}/${formatIsoUtc(end)}`;
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title || 'Lịch hẹn BeautyShop Spa')}&dates=${dates}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+  } catch {
+    return '';
   }
 };
 

@@ -15,6 +15,8 @@ import {
   formatCurrency,
   formatDateTime,
   getOrderStatusBadge,
+  getOrderType,
+  getOrderTypeBadge,
   getPaymentStatusBadge,
   getPaymentMethodLabel,
   resolveMediaUrl,
@@ -36,6 +38,7 @@ export const OrdersPage = () => {
   const [loading, setLoading] = useState(false);
 
   const [keyword, setKeyword] = useState('');
+  const [orderTypeTab, setOrderTypeTab] = useState('ALL');
   const [status, setStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -179,6 +182,15 @@ export const OrdersPage = () => {
     }
   };
 
+  const displayedOrders = React.useMemo(() => {
+    if (orderTypeTab === 'ALL') return orders;
+    return orders.filter((o) => {
+      const type = getOrderType(o);
+      if (orderTypeTab === 'PRODUCT') return type === 'PRODUCT';
+      return type !== 'PRODUCT';
+    });
+  }, [orders, orderTypeTab]);
+
   const columns = [
     {
       header: 'Mã đơn / ID',
@@ -189,6 +201,18 @@ export const OrdersPage = () => {
         </div>
       ),
       width: '130px',
+    },
+    {
+      header: 'Loại đơn',
+      accessor: (row) => {
+        const typeBadge = getOrderTypeBadge(row);
+        return (
+          <Badge variant={typeBadge.variant}>
+            {typeBadge.text}
+          </Badge>
+        );
+      },
+      width: '140px',
     },
     {
       header: 'Khách hàng',
@@ -374,6 +398,7 @@ export const OrdersPage = () => {
             <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
             <option value="SHIPPED">Đang giao hàng</option>
             <option value="DELIVERED">Đã giao thành công</option>
+            <option value="COMPLETED">Đã hoàn tất (Dịch vụ Spa)</option>
             <option value="CANCELLED">Đã hủy đơn</option>
             <option value="RETURNED">Đã hoàn trả</option>
           </Select>
@@ -387,6 +412,8 @@ export const OrdersPage = () => {
             <option value="">Tất cả thanh toán</option>
             <option value="PENDING">Chờ thanh toán</option>
             <option value="PAID">Đã thanh toán</option>
+            <option value="PARTIALLY_PAID">Thanh toán một phần</option>
+            <option value="UNPAID">Chưa thanh toán</option>
             <option value="REFUND_PENDING">Chờ hoàn tiền</option>
             <option value="REFUNDED">Đã hoàn tiền</option>
             <option value="FAILED">Thanh toán thất bại</option>
@@ -430,9 +457,36 @@ export const OrdersPage = () => {
         </form>
       </div>
 
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className={`btn ${orderTypeTab === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setOrderTypeTab('ALL')}
+          style={{ fontSize: '13px', padding: '6px 14px' }}
+        >
+          Tất cả đơn ({orders.length})
+        </button>
+        <button
+          type="button"
+          className={`btn ${orderTypeTab === 'PRODUCT' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setOrderTypeTab('PRODUCT')}
+          style={{ fontSize: '13px', padding: '6px 14px' }}
+        >
+          Đơn Mỹ phẩm (Vận chuyển) ({orders.filter(o => getOrderType(o) === 'PRODUCT').length})
+        </button>
+        <button
+          type="button"
+          className={`btn ${orderTypeTab === 'SPA' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setOrderTypeTab('SPA')}
+          style={{ fontSize: '13px', padding: '6px 14px' }}
+        >
+          Dịch vụ & Liệu trình Spa ({orders.filter(o => getOrderType(o) !== 'PRODUCT').length})
+        </button>
+      </div>
+
       <DataTable
         columns={columns}
-        data={orders}
+        data={displayedOrders}
         loading={loading}
         emptyMessage="Không tìm thấy đơn hàng nào phù hợp bộ lọc."
         page={page}
@@ -506,6 +560,20 @@ export const OrdersPage = () => {
                 )}
               </div>
             </div>
+
+            {selectedOrder.servicePackageId && (
+              <div style={{ padding: '12px 16px', background: '#FDF2F8', border: '1px solid #FBCFE8', borderRadius: '8px' }}>
+                <div style={{ fontWeight: 700, color: '#9D174D', fontSize: '13px' }}>
+                  Gói dịch vụ Spa / Liệu trình
+                </div>
+                <div style={{ fontSize: '12px', marginTop: '4px', color: '#831843' }}>
+                  Mã gói dịch vụ: <strong>#{selectedOrder.servicePackageId}</strong>
+                  {selectedOrder.spaBenefitType && (
+                    <span> · Loại quyền lợi: <strong>{selectedOrder.spaBenefitType === 'TREATMENT_COURSE' ? 'Lộ trình chăm sóc da chuyên sâu' : 'Gói dịch vụ Spa'}</strong></span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div>
               <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>
@@ -685,38 +753,57 @@ export const OrdersPage = () => {
             </div>
           )}
 
-          <Select
-            label="Chọn trạng thái luân chuyển mới"
-            value={targetStatus}
-            onChange={(e) => setTargetStatus(e.target.value)}
-          >
-            <option value="CONFIRMED">Xác nhận đơn hàng</option>
-            <option value="PROCESSING">Chuyển sang chuẩn bị hàng</option>
-            <option value="DELIVERY_FAILED">Giao không thành công</option>
-            <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
-            <option value="SHIPPED">Xuất kho bàn giao vận chuyển</option>
-            <option value="DELIVERED">Xác nhận giao thành công</option>
-            <option value="CANCELLED">Hủy đơn hàng</option>
-            <option value="RETURNED">Khách trả hàng về kho</option>
-          </Select>
+          {selectedOrder && getOrderType(selectedOrder) !== 'PRODUCT' ? (
+            <>
+              <div style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', fontSize: '12px', color: '#1E40AF', marginBottom: '14px' }}>
+                ℹ️ Đơn dịch vụ Spa (thực hiện tại cơ sở hoặc kích hoạt vé điện tử), không qua khâu vận chuyển hàng hóa.
+              </div>
+              <Select
+                label="Chọn trạng thái đơn dịch vụ mới"
+                value={targetStatus}
+                onChange={(e) => setTargetStatus(e.target.value)}
+              >
+                <option value="CONFIRMED">Xác nhận đơn dịch vụ</option>
+                <option value="COMPLETED">Đã hoàn tất dịch vụ</option>
+                <option value="CANCELLED">Hủy đơn dịch vụ</option>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Select
+                label="Chọn trạng thái luân chuyển mới"
+                value={targetStatus}
+                onChange={(e) => setTargetStatus(e.target.value)}
+              >
+                <option value="CONFIRMED">Xác nhận đơn hàng</option>
+                <option value="PROCESSING">Chuyển sang chuẩn bị hàng</option>
+                <option value="DELIVERY_FAILED">Giao không thành công</option>
+                <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
+                <option value="SHIPPED">Xuất kho bàn giao vận chuyển</option>
+                <option value="DELIVERED">Xác nhận giao thành công</option>
+                <option value="CANCELLED">Hủy đơn hàng</option>
+                <option value="RETURNED">Khách trả hàng về kho</option>
+              </Select>
 
-          {targetStatus === 'SHIPPED' && (
-            <div style={{ marginTop: '12px' }}>
-              <Input
-                label="Đơn vị vận chuyển (Carrier)"
-                placeholder="Ví dụ: Giao Hàng Tiết Kiệm, Viettel Post, GrabExpress..."
-                value={carrierName}
-                onChange={(e) => setCarrierName(e.target.value)}
-                required
-              />
-              <Input
-                label="Mã vận đơn theo dõi (Tracking Code)"
-                placeholder="Ví dụ: GHTK893284920"
-                value={trackingCode}
-                onChange={(e) => setTrackingCode(e.target.value)}
-                required
-              />
-            </div>
+              {targetStatus === 'SHIPPED' && (
+                <div style={{ marginTop: '12px' }}>
+                  <Input
+                    label="Đơn vị vận chuyển (Carrier)"
+                    placeholder="Ví dụ: Giao Hàng Tiết Kiệm, Viettel Post, GrabExpress..."
+                    value={carrierName}
+                    onChange={(e) => setCarrierName(e.target.value)}
+                    required
+                  />
+                  <Input
+                    label="Mã vận đơn theo dõi (Tracking Code)"
+                    placeholder="Ví dụ: GHTK893284920"
+                    value={trackingCode}
+                    onChange={(e) => setTrackingCode(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {['CANCELLED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'].includes(targetStatus) && (

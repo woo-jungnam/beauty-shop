@@ -11,6 +11,7 @@ export const ENDPOINTS = {
     OVERVIEW: '/api/v1/admin/dashboard',
     REVENUE: '/api/v1/admin/dashboard/revenue',
     TOP_PRODUCTS: '/api/v1/admin/dashboard/top-products',
+    TOP_SERVICES: '/api/v1/admin/dashboard/top-services',
     SPA_OCCUPANCY: '/api/v1/admin/dashboard/spa-occupancy',
   },
 

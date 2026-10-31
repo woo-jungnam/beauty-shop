@@ -29,13 +29,33 @@ public class AdminDashboardService {
                 FROM orders WHERE is_deleted = false AND created_at >= ? AND created_at < ?
                 """, range.from(), range.to());
         Map<String, Object> settled = row("""
-                SELECT COUNT(*) paid_orders, COALESCE(AVG(total_amount), 0) average_order_value
+                SELECT COUNT(*) paid_orders, COALESCE(AVG(total_amount), 0) average_order_value,
+                       COALESCE(SUM(CASE WHEN service_package_id IS NULL AND appointment_id IS NULL THEN 1 ELSE 0 END), 0) product_paid_orders,
+                       COALESCE(SUM(CASE WHEN service_package_id IS NULL AND appointment_id IS NULL THEN paid_amount ELSE 0 END), 0) product_revenue,
+                       COALESCE(AVG(CASE WHEN service_package_id IS NULL AND appointment_id IS NULL THEN total_amount ELSE NULL END), 0) product_aov,
+                       COALESCE(SUM(CASE WHEN service_package_id IS NOT NULL OR appointment_id IS NOT NULL THEN 1 ELSE 0 END), 0) spa_paid_orders,
+                       COALESCE(SUM(CASE WHEN service_package_id IS NOT NULL OR appointment_id IS NOT NULL THEN paid_amount ELSE 0 END), 0) spa_revenue,
+                       COALESCE(AVG(CASE WHEN service_package_id IS NOT NULL OR appointment_id IS NOT NULL THEN total_amount ELSE NULL END), 0) spa_aov
                 FROM orders WHERE is_deleted = false AND paid_at >= ? AND paid_at < ?
                 """, range.from(), range.to());
         Map<String, Object> collections = row("SELECT COALESCE(SUM(amount),0) revenue, "
                 + "COALESCE(SUM(CASE WHEN gateway = 'COD' THEN amount ELSE 0 END),0) cod_amount, COALESCE(SUM(CASE WHEN gateway = 'CASH' THEN amount ELSE 0 END),0) cash_amount, COUNT(*) receipt_count "
                 + "FROM payment_transactions WHERE " + RECEIPTS + " AND created_at >= ? AND created_at < ?", range.from(), range.to());
-        BigDecimal refunds = decimal(first(row("SELECT COALESCE(SUM(amount),0) refunded_amount FROM (SELECT amount,confirmed_at recorded_at FROM refund_confirmations UNION ALL SELECT amount,created_at recorded_at FROM payment_resolutions WHERE kind='REFUND' UNION ALL SELECT amount,created_at recorded_at FROM spa_financial_entries WHERE kind='REFUND') r WHERE recorded_at >= ? AND recorded_at < ?", range.from(), range.to())));
+        Map<String, Object> refundStats = row("""
+                SELECT COALESCE(SUM(amount),0) total_refunds,
+                       COALESCE(SUM(CASE WHEN source = 'PRODUCT' THEN amount ELSE 0 END), 0) product_refunds,
+                       COALESCE(SUM(CASE WHEN source = 'SPA' THEN amount ELSE 0 END), 0) spa_refunds
+                FROM (
+                    SELECT amount, confirmed_at recorded_at, 'PRODUCT' source FROM refund_confirmations
+                    UNION ALL
+                    SELECT amount, created_at recorded_at, 'SPA' source FROM spa_financial_entries WHERE kind = 'REFUND'
+                    UNION ALL
+                    SELECT amount, created_at recorded_at, 'OTHER' source FROM payment_resolutions WHERE kind = 'REFUND'
+                ) r WHERE recorded_at >= ? AND recorded_at < ?
+                """, range.from(), range.to());
+        BigDecimal refunds = decimal(refundStats.get("total_refunds"));
+        BigDecimal productRefunds = decimal(refundStats.get("product_refunds"));
+        BigDecimal spaRefunds = decimal(refundStats.get("spa_refunds"));
         long customers = number(first(row("""
                 SELECT COUNT(DISTINCT u.id) customer_count FROM users u JOIN user_roles ur ON ur.user_id = u.id
                 JOIN roles r ON r.id = ur.role_id WHERE u.is_deleted = false AND u.status = 'ACTIVE'
@@ -55,7 +75,11 @@ public class AdminDashboardService {
         return new Overview(number(order.get("total_orders")).longValue(), received,
                 number(settled.get("paid_orders")).longValue(), number(order.get("pending_payment_orders")).longValue(),
                 number(order.get("open_orders")).longValue(), decimal(settled.get("average_order_value")),
-                customers, lowStock, inventory, refunds, cod, received.subtract(cod).subtract(cash), cash, number(collections.get("receipt_count")).longValue());
+                customers, lowStock, inventory, refunds, cod, received.subtract(cod).subtract(cash), cash, number(collections.get("receipt_count")).longValue(),
+                decimal(settled.get("product_revenue")), decimal(settled.get("spa_revenue")),
+                number(settled.get("product_paid_orders")).longValue(), number(settled.get("spa_paid_orders")).longValue(),
+                decimal(settled.get("product_aov")), decimal(settled.get("spa_aov")),
+                productRefunds, spaRefunds);
     }
 
     @Transactional(readOnly = true)
@@ -86,14 +110,45 @@ public class AdminDashboardService {
                 GROUP BY period_key
                 """, format, range.from(), range.to())) bucket(buckets, refund).refunds = decimal(refund.get("refunded_amount"));
         for (var paid : rows("""
-                SELECT DATE_FORMAT(CONVERT_TZ(paid_at,'+00:00','+07:00'), ?) period_key, COUNT(*) order_count
+                SELECT DATE_FORMAT(CONVERT_TZ(paid_at,'+00:00','+07:00'), ?) period_key, COUNT(*) order_count,
+                       COALESCE(SUM(CASE WHEN service_package_id IS NULL AND appointment_id IS NULL THEN paid_amount ELSE 0 END), 0) product_revenue,
+                       COALESCE(SUM(CASE WHEN service_package_id IS NOT NULL OR appointment_id IS NOT NULL THEN paid_amount ELSE 0 END), 0) spa_revenue
                 FROM orders WHERE is_deleted = false AND paid_at >= ? AND paid_at < ?
                 GROUP BY period_key
-                """, format, range.from(), range.to())) bucket(buckets, paid).orders = number(paid.get("order_count")).longValue();
+                """, format, range.from(), range.to())) {
+            RevenueBucket b = bucket(buckets, paid);
+            b.orders = number(paid.get("order_count")).longValue();
+            b.productRevenue = decimal(paid.get("product_revenue"));
+            b.spaRevenue = decimal(paid.get("spa_revenue"));
+        }
         return buckets.entrySet().stream().map(entry -> {
             RevenueBucket value = entry.getValue();
-            return new RevenuePoint(entry.getKey(), value.revenue, value.orders, value.refunds, value.receipts, value.cod, value.revenue.subtract(value.cod).subtract(value.cash), value.cash);
+            return new RevenuePoint(entry.getKey(), value.revenue, value.orders, value.refunds, value.receipts, value.cod, value.revenue.subtract(value.cod).subtract(value.cash), value.cash, value.productRevenue, value.spaRevenue);
         }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TopService> topServices(Instant from, Instant to) {
+        TimeRange range = range(from, to);
+        return rows("""
+                SELECT s.id service_id, s.name service_name,
+                       COUNT(*) performed_sessions,
+                       COALESCE(SUM(GREATEST(TIMESTAMPDIFF(MINUTE, ai.actual_started_at, ai.actual_completed_at), 0)), 0) performed_minutes,
+                       COALESCE(SUM(ai.price), 0) estimated_revenue
+                FROM appointment_items ai
+                JOIN beauty_services s ON s.id = ai.service_id
+                WHERE ai.is_deleted = false AND ai.execution_status = 'PERFORMED'
+                  AND ai.actual_completed_at >= ? AND ai.actual_completed_at < ?
+                GROUP BY s.id, s.name
+                ORDER BY performed_sessions DESC, estimated_revenue DESC
+                LIMIT 10
+                """, range.from(), range.to()).stream().map(value -> new TopService(
+                        number(value.get("service_id")).longValue(),
+                        String.valueOf(value.get("service_name")),
+                        number(value.get("performed_sessions")).longValue(),
+                        number(value.get("performed_minutes")).longValue(),
+                        decimal(value.get("estimated_revenue"))
+                )).toList();
     }
 
     @Transactional(readOnly = true)
@@ -206,15 +261,21 @@ public class AdminDashboardService {
     private BigDecimal decimal(Object value) { return value instanceof BigDecimal b ? b : value instanceof Number n ? BigDecimal.valueOf(n.doubleValue()) : BigDecimal.ZERO; }
     private BigDecimal percentage(long numerator, long denominator) { return denominator == 0 ? BigDecimal.ZERO : BigDecimal.valueOf(numerator).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(denominator), 2, RoundingMode.HALF_UP); }
     private RevenueBucket bucket(Map<String, RevenueBucket> buckets, Map<String, Object> row) { return buckets.computeIfAbsent(String.valueOf(row.get("period_key")), ignored -> new RevenueBucket()); }
-    private static class RevenueBucket { BigDecimal revenue = BigDecimal.ZERO, refunds = BigDecimal.ZERO, cod = BigDecimal.ZERO, cash = BigDecimal.ZERO; long receipts, orders; }
+    private static class RevenueBucket { BigDecimal revenue = BigDecimal.ZERO, refunds = BigDecimal.ZERO, cod = BigDecimal.ZERO, cash = BigDecimal.ZERO, productRevenue = BigDecimal.ZERO, spaRevenue = BigDecimal.ZERO; long receipts, orders; }
     private record TimeRange(Instant from, Instant to) { }
 
     public record Overview(long totalOrders, BigDecimal revenue, long paidOrders, long pendingPaymentOrders,
                            long openOrders, BigDecimal averageOrderValue, long activeCustomers, long lowStockItems, BigDecimal inventoryValue,
-                           BigDecimal refundedAmount, BigDecimal codAmount, BigDecimal bankAmount, BigDecimal cashAmount, long receiptCount) { }
+                           BigDecimal refundedAmount, BigDecimal codAmount, BigDecimal bankAmount, BigDecimal cashAmount, long receiptCount,
+                           BigDecimal productRevenue, BigDecimal spaRevenue,
+                           long productPaidOrders, long spaPaidOrders,
+                           BigDecimal productAov, BigDecimal spaAov,
+                           BigDecimal productRefunds, BigDecimal spaRefunds) { }
     public record RevenuePoint(String period, BigDecimal revenue, long orderCount, BigDecimal refundedAmount,
-                               long receiptCount, BigDecimal codAmount, BigDecimal bankAmount, BigDecimal cashAmount) { }
+                               long receiptCount, BigDecimal codAmount, BigDecimal bankAmount, BigDecimal cashAmount,
+                               BigDecimal productRevenue, BigDecimal spaRevenue) { }
     public record TopProduct(Long productId, String productName, long unitsSold, BigDecimal grossSales) { }
+    public record TopService(Long serviceId, String serviceName, long performedSessions, long performedMinutes, BigDecimal estimatedRevenue) { }
     public record SpaFinancials(long outstandingInvoices, BigDecimal outstandingAmount,
                                long unbilledCompletedVisits, BigDecimal unbilledAmount, long legacyVisitsRequiringReconciliation) { }
     public record SpaOccupancy(long scheduledMinutes, long bookedMinutes, BigDecimal occupancyRatePercent,

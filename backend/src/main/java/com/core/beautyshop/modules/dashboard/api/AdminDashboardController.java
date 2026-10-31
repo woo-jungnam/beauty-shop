@@ -37,6 +37,12 @@ public class AdminDashboardController {
         return ApiResponse.success(service.topProducts(from, to));
     }
 
+    @Operation(summary = "Lấy 10 dịch vụ Spa thực hiện nhiều nhất", description = "Lọc các ca PERFORMED trong khoảng Instant [from,to), sắp xếp theo số ca thực hiện rồi doanh thu ước tính.")
+    @GetMapping("/top-services")
+    public ApiResponse<List<AdminDashboardService.TopService>> topServices(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to) {
+        return ApiResponse.success(service.topServices(from, to));
+    }
+
     @Operation(summary = "Lấy độ lấp lịch và thời gian phục vụ Spa", description = "Ngày from/to bao gồm hai đầu, giờ Việt Nam; mặc định toàn tháng hiện tại. booked/reserved là phút kế hoạch của nhân viên; served dùng giờ thực tế PERFORMED, giới hạn trong kỳ; legacyFinalized riêng. overCapacity chỉ so tổng phút với ca, không chứng minh đủ phòng/giường/máy hoặc đủ từng slot.")
     @GetMapping("/spa-occupancy")
     public ApiResponse<AdminDashboardService.SpaOccupancy> spaOccupancy(@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to) {

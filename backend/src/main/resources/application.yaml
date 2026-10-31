@@ -192,6 +192,17 @@ springdoc:
     doc-expansion: none
     filter: true
     try-it-out-enabled: true
+
+logging:
+  file:
+    path: ${LOG_PATH:logs}
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      total-size-cap: 100MB
 ---
 spring:
   config:

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +52,11 @@ public interface WarehouseStockRepository extends JpaRepository<WarehouseStock, 
     @Query("SELECT SUM(ws.quantity - ws.reservedQuantity) FROM WarehouseStock ws " +
            "WHERE ws.productVariantId = :variantId AND ws.isDeleted = false AND ws.isBlocked = false AND ws.warehouse.isActive = true AND ws.warehouse.isDeleted = false AND (ws.expirationDate IS NULL OR ws.expirationDate > :saleCutoff)")
     Integer getTotalAvailableQuantityForVariant(@Param("variantId") Long variantId, @Param("saleCutoff") LocalDate saleCutoff);
+
+    @Query("SELECT ws.productVariantId, SUM(ws.quantity - ws.reservedQuantity) FROM WarehouseStock ws " +
+           "WHERE ws.productVariantId IN :variantIds AND ws.isDeleted = false AND ws.isBlocked = false AND ws.warehouse.isActive = true AND ws.warehouse.isDeleted = false AND (ws.expirationDate IS NULL OR ws.expirationDate > :saleCutoff) " +
+           "GROUP BY ws.productVariantId")
+    List<Object[]> getAvailableQuantitiesForVariantsRaw(@Param("variantIds") Collection<Long> variantIds, @Param("saleCutoff") LocalDate saleCutoff);
 
     @Query("SELECT ws FROM WarehouseStock ws " +
            "WHERE ws.productVariantId = :variantId AND ws.isDeleted = false AND ws.isBlocked = false AND ws.warehouse.isActive = true AND ws.warehouse.isDeleted = false AND (ws.expirationDate IS NULL OR ws.expirationDate > :saleCutoff) " +

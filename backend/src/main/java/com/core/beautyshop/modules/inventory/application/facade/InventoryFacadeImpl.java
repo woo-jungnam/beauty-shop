@@ -42,6 +42,11 @@ public class InventoryFacadeImpl implements InventoryFacade {
     }
 
     @Override
+    public java.util.Map<Long, Integer> getAvailableQuantities(java.util.Collection<Long> variantIds) {
+        return inventoryService.getAvailableQuantities(variantIds);
+    }
+
+    @Override
     public List<ExpiringVariantStockDto> getExpiringVariantStocks(LocalDate businessDate, int thresholdDays, int page, int size) {
         return inventoryService.getExpiringVariantStocks(businessDate, thresholdDays, page, size);
     }

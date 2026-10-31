@@ -11,6 +11,7 @@ import { AccountSettings, AddressBook, SkinProfile, NotificationInbox, WishlistP
 import { OrderWorkspace } from '../components/account/OrderWorkspace';
 import { AppointmentTools } from '../components/account/AppointmentTools';
 import { TicketDetails } from '../../features/spa/TicketDetails';
+import { buildGoogleCalendarUrl } from '../../shared/utils/formatters';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -411,6 +412,27 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                         <div className="bento-ticket-footer">
                           <div className="profile-reference">Mã lịch hẹn: <strong>SPA-APT-#{upcomingAppointment.id}</strong></div>
                           <div className="profile-actions">
+                            {buildGoogleCalendarUrl({
+                              title: `Lịch hẹn Spa: ${upcomingAppointment.items?.[0]?.serviceName || 'Chăm sóc da'}`,
+                              date: upcomingAppointment.appointmentDate,
+                              startTime: upcomingAppointment.startTime,
+                              details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${upcomingAppointment.items[0].staffName}` : ''}`,
+                            }) && (
+                              <a
+                                href={buildGoogleCalendarUrl({
+                                  title: `Lịch hẹn Spa: ${upcomingAppointment.items?.[0]?.serviceName || 'Chăm sóc da'}`,
+                                  date: upcomingAppointment.appointmentDate,
+                                  startTime: upcomingAppointment.startTime,
+                                  details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${upcomingAppointment.items[0].staffName}` : ''}`,
+                                })}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-editorial-outline"
+                                title="Lưu vào Google Calendar"
+                              >
+                                <Calendar size={15} /> Thêm vào lịch
+                              </a>
+                            )}
                             <button onClick={() => handleTabChange('appointments')} className="btn-editorial-outline">Chi tiết lịch hẹn</button>
                             <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt hẹn mới</button>
                           </div>
@@ -559,6 +581,22 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                       </div>
                       <div className="account-actions">
                         <AppointmentTools appointment={apt} onSaved={loadData} autoOpen={String(apt.id) === params.get('appointment')} />
+                        {['PENDING', 'CONFIRMED'].includes(apt.status) && (
+                          <a
+                            href={buildGoogleCalendarUrl({
+                              title: `Lịch hẹn Spa: ${apt.items?.[0]?.serviceName || 'Chăm sóc da'}`,
+                              date: apt.appointmentDate,
+                              startTime: apt.startTime,
+                              details: `Mã lịch hẹn: SPA-APT-#${apt.id}${apt.items?.[0]?.staffName ? `\nKTV: ${apt.items[0].staffName}` : ''}`,
+                            })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-editorial-outline"
+                            title="Lưu vào Google Calendar"
+                          >
+                            <Calendar size={15} /> Lưu lịch
+                          </a>
+                        )}
                         {isCancellable && <button onClick={() => handleCancelAppointment(apt.id)} disabled={cancellingAptId === apt.id} className="btn-editorial-outline profile-danger">{cancellingAptId === apt.id ? 'Đang hủy...' : 'Hủy lịch hẹn'}</button>}
                         <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt hẹn mới</button>
                       </div>

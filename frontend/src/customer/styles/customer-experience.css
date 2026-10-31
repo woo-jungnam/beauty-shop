@@ -461,12 +461,12 @@
 .customer-home-page .brand-logo-tile,
 .customer-home-page #brand-partners .brand-partner-box,
 .customer-home-page #brand-partners .brand-partner-card {
-  flex: 0 0 180px !important;
-  width: 180px !important;
-  min-width: 180px !important;
-  max-width: 180px !important;
-  height: 80px !important;
-  min-height: 80px !important;
+  flex: 0 0 270px !important;
+  width: 270px !important;
+  min-width: 270px !important;
+  max-width: 270px !important;
+  height: 120px !important;
+  min-height: 120px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -474,7 +474,7 @@
   background-color: transparent !important;
   border: none !important;
   border-radius: 0 !important;
-  padding: 8px 14px !important;
+  padding: 10px 18px !important;
   cursor: pointer;
   box-shadow: none !important;
   overflow: visible !important;
@@ -493,17 +493,17 @@
 }
 
 .customer-home-page #brand-partners .home-brand-skeleton {
-  min-height: 80px !important;
-  height: 80px !important;
-  border-radius: 8px !important;
+  min-height: 120px !important;
+  height: 120px !important;
+  border-radius: 12px !important;
   background: rgba(0, 0, 0, 0.04) !important;
   border: none !important;
   box-shadow: none !important;
 }
 
 .brand-logo-img {
-  max-width: 150px;
-  max-height: 56px;
+  max-width: 225px;
+  max-height: 84px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -519,7 +519,7 @@
 
 .brand-logo-text {
   font-family: var(--font-sans, sans-serif);
-  font-size: 18px;
+  font-size: 26px;
   font-weight: 700;
   color: #374151;
   text-align: center;
@@ -538,29 +538,29 @@
 
 @media (max-width: 639px) {
   .brands-marquee-track {
-    gap: 20px !important;
+    gap: 24px !important;
   }
   .customer-home-page .brand-logo-tile,
   .customer-home-page #brand-partners .brand-partner-box,
   .customer-home-page #brand-partners .brand-partner-card {
-    flex: 0 0 130px !important;
-    width: 130px !important;
-    min-width: 130px !important;
-    max-width: 130px !important;
-    height: 60px !important;
-    min-height: 60px !important;
-    padding: 4px 8px !important;
+    flex: 0 0 195px !important;
+    width: 195px !important;
+    min-width: 195px !important;
+    max-width: 195px !important;
+    height: 90px !important;
+    min-height: 90px !important;
+    padding: 6px 10px !important;
   }
   .customer-home-page #brand-partners .home-brand-skeleton {
-    min-height: 60px !important;
-    height: 60px !important;
+    min-height: 90px !important;
+    height: 90px !important;
   }
   .brand-logo-img {
-    max-width: 110px;
-    max-height: 44px;
+    max-width: 165px;
+    max-height: 66px;
   }
   .brand-logo-text {
-    font-size: 14px;
+    font-size: 20px;
   }
 }
 .customer-app .hero-slider-container { position: relative; padding: 24px 0 0 !important; min-height: 0; background: transparent; }

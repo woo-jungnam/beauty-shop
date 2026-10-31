@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Star,
   Sun,
   Ticket,
   User,
@@ -28,6 +29,7 @@ import { ENDPOINTS } from "../../shared/api/endpoints";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { AppointmentFinance } from "../../features/treatments/AppointmentFinance";
 import {
+  buildGoogleCalendarUrl,
   getVietnamDateString,
   resolveMediaUrl,
 } from "../../shared/utils/formatters";
@@ -637,6 +639,20 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             </div>
           )}
           <div className="booking-success-actions">
+            <a
+              href={buildGoogleCalendarUrl({
+                title: `Lịch hẹn Spa: ${bookingResult.service}`,
+                date: bookingResult.date,
+                startTime: bookingResult.time,
+                durationMinutes: bookingResult.duration || 60,
+                details: `Mã đặt lịch: ${bookingResult.code}\nChuyên viên: ${bookingResult.staff}\nKhách hàng: ${bookingResult.customer}`,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="booking-calendar-button"
+            >
+              <CalendarDays size={16} /> Thêm vào Google Calendar
+            </a>
             <button
               type="button"
               className="booking-primary-button"
@@ -1000,16 +1016,25 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 ))}
               </div>
 
-              <details className="booking-provider">
+              <details className="booking-provider" open={selectedStaff !== "AUTO"}>
                 <summary>
                   <span>
                     <User size={16} />{" "}
                     {selectedStaff === "AUTO"
                       ? "Để Spa sắp xếp chuyên viên"
                       : selectedStaffName}
-                    <small>Bạn có thể chọn chuyên viên mong muốn</small>
+                    <small>
+                      {selectedStaff === "AUTO"
+                        ? "Bấm để chọn chuyên viên mong muốn (tùy chọn)"
+                        : "Đã chọn chuyên viên riêng cho ca chăm sóc"}
+                    </small>
                   </span>
-                  <ChevronDown size={16} />
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <span className="booking-provider-tag">
+                      {selectedStaff === "AUTO" ? "Tự động" : "Đã chọn"}
+                    </span>
+                    <ChevronDown size={16} />
+                  </div>
                 </summary>
                 <div className="booking-staff-grid">
                   <button
@@ -1055,6 +1080,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                       <span>
                         <strong>{getStaffName(person)}</strong>
                         <small>{person.specialty || "Chuyên viên Spa"}</small>
+                        <span className="booking-staff-rating">
+                          <Star size={11} fill="#D48B38" stroke="#D48B38" />
+                          <span>{person.rating ? Number(person.rating).toFixed(1) : "5.0"}</span>
+                          {person.totalReviews ? <small>({person.totalReviews})</small> : null}
+                        </span>
                       </span>
                       {selectedStaff === String(person.id) && (
                         <Check size={15} />

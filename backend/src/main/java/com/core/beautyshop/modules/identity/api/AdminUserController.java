@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class AdminUserController {
     private final UserService userService;
     private final AuthService authService;
-    private final com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository sessionRepository;
 
     @Operation(summary = "Lấy danh sách người dùng (ADMIN)", description = "Chỉ tài khoản chưa soft-delete. Có bộ lọc keyword/status/role và page/size/sort; page bắt đầu từ 0. Không giới hạn danh sách vào khách hàng.")
     @GetMapping
@@ -56,9 +55,7 @@ public class AdminUserController {
     @Operation(summary = "Xem lịch sử phiên đăng nhập của người dùng", description = "ADMIN. Bao gồm các bản refresh session đã hết hạn/thu hồi/luân chuyển, theo createdAt giảm dần; các dòng cùng familyId thuộc cùng một họ phiên. Không trả token hoặc token hash.")
     @GetMapping("/{id}/sessions")
     public ApiResponse<java.util.List<SessionView>> sessions(@PathVariable Long id) {
-        userService.getUserById(id);
-        return ApiResponse.success(sessionRepository.findByUserIdOrderByCreatedAtDesc(id).stream()
-                .map(session -> new SessionView(session.getId(), session.getFamilyId(), session.getCreatedAt(), session.getExpiresAt(), session.getRevokedAt())).toList());
+        return ApiResponse.success(userService.getUserSessions(id));
     }
 
     @GetMapping("/{id}/status-history")

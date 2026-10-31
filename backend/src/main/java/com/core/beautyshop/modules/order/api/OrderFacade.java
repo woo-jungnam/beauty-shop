@@ -24,4 +24,6 @@ public interface OrderFacade {
     boolean existsById(Long orderId);
     boolean isPaidOrderForUser(Long orderId, Long userId);
     boolean isDeliveredProductPurchase(Long orderId, Long userId, Long productId);
+    record OrderRecipientDto(Long userId, String email, String name, String updatedAt) {}
+    java.util.Optional<OrderRecipientDto> findOrderRecipient(Long orderId);
 }

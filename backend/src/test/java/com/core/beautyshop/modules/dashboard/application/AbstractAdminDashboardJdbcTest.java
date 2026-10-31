@@ -23,8 +23,8 @@ abstract class AbstractAdminDashboardJdbcTest {
     @BeforeEach
     void schema() {
         jdbc = connect();
-        for (String table : List.of("payment_resolutions", "spa_financial_entries", "orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
-        jdbc.execute("CREATE TABLE orders (id BIGINT PRIMARY KEY, created_at TIMESTAMP, paid_at TIMESTAMP, total_amount DECIMAL(14,2), paid_amount DECIMAL(14,2), status VARCHAR(30), payment_status VARCHAR(30), is_deleted BOOLEAN)");
+        for (String table : List.of("beauty_services", "payment_resolutions", "spa_financial_entries", "orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
+        jdbc.execute("CREATE TABLE orders (id BIGINT PRIMARY KEY, created_at TIMESTAMP, paid_at TIMESTAMP, total_amount DECIMAL(14,2), paid_amount DECIMAL(14,2), status VARCHAR(30), payment_status VARCHAR(30), is_deleted BOOLEAN, service_package_id BIGINT, appointment_id BIGINT)");
         jdbc.execute("CREATE TABLE payment_transactions (id BIGINT PRIMARY KEY, created_at TIMESTAMP, amount DECIMAL(14,2), gateway VARCHAR(30), transfer_type VARCHAR(20), status VARCHAR(40))");
         jdbc.execute("CREATE TABLE refund_confirmations (id BIGINT PRIMARY KEY, confirmed_at TIMESTAMP, amount DECIMAL(14,2))");
         jdbc.execute("CREATE TABLE users (id BIGINT PRIMARY KEY, status VARCHAR(30), is_deleted BOOLEAN)");
@@ -33,7 +33,8 @@ abstract class AbstractAdminDashboardJdbcTest {
         jdbc.execute("CREATE TABLE warehouse_stocks (id BIGINT PRIMARY KEY, product_variant_id BIGINT, quantity INT, reserved_quantity INT, min_quantity INT, cost_price DECIMAL(14,2), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE staff_schedules (id BIGINT PRIMARY KEY, work_date DATE, start_time TIME, end_time TIME, status VARCHAR(30), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE appointments (id BIGINT PRIMARY KEY, appointment_date DATE, status VARCHAR(30), is_deleted BOOLEAN)");
-        jdbc.execute("CREATE TABLE appointment_items (id BIGINT PRIMARY KEY, appointment_id BIGINT, staff_id BIGINT, start_time TIME, end_time TIME, is_deleted BOOLEAN, execution_status VARCHAR(30) DEFAULT 'PLANNED', actual_started_at TIMESTAMP NULL, actual_completed_at TIMESTAMP NULL)");
+        jdbc.execute("CREATE TABLE appointment_items (id BIGINT PRIMARY KEY, service_id BIGINT, appointment_id BIGINT, staff_id BIGINT, price DECIMAL(14,2), start_time TIME, end_time TIME, is_deleted BOOLEAN, execution_status VARCHAR(30) DEFAULT 'PLANNED', actual_started_at TIMESTAMP NULL, actual_completed_at TIMESTAMP NULL)");
+        jdbc.execute("CREATE TABLE beauty_services (id BIGINT PRIMARY KEY, name VARCHAR(255), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE payment_resolutions (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
         jdbc.execute("CREATE TABLE spa_financial_entries (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
         service = new AdminDashboardService(jdbc);
@@ -41,7 +42,7 @@ abstract class AbstractAdminDashboardJdbcTest {
 
     @Test
     void overviewUsesCashLedgerPaidTimeCustomerRoleAndWholeSkuStock() {
-        jdbc.execute("INSERT INTO orders VALUES (1,'2026-09-30 10:00:00','2026-10-02 10:00:00',100,100,'DELIVERED','PAID',false), (2,'2026-09-30 10:00:00','2026-10-02 11:00:00',80,80,'CANCELLED','REFUND_PENDING',false), (3,'2026-10-02 10:00:00','2026-10-02 10:00:00',0,0,'CONFIRMED','PAID',false), (4,'2026-10-02 10:00:00',NULL,500,0,'PENDING','PENDING',false)");
+        jdbc.execute("INSERT INTO orders (id, created_at, paid_at, total_amount, paid_amount, status, payment_status, is_deleted) VALUES (1,'2026-09-30 10:00:00','2026-10-02 10:00:00',100,100,'DELIVERED','PAID',false), (2,'2026-09-30 10:00:00','2026-10-02 11:00:00',80,80,'CANCELLED','REFUND_PENDING',false), (3,'2026-10-02 10:00:00','2026-10-02 10:00:00',0,0,'CONFIRMED','PAID',false), (4,'2026-10-02 10:00:00',NULL,500,0,'PENDING','PENDING',false)");
         receipt(1, "2026-10-02 10:00:00", 100, "SEPAY", "in", "SUCCESS");
         receipt(2, "2026-10-02 10:00:00", 40, "SEPAY", "in", "PARTIALLY_PAID");
         receipt(3, "2026-10-02 10:00:00", 60, "COD", "in", "SUCCESS");
@@ -72,12 +73,20 @@ abstract class AbstractAdminDashboardJdbcTest {
         assertEquals(1, result.lowStockItems());
         assertMoney("16", result.inventoryValue());
         assertEquals(1, result.pendingPaymentOrders());
+        assertEquals(3, result.productPaidOrders());
+        assertEquals(0, result.spaPaidOrders());
+        assertMoney("180", result.productRevenue());
+        assertMoney("0", result.spaRevenue());
+        assertMoney("60", result.productAov());
+        assertMoney("0", result.spaAov());
+        assertMoney("25", result.productRefunds());
+        assertMoney("0", result.spaRefunds());
     }
 
     @Test
     void dailyAndMonthlyBucketsUseReceiptTimeBusinessZoneAndRefundOnlyDays() {
         assumeTrue(supportsMySqlGrouping(), "DATE_FORMAT/CONVERT_TZ are verified by the MySQL subclass");
-        jdbc.execute("INSERT INTO orders VALUES (1,'2026-09-28 10:00:00','2026-09-30 18:00:00',100,100,'CANCELLED','REFUND_PENDING',false)");
+        jdbc.execute("INSERT INTO orders (id, created_at, paid_at, total_amount, paid_amount, status, payment_status, is_deleted) VALUES (1,'2026-09-28 10:00:00','2026-09-30 18:00:00',100,100,'CANCELLED','REFUND_PENDING',false)");
         receipt(1, "2026-09-30 18:00:00", 100, "SEPAY", "in", "SUCCESS");
         receipt(2, "2026-10-01 10:00:00", 60, "COD", "in", "SUCCESS");
         receipt(3, "2026-10-01 10:00:00", 5, "SEPAY", "in", "IGNORED");
@@ -144,6 +153,23 @@ abstract class AbstractAdminDashboardJdbcTest {
         jdbc.execute("INSERT INTO payment_resolutions VALUES (1,'REFUND',50,'2026-10-02 10:00:00'),(2,'MATCH',900,'2026-10-02 10:00:00')");
         var report=service.overview(Instant.parse("2026-10-01T00:00:00Z"),Instant.parse("2026-10-03T00:00:00Z"));
         assertMoney("50",report.refundedAmount());
+    }
+
+    @Test void topServicesRanksByPerformedSessions() {
+        jdbc.execute("INSERT INTO beauty_services VALUES (1,'Chăm sóc da',false),(2,'Trị mụn',false)");
+        jdbc.execute("INSERT INTO appointment_items (id, service_id, appointment_id, staff_id, price, start_time, end_time, is_deleted, execution_status, actual_started_at, actual_completed_at) VALUES "
+                + "(1,1,10,1,300,'09:00:00','10:00:00',false,'PERFORMED','2026-10-02 09:00:00','2026-10-02 10:00:00'),"
+                + "(2,1,11,1,300,'10:00:00','11:00:00',false,'PERFORMED','2026-10-02 10:00:00','2026-10-02 11:00:00'),"
+                + "(3,2,12,1,500,'14:00:00','15:00:00',false,'PERFORMED','2026-10-02 14:00:00','2026-10-02 15:00:00'),"
+                + "(4,2,13,1,500,'16:00:00','17:00:00',false,'PLANNED',NULL,NULL)");
+        var list = service.topServices(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-03T00:00:00Z"));
+        assertEquals(2, list.size());
+        assertEquals("Chăm sóc da", list.get(0).serviceName());
+        assertEquals(2, list.get(0).performedSessions());
+        assertMoney("600", list.get(0).estimatedRevenue());
+        assertEquals("Trị mụn", list.get(1).serviceName());
+        assertEquals(1, list.get(1).performedSessions());
+        assertMoney("500", list.get(1).estimatedRevenue());
     }
 
     void receipt(int id, String created, int amount, String gateway, String direction, String status) {

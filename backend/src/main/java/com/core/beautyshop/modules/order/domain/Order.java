@@ -149,4 +149,46 @@ public class Order extends Base {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderStatusHistory> statusHistories;
+
+    public boolean isSpaOrder() {
+        return this.servicePackageId != null || this.appointmentId != null || (this.spaVisitItems != null && !this.spaVisitItems.isEmpty());
+    }
+
+    public void cancel(String reason, Long cancelledByUserId) {
+        if (this.status == OrderStatus.CANCELLED) {
+            return;
+        }
+        if (this.status == OrderStatus.DELIVERED || this.status == OrderStatus.COMPLETED) {
+            throw new com.core.beautyshop.shared.exception.BusinessException("Không thể hủy đơn hàng đã hoàn tất hoặc đã giao thành công");
+        }
+        this.cancelReason = reason;
+        this.cancelledBy = cancelledByUserId;
+        this.status = OrderStatus.CANCELLED;
+        if (this.paidAmount != null && this.refundedAmount != null && this.paidAmount.compareTo(this.refundedAmount) > 0) {
+            this.paymentStatus = PaymentStatus.REFUND_PENDING;
+        }
+    }
+
+    public void markAsShipped(String carrier, String tracking) {
+        if (this.status != OrderStatus.CONFIRMED && this.status != OrderStatus.PROCESSING) {
+            throw new com.core.beautyshop.shared.exception.BusinessException("Chỉ có thể giao đơn hàng đang ở trạng thái đã xác nhận hoặc đang xử lý");
+        }
+        if (carrier != null && !carrier.isBlank()) {
+            this.carrierName = carrier.trim();
+        }
+        if (tracking != null && !tracking.isBlank()) {
+            this.trackingCode = tracking.trim();
+        }
+        this.status = OrderStatus.SHIPPED;
+    }
+
+    public void markAsDelivered(java.time.Instant deliveredTime) {
+        if (this.status != OrderStatus.SHIPPED) {
+            throw new com.core.beautyshop.shared.exception.BusinessException("Chỉ có thể xác nhận đã giao khi đơn hàng đang được vận chuyển");
+        }
+        this.status = OrderStatus.DELIVERED;
+        if (this.deliveredAt == null) {
+            this.deliveredAt = deliveredTime != null ? deliveredTime : java.time.Instant.now();
+        }
+    }
 }
