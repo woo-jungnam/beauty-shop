@@ -3,6 +3,7 @@ package com.core.beautyshop.modules.spa.application.service;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public final class TreatmentContracts {
     private TreatmentContracts() {}
@@ -48,5 +49,5 @@ public final class TreatmentContracts {
     public record Report(long totalCourses, long pendingIntake, long activeCourses, long pausedCourses,
                          long completedCourses, long expiredCourses, long sessionsDue, long customersWithoutNextBooking,
                          BigDecimal collectedAmount, BigDecimal refundedAmount, BigDecimal unusedEntitlementAmount,
-                         java.util.Map<String, Long> byStatus) {}
+                         Map<String, Long> byStatus) {}
 }

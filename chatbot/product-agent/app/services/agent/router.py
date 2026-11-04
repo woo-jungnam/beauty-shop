@@ -1,6 +1,7 @@
 import re
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 from app.core.taxonomy import Taxonomy
+from app.repositories.order_repository import orderRepository
 from app.schemas.query import (
     ActionRouting,
     ComplexityLevel,
@@ -31,21 +32,34 @@ class QueryRouter:
             "hoặc số điện thoại đặt hàng để hệ thống hỗ trợ kiểm tra tiến độ giao hàng nhé!"
         ),
         Intent.GENERAL_CHAT: (
-            "Xin chào! Tôi là chuyên gia tư vấn mỹ phẩm và chăm sóc da cá nhân hóa. "
-            "Tôi có thể hỗ trợ bạn tìm kiếm sản phẩm tối ưu theo từng loại da (da dầu, da khô, da nhạy cảm...), "
-            "vấn đề da (mụn, thâm, lão hóa, phục hồi) và mức ngân sách mong muốn. "
-            "Hôm nay bạn cần tìm sản phẩm chăm sóc da nào ạ?"
+            "Xin chào! Tôi là trợ lý AI chuyên về mỹ phẩm và dịch vụ chăm sóc da tại BeautyShop. "
+            "Bạn đang quan tâm đến sản phẩm chăm sóc da nào hay cần hỗ trợ gì ạ?"
         ),
         Intent.OUT_OF_DOMAIN: (
-            "Dạ, tôi là chuyên gia AI chuyên biệt về tư vấn mỹ phẩm, chăm sóc da và dịch vụ làm đẹp tại spa. "
+            "Dạ, tôi là trợ lý AI chuyên về tư vấn mỹ phẩm và dịch vụ làm đẹp tại spa. "
             "Câu hỏi của bạn hiện nằm ngoài phạm vi chuyên môn của tôi. "
-            "Nếu bạn cần tư vấn sản phẩm chăm sóc da hoặc đặt lịch dịch vụ spa, xin vui lòng cho tôi biết nhé!"
+            "Bạn có thể hỏi tôi về sản phẩm dưỡng da hoặc đặt lịch dịch vụ spa nhé!"
         ),
     }
 
     def shouldRetrieve(self, understanding: UnderstandingResult) -> bool:
         pIntent = getattr(understanding.primary_intent, "value", str(understanding.primary_intent or ""))
+        uIntent = getattr(understanding.intent, "value", str(understanding.intent or ""))
+
         if pIntent in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI") or understanding.intent == Intent.OUT_OF_DOMAIN:
+            return False
+
+        if understanding.intent == Intent.ORDER_STATUS or pIntent in (
+            PrimaryIntent.HO_TRO_DON_HANG.value,
+            "HỖ_TRỢ_ĐƠN_HÀNG",
+            "HO_TRO_DON_HANG",
+        ):
+            return False
+
+        if uIntent == "CONSULTATION" or understanding.intent == Intent.CONSULTATION:
+            return False
+
+        if understanding.needs_clarification:
             return False
 
         hasValidIntent = (
@@ -54,9 +68,6 @@ class QueryRouter:
         )
         if hasValidIntent and getattr(understanding, "information_score", 0.0) >= 3.0:
             understanding.needs_clarification = False
-
-        if understanding.needs_clarification:
-            return False
 
         if getattr(understanding, "action_routing", None) in (
             ActionRouting.CHAIN_OF_THOUGHT_REASONING,
@@ -93,11 +104,60 @@ class QueryRouter:
 
     should_retrieve = shouldRetrieve
 
-    def handleNonRetrieval(self, understanding: UnderstandingResult) -> Optional[str]:
+    def handleOrderLookup(self, rawText: str) -> Tuple[str, Optional[Dict[str, Any]]]:
+        cleanText = rawText.strip()
+        phoneMatch = re.search(r"\b(0[3|5|7|8|9]\d{8})\b", cleanText)
+        orderCodeMatch = re.search(
+            r"(?:mã\s+đơn|mã|đơn\s+hàng|đơn|order|code|#)\s*:?\s*([A-Za-z0-9_-]{4,30})",
+            cleanText,
+            re.I,
+        )
+        directCodeMatch = re.search(r"\b([A-Za-z]{2,5}-\d{4,20})\b", cleanText, re.I)
+
+        identifier = None
+        if phoneMatch:
+            identifier = phoneMatch.group(1)
+        elif directCodeMatch:
+            identifier = directCodeMatch.group(1)
+        elif orderCodeMatch:
+            cand = orderCodeMatch.group(1).strip()
+            if cand.lower() not in ("hàng", "hang", "don", "shop", "ad", "của", "tôi", "mình"):
+                identifier = cand
+
+        if identifier:
+            order = orderRepository.findOrder(identifier)
+            if order:
+                return orderRepository.formatOrderSummary(order), order
+            return (
+                f"Rất tiếc, hệ thống không tìm thấy đơn hàng nào khớp với thông tin '{identifier}'. "
+                "Bạn vui lòng kiểm tra lại chính xác Mã đơn hàng (ví dụ: ORD-123456) hoặc Số điện thoại đặt hàng nhé!",
+                None,
+            )
+        return self.CANNED_RESPONSES[Intent.ORDER_STATUS], None
+
+    handle_order_lookup = handleOrderLookup
+
+    def handleNonRetrieval(
+        self,
+        understanding: UnderstandingResult,
+        userMessage: str = "",
+        **kwargs: Any,
+    ) -> Optional[str]:
+        uMsg = userMessage or kwargs.get("user_message", "")
         intent = understanding.intent
         pIntent = getattr(understanding.primary_intent, "value", str(understanding.primary_intent or ""))
         if intent == Intent.OUT_OF_DOMAIN or pIntent in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI"):
             return self.CANNED_RESPONSES[Intent.OUT_OF_DOMAIN]
+
+        if intent == Intent.ORDER_STATUS or pIntent in (
+            PrimaryIntent.HO_TRO_DON_HANG.value,
+            "HỖ_TRỢ_ĐƠN_HÀNG",
+            "HO_TRO_DON_HANG",
+        ):
+            fullText = f"{uMsg} {understanding.raw_query or ''}".strip()
+            reply, _ = self.handleOrderLookup(fullText)
+            return reply
+
         if understanding.needs_clarification and understanding.clarification_question:
             return understanding.clarification_question
         return self.CANNED_RESPONSES.get(intent) or (
@@ -112,24 +172,36 @@ class QueryRouter:
 class FastPathParser:
     THANKS_PATTERN = re.compile(r"^(cảm ơn|cam on|thanks|thank you|ok shop|oke shop|oki shop|dạ cảm ơn)", re.I)
     GREETING_PATTERN = re.compile(
-        r"^(chào(\s+shop|\s+bạn|\s+ad)?(\s+buổi\s+(sáng|trưa|chiều|tối))?(\s+nhé|\s+nha|\s+nghen)?|"
-        r"hello(\s+shop)?(\s+nhé|\s+nha)?|"
-        r"hi(\s+shop)?(\s+nhé|\s+nha)?|"
-        r"alo(\s+shop)?(\s+nhé|\s+nha)?)$",
+        r"^(chào(\s+shop|\s+bạn|\s+ad)?(\s+buổi\s+(sáng|trưa|chiều|tối))?(\s+nhé|\s+nha|\s+nghen|\s+ơi|\s+ạ)?|"
+        r"hello(\s+shop|\s+ad)?(\s+nhé|\s+nha|\s+ơi|\s+ạ)?|"
+        r"hi(\s+shop|\s+ad)?(\s+nhé|\s+nha|\s+ơi|\s+ạ)?|"
+        r"alo(\s+shop|\s+ad)?(\s+nhé|\s+nha|\s+ơi|\s+ạ)?|"
+        r"(shop|ad)\s+ơi)$",
+        re.I,
+    )
+    ORDER_STATUS_PATTERN = re.compile(
+        r"(tra cứu|kiểm tra|check|tình trạng|tiến độ|trạng thái)\s+(đơn hàng|don hang|đơn|don)\b|"
+        r"\b(mã đơn|ma don|mã vận đơn)\b|"
+        r"^#(?:ord|dh)?[a-z0-9_-]{4,30}$|"
+        r"^(?:ord|dh)-[a-z0-9_-]{4,25}$",
         re.I,
     )
     OUT_OF_DOMAIN_PATTERNS = (
         re.compile(r"^\s*(\d+\s*[\+\-\*\/xX\=]\s*[\d\s\+\-\*\/xX\=\?]*|[\d\s\+\-\*\/xX\=\?]+\=[\d\s\+\-\*\/xX\=\?]*)\s*$", re.I),
         re.compile(r"(\d+\s*(cộng|trừ|nhân|chia)\s*\d+|bằng\s+mấy|bằng\s+bao\s+nhiêu\s*(\?|$))", re.I),
-        re.compile(r"^(thời tiết|dự báo thời tiết|hôm nay mưa không|mấy giờ rồi|bây giờ là mấy giờ|hôm nay thứ mấy|viết code|lập trình python|dịch bài này|kể chuyện|hát đi)", re.I),
+        re.compile(r"(thời tiết|trời mưa|mưa không|trời nắng|mấy giờ|bây giờ là mấy giờ|hôm nay thứ mấy|viết code|lập trình|dịch bài|kể chuyện|hát đi)", re.I),
     )
     PRICE_KEYWORDS = ("dưới", "tầm", "khoảng", "rẻ hơn", "ngân sách", "tiền", "<=")
     CATEGORY_PREFIXES = ("đổi sang ", "chuyển sang ", "sang ", "qua ", "loại ", "chọn ")
 
     def tryParse(self, message: str, ctx) -> Optional[UnderstandingResult]:
-        clean = message.strip().lower()
+        cleanPunct = re.sub(r"[^\w\s]", " ", message.strip().lower())
+        clean = " ".join(cleanPunct.split())
+        if not clean:
+            clean = message.strip().lower()
+
         for pat in self.OUT_OF_DOMAIN_PATTERNS:
-            if pat.search(clean):
+            if pat.search(clean) or pat.search(message):
                 res = self.buildResult(Intent.OUT_OF_DOMAIN, message, message)
                 res.primary_intent = PrimaryIntent.NGOAI_PHAM_VI.value
                 res.action_routing = ActionRouting.FAST_PATH.value
@@ -139,9 +211,35 @@ class FastPathParser:
         if self.THANKS_PATTERN.search(clean):
             return self.buildResult(Intent.GENERAL_INFORMATION, message, message)
 
+        if self.ORDER_STATUS_PATTERN.search(clean):
+            res = self.buildResult(Intent.ORDER_STATUS, message, message)
+            res.primary_intent = PrimaryIntent.HO_TRO_DON_HANG.value
+            res.action_routing = ActionRouting.FAST_PATH.value
+            res.needs_clarification = False
+            return res
+
         if self.GREETING_PATTERN.match(clean):
             res = self.buildResult(Intent.GENERAL_CHAT, message, message)
             res.primary_intent = "CHÀO_HỎI"
+            res.action_routing = ActionRouting.FAST_PATH.value
+            res.needs_clarification = False
+            return res
+
+        if self.THANKS_PATTERN.search(clean):
+            return self.buildResult(Intent.GENERAL_INFORMATION, message, message)
+
+        if self.ORDER_STATUS_PATTERN.search(clean):
+            res = self.buildResult(Intent.ORDER_STATUS, message, message)
+            res.primary_intent = PrimaryIntent.HO_TRO_DON_HANG.value
+            res.action_routing = ActionRouting.FAST_PATH.value
+            res.needs_clarification = False
+            return res
+
+        if self.GREETING_PATTERN.match(clean):
+            res = self.buildResult(Intent.GENERAL_CHAT, message, message)
+            res.primary_intent = "CHÀO_HỎI"
+            res.action_routing = ActionRouting.FAST_PATH.value
+            res.needs_clarification = False
             return res
 
         complexPatterns = ("so sánh", "so sanh", "vs", "hay", "tốt hơn", "khác nhau", "nên chọn", "routine", "combo", "chu trình", "dùng chung", "kết hợp", "thế nào", "như thế nào")

@@ -1,10 +1,12 @@
 package com.core.beautyshop.modules.spa.application.service;
 
+import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
 import com.core.beautyshop.modules.spa.domain.treatment.TreatmentNotification;
 import com.core.beautyshop.modules.spa.domain.treatment.TreatmentNotificationRepository;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
@@ -14,8 +16,8 @@ import java.util.Map;
 @Service @RequiredArgsConstructor
 public class TreatmentNotificationService {
     private final TreatmentNotificationRepository notifications;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerInbox;
+    @Autowired
+    private CustomerNotificationFacade customerInbox;
     private static final Map<String, String> TITLES = Map.ofEntries(
             Map.entry("PURCHASE_PAID", "Lộ trình đã thanh toán"),
             Map.entry("ENROLLED", "Lộ trình đã được cấp"),

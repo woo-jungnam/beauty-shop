@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.order.application.dto.response;
 
+import com.core.beautyshop.modules.order.api.dto.SpaVisitCharge;
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import com.core.beautyshop.modules.order.domain.enums.PaymentStatus;
@@ -32,7 +33,7 @@ public class OrderResponse {
     @Schema(description = "ID appointment nếu là invoice buổi lẻ; status giữ COMPLETED độc lập với trạng thái thanh toán")
     private Long appointmentId;
     @Schema(description = "Snapshot mục PERFORMED không dùng vé của invoice Spa; tách khỏi items sản phẩm")
-    private List<com.core.beautyshop.modules.order.api.dto.SpaVisitCharge> spaVisitItems;
+    private List<SpaVisitCharge> spaVisitItems;
 
     @Schema(description = "Mã số đơn dùng trong nội dung chuyển khoản", example = "ORD-1234ABCD")
     private String orderNumber;

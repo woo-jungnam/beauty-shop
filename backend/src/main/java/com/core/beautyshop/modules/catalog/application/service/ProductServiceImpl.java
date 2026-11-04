@@ -33,6 +33,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
@@ -409,11 +410,11 @@ public class ProductServiceImpl implements ProductService {
                         .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted())
                                 && !Boolean.TRUE.equals(value.getAttributeDefinition().getIsDeleted())
                                 && (value.getProductVariant() == null || !Boolean.TRUE.equals(value.getProductVariant().getIsDeleted())))
-                        .sorted(java.util.Comparator.comparing(com.core.beautyshop.modules.catalog.domain.ProductAttributeValue::getId))
+                        .sorted(Comparator.comparing(ProductAttributeValue::getId))
                         .map(ProductAttributeServiceImpl::mapToValueResponse).toList())
                 .ingredientsList(product.getProductIngredients() != null ? product.getProductIngredients().stream()
                         .filter(pi -> pi.getIngredient() != null && !Boolean.TRUE.equals(pi.getIngredient().getIsDeleted()))
-                        .sorted(java.util.Comparator.comparing(pi -> pi.getDisplayOrder(), java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                        .sorted(Comparator.comparing(pi -> pi.getDisplayOrder(), Comparator.nullsLast(Comparator.naturalOrder())))
                         .map(pi -> ProductResponse.IngredientDetailResponse.builder()
                                 .ingredientId(pi.getIngredient() != null ? pi.getIngredient().getId() : null)
                                 .name(pi.getIngredient() != null ? pi.getIngredient().getName() : null)
@@ -506,7 +507,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public Page<ProductListResponse> getAllProductsForAdmin(String keyword, Long categoryId, Long brandId, ProductStatus status, Pageable pageable) {
         String text = keyword == null ? "" : keyword.trim();
-        String pattern = text.isEmpty() ? null : "%" + text.toLowerCase(java.util.Locale.ROOT)
+        String pattern = text.isEmpty() ? null : "%" + text.toLowerCase(Locale.ROOT)
                 .replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         Sort sort = pageable.getSort().isUnsorted() ? Sort.by(Sort.Order.desc("createdAt")) : pageable.getSort();
         if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by(Sort.Order.desc("id")));

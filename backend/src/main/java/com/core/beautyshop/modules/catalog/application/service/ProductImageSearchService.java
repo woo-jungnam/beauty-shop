@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -73,8 +75,8 @@ public class ProductImageSearchService {
     private static boolean isUploadUrl(String url) {
         if (url == null || !url.startsWith("/uploads/") || url.contains("\\")) return false;
         try {
-            var path = java.net.URI.create(url).getPath();
-            return path != null && !path.contains("\\") && java.util.Arrays.stream(path.split("/"))
+            var path = URI.create(url).getPath();
+            return path != null && !path.contains("\\") && Arrays.stream(path.split("/"))
                     .noneMatch(part -> part.equals("..") || part.equals("."));
         } catch (IllegalArgumentException error) {
             return false;

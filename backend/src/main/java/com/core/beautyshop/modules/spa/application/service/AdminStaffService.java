@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.spa.application.service;
 
 import com.core.beautyshop.modules.identity.api.*;
+import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.spa.domain.*;
 import com.core.beautyshop.modules.spa.domain.enums.StaffScheduleStatus;
 import com.core.beautyshop.shared.exception.*;
@@ -27,7 +28,7 @@ public class AdminStaffService {
     @Transactional(readOnly = true)
     public List<StaffView> list() {
         List<Staff> rows = staffRepository.findAllAdminWithSkills();
-        Map<Long, com.core.beautyshop.modules.identity.api.dto.UserSummaryDto> users = identityFacade.findUserSummaries(rows.stream().map(Staff::getUserId).toList());
+        Map<Long, UserSummaryDto> users = identityFacade.findUserSummaries(rows.stream().map(Staff::getUserId).toList());
         return rows.stream().map(row -> StaffView.from(row, users.get(row.getUserId()))).toList();
     }
     @Transactional(readOnly = true)
@@ -154,7 +155,7 @@ public class AdminStaffService {
     @Schema(name = "SpaStaffView", description = "Hồ sơ quản trị staff, tài khoản và kỹ năng; có thể inactive")
     public record StaffView(Long id, Long userId, String fullName, String specialty, String bio, Double rating, Integer totalReviews,
                             Boolean active, List<SkillView> skills) {
-        static StaffView from(Staff staff, com.core.beautyshop.modules.identity.api.dto.UserSummaryDto user) {
+        static StaffView from(Staff staff, UserSummaryDto user) {
             List<SkillView> skills = staff.getSkills() == null ? List.of() : staff.getSkills().stream()
                     .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
                     .map(value -> new SkillView(value.getService().getId(), value.getService().getName(), value.getIsCertified(), value.getCertifiedUntil())).toList();

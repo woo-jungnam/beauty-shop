@@ -1,20 +1,25 @@
 package com.core.beautyshop.modules.order.domain;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import jakarta.persistence.LockModeType;
 
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
+import com.core.beautyshop.modules.order.domain.enums.PaymentStatus;
+import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 
 @Repository
-public interface OrderRepository extends JpaRepository<Order, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Order> {
+public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
     @Query("select count(o) > 0 from Order o join o.items i, ProductVariant v where o.id = :orderId and o.userId = :userId and o.status = com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED and v.id = i.productVariantId and v.product.id = :productId")
     boolean existsDeliveredProductPurchase(Long orderId, Long userId, Long productId);
@@ -45,9 +50,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, org.springf
             + "and o.paymentMethod = com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK "
             + "and o.paymentStatus <> com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID "
             + "and o.appointmentId is null and o.isDeleted = false and o.id > :after and o.paymentDeadline <= :now order by o.id")
-    java.util.List<Long> findExpiredPaymentIdsAfter(java.time.Instant now, Long after, Pageable pageable);
+    List<Long> findExpiredPaymentIdsAfter(Instant now, Long after, Pageable pageable);
 
-    default java.util.List<Long> findExpiredPaymentIds(java.time.Instant now, Pageable pageable) {
+    default List<Long> findExpiredPaymentIds(Instant now, Pageable pageable) {
         return findExpiredPaymentIdsAfter(now, 0L, pageable);
     }
 

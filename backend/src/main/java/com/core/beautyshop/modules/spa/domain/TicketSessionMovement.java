@@ -3,8 +3,11 @@ package com.core.beautyshop.modules.spa.domain;
 import com.core.beautyshop.shared.domain.Base;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Immutable;
 
-@org.hibernate.annotations.Immutable
+import java.time.Instant;
+
+@Immutable
 @Entity @Table(name = "ticket_session_movements") @Getter @Setter @NoArgsConstructor
 public class TicketSessionMovement extends Base {
     @Column(name = "ticket_id", nullable = false, updatable = false) private Long ticketId;
@@ -20,6 +23,6 @@ public class TicketSessionMovement extends Base {
     private String idempotencyKey;
     @Column(name="command_fingerprint", length=64, updatable=false) private String commandFingerprint;
     @Column(name="session_adjustment", updatable=false) private Integer sessionAdjustment;
-    @Column(name="expiry_before", updatable=false) private java.time.Instant expiryBefore;
-    @Column(name="expiry_after", updatable=false) private java.time.Instant expiryAfter;
+    @Column(name="expiry_before", updatable=false) private Instant expiryBefore;
+    @Column(name="expiry_after", updatable=false) private Instant expiryAfter;
 }

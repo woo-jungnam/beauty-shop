@@ -4,6 +4,7 @@ import com.core.beautyshop.modules.catalog.application.dto.request.ProductImageR
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse;
 import com.core.beautyshop.modules.catalog.domain.Product;
 import com.core.beautyshop.modules.catalog.domain.ProductImage;
+import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.catalog.domain.ProductImageRepository;
 import com.core.beautyshop.modules.catalog.domain.ProductRepository;
@@ -26,7 +27,7 @@ public class ProductImageServiceImpl implements ProductImageService {
     @Override
     @Transactional(readOnly = true)
     public List<ProductImageResponse> getImagesByProductId(Long productId) {
-        productRepository.findByIdAndStatusAndIsDeletedFalse(productId, com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE)
+        productRepository.findByIdAndStatusAndIsDeletedFalse(productId, ProductStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + productId));
         return imageRepository.findByProductIdOrderByDisplayOrderAsc(productId).stream()
                 .filter(image -> !Boolean.TRUE.equals(image.getIsDeleted()))

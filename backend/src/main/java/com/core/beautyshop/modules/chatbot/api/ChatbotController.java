@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Tag(name = "Trợ lý Chatbot AI", description = "Giao tiếp với dịch vụ Chatbot, kiểm tra kết nối và quản trị đồng bộ dữ liệu")
 @RestController
@@ -39,7 +40,7 @@ public class ChatbotController {
             @Valid @RequestBody ChatRequest request
     ) {
         if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-            request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+            request.setSessionId("sess_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         }
         ChatResponse response = chatbotService.chat(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Nhận phản hồi tư vấn thành công"));
@@ -55,7 +56,7 @@ public class ChatbotController {
             @Valid @RequestBody ChatRequest request
     ) {
         if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-            request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+            request.setSessionId("sess_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         }
         StreamingResponseBody responseBody = outputStream -> chatbotService.streamChat(request, outputStream);
 

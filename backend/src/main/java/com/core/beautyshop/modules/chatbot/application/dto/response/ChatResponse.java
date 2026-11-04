@@ -42,6 +42,9 @@ public class ChatResponse {
     @Schema(description = "Nguồn thông tin do dịch vụ AI trả về")
     private List<SourceRefResponse> sources;
 
+    @Schema(description = "Danh sách hành động tương tác nhanh do dịch vụ AI đề xuất")
+    private List<ChatActionResponse> actions;
+
     @JsonProperty("needs_clarification")
     @JsonAlias({"needsClarification", "needs_clarification"})
     @Schema(description = "Đánh dấu câu hỏi hiện tại có cần khách hàng cung cấp thêm thông tin làm rõ hay không", example = "false")

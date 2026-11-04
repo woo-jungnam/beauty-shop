@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -41,5 +42,5 @@ public class ServicePackage extends Base {
 
     @OneToMany(mappedBy = "servicePackage", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<ServicePackageItem> items = new java.util.ArrayList<>();
+    private List<ServicePackageItem> items = new ArrayList<>();
 }

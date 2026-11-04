@@ -1,11 +1,15 @@
 package com.core.beautyshop.modules.spa.application.dto.response;
 
+import com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus;
+import com.core.beautyshop.modules.spa.domain.enums.TicketUsageState;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalTime;
-import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 
 @Data
 @Builder
@@ -29,18 +33,18 @@ public class AppointmentItemResponse {
     @Schema(description = "Giờ dự kiến kết thúc gồm thời gian chuẩn bị", type = "string", format = "time", example = "11:00:00")
     private LocalTime endTime;
     @Schema(description = "Kết quả execution; LEGACY_FINALIZED thiếu bằng chứng thực tế, NO_SHOW không phải PERFORMED")
-    private com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus executionStatus;
+    private AppointmentItemExecutionStatus executionStatus;
     @Schema(description = "NONE/RESERVED/REDEEMED/RELEASED/FORFEITED/LEGACY_FINALIZED; phân biệt giữ, dùng và mất lượt no-show")
-    private com.core.beautyshop.modules.spa.domain.enums.TicketUsageState ticketUsageState;
-    private java.time.Instant actualStartedAt;
-    private java.time.Instant actualCompletedAt;
+    private TicketUsageState ticketUsageState;
+    private Instant actualStartedAt;
+    private Instant actualCompletedAt;
     @Schema(description = "Actor đã bắt đầu item, là User.id; null với legacy hoặc item chưa START")
     private Long performedByUserId;
     private String executionNotes;
     @Schema(description = "Facility đầu tiên/field legacy; dùng resources để xem đầy đủ bed+machine")
     private Long facilityId;
     @Schema(description = "Allocations đã lưu; legacy chỉ có facilityId có thể trả array rỗng")
-    private java.util.List<ResourceAllocation> resources;
+    private List<ResourceAllocation> resources;
     @Schema(name = "SpaItemResourceAllocation", description = "Một tài nguyên và số đơn vị được phân bổ cho item")
     public record ResourceAllocation(Long facilityId, String name, String type, @Schema(minimum = "1") int quantity) { }
 

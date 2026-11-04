@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.spa.api;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import com.core.beautyshop.modules.spa.application.dto.response.BeautyServiceResponse;
+import com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse;
+import com.core.beautyshop.modules.spa.application.dto.response.StaffResponse;
 import com.core.beautyshop.modules.spa.application.service.BeautyServiceService;
 import com.core.beautyshop.shared.dto.ApiResponse;
 
@@ -53,19 +56,19 @@ public class SpaServiceController {
 
     @Operation(summary = "Lấy danh sách gói Spa có thể mua", description = "API công khai; chỉ gói hoạt động, chưa xóa và có các dịch vụ thành phần còn khả dụng. Danh sách không phân trang; không cấp vé ở bước đọc catalog.")
     @GetMapping("/packages")
-    public ResponseEntity<ApiResponse<List<com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse>>> getPackages() {
+    public ResponseEntity<ApiResponse<List<ServicePackageResponse>>> getPackages() {
         return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getActivePackages()));
     }
 
     @Operation(summary = "Lấy tất cả nhân viên Spa đang hoạt động", description = "API công khai; chỉ nhân viên hoạt động, chưa xóa.")
     @GetMapping("/staff")
-    public ResponseEntity<ApiResponse<List<com.core.beautyshop.modules.spa.application.dto.response.StaffResponse>>> getAllStaff() {
+    public ResponseEntity<ApiResponse<List<StaffResponse>>> getAllStaff() {
         return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getAllStaff()));
     }
 
     @Operation(summary = "Lấy nhân viên có kỹ năng cho dịch vụ", description = "API công khai; dịch vụ hoạt động/chưa xóa, staff hoạt động/chưa xóa và có kỹ năng dịch vụ. Danh sách này không chứng minh nhân viên rảnh vào một giờ cụ thể; dùng available-slots để kiểm ca và slot.")
     @GetMapping("/{id}/staff")
-    public ResponseEntity<ApiResponse<List<com.core.beautyshop.modules.spa.application.dto.response.StaffResponse>>> getQualifiedStaff(
+    public ResponseEntity<ApiResponse<List<StaffResponse>>> getQualifiedStaff(
             @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getQualifiedStaff(id)));
     }
@@ -74,7 +77,7 @@ public class SpaServiceController {
     @GetMapping("/{id}/available-slots")
     public ResponseEntity<ApiResponse<List<String>>> getAvailableSlots(
             @PathVariable Long id,
-            @Parameter(description = "Ngày từ hôm nay theo Asia/Ho_Chi_Minh, yyyy-MM-dd", example = "2026-10-05") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @Parameter(description = "Ngày từ hôm nay theo Asia/Ho_Chi_Minh, yyyy-MM-dd", example = "2026-10-05") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @Parameter(description = "ID hồ sơ Staff có kỹ năng dịch vụ, không phải ID User; bỏ trống để tìm bất kỳ staff phù hợp") @RequestParam(required = false) Long staffId) {
         return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getAvailableSlots(id, date, staffId)));
     }

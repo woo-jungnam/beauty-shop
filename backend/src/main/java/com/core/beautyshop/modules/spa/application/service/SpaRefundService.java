@@ -6,23 +6,27 @@ import com.core.beautyshop.modules.spa.domain.*;
 import com.core.beautyshop.modules.spa.domain.enums.TicketStatus;
 import com.core.beautyshop.shared.exception.*;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.access.prepost.PreAuthorize;
 import java.math.*;
 import java.util.*;
 
-@Service @RequiredArgsConstructor @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+@Service @RequiredArgsConstructor @Transactional(isolation=Isolation.READ_COMMITTED)
 public class SpaRefundService {
     private final UserServiceTicketRepository tickets;
     private final SpaPurchaseSnapshotRepository snapshots;
     private final SpaServiceRefundRepository refunds;
     private final AppointmentRepository appointments;
     private final OrderFacade orders;
-    private final jakarta.persistence.EntityManager em;
+    private final EntityManager em;
     private final TicketSessionMovementRepository movements;
-    @io.swagger.v3.oas.annotations.media.Schema(name="SpaServiceRefundConfirmation")
+    @Schema(name="SpaServiceRefundConfirmation")
     public record Confirmation(BigDecimal amount, String reference, String reason) {}
     public record PackageQuote(Long ticketId, BigDecimal purchasedAmount, BigDecimal refundableAmount, int unusedSessions, String blockedReason) {}
     public record LineQuote(Long appointmentItemId, String serviceName, BigDecimal allocatedAmount, BigDecimal refundedAmount, BigDecimal refundableAmount) {}
@@ -130,7 +134,7 @@ public class SpaRefundService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vé đã mua"));
     }
     private UserServiceTicket lockedTicket(Long id) {
-        var ticket = tickets.findByIdForUpdate(id).orElseThrow(); em.refresh(ticket, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE); return ticket;
+        var ticket = tickets.findByIdForUpdate(id).orElseThrow(); em.refresh(ticket, LockModeType.PESSIMISTIC_WRITE); return ticket;
     }
     private void validate(Confirmation c, boolean allowZero) {
         if (c==null || c.amount()==null || c.amount().signum()<(allowZero?0:1) || c.amount().stripTrailingZeros().scale()>0

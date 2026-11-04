@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.spa.application.service;
 
+import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
 import com.core.beautyshop.modules.spa.api.SpaNotificationFacade;
 import com.core.beautyshop.modules.spa.domain.Appointment;
 import com.core.beautyshop.modules.spa.domain.AppointmentItem;
@@ -12,11 +13,14 @@ import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.outbox.application.service.OutboxService;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -34,8 +38,8 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
     private final AppointmentRepository appointments;
     private final SpaAccessService access;
     private final OutboxService outbox;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerInbox;
+    @Autowired
+    private CustomerNotificationFacade customerInbox;
 
     @Transactional
     public Instruction addInstruction(Long appointmentId, Long itemId, InstructionCommand command) {
@@ -152,7 +156,7 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
         return found.get(0);
     }
 
-    private Instruction instructionRow(java.sql.ResultSet rs, int row) throws java.sql.SQLException {
+    private Instruction instructionRow(ResultSet rs, int row) throws SQLException {
         return new Instruction(rs.getLong("id"), rs.getLong("appointment_id"), rs.getLong("appointment_item_id"), rs.getString("content"),
                 SpaJdbcSupport.instant(rs, "due_at"), rs.getLong("author_id"), SpaJdbcSupport.instant(rs, "created_at"));
     }

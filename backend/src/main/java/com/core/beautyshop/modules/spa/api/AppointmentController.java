@@ -1,20 +1,33 @@
 package com.core.beautyshop.modules.spa.api;
 
-import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.modules.spa.application.dto.request.BookAppointmentRequest;
+import com.core.beautyshop.modules.spa.application.dto.request.ExecuteAppointmentItemRequest;
+import com.core.beautyshop.modules.spa.application.dto.request.RescheduleAppointmentRequest;
+import com.core.beautyshop.modules.spa.application.dto.request.UpdateAppointmentStatusRequest;
 import com.core.beautyshop.modules.spa.application.dto.response.AppointmentResponse;
 import com.core.beautyshop.modules.spa.application.service.AppointmentService;
+import com.core.beautyshop.modules.spa.domain.AppointmentActionHistory;
+import com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus;
+import com.core.beautyshop.shared.audit.api.annotation.AuditAction;
+import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.shared.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springdoc.core.annotations.ParameterObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "Lịch hẹn Spa", description = "Đặt yêu cầu, phân công, check-in và ghi kết quả từng dịch vụ; phạm vi dữ liệu theo chủ lịch và nhân viên được giao")
@@ -27,8 +40,8 @@ public class AppointmentController {
 
     @GetMapping("/{id}/available-slots") @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<String>> availableSlots(@PathVariable Long id,
-            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
-        return ApiResponse.success(appointmentService.availableSlots(id,date));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ApiResponse.success(appointmentService.availableSlots(id, date));
     }
 
     @Operation(summary = "Đặt yêu cầu lịch hẹn Spa", description = "Yêu cầu đăng nhập; chủ lịch là tài khoản hiện tại. Tạo PENDING, chưa cam kết đã phân công nhân viên. Các mục chạy tuần tự theo thứ tự items, dùng giờ Việt Nam, giữ quota vé và tài nguyên nếu có cấu hình. Giá/tên/thời lượng/yêu cầu được lưu lúc đặt. Endpoint không hỗ trợ Idempotency-Key cho booking.")
@@ -64,49 +77,50 @@ public class AppointmentController {
 
     @Operation(summary = "Hủy lịch hẹn trước check-in", description = "Chủ lịch hoặc ADMIN/STAFF/SPA_RECEPTION. Chỉ PENDING/CONFIRMED, chưa check-in; khách tuân cutoff đã chụp lúc đặt. Nhân viên hủy cho khách khác hoặc vượt cutoff cần reason. Hoàn lượt RESERVED và giải phóng tài nguyên; không tự hoàn tiền hoặc thu phí.")
     @PutMapping("/{id}/cancel")
-    @com.core.beautyshop.shared.audit.api.annotation.AuditAction(action = "CANCEL_APPOINTMENT", resourceType = "APPOINTMENT")
+    @AuditAction(action = "CANCEL_APPOINTMENT", resourceType = "APPOINTMENT")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> cancelAppointment(
-            @PathVariable Long id, @Valid @RequestBody(required=false) CancellationRequest request) {
+            @PathVariable Long id, @Valid @RequestBody(required = false) CancellationRequest request) {
         appointmentService.cancelAppointment(id, request == null ? null : request.reason());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @Schema(name = "SpaAppointmentCancellationRequest", description = "Lý do hủy; bắt buộc khi nhân viên hủy cho người khác hoặc xử lý ngoại lệ cutoff")
-    public record CancellationRequest(@Schema(description = "Lý do hủy, tối đa 500 ký tự", maxLength = 500, example = "Khách yêu cầu hủy lịch") @jakarta.validation.constraints.Size(max=500) String reason) { }
+    public record CancellationRequest(@Schema(description = "Lý do hủy, tối đa 500 ký tự", maxLength = 500, example = "Khách yêu cầu hủy lịch") @Size(max = 500) String reason) { }
 
     @Operation(summary = "Tra cứu lịch hẹn theo phạm vi nhân viên", description = "ADMIN hoặc STAFF xem các lịch chưa xóa. Lọc date/status tùy chọn, phân trang từ page=0.")
     @GetMapping("/admin/all")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<ApiResponse<com.core.beautyshop.shared.dto.PageResponse<AppointmentResponse>>> getAllAppointments(
-            @Parameter(description = "Ngày hẹn tại Việt Nam, yyyy-MM-dd", example = "2026-10-05") @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
-            @Parameter(description = "Lọc trạng thái lịch hẹn") @RequestParam(required = false) com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus status,
-            @org.springdoc.core.annotations.ParameterObject @org.springframework.data.web.PageableDefault(size = 20) org.springframework.data.domain.Pageable pageable) {
-        org.springframework.data.domain.Page<AppointmentResponse> page = appointmentService.getAllAppointments(date, status, pageable);
-        return ResponseEntity.ok(ApiResponse.success(com.core.beautyshop.shared.dto.PageResponse.of(page)));
+    public ResponseEntity<ApiResponse<PageResponse<AppointmentResponse>>> getAllAppointments(
+            @Parameter(description = "Ngày hẹn tại Việt Nam, yyyy-MM-dd", example = "2026-10-05") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @Parameter(description = "Lọc trạng thái lịch hẹn") @RequestParam(required = false) AppointmentStatus status,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        Page<AppointmentResponse> page = appointmentService.getAllAppointments(date, status, pageable);
+        return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 
     @Operation(summary = "Xác nhận, phân công hoặc chuyển trạng thái buổi Spa", description = "ADMIN hoặc STAFF: PENDING→CONFIRMED/CANCELLED; CONFIRMED→IN_PROGRESS/CANCELLED/NO_SHOW; IN_PROGRESS→COMPLETED. Phân công bằng staffAssignments chỉ khi trạng thái đích CONFIRMED, kể cả gửi lại cùng CONFIRMED. IN_PROGRESS cần check-in và đến giờ; COMPLETED cần mọi item PERFORMED/SKIPPED. NO_SHOW cần chưa check-in, qua start+grace và notes có lý do.")
     @PutMapping("/admin/{id}/status")
-    @com.core.beautyshop.shared.audit.api.annotation.AuditAction(action = "UPDATE_APPOINTMENT_STATUS", resourceType = "APPOINTMENT")
+    @AuditAction(action = "UPDATE_APPOINTMENT_STATUS", resourceType = "APPOINTMENT")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<AppointmentResponse>> updateAppointmentStatus(
             @PathVariable Long id,
-            @Valid @RequestBody com.core.beautyshop.modules.spa.application.dto.request.UpdateAppointmentStatusRequest request) {
+            @Valid @RequestBody UpdateAppointmentStatusRequest request) {
         AppointmentResponse response = appointmentService.updateAppointmentStatus(id, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "Đổi giờ lịch hẹn trước check-in", description = "Chủ lịch hoặc ADMIN/STAFF; chỉ PENDING/CONFIRMED chưa check-in. Giữ dịch vụ, giá và thời lượng đã đặt; kiểm lại nhân viên, ca, hạn vé và tài nguyên. Khách tuân cutoff snapshot; nhân viên thao tác cho khách khác hoặc ngoài cutoff phải có notes ghi lý do. Thất bại giữ nguyên lịch và allocations.")
     @PutMapping("/{id}/reschedule")
-    @com.core.beautyshop.shared.audit.api.annotation.AuditAction(action = "RESCHEDULE_APPOINTMENT", resourceType = "APPOINTMENT")
+    @AuditAction(action = "RESCHEDULE_APPOINTMENT", resourceType = "APPOINTMENT")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<AppointmentResponse>> rescheduleAppointment(
             @PathVariable Long id,
-            @Valid @RequestBody com.core.beautyshop.modules.spa.application.dto.request.RescheduleAppointmentRequest request) {
+            @Valid @RequestBody RescheduleAppointmentRequest request) {
         AppointmentResponse response = appointmentService.rescheduleAppointment(id, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
     @Operation(summary = "Ghi nhận khách đến Spa", description = "ADMIN hoặc STAFF; lịch phải CONFIRMED và có ngày hẹn là hôm nay theo Asia/Ho_Chi_Minh. Lưu checkedInAt/checkedInByUserId; gửi lại không tạo lần check-in mới. Check-in không tự bắt đầu buổi hoặc thu tiền.")
     @PutMapping("/{id}/check-in")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
@@ -118,14 +132,14 @@ public class AppointmentController {
     @PutMapping("/{id}/items/{itemId}/execution")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ApiResponse<AppointmentResponse> executeItem(@PathVariable Long id, @PathVariable Long itemId,
-            @Valid @RequestBody com.core.beautyshop.modules.spa.application.dto.request.ExecuteAppointmentItemRequest request) {
+            @Valid @RequestBody ExecuteAppointmentItemRequest request) {
         return ApiResponse.success(appointmentService.executeItem(id, itemId, request));
     }
 
     @Operation(summary = "Xem lịch sử hành động của lịch hẹn", description = "Chủ lịch, ADMIN/STAFF/SPA_RECEPTION hoặc SPA_THERAPIST được giao; phân trang page=0, size mặc định 20. Gồm trạng thái trước/sau, actor, thời điểm và lý do khi có.")
     @GetMapping("/{id}/history") @PreAuthorize("isAuthenticated()")
-    public ApiResponse<com.core.beautyshop.shared.dto.PageResponse<com.core.beautyshop.modules.spa.domain.AppointmentActionHistory>> history(
-            @PathVariable Long id, @ParameterObject @org.springframework.data.web.PageableDefault(size=20) org.springframework.data.domain.Pageable pageable) {
-        return ApiResponse.success(com.core.beautyshop.shared.dto.PageResponse.of(appointmentService.actionHistory(id, pageable)));
+    public ApiResponse<PageResponse<AppointmentActionHistory>> history(
+            @PathVariable Long id, @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.success(PageResponse.of(appointmentService.actionHistory(id, pageable)));
     }
 }

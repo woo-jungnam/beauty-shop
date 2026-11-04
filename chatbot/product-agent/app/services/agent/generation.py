@@ -17,98 +17,33 @@ class ContextBuilder:
     @staticmethod
     def buildProductContext(
         candidates: List[RerankedCandidate],
-        maxProducts: int = 5,
+        maxProducts: int = 2,
         understanding: Optional[UnderstandingResult] = None,
         **kwargs,
     ) -> str:
-        maxProds = maxProducts if "maxProducts" in kwargs or maxProducts != 5 else kwargs.get("max_products", maxProducts)
+        maxProds = maxProducts if "maxProducts" in kwargs or maxProducts != 2 else kwargs.get("max_products", maxProducts)
         und = understanding if understanding is not None else kwargs.get("understanding")
         if not candidates:
             return "Không tìm thấy sản phẩm nào phù hợp với các tiêu chí tìm kiếm."
-
-        uIntentVal = getattr(getattr(und, "intent", None), "value", str(getattr(und, "intent", "") or ""))
-        pIntentVal = getattr(getattr(und, "primary_intent", None), "value", str(getattr(und, "primary_intent", "") or ""))
-
-        isPriceQuery = uIntentVal in ("PRICE_QUERY", "AVAILABILITY_QUERY") or pIntentVal == "GIÁ_NGÂN_SÁCH"
-        isIngredientQuery = pIntentVal in ("THÔNG_TIN_THÀNH_PHẦN", "TÁC_DỤNG_THÀNH_PHẦN", "TƯƠNG_THÍCH_THÀNH_PHẦN")
-        isComparisonOrRoutine = uIntentVal in ("COMPARISON", "PRODUCT_COMPARISON", "ROUTINE_RECOMMENDATION", "ROUTINE")
 
         blocks: List[str] = []
         for idx, cand in enumerate(candidates[:maxProds], 1):
             p = cand.product
             priceFmt = f"{p.price:,.0f} VND"
             skins = ", ".join(p.skinType) if p.skinType else "Mọi loại da"
-            concerns = ", ".join(p.concerns) if p.concerns else "Không chỉ định"
+            concerns = ", ".join(p.concerns) if p.concerns else "Chăm sóc chung"
             pType = getattr(p, "targetType", "PRODUCT") or getattr(p, "target_type", "PRODUCT") or "PRODUCT"
             duration = getattr(p, "durationMinutes", 0) or getattr(p, "duration_minutes", 0) or 0
-            relevanceExpl = cand.relevanceExplanation or getattr(cand, "relevance_explanation", "") or "Phù hợp với tiêu chí của bạn"
+            durationStr = f" ({duration}p)" if duration else ""
+            ingr = (p.ingredients[:80] + "...") if len(p.ingredients) > 80 else p.ingredients
 
-            ingr = (p.ingredients[:160] + "...") if len(p.ingredients) > 160 else p.ingredients
-            ben = (p.benefits[:160] + "...") if len(p.benefits) > 160 else p.benefits
-
-            if isPriceQuery:
-                if pType == "SERVICE":
-                    durationStr = f" | Thời lượng: {duration} phút" if duration else ""
-                    block = (
-                        f"### [Tài liệu {idx}]: {p.name}\n"
-                        f"- Cơ sở: {p.brand} | Danh mục: {p.category}{durationStr}\n"
-                        f"- Giá dịch vụ niêm yết: {priceFmt}\n"
-                        f"- Điểm tương thích: {relevanceExpl}"
-                    )
-                else:
-                    block = (
-                        f"### [Tài liệu {idx}]: {p.name}\n"
-                        f"- Thương hiệu: {p.brand} | Danh mục: {p.category}\n"
-                        f"- Giá niêm yết: {priceFmt}\n"
-                        f"- Tình trạng kho: Còn hàng\n"
-                        f"- Điểm tương thích: {relevanceExpl}"
-                    )
-            elif isIngredientQuery:
-                block = (
-                    f"### [Tài liệu {idx}]: {p.name}\n"
-                    f"- Thương hiệu: {p.brand}\n"
-                    f"- Thành phần cốt lõi: {p.ingredients}\n"
-                    f"- Chỉ định loại da: {skins}\n"
-                    f"- Vấn đề giải quyết: {concerns}\n"
-                    f"- Công dụng chính: {ben}\n"
-                    f"- Điểm tương thích: {relevanceExpl}"
-                )
-            elif isComparisonOrRoutine:
-                block = (
-                    f"### [Tài liệu {idx}]: {p.name}\n"
-                    f"- Thương hiệu: {p.brand} | Danh mục: {p.category}\n"
-                    f"- Giá niêm yết: {priceFmt}\n"
-                    f"- Chỉ định loại da: {skins}\n"
-                    f"- Hoạt chất chính: {ingr}\n"
-                    f"- Công dụng & Lợi ích: {ben}\n"
-                    f"- Điểm tương thích: {relevanceExpl}"
-                )
+            if pType == "SERVICE":
+                block = f"[{idx}] {p.name}{durationStr} | Cơ sở: {p.brand} | Giá: {priceFmt} | Phù hợp: {skins} ({concerns})"
             else:
-                if pType == "SERVICE":
-                    durationStr = f" | Thời lượng: {duration} phút" if duration else ""
-                    block = (
-                        f"### [Tài liệu {idx}]: {p.name}\n"
-                        f"- Cơ sở: {p.brand} | Danh mục: {p.category}{durationStr}\n"
-                        f"- Giá dịch vụ niêm yết: {priceFmt}\n"
-                        f"- Chỉ định loại da: {skins}\n"
-                        f"- Vấn đề giải quyết: {concerns}\n"
-                        f"- Công nghệ / Hoạt chất: {ingr}\n"
-                        f"- Điểm tương thích: {relevanceExpl}"
-                    )
-                else:
-                    block = (
-                        f"### [Tài liệu {idx}]: {p.name}\n"
-                        f"- Thương hiệu: {p.brand} | Danh mục: {p.category}\n"
-                        f"- Giá niêm yết: {priceFmt}\n"
-                        f"- Chỉ định loại da: {skins}\n"
-                        f"- Vấn đề giải quyết: {concerns}\n"
-                        f"- Hoạt chất chính: {ingr}\n"
-                        f"- Công dụng: {ben}\n"
-                        f"- Điểm tương thích: {relevanceExpl}"
-                    )
+                block = f"[{idx}] {p.name} | Hãng: {p.brand} | Giá: {priceFmt} | Da: {skins} | Vấn đề: {concerns} | Hoạt chất: {ingr}"
             blocks.append(block)
 
-        return "\n\n".join(blocks)
+        return "\n".join(blocks)
 
     build_product_context = buildProductContext
 
@@ -174,12 +109,12 @@ class GroundedGenerationService:
                     system_instruction=(
                         "Bạn là Chuyên viên Tư vấn Mỹ phẩm & Da liễu Chân thành, Ngắn gọn và Trực diện. "
                         "Tuyệt đối KHÔNG mở đầu sáo rỗng giả trân (như 'rất vui được đồng hành...'). "
-                        "Đi thẳng vào trọng tâm vấn đề, giải thích súc tích và tôn trọng thời gian của khách hàng. "
+                        "Đi thẳng vào trọng tâm, trả lời tối đa 2-3 câu ngắn (dưới 80 từ). "
                         "Trích xuất thông tin liên quan theo đúng câu hỏi (giá, thành phần, cách dùng). "
                         "BẮT BUỘC ghi số nguồn tương ứng dạng [1], [2] ngay sau tên sản phẩm hoặc thông tin trích dẫn. "
                         "Tuyệt đối KHÔNG sử dụng bất kỳ emoji hay biểu tượng icon nào trong câu trả lời."
                     ),
-                    max_tokens=600,
+                    max_tokens=200,
                     temperature=0.3,
                 )
                 if response:
@@ -257,7 +192,7 @@ class GroundedGenerationService:
                     "BẮT BUỘC ghi số nguồn tương ứng dạng [1], [2] ngay sau tên sản phẩm hoặc thông tin trích dẫn. "
                     "Tuyệt đối KHÔNG sử dụng bất kỳ emoji hay biểu tượng icon nào trong câu trả lời."
                 ),
-                max_tokens=600,
+                max_tokens=200,
                 temperature=0.3,
             ):
                 cleaned_token = remove_emojis(token)

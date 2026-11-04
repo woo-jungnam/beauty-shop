@@ -2,11 +2,13 @@ package com.core.beautyshop.modules.order.application.mapper;
 
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
+import com.core.beautyshop.modules.order.api.dto.SpaVisitCharge;
 import com.core.beautyshop.modules.order.application.dto.response.OrderItemResponse;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
+import com.core.beautyshop.modules.order.application.dto.response.OrderStatusHistoryResponse;
 import com.core.beautyshop.modules.order.domain.Order;
 import com.core.beautyshop.modules.order.domain.OrderItem;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -24,7 +26,7 @@ public class OrderMapper {
         this.catalogFacade = null;
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public OrderMapper(CatalogFacade catalogFacade) {
         this.catalogFacade = catalogFacade;
     }
@@ -48,7 +50,7 @@ public class OrderMapper {
                 .spaBenefitType(order.getSpaBenefitType())
                 .appointmentId(order.getAppointmentId())
                 .spaVisitItems(order.getSpaVisitItems() == null ? List.of() : order.getSpaVisitItems().stream()
-                        .map(item -> new com.core.beautyshop.modules.order.api.dto.SpaVisitCharge(item.getAppointmentItemId(),
+                        .map(item -> new SpaVisitCharge(item.getAppointmentItemId(),
                                 item.getServiceId(), item.getServiceName(), item.getUnitPrice())).toList())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
@@ -75,7 +77,7 @@ public class OrderMapper {
                 .cancelledBy(order.getCancelledBy())
                 .notes(order.getNotes())
                 .statusHistories(order.getStatusHistories() == null ? List.of() : order.getStatusHistories().stream()
-                        .map(history -> new com.core.beautyshop.modules.order.application.dto.response.OrderStatusHistoryResponse(
+                        .map(history -> new OrderStatusHistoryResponse(
                                 history.getStatus(), history.getNotes(), history.getCreatedAt())).toList())
                 .createdAt(order.getCreatedAt())
                 .items(order.getItems() != null ?
@@ -88,7 +90,7 @@ public class OrderMapper {
         return Stream.of(order.getShippingAddress(), order.getWard(), order.getDistrict(), order.getCity())
                 .filter(Objects::nonNull)
                 .map(String::trim)
-                .filter(value -> !value.isEmpty())
+                .filter(part -> !part.isEmpty())
                 .collect(Collectors.joining(", "));
     }
 

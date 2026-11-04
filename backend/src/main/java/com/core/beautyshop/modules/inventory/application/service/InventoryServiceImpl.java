@@ -11,7 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -40,11 +43,11 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.Map<Long, Integer> getAvailableQuantities(java.util.Collection<Long> variantIds) {
-        if (variantIds == null || variantIds.isEmpty()) return java.util.Map.of();
+    public Map<Long, Integer> getAvailableQuantities(Collection<Long> variantIds) {
+        if (variantIds == null || variantIds.isEmpty()) return Map.of();
         LocalDate cutoff = InventoryExpiryPolicy.saleCutoff(BusinessTime.today());
         List<Object[]> rows = warehouseStockRepository.getAvailableQuantitiesForVariantsRaw(variantIds, cutoff);
-        java.util.Map<Long, Integer> result = new java.util.HashMap<>();
+        Map<Long, Integer> result = new HashMap<>();
         for (Object[] r : rows) {
             Long vid = ((Number) r[0]).longValue();
             Integer qty = r[1] != null ? ((Number) r[1]).intValue() : 0;

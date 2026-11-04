@@ -2,6 +2,8 @@ package com.core.beautyshop.modules.spa.domain;
 
 import com.core.beautyshop.modules.spa.domain.enums.TicketStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -9,9 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.domain.*;
 
 @Repository
 public interface UserServiceTicketRepository extends JpaRepository<UserServiceTicket, Long> {
@@ -19,7 +21,7 @@ public interface UserServiceTicketRepository extends JpaRepository<UserServiceTi
             + "where e.service_id = :serviceId and e.total_sessions > e.used_sessions and t.is_deleted = false "
             + "and t.status not in ('REVOKED', 'EXPIRED') and t.order_id is not null "
             + "and (t.expiry_date is null or t.expiry_date > :now)", nativeQuery = true)
-    long countOutstandingServiceRights(@Param("serviceId") Long serviceId, @Param("now") java.time.Instant now);
+    long countOutstandingServiceRights(@Param("serviceId") Long serviceId, @Param("now") Instant now);
 
     @EntityGraph(attributePaths = {"servicePackage", "servicePackage.items", "servicePackage.items.service"})
     List<UserServiceTicket> findByUserId(Long userId);

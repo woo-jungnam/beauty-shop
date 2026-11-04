@@ -2,6 +2,7 @@ package com.core.beautyshop.shared.security.services;
 
 import com.core.beautyshop.modules.identity.domain.User;
 import com.core.beautyshop.modules.identity.domain.UserRepository;
+import com.core.beautyshop.modules.identity.domain.enums.AccountStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -22,7 +23,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = (usernameOrEmail.contains("@") ? userRepository.findByEmail(usernameOrEmail) : userRepository.findByUsername(usernameOrEmail))
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với tên đăng nhập hoặc email: " + usernameOrEmail));
 
-        if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getStatus() != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) {
+        if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getStatus() != AccountStatus.ACTIVE) {
             throw new DisabledException("Account is " + user.getStatus());
         }
         return UserDetailsImpl.build(user);

@@ -9,6 +9,8 @@ import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.inventory.domain.WarehouseRepository;
 import com.core.beautyshop.modules.inventory.domain.WarehouseStockRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +24,7 @@ public class WarehouseServiceImpl implements WarehouseService {
 
     private final WarehouseRepository warehouseRepository;
     private final WarehouseStockRepository stocks;
-    private final jakarta.persistence.EntityManager entities;
+    private final EntityManager entities;
 
     @Override
     @Transactional(readOnly = true)
@@ -91,9 +93,9 @@ public class WarehouseServiceImpl implements WarehouseService {
     public void deleteWarehouse(Long id) {
         Warehouse warehouse = warehouseRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho với id: " + id));
-        entities.refresh(warehouse, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        entities.refresh(warehouse, LockModeType.PESSIMISTIC_WRITE);
         for (var stock : stocks.findAllByWarehouseIdForUpdate(id)) {
-            entities.refresh(stock, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            entities.refresh(stock, LockModeType.PESSIMISTIC_WRITE);
             if (hasBalance(stock.getQuantity()) || hasBalance(stock.getReservedQuantity()) || hasBalance(stock.getQuarantinedQuantity()))
                 throw new BusinessException("Kho bãi vẫn còn tồn kho, hàng giữ chỗ cho đơn hoặc hàng cách ly; vui lòng giải phóng trước khi xóa kho");
         }

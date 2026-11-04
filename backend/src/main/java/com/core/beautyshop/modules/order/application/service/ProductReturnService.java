@@ -12,7 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
+import org.springframework.security.access.AccessDeniedException;
 import java.math.*;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.*;
 import java.util.*;
 
@@ -162,8 +165,8 @@ public class ProductReturnService {
     private void owned(Order order,String session) {
         if(SecurityUtils.isAdmin())return;
         if(order.getUserId()!=null&&SecurityUtils.getCurrentUserIdOptional().filter(order.getUserId()::equals).isPresent())return;
-        if(order.getUserId()==null&&session!=null&&order.getGuestSessionId()!=null&&java.security.MessageDigest.isEqual(session.getBytes(java.nio.charset.StandardCharsets.UTF_8),order.getGuestSessionId().getBytes(java.nio.charset.StandardCharsets.UTF_8)))return;
-        throw new org.springframework.security.access.AccessDeniedException("Order ownership required");
+        if(order.getUserId()==null&&session!=null&&order.getGuestSessionId()!=null&&MessageDigest.isEqual(session.getBytes(StandardCharsets.UTF_8),order.getGuestSessionId().getBytes(StandardCharsets.UTF_8)))return;
+        throw new AccessDeniedException("Order ownership required");
     }
     private List<Line> lines(ProductReturn row){try{return mapper.readValue(row.getLinesJson(),new TypeReference<List<Line>>(){});}catch(Exception e){throw new IllegalStateException(e);}}
     private String json(Object data){try{return mapper.writeValueAsString(data);}catch(Exception e){throw new IllegalArgumentException(e);}}

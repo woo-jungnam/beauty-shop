@@ -1,5 +1,6 @@
 package com.core.beautyshop.shared.config;
 
+import com.core.beautyshop.shared.security.StaffPermissionInterceptor;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.*;
@@ -52,7 +53,7 @@ public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, Gl
         operation.addExtension("x-access-mode", mode);
         operation.addExtension("x-module", module(handler.getBeanType()));
         String verb=mapping==null || mapping.method().length==0 ? "GET" : mapping.method()[0].name();
-        String permission=com.core.beautyshop.shared.security.StaffPermissionInterceptor.requiredPermission(path,verb);
+        String permission=StaffPermissionInterceptor.requiredPermission(path,verb);
         if(permission!=null)operation.addExtension("x-staff-permission",permission);
         if(operation.getSummary()==null || operation.getSummary().isBlank()) {
             String action=switch(verb){case "GET" -> "Tra cứu";case "DELETE" -> "Xóa";case "PUT","PATCH" -> "Cập nhật";default -> "Thực hiện";};

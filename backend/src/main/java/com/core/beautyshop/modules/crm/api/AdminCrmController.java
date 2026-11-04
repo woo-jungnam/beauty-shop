@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,14 +22,14 @@ public class AdminCrmController {
     private final CustomerCareService service;
 
     public record ReceptionCustomerCommand(
-            @jakarta.validation.constraints.NotBlank(message = "Vui lòng nhập họ tên khách.")
-            @jakarta.validation.constraints.Size(max = 100, message = "Họ tên không được vượt quá 100 ký tự.") String fullName,
-            @jakarta.validation.constraints.NotBlank(message = "Vui lòng nhập số điện thoại khách.")
-            @jakarta.validation.constraints.Size(max = 20, message = "Số điện thoại không được vượt quá 20 ký tự.") String phone) {}
+            @NotBlank(message = "Vui lòng nhập họ tên khách.")
+            @Size(max = 100, message = "Họ tên không được vượt quá 100 ký tự.") String fullName,
+            @NotBlank(message = "Vui lòng nhập số điện thoại khách.")
+            @Size(max = 20, message = "Số điện thoại không được vượt quá 20 ký tự.") String phone) {}
 
     @Operation(summary = "Tạo hồ sơ khách vãng lai tại quầy", description = "ADMIN/STAFF; chỉ tạo vai trò CUSTOMER. SĐT chuẩn hóa về 0xxxxxxxxx; hồ sơ khách đang hoạt động có cùng SĐT được dùng lại, không thay đổi thông tin cũ.")
     @PostMapping("/customers")
-    public ApiResponse<CustomerCareService.CustomerView> createCustomer(@jakarta.validation.Valid @RequestBody ReceptionCustomerCommand command) {
+    public ApiResponse<CustomerCareService.CustomerView> createCustomer(@Valid @RequestBody ReceptionCustomerCommand command) {
         return ApiResponse.success(service.createCustomer(command.fullName(), command.phone()), "Hồ sơ khách đã sẵn sàng.");
     }
 

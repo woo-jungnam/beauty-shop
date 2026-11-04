@@ -14,6 +14,7 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -186,7 +187,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
                 .build();
     }
 
-    private void validatePrices(java.math.BigDecimal price, java.math.BigDecimal discountPrice) {
+    private void validatePrices(BigDecimal price, BigDecimal discountPrice) {
         if (price == null || price.signum() < 0) {
             throw new BusinessException("Giá sản phẩm phải lớn hơn hoặc bằng 0");
         }

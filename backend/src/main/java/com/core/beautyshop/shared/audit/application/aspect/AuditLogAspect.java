@@ -10,15 +10,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.util.Locale;
+import java.util.Set;
 
 @Slf4j
 @Aspect
 @Component
 @RequiredArgsConstructor
-@org.springframework.core.annotation.Order(0)
+@Order(0)
 public class AuditLogAspect {
 
     private final AuditLogWriter auditLogWriter;
@@ -58,7 +62,7 @@ public class AuditLogAspect {
         boolean mutation = "POST".equals(method) || "PUT".equals(method) || "PATCH".equals(method) || "DELETE".equals(method);
         boolean managedPath = uri.startsWith("/api/v1/admin/") || uri.startsWith("/api/v1/users/admin/")
                 || uri.startsWith("/api/v1/roles") || uri.startsWith("/api/v1/chatbot/sync/") || uri.startsWith("/api/v1/chatbot/test/")
-                || java.util.Set.of("products", "categories", "brands", "attributes", "tags").stream()
+                || Set.of("products", "categories", "brands", "attributes", "tags").stream()
                     .anyMatch(resource -> request.getRequestURI().matches(".*/api/v1/" + resource + "(?:/.*)?"))
                 || uri.matches("/api/v1/auth/(login|logout|register|refresh)");
         if (!mutation || !managedPath) return joinPoint.proceed();
@@ -76,12 +80,12 @@ public class AuditLogAspect {
     private String resourceType(String uri) {
         String[] parts = uri.split("/");
         for (int i = 0; i < parts.length; i++) if ("admin".equals(parts[i]) && i + 1 < parts.length) return parts[i + 1].toUpperCase();
-        for (int i = 0; i < parts.length; i++) if ("v1".equals(parts[i]) && i + 1 < parts.length) return parts[i + 1].toUpperCase(java.util.Locale.ROOT);
+        for (int i = 0; i < parts.length; i++) if ("v1".equals(parts[i]) && i + 1 < parts.length) return parts[i + 1].toUpperCase(Locale.ROOT);
         return "SYSTEM";
     }
 
     private String action(String method, String uri) {
-        if (uri.startsWith("/api/v1/auth/")) return "AUTH_" + uri.substring(uri.lastIndexOf('/') + 1).toUpperCase(java.util.Locale.ROOT);
+        if (uri.startsWith("/api/v1/auth/")) return "AUTH_" + uri.substring(uri.lastIndexOf('/') + 1).toUpperCase(Locale.ROOT);
         return "HTTP_" + method;
     }
 

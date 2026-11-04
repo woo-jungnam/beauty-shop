@@ -1,6 +1,8 @@
 package com.core.beautyshop.modules.identity.application.dto.response;
 
+import com.core.beautyshop.modules.identity.domain.enums.AccountStatus;
 import com.core.beautyshop.modules.identity.domain.enums.Gender;
+import com.core.beautyshop.modules.identity.domain.enums.MembershipTier;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,11 +51,11 @@ public class UserProfileResponse {
     private List<String> permissions;
 
     @Schema(description = "Hạng thành viên (MEMBER, SILVER, GOLD, PLATINUM)", example = "GOLD")
-    private com.core.beautyshop.modules.identity.domain.enums.MembershipTier membershipTier;
+    private MembershipTier membershipTier;
 
     @Schema(description = "Điểm tích lũy thành viên", example = "450")
     private Integer loyaltyPoints;
 
     @Schema(description = "Trạng thái tài khoản", example = "ACTIVE")
-    private com.core.beautyshop.modules.identity.domain.enums.AccountStatus status;
+    private AccountStatus status;
 }

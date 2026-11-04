@@ -85,6 +85,7 @@ class Intent(str, Enum):
     ORDER_STATUS = "ORDER_STATUS"
     OUT_OF_DOMAIN = "OUT_OF_DOMAIN"
     UNKNOWN = "UNKNOWN"
+    CONSULTATION = "CONSULTATION"
 
 
 UserIntent = Intent
@@ -102,13 +103,38 @@ PRIMARY_TO_LEGACY_INTENT = {
     PrimaryIntent.TAC_DUNG_THANH_PHAN.value: Intent.GENERAL_INFORMATION,
     PrimaryIntent.TUONG_THICH_THANH_PHAN.value: Intent.COMPARISON,
     PrimaryIntent.PHU_HOP_LAN_DA.value: Intent.PRODUCT_DETAIL,
-    PrimaryIntent.VAN_DE_DA.value: Intent.PRODUCT_SEARCH,
+    PrimaryIntent.VAN_DE_DA.value: Intent.CONSULTATION,
     PrimaryIntent.HO_TRO_DON_HANG.value: Intent.ORDER_STATUS,
     PrimaryIntent.DICH_VU_LAM_DEP.value: Intent.PRODUCT_SEARCH,
     PrimaryIntent.DAT_LICH.value: Intent.PRODUCT_SEARCH,
     PrimaryIntent.CHAO_HOI.value: Intent.GENERAL_CHAT,
     PrimaryIntent.NGOAI_PHAM_VI.value: Intent.OUT_OF_DOMAIN,
     PrimaryIntent.KHONG_XAC_DINH.value: Intent.UNKNOWN,
+    # Shorthand intents for fast LLM JSON
+    "SEARCH": Intent.PRODUCT_SEARCH,
+    "DETAIL": Intent.PRODUCT_DETAIL,
+    "COMPARE": Intent.COMPARISON,
+    "ROUTINE": Intent.ROUTINE_RECOMMENDATION,
+    "BOOKING": Intent.PRODUCT_SEARCH,
+    "ORDER": Intent.ORDER_STATUS,
+    "CHAT": Intent.GENERAL_CHAT,
+    "OUT_OF_DOMAIN": Intent.OUT_OF_DOMAIN,
+    "CONSULTATION": Intent.CONSULTATION,
+}
+
+LEGACY_TO_PRIMARY_INTENT = {
+    Intent.PRODUCT_SEARCH: PrimaryIntent.TU_VAN_SAN_PHAM.value,
+    Intent.PRODUCT_DETAIL: PrimaryIntent.THONG_TIN_SAN_PHAM.value,
+    Intent.PRICE_QUERY: PrimaryIntent.GIA_NGAN_SACH.value,
+    Intent.AVAILABILITY_QUERY: PrimaryIntent.THONG_TIN_SAN_PHAM.value,
+    Intent.COMPARISON: PrimaryIntent.SO_SANH_SAN_PHAM.value,
+    Intent.ROUTINE_RECOMMENDATION: PrimaryIntent.XAY_DUNG_CHU_TRINH.value,
+    Intent.GENERAL_INFORMATION: PrimaryIntent.HOI_DAP_SAN_PHAM.value,
+    Intent.GENERAL_CHAT: PrimaryIntent.CHAO_HOI.value,
+    Intent.ORDER_STATUS: PrimaryIntent.HO_TRO_DON_HANG.value,
+    Intent.OUT_OF_DOMAIN: PrimaryIntent.NGOAI_PHAM_VI.value,
+    Intent.UNKNOWN: PrimaryIntent.KHONG_XAC_DINH.value,
+    Intent.CONSULTATION: PrimaryIntent.VAN_DE_DA.value,
 }
 
 LEGACY_TO_PRIMARY_INTENT = {
@@ -309,14 +335,14 @@ def checkBareOrMissingIntent(rawQuery: str, data: dict | None = None) -> tuple[b
     if not q:
         return True, "PRODUCT", None
 
-    # Kiểm tra hành vi / câu hỏi / mục đích cụ thể
+    # Kiểm tra hành vi / câu hỏi / mục đích cụ thể (loại trừ các trợ từ nghi vấn như "được không")
     action_keywords = [
         "tìm", "tư vấn", "gợi ý", "cho mình", "mua", "giá", "bao nhiêu", "nhiêu",
         "đặt lịch", "hẹn lịch", "lịch hẹn", "so sánh", "dùng như thế nào", "cách dùng",
         "có loại nào", "nào tốt", "sao ạ", "khác gì", "dùng được không", "kết hợp",
         "dùng chung", "hỏi về", "bảng giá", "chi phí", "bao nhiêu tiền", "đổi trả",
         "vận chuyển", "đơn hàng", "tại sao", "cơ chế", "thế nào", "có tốt không",
-        "phù hợp không", "xem", "chọn", "được không"
+        "phù hợp không", "xem", "chọn"
     ]
     has_action = any(w in q for w in action_keywords)
 
@@ -338,6 +364,20 @@ def checkBareOrMissingIntent(rawQuery: str, data: dict | None = None) -> tuple[b
     ]
     has_brand = any(b in q for b in brand_keywords)
 
+    # Kiểm tra danh mục cụ thể đã biết
+    known_specific_categories = [
+        "kem chống nắng", "kcn", "sữa rửa mặt", "srm", "toner", "nước hoa hồng",
+        "serum", "kem dưỡng", "tẩy trang", "nước tẩy trang", "son môi", "mặt nạ",
+        "tẩy da chết", "tẩy tế bào chết", "xịt khoáng", "dầu gội", "sữa tắm", "dưỡng thể"
+    ]
+    has_specific_cat = any(c in q for c in known_specific_categories)
+
+    # Kiểm tra nếu người dùng yêu cầu mua/đặt sản phẩm chung chung nhưng chưa có mặt hàng hay loại da nào cụ thể
+    product_intent_words = ["đặt sản phẩm", "mua sản phẩm", "đặt hàng", "mua hàng", "lên đơn", "chọn sản phẩm", "tư vấn sản phẩm"]
+    has_general_product_intent = any(w in q for w in product_intent_words) or ("sản phẩm" in q and any(w in q for w in ["đặt", "mua", "lấy", "hỗ trợ"]))
+    if has_general_product_intent and not (has_specific_detail or has_brand or has_specific_cat):
+        return True, "PRODUCT", "sản phẩm"
+
     # Kiểm tra nếu dữ liệu đã có ngữ cảnh tích lũy từ lượt trước (loại da, vấn đề da, hoạt chất, thương hiệu):
     cDict = (dataDict.get("constraints") or {}) if isinstance(dataDict, dict) else {}
     pDict = (dataDict.get("preferences") or {}) if isinstance(dataDict, dict) else {}
@@ -353,8 +393,8 @@ def checkBareOrMissingIntent(rawQuery: str, data: dict | None = None) -> tuple[b
         or pDict.get("ingredients")
     )
 
-    # Nếu câu có hành động, có thuộc tính, có thương hiệu hoặc ĐÃ CÓ NGỮ CẢNH TỪ LƯỢT TRƯỚC: Intent ĐÃ CÓ DỮ LIỆU!
-    if has_action or has_specific_detail or has_brand or has_prior_context:
+    # Nếu câu có hành động kèm danh mục cụ thể, hoặc có thuộc tính, có thương hiệu hoặc ĐÃ CÓ NGỮ CẢNH: Intent ĐÃ CÓ DỮ LIỆU!
+    if (has_action and has_specific_cat) or has_specific_detail or has_brand or has_prior_context:
         return False, "PRODUCT", None
 
     # Nếu câu không có hành vi và không có thuộc tính: Chuẩn hóa chuỗi để nhận diện danh từ trần trụi
@@ -624,7 +664,7 @@ class UnderstandingResult(BaseModel):
         if not isinstance(data.get("constraints"), dict):
             data["constraints"] = {}
 
-        # 0. XỬ LÝ TRUY VẤN NGOÀI PHẠM VI (Out of Domain)
+        # 0. XỬ LÝ TRUY VẤN NGOÀI PHẠM VI (Out of Domain) HOẶC CHÀO HỎI (General Chat)
         if (
             curPVal in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI")
             or legIVal in (Intent.OUT_OF_DOMAIN.value, "OUT_OF_DOMAIN")
@@ -632,6 +672,22 @@ class UnderstandingResult(BaseModel):
         ):
             data["primary_intent"] = PrimaryIntent.NGOAI_PHAM_VI.value
             data["intent"] = Intent.OUT_OF_DOMAIN
+            data["needs_clarification"] = False
+            data["action_routing"] = ActionRouting.FAST_PATH.value
+            data["information_score"] = 0.0
+            data["clarification_question"] = None
+            if not isinstance(data.get("dialogue_state"), dict):
+                data["dialogue_state"] = {}
+            data["dialogue_state"]["needs_clarification"] = False
+            data["dialogue_state"]["clarification_question"] = None
+            return data
+
+        if (
+            curPVal in (PrimaryIntent.CHAO_HOI.value, "CHÀO_HỎI", "CHAO_HOI")
+            or legIVal in (Intent.GENERAL_CHAT.value, "GENERAL_CHAT")
+        ):
+            data["primary_intent"] = PrimaryIntent.CHAO_HOI.value
+            data["intent"] = Intent.GENERAL_CHAT
             data["needs_clarification"] = False
             data["action_routing"] = ActionRouting.FAST_PATH.value
             data["information_score"] = 0.0
@@ -698,7 +754,13 @@ class UnderstandingResult(BaseModel):
             "dịch vụ chăm sóc", "dịch vụ làm đẹp", "chăm sóc da", "spa", "gói chăm sóc",
             "mần đẹp", "tiệm", "liệu trình", "đặt lịch", "hẹn lịch"
         )
-        if any(k in rawQLower for k in spaKeywords):
+        productKeywords = ("sản phẩm", "san pham", "đặt sản phẩm", "mua sản phẩm", "đặt hàng", "mua hàng", "lên đơn", "mua đồ", "mỹ phẩm")
+        if any(w in rawQLower for w in productKeywords):
+            targetTypeVal = "PRODUCT"
+            if curPVal in (PrimaryIntent.DAT_LICH.value, "ĐẶT_LỊCH", "DAT_LICH"):
+                data["primary_intent"] = PrimaryIntent.TU_VAN_SAN_PHAM.value
+                data["intent"] = Intent.PRODUCT_SEARCH
+        elif any(k in rawQLower for k in spaKeywords):
             if not targetTypeVal or targetTypeVal not in ("SERVICE", "COMBO"):
                 hasComboIndicator = "combo" in rawQLower or "kèm" in rawQLower or "cùng với" in rawQLower
                 targetTypeVal = "COMBO" if hasComboIndicator else "SERVICE"

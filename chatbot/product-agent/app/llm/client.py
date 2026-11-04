@@ -255,7 +255,7 @@ class LLMClient:
             "model": self.model,
             "messages": messages,
             "temperature": 0.0,
-            "max_tokens": 1500,
+            "max_tokens": 150,
             "response_format": {"type": "json_object"},
         }
 
@@ -317,12 +317,12 @@ class LLMClient:
         self,
         prompt: str,
         systemInstruction: str = "Bạn là trợ lý tư vấn mỹ phẩm cao cấp và tận tâm.",
-        maxTokens: int = 800,
+        maxTokens: int = 200,
         temperature: float = 0.4,
         **kwargs: Any,
     ) -> str:
         sysInst = systemInstruction if "systemInstruction" in kwargs or systemInstruction != "Bạn là trợ lý tư vấn mỹ phẩm cao cấp và tận tâm." else kwargs.get("system_instruction", systemInstruction)
-        mTokens = maxTokens if "maxTokens" in kwargs or maxTokens != 800 else kwargs.get("max_tokens", maxTokens)
+        mTokens = maxTokens if "maxTokens" in kwargs or maxTokens != 200 else kwargs.get("max_tokens", maxTokens)
 
         if not self.apiKey or self.apiKey in ("your_llm_api_key_here", ""):
             raise LLMAuthenticationError("Chưa cấu hình LLM_API_KEY hợp lệ trong môi trường.")
@@ -393,12 +393,12 @@ class LLMClient:
         self,
         prompt: str,
         systemInstruction: str = "Bạn là trợ lý tư vấn mỹ phẩm cao cấp và tận tâm.",
-        maxTokens: int = 500,
+        maxTokens: int = 200,
         temperature: float = 0.3,
         **kwargs: Any,
     ):
         sysInst = systemInstruction if "systemInstruction" in kwargs or systemInstruction != "Bạn là trợ lý tư vấn mỹ phẩm cao cấp và tận tâm." else kwargs.get("system_instruction", systemInstruction)
-        mTokens = maxTokens if "maxTokens" in kwargs or maxTokens != 500 else kwargs.get("max_tokens", maxTokens)
+        mTokens = maxTokens if "maxTokens" in kwargs or maxTokens != 200 else kwargs.get("max_tokens", maxTokens)
 
         if not self.apiKey or self.apiKey in ("your_llm_api_key_here", ""):
             raise LLMAuthenticationError("Chưa cấu hình LLM_API_KEY hợp lệ trong môi trường.")
@@ -568,6 +568,47 @@ class LLMClient:
             parsedData = parsedData["understanding_result"]
 
         if isinstance(parsedData, dict):
+            # Flat JSON mapping từ prompt tối ưu
+            rawIntent = str(parsedData.get("intent") or "").upper()
+            shortMap = {
+                "SEARCH": ("PRODUCT_SEARCH", "TƯ_VẤN_SẢN_PHẨM"),
+                "DETAIL": ("PRODUCT_DETAIL", "THÔNG_TIN_SẢN_PHẨM"),
+                "COMPARE": ("COMPARISON", "SO_SÁNH_SẢN_PHẨM"),
+                "ROUTINE": ("ROUTINE_RECOMMENDATION", "XÂY_DỰNG_CHU_TRINH"),
+                "BOOKING": ("PRODUCT_SEARCH", "ĐẶT_LỊCH"),
+                "ORDER": ("ORDER_STATUS", "HỖ_TRỢ_ĐƠN_HÀNG"),
+                "CHAT": ("GENERAL_CHAT", "CHÀO_HỎI"),
+                "OUT_OF_DOMAIN": ("OUT_OF_DOMAIN", "NGOÀI_PHẠM_VI"),
+                "CONSULTATION": ("CONSULTATION", "VẤN_ĐỀ_DA"),
+            }
+            if rawIntent in shortMap:
+                parsedData["intent"], parsedData["primary_intent"] = shortMap[rawIntent]
+
+            if not isinstance(parsedData.get("constraints"), dict):
+                parsedData["constraints"] = {}
+            if not isinstance(parsedData.get("preferences"), dict):
+                parsedData["preferences"] = {}
+
+            cDict = parsedData["constraints"]
+            pDict = parsedData["preferences"]
+
+            if "skin_type" in parsedData and parsedData["skin_type"] and "skin_type" not in cDict:
+                cDict["skin_type"] = parsedData["skin_type"]
+            if "max_price" in parsedData and parsedData["max_price"] and "max_price" not in cDict:
+                cDict["max_price"] = parsedData["max_price"]
+            if "category" in parsedData and parsedData["category"] and "category" not in cDict:
+                cDict["category"] = parsedData["category"]
+            if "brand" in parsedData and parsedData["brand"] and "brand" not in cDict:
+                cDict["brand"] = parsedData["brand"]
+
+            if "concerns" in parsedData and parsedData["concerns"] and "concerns" not in pDict:
+                pDict["concerns"] = parsedData["concerns"] if isinstance(parsedData["concerns"], list) else [str(parsedData["concerns"])]
+            if "ingredients" in parsedData and parsedData["ingredients"] and "ingredients" not in pDict:
+                pDict["ingredients"] = parsedData["ingredients"] if isinstance(parsedData["ingredients"], list) else [str(parsedData["ingredients"])]
+
+            if parsedData.get("clarify_question") and not parsedData.get("clarification_question"):
+                parsedData["clarification_question"] = parsedData["clarify_question"]
+
             if isinstance(parsedData.get("primary_intent"), dict):
                 p_in = parsedData["primary_intent"]
                 parsedData["primary_intent"] = str(p_in.get("primary_intent") or p_in.get("intent") or "TƯ_VẤN_SẢN_PHẨM")
@@ -631,20 +672,25 @@ class LLMClient:
                         if parsedData.get("primary_intent") == "XÂY_DỰNG_CHU_TRINH":
                             parsedData["primary_intent"] = "TƯ_VẤN_SẢN_PHẨM"
 
-            spaKeywords = ("triệt lông", "peel da", "massage", "lấy nhân mụn", "soi da", "điện di", "vi kim", "spa")
-            if any(k in origLower for k in spaKeywords):
-                if not any(w in origLower for w in ("kèm", "combo")):
-                    parsedData["target_type"] = "SERVICE"
-                    if "constraints" in parsedData and isinstance(parsedData["constraints"], dict):
-                        parsedData["constraints"]["target_type"] = "SERVICE"
-                    if "entities" in parsedData and isinstance(parsedData["entities"], dict):
-                        parsedData["entities"]["target_type"] = "SERVICE"
+            # 1. Đảm bảo target_type xác định đúng theo từ khóa truy vấn
+            if any(w in origLower for w in ("sản phẩm", "san pham", "đặt sản phẩm", "mua sản phẩm", "đặt hàng", "mua hàng", "lên đơn", "mỹ phẩm")):
+                curTarget = "PRODUCT"
+                if "constraints" in parsedData and isinstance(parsedData["constraints"], dict):
+                    parsedData["constraints"]["target_type"] = "PRODUCT"
+            else:
+                spaKeywords = ("triệt lông", "peel da", "massage", "lấy nhân mụn", "soi da", "điện di", "vi kim", "spa")
+                if any(k in origLower for k in spaKeywords):
+                    if not any(w in origLower for w in ("kèm", "combo")):
+                        parsedData["target_type"] = "SERVICE"
+                        if "constraints" in parsedData and isinstance(parsedData["constraints"], dict):
+                            parsedData["constraints"]["target_type"] = "SERVICE"
+                        if "entities" in parsedData and isinstance(parsedData["entities"], dict):
+                            parsedData["entities"]["target_type"] = "SERVICE"
 
-            # 1. Đảm bảo target_type tuyệt đối không bao giờ để null
-            curTarget = parsedData.get("target_type") or parsedData.get("target")
-            if not curTarget or str(curTarget).upper() in ("NONE", "NULL", ""):
-                spaKeywords = ("triệt lông", "peel da", "massage", "lấy nhân mụn", "soi da", "điện di", "vi kim", "spa", "dịch vụ chăm sóc", "chăm sóc da")
-                curTarget = "SERVICE" if any(k in origLower for k in spaKeywords) else "PRODUCT"
+                curTarget = parsedData.get("target_type") or parsedData.get("target")
+                if not curTarget or str(curTarget).upper() in ("NONE", "NULL", ""):
+                    spaKeywords = ("triệt lông", "peel da", "massage", "lấy nhân mụn", "soi da", "điện di", "vi kim", "spa", "dịch vụ chăm sóc", "chăm sóc da")
+                    curTarget = "SERVICE" if any(k in origLower for k in spaKeywords) else "PRODUCT"
             parsedData["target_type"] = str(curTarget).upper()
             parsedData["target"] = parsedData["target_type"]
 
@@ -659,7 +705,17 @@ class LLMClient:
             infoScore = calculateInformationScore(parsedData, origLower)
             parsedData["information_score"] = infoScore
 
-            if infoScore >= 3.0 and hasValidIntent:
+            isConsultation = (
+                str(parsedData.get("intent", "")).upper() == "CONSULTATION"
+                or str(parsedData.get("primary_intent", "")) in ("CONSULTATION", "VẤN_ĐỀ_DA")
+            )
+
+            if isConsultation:
+                parsedData["needs_clarification"] = True
+                parsedData["action_routing"] = "CLARIFICATION_PROMPT"
+                if isinstance(parsedData.get("dialogue_state"), dict):
+                    parsedData["dialogue_state"]["needs_clarification"] = True
+            elif infoScore >= 3.0 and hasValidIntent:
                 parsedData["needs_clarification"] = False
                 if parsedData.get("action_routing") == "CLARIFICATION_PROMPT":
                     parsedData["action_routing"] = "CONSTRAINED_HYBRID_SEARCH"

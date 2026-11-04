@@ -3,6 +3,7 @@ import com.core.beautyshop.shared.domain.Base;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.Instant;
 @Entity @Table(name="product_returns") @Getter @Setter @NoArgsConstructor
 public class ProductReturn extends Base {
     @Column(name="order_id",nullable=false) private Long orderId;
@@ -17,6 +18,6 @@ public class ProductReturn extends Base {
     @Column(name="request_key",length=100,unique=true) private String requestKey;
     @Column(name="replacement_order_id") private Long replacementOrderId;
     @Column(name="replacement_reason",length=500) private String replacementReason;
-    @Column(name="replacement_linked_at") private java.time.Instant replacementLinkedAt;
+    @Column(name="replacement_linked_at") private Instant replacementLinkedAt;
     @Column(name="replacement_linked_by") private Long replacementLinkedBy;
 }

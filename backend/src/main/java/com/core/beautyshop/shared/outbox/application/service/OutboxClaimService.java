@@ -1,6 +1,7 @@
 package com.core.beautyshop.shared.outbox.application.service;
 import com.core.beautyshop.shared.outbox.domain.*;
 import com.core.beautyshop.shared.outbox.domain.enums.OutboxStatus;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,7 @@ import java.util.*;
 @Service @RequiredArgsConstructor
 public class OutboxClaimService {
     private final OutboxMessageRepository messages;
-    private final jakarta.persistence.EntityManager entityManager;
+    private final EntityManager entityManager;
     @Transactional
     public List<OutboxMessage> claimBatch() {
         LocalDateTime now = LocalDateTime.now();

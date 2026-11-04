@@ -5,6 +5,7 @@ import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -27,7 +28,7 @@ public class BankPaymentStrategy implements PaymentStrategy {
     public PaymentInstruction processPayment(PaymentOrderDto order) {
         String transferSyntax = order.getOrderNumber();
         String amount = order.getTotalAmount() != null
-                ? order.getTotalAmount().setScale(0, java.math.RoundingMode.HALF_UP).toPlainString() : "0";
+                ? order.getTotalAmount().setScale(0, RoundingMode.HALF_UP).toPlainString() : "0";
 
         String encodedAccountName = URLEncoder.encode(bankAccountName, StandardCharsets.UTF_8);
         String encodedAddInfo = URLEncoder.encode(transferSyntax, StandardCharsets.UTF_8);

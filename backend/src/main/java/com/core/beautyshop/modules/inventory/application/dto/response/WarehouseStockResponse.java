@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.math.BigDecimal;
 
 @Data
@@ -24,7 +25,7 @@ public class WarehouseStockResponse {
     @Schema(description = "Hàng trả cách ly chờ inspection; chưa được bán và không nằm trong quantity")
     private Integer quarantinedQuantity;
     @Schema(description = "Hạn dùng YYYY-MM-DD, có thể null")
-    private java.time.LocalDate expirationDate;
+    private LocalDate expirationDate;
     @Schema(description = "Mã lô đã trim; chuỗi rỗng đại diện lô không mã")
     private String batchCode;
     private Boolean isBlocked;

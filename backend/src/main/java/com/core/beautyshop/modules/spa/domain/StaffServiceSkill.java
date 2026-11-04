@@ -4,6 +4,8 @@ import com.core.beautyshop.shared.domain.Base;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "staff_service_skills")
 @Getter
@@ -26,5 +28,5 @@ public class StaffServiceSkill extends Base {
     private Boolean isCertified = false;
 
     @Column(name = "certified_until")
-    private java.time.LocalDate certifiedUntil;
+    private LocalDate certifiedUntil;
 }

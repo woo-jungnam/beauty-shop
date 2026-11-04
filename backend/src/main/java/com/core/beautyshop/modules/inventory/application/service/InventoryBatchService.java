@@ -2,6 +2,8 @@ package com.core.beautyshop.modules.inventory.application.service;
 
 import com.core.beautyshop.modules.inventory.domain.*;
 import com.core.beautyshop.shared.exception.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
@@ -11,12 +13,12 @@ import java.util.Optional;
 public class InventoryBatchService {
     private final WarehouseRepository warehouses;
     private final WarehouseStockRepository stocks;
-    private final jakarta.persistence.EntityManager entities;
+    private final EntityManager entities;
     private final BatchRecallRepository recalls;
 
-    public void requireReceivable(Long variantId,String batchCode) {
-        stocks.lockRecallBatches(variantId,normalizeBatchCode(batchCode));
-        if(!recalls.findByVariantIdAndBatchCodeAndActiveTrue(variantId,normalizeBatchCode(batchCode)).isEmpty())
+    public void requireReceivable(Long variantId, String batchCode) {
+        stocks.lockRecallBatches(variantId, normalizeBatchCode(batchCode));
+        if (!recalls.findByVariantIdAndBatchCodeAndActiveTrue(variantId, normalizeBatchCode(batchCode)).isEmpty())
             throw new BusinessException("This batch is under active recall; resolve the recall before receiving sellable stock");
     }
 
@@ -31,7 +33,7 @@ public class InventoryBatchService {
         if (id == null) throw new BusinessException("Kho hàng là bắt buộc");
         Warehouse warehouse = warehouses.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kho hàng: " + id));
-        entities.refresh(warehouse, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        entities.refresh(warehouse, LockModeType.PESSIMISTIC_WRITE);
         return warehouse;
     }
 

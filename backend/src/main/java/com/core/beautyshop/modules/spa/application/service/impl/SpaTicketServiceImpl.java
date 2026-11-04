@@ -6,12 +6,11 @@ import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.modules.order.api.dto.CreateSpaPackageOrderCommand;
 import com.core.beautyshop.modules.order.api.dto.SpaPackageOrderResult;
 import com.core.beautyshop.modules.spa.application.dto.request.PurchasePackageRequest;
+import com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse;
 import com.core.beautyshop.modules.spa.application.dto.response.UserServiceTicketResponse;
+import com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService;
 import com.core.beautyshop.modules.spa.application.service.SpaTicketService;
-import com.core.beautyshop.modules.spa.domain.ServicePackage;
-import com.core.beautyshop.modules.spa.domain.ServicePackageRepository;
-import com.core.beautyshop.modules.spa.domain.UserServiceTicket;
-import com.core.beautyshop.modules.spa.domain.UserServiceTicketRepository;
+import com.core.beautyshop.modules.spa.domain.*;
 import com.core.beautyshop.modules.spa.domain.enums.TicketStatus;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.exception.BusinessException;
@@ -21,6 +20,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,9 +33,9 @@ public class SpaTicketServiceImpl implements SpaTicketService {
     private final ServicePackageRepository packageRepository;
     private final IdentityFacade identityFacade;
     private final OrderFacade orderFacade;
-    private final com.core.beautyshop.modules.spa.domain.SpaPurchaseSnapshotRepository snapshots;
-    private final com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService policies;
-    private final com.core.beautyshop.modules.spa.domain.BeautyServiceRepository services;
+    private final SpaPurchaseSnapshotRepository snapshots;
+    private final SpaBookingPolicyService policies;
+    private final BeautyServiceRepository services;
 
     @Override
     @Transactional(readOnly = true)
@@ -90,7 +90,7 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         if (Boolean.TRUE.equals(servicePackage.getTreatmentManaged())) {
             throw new BusinessException("Please purchase this treatment through its published treatment plan");
         }
-        if (servicePackage.getPrice() == null || servicePackage.getPrice().compareTo(java.math.BigDecimal.ONE) < 0) {
+        if (servicePackage.getPrice() == null || servicePackage.getPrice().compareTo(BigDecimal.ONE) < 0) {
             throw new BusinessException("Gói dịch vụ Spa chưa có giá thanh toán hợp lệ");
         }
 
@@ -117,7 +117,7 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         });
 
         if (request.getPurchaseToken() != null && !request.getPurchaseToken().equals(
-                com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse.token(servicePackage)))
+                ServicePackageResponse.token(servicePackage)))
             throw new BusinessException("Thông tin gói đã thay đổi. Hãy tải lại và xác nhận quyền lợi, giá trước khi mua");
         SpaPackageOrderResult result = orderFacade.createSpaPackageOrder(CreateSpaPackageOrderCommand.builder()
                 .userId(currentUserId)
@@ -132,7 +132,7 @@ public class SpaTicketServiceImpl implements SpaTicketService {
         if (snapshots.existsById(result.getOrderId())) {
             return result;
         }
-        var snapshot = new com.core.beautyshop.modules.spa.domain.SpaPurchaseSnapshot();
+        var snapshot = new SpaPurchaseSnapshot();
         snapshot.setOrderId(result.getOrderId());
         snapshot.setPackageId(servicePackage.getId());
         snapshot.setPackageName(servicePackage.getName());
@@ -147,7 +147,7 @@ public class SpaTicketServiceImpl implements SpaTicketService {
             if (quantity <= 0 || item.getService() == null) throw new BusinessException("Quyền lợi dịch vụ trong gói không hợp lệ");
             snapshot.getEntitlements().merge(item.getService().getId(), quantity, Math::addExact);
             snapshot.getServiceDetails().put(item.getService().getId(),
-                    new com.core.beautyshop.modules.spa.domain.PurchasedServiceDetail(item.getService().getName(), item.getService().getBasePrice()));
+                    new PurchasedServiceDetail(item.getService().getName(), item.getService().getBasePrice()));
         }
         snapshots.save(snapshot);
         return result;

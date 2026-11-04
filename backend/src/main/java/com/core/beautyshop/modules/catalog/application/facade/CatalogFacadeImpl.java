@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.catalog.application.facade;
 
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
+import com.core.beautyshop.modules.catalog.domain.ProductRepository;
 import com.core.beautyshop.modules.catalog.domain.ProductVariantRepository;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -9,8 +10,11 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -19,7 +23,7 @@ import java.util.stream.Collectors;
 public class CatalogFacadeImpl implements CatalogFacade {
 
     private final ProductVariantRepository productVariantRepository;
-    private final com.core.beautyshop.modules.catalog.domain.ProductRepository productRepository;
+    private final ProductRepository productRepository;
 
     @Override
     public ProductVariantSummaryDto getVariantSummaryById(Long variantId) {
@@ -54,9 +58,9 @@ public class CatalogFacadeImpl implements CatalogFacade {
     }
 
     @Override
-    public java.util.List<ProductVariantSummaryDto> getVariantSummariesForInventoryBySkus(Collection<String> skus) {
-        if (skus == null || skus.isEmpty()) return java.util.List.of();
-        var exactSkus = new java.util.HashSet<>(skus);
+    public List<ProductVariantSummaryDto> getVariantSummariesForInventoryBySkus(Collection<String> skus) {
+        if (skus == null || skus.isEmpty()) return List.of();
+        var exactSkus = new HashSet<>(skus);
         return productVariantRepository.findVariantSummariesForInventoryBySkus(exactSkus).stream()
                 .filter(dto -> exactSkus.contains(dto.getSku())).toList();
     }

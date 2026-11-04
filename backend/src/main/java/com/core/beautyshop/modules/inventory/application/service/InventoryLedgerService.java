@@ -4,6 +4,7 @@ import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.inventory.domain.*;
 import com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType;
+import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -54,7 +56,7 @@ public class InventoryLedgerService {
     @Transactional(readOnly = true)
     public LedgerView findById(Long id) {
         InventoryTransaction tx = repository.findById(id)
-                .orElseThrow(() -> new com.core.beautyshop.shared.exception.ResourceNotFoundException("Không tìm thấy giao dịch kho: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch kho: " + id));
         ProductVariantSummaryDto variant = catalogFacade.getVariantSummariesForInventory(List.of(tx.getProductVariantId())).get(tx.getProductVariantId());
         String warehouseName = warehouseRepository.findById(tx.getWarehouseId()).map(Warehouse::getName).orElse(null);
         WarehouseStock stock = warehouseStockRepository.findById(tx.getWarehouseStockId()).orElse(null);
@@ -64,7 +66,7 @@ public class InventoryLedgerService {
     @Schema(description = "Movement kho bất biến; quantityBefore/After là bucket tồn bán được, đọc type/note để phân biệt giữ/nhả tồn hoặc quarantine")
     public record LedgerView(Long id, Long stockId, Long warehouseId, String warehouseName, Long productVariantId,
             String sku, String productName, String variantName,
-            String batchCode, java.time.LocalDate expirationDate, String location,
+            String batchCode, LocalDate expirationDate, String location,
             InventoryTransactionType type,
             @Schema(description = "Lượng thao tác có dấu; không phải luôn quantityAfter−quantityBefore (reservation/return quarantine)") Integer quantity,
             Integer quantityBefore, Integer quantityAfter,

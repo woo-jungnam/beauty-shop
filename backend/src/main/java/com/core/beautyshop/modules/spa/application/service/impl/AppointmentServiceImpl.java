@@ -1,51 +1,77 @@
 package com.core.beautyshop.modules.spa.application.service.impl;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Isolation;
-
-import com.core.beautyshop.modules.identity.api.IdentityFacade;
-import com.core.beautyshop.modules.order.api.OrderFacade;
-import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
+import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
+import com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest;
 import com.core.beautyshop.modules.spa.application.dto.request.BookAppointmentRequest;
+import com.core.beautyshop.modules.spa.application.dto.request.ExecuteAppointmentItemRequest;
+import com.core.beautyshop.modules.spa.application.dto.request.RescheduleAppointmentRequest;
+import com.core.beautyshop.modules.spa.application.dto.request.UpdateAppointmentStatusRequest;
 import com.core.beautyshop.modules.spa.application.dto.response.AppointmentResponse;
 import com.core.beautyshop.modules.spa.application.service.AppointmentService;
+import com.core.beautyshop.modules.spa.application.service.FacilitySchedulingService;
+import com.core.beautyshop.modules.spa.application.service.SpaAccessService;
+import com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService;
+import com.core.beautyshop.modules.spa.application.service.SpaBusinessCalendarService;
+import com.core.beautyshop.modules.spa.application.service.SpaConsumableService;
+import com.core.beautyshop.modules.spa.application.service.SpaFinancialService;
+import com.core.beautyshop.modules.spa.application.service.SpaLoyaltyService;
+import com.core.beautyshop.modules.spa.application.service.SpaPreparationService;
 import com.core.beautyshop.modules.spa.application.service.SpaTimeRules;
-import com.core.beautyshop.modules.spa.domain.StaffScheduleRepository;
+import com.core.beautyshop.modules.spa.application.service.TicketUsageService;
+import com.core.beautyshop.modules.spa.application.service.TreatmentAppointmentBridge;
 import com.core.beautyshop.modules.spa.domain.Appointment;
+import com.core.beautyshop.modules.spa.domain.AppointmentActionHistory;
+import com.core.beautyshop.modules.spa.domain.AppointmentActionHistoryRepository;
 import com.core.beautyshop.modules.spa.domain.AppointmentItem;
 import com.core.beautyshop.modules.spa.domain.AppointmentRepository;
 import com.core.beautyshop.modules.spa.domain.BeautyService;
 import com.core.beautyshop.modules.spa.domain.BeautyServiceRepository;
 import com.core.beautyshop.modules.spa.domain.Staff;
 import com.core.beautyshop.modules.spa.domain.StaffRepository;
-import com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus;
+import com.core.beautyshop.modules.spa.domain.StaffScheduleRepository;
 import com.core.beautyshop.modules.spa.domain.UserServiceTicket;
 import com.core.beautyshop.modules.spa.domain.UserServiceTicketRepository;
+import com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus;
+import com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus;
 import com.core.beautyshop.modules.spa.domain.enums.TicketStatus;
+import com.core.beautyshop.modules.identity.api.IdentityFacade;
+import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
+import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
-
 import lombok.RequiredArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.Instant;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class AppointmentServiceImpl implements AppointmentService {
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.core.beautyshop.modules.spa.application.service.SpaLoyaltyService loyalty;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerInbox;
+    @Autowired
+    private SpaLoyaltyService loyalty;
+    @Autowired
+    private CustomerNotificationFacade customerInbox;
 
     private final AppointmentRepository appointmentRepository;
     private final BeautyServiceRepository beautyServiceRepository;
@@ -54,16 +80,16 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final IdentityFacade identityFacade;
     private final OrderFacade orderFacade;
     private final StaffScheduleRepository schedules;
-    private final com.core.beautyshop.modules.spa.application.service.SpaAccessService access;
-    private final com.core.beautyshop.modules.spa.application.service.SpaPreparationService preparation;
-    private final com.core.beautyshop.modules.spa.application.service.FacilitySchedulingService facilities;
-    private final com.core.beautyshop.modules.spa.application.service.SpaBookingPolicyService policies;
-    private final com.core.beautyshop.modules.spa.application.service.TicketUsageService usage;
-    private final com.core.beautyshop.modules.spa.domain.AppointmentActionHistoryRepository history;
-    private final com.core.beautyshop.modules.spa.application.service.TreatmentAppointmentBridge treatments;
-    private final com.core.beautyshop.modules.spa.application.service.SpaBusinessCalendarService calendar;
-    private final com.core.beautyshop.modules.spa.application.service.SpaConsumableService materials;
-    private final com.core.beautyshop.modules.spa.application.service.SpaFinancialService finance;
+    private final SpaAccessService access;
+    private final SpaPreparationService preparation;
+    private final FacilitySchedulingService facilities;
+    private final SpaBookingPolicyService policies;
+    private final TicketUsageService usage;
+    private final AppointmentActionHistoryRepository history;
+    private final TreatmentAppointmentBridge treatments;
+    private final SpaBusinessCalendarService calendar;
+    private final SpaConsumableService materials;
+    private final SpaFinancialService finance;
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -110,28 +136,28 @@ public class AppointmentServiceImpl implements AppointmentService {
         LocalTime currentStartTime = request.getStartTime();
 
         var sessionIds = request.getItems().stream()
-                .map(com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest::getTreatmentSessionItemId)
-                .filter(java.util.Objects::nonNull).toList();
+                .map(AppointmentItemRequest::getTreatmentSessionItemId)
+                .filter(Objects::nonNull).toList();
         if (sessionIds.stream().distinct().count() != sessionIds.size())
             throw new BusinessException("Một mục điều trị không thể xuất hiện hai lần trong cùng lịch hẹn");
-        request.getItems().stream().sorted(java.util.Comparator.comparing(
-                com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest::getTreatmentSessionItemId,
-                java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder())))
+        request.getItems().stream().sorted(Comparator.comparing(
+                AppointmentItemRequest::getTreatmentSessionItemId,
+                Comparator.nullsFirst(Comparator.naturalOrder())))
                 .forEach(item -> treatments.validateAndLockBooking(item.getTreatmentSessionItemId(), bookingUserId,
                         item.getServiceId(), item.getTicketId(), request.getAppointmentDate()
                                 .atTime(request.getStartTime()).atZone(SpaTimeRules.ZONE).toInstant()));
 
-        request.getItems().stream().map(com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest::getStaffId)
-                .filter(java.util.Objects::nonNull).distinct().sorted()
+        request.getItems().stream().map(AppointmentItemRequest::getStaffId)
+                .filter(Objects::nonNull).distinct().sorted()
                 .forEach(id -> staffRepository.findByIdWithLock(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Staff not found")));
-        request.getItems().stream().map(com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest::getTicketId)
-                .filter(java.util.Objects::nonNull).distinct().sorted()
+        request.getItems().stream().map(AppointmentItemRequest::getTicketId)
+                .filter(Objects::nonNull).distinct().sorted()
                 .forEach(id -> ticketRepository.findByIdForUpdate(id)
                         .filter(t -> !Boolean.TRUE.equals(t.getIsDeleted()))
                         .orElseThrow(() -> new ResourceNotFoundException("Ticket not found")));
-        request.getItems().stream().map(com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest::getServiceId)
-                .filter(java.util.Objects::nonNull).distinct().sorted()
+        request.getItems().stream().map(AppointmentItemRequest::getServiceId)
+                .filter(Objects::nonNull).distinct().sorted()
                 .forEach(id -> beautyServiceRepository.findAvailableByIdForUpdate(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Service not found")));
 
@@ -340,9 +366,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<AppointmentResponse> getAllAppointments(
-            java.time.LocalDate date, AppointmentStatus status, org.springframework.data.domain.Pageable pageable) {
-        org.springframework.data.domain.Page<Appointment> page;
+    public Page<AppointmentResponse> getAllAppointments(
+            LocalDate date, AppointmentStatus status, Pageable pageable) {
+        Page<Appointment> page;
         if (!canManageAppointments()) {
             if (!access.hasRole("SPA_THERAPIST")) throw new AccessDeniedException("Appointment management access required");
             page = appointmentRepository.findAssignedAppointments(SecurityUtils.getCurrentUserId(), date, status, pageable);
@@ -362,7 +388,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public AppointmentResponse updateAppointmentStatus(Long id, com.core.beautyshop.modules.spa.application.dto.request.UpdateAppointmentStatusRequest request) {
+    public AppointmentResponse updateAppointmentStatus(Long id, UpdateAppointmentStatusRequest request) {
         Appointment appointment = locked(id);
         treatments.lockAppointmentCourse(appointment);
         AppointmentStatus previous = appointment.getStatus(), next = request.getStatus();
@@ -455,13 +481,13 @@ public class AppointmentServiceImpl implements AppointmentService {
         return response(appointment);
     }
 
-    private void validateAndAssignStaff(Appointment appointment, java.util.Map<Long, Long> requested) {
-        var assignments = requested == null ? java.util.Map.<Long, Long>of() : requested;
+    private void validateAndAssignStaff(Appointment appointment, Map<Long, Long> requested) {
+        var assignments = requested == null ? Map.<Long, Long>of() : requested;
         for (Long itemId : assignments.keySet()) if (appointment.getItems().stream().noneMatch(item -> itemId.equals(item.getId())))
             throw new BusinessException("Phân công chuyên viên chứa dịch vụ không tồn tại trong lịch hẹn");
         var ids = appointment.getItems().stream().map(item -> assignments.getOrDefault(item.getId(), item.getStaff() == null ? null : item.getStaff().getId())).toList();
-        if (ids.stream().anyMatch(java.util.Objects::isNull)) throw new BusinessException("Vui lòng chọn chuyên viên đủ chuyên môn trước khi xác nhận");
-        var locked = new java.util.HashMap<Long, Staff>();
+        if (ids.stream().anyMatch(Objects::isNull)) throw new BusinessException("Vui lòng chọn chuyên viên đủ chuyên môn trước khi xác nhận");
+        var locked = new HashMap<Long, Staff>();
         ids.stream().distinct().sorted().forEach(staffId -> locked.put(staffId, staffRepository.findByIdWithLock(staffId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy chuyên viên"))));
         for (int i = 0; i < appointment.getItems().size(); i++) {
@@ -488,23 +514,23 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override @Transactional(isolation = Isolation.READ_COMMITTED)
-    public AppointmentResponse executeItem(Long id, Long itemId, com.core.beautyshop.modules.spa.application.dto.request.ExecuteAppointmentItemRequest request) {
+    public AppointmentResponse executeItem(Long id, Long itemId, ExecuteAppointmentItemRequest request) {
         Appointment a = locked(id);
         treatments.lockAppointmentCourse(a);
         AppointmentItem item = a.getItems().stream().filter(i -> itemId.equals(i.getId())).findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ trong lịch hẹn"));
         access.requireCanPerformItem(item);
         if (item.getTreatmentSessionItemId() != null && !access.hasRole("ADMIN")
-                && (item.getStaff() == null || !java.util.Objects.equals(item.getStaff().getUserId(), SecurityUtils.getCurrentUserId())))
+                && (item.getStaff() == null || !Objects.equals(item.getStaff().getUserId(), SecurityUtils.getCurrentUserId())))
             throw new AccessDeniedException("Chỉ chuyên viên được phân công được ghi kết quả mục điều trị này");
         if (a.getStatus() != AppointmentStatus.IN_PROGRESS) throw new BusinessException("Vui lòng bắt đầu buổi hẹn trước khi ghi nhận trạng thái thực hiện dịch vụ");
         var old = item.getExecutionStatus(); var target = request.getStatus();
         if (old == target) return response(a);
-        boolean start = old == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.PLANNED && target == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.IN_PROGRESS;
-        boolean perform = old == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.IN_PROGRESS && target == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.PERFORMED;
-        boolean skip = old == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.PLANNED && target == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.SKIPPED;
-        boolean interrupt = old == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.IN_PROGRESS
-                && target == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.SKIPPED;
+        boolean start = old == AppointmentItemExecutionStatus.PLANNED && target == AppointmentItemExecutionStatus.IN_PROGRESS;
+        boolean perform = old == AppointmentItemExecutionStatus.IN_PROGRESS && target == AppointmentItemExecutionStatus.PERFORMED;
+        boolean skip = old == AppointmentItemExecutionStatus.PLANNED && target == AppointmentItemExecutionStatus.SKIPPED;
+        boolean interrupt = old == AppointmentItemExecutionStatus.IN_PROGRESS
+                && target == AppointmentItemExecutionStatus.SKIPPED;
         skip |= interrupt;
         if (!start && !perform && !skip) throw new BusinessException("Chuyển trạng thái thực hiện dịch vụ không hợp lệ");
         if (skip && (request.getNotes() == null || request.getNotes().isBlank())) throw new BusinessException("Bỏ qua dịch vụ cần phải có lý do cụ thể");
@@ -515,7 +541,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             validateStaff(performer, item.getService(), a.getAppointmentDate());
             if (appointmentRepository.hasActiveExecutionForStaff(performer.getId(), item.getId()))
                 throw new BusinessException("Chuyên viên đang thực hiện một dịch vụ khác chưa kết thúc");
-            if (a.getItems().stream().anyMatch(i -> i.getStartTime().isBefore(item.getStartTime()) && i.getExecutionStatus() == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.PLANNED))
+            if (a.getItems().stream().anyMatch(i -> i.getStartTime().isBefore(item.getStartTime()) && i.getExecutionStatus() == AppointmentItemExecutionStatus.PLANNED))
                 throw new BusinessException("Cần hoàn tất hoặc ghi nhận dịch vụ trước đó trước khi bắt đầu dịch vụ tiếp theo");
             if (a.getItems().stream().anyMatch(i -> i != item && i.getExecutionStatus() == com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.IN_PROGRESS))
                 throw new BusinessException("Vui lòng hoàn thành dịch vụ hiện tại trước khi bắt đầu dịch vụ tiếp theo");
@@ -584,7 +610,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointment.getItems().stream()
                 .map(AppointmentItem::getStaff)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .map(Staff::getId)
                 .distinct()
                 .sorted()
@@ -601,8 +627,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             if (item.getStartTime() == null || item.getEndTime() == null) {
                 throw new BusinessException("Thiếu thông tin khung giờ hẹn ban đầu; cần kiểm tra đối soát");
             }
-            long reservedMinutes = java.time.Duration.between(item.getStartTime(), item.getEndTime()).toMinutes();
-            if (reservedMinutes <= 0 || reservedMinutes > java.time.Duration.between(currentStartTime, calendar.forDate(request.getAppointmentDate()).closesAt()).toMinutes()) {
+            long reservedMinutes = Duration.between(item.getStartTime(), item.getEndTime()).toMinutes();
+            if (reservedMinutes <= 0 || reservedMinutes > Duration.between(currentStartTime, calendar.forDate(request.getAppointmentDate()).closesAt()).toMinutes()) {
                 throw new BusinessException("Lịch hẹn mới phải nằm trong khung giờ mở cửa của cơ sở");
             }
             validateService(item.getService());
@@ -662,23 +688,23 @@ public class AppointmentServiceImpl implements AppointmentService {
         return response(saved);
     }
 
-    private java.util.Map<Long, String> resolveStaffNames(List<Appointment> appointmentList) {
-        if (appointmentList == null || appointmentList.isEmpty()) return java.util.Map.of();
+    private Map<Long, String> resolveStaffNames(List<Appointment> appointmentList) {
+        if (appointmentList == null || appointmentList.isEmpty()) return Map.of();
         List<Staff> staffList = appointmentList.stream()
                 .filter(a -> a.getItems() != null)
                 .flatMap(a -> a.getItems().stream())
                 .map(AppointmentItem::getStaff)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        if (staffList.isEmpty()) return java.util.Map.of();
+        if (staffList.isEmpty()) return Map.of();
         List<Long> userIds = staffList.stream()
                 .map(Staff::getUserId)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .distinct()
                 .toList();
         var userSummaries = identityFacade.findUserSummaries(userIds);
-        java.util.Map<Long, String> map = new java.util.HashMap<>();
+        Map<Long, String> map = new HashMap<>();
         for (Staff s : staffList) {
             if (s.getUserId() != null && userSummaries.containsKey(s.getUserId())) {
                 String name = userSummaries.get(s.getUserId()).getFullName();
@@ -704,7 +730,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         var staffNames = resolveStaffNames(List.of(a));
         return AppointmentResponse.of(a, customerName, customerPhone, staffNames);
     }
-    private Instant now() { return Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS); }
+    private Instant now() { return Instant.now().truncatedTo(ChronoUnit.MICROS); }
     private Instant scheduledStart(Appointment a) { return a.getAppointmentDate().atTime(a.getStartTime()).atZone(SpaTimeRules.ZONE).toInstant(); }
     private Instant scheduledEnd(Appointment a) { return a.getAppointmentDate().atTime(a.getEndTime() != null ? a.getEndTime() : a.getStartTime()).atZone(SpaTimeRules.ZONE).toInstant(); }
     private boolean isAppointmentPast(Appointment a) { return scheduledEnd(a).isBefore(Instant.now()); }
@@ -730,12 +756,12 @@ public class AppointmentServiceImpl implements AppointmentService {
         items.stream().filter(i -> i.getTicket() != null).forEach(i -> i.setTicket(locked.get(i.getTicket().getId())));
     }
     private void appendHistory(Appointment a, AppointmentItem item, String action, String from, String to, String details) {
-        var row = new com.core.beautyshop.modules.spa.domain.AppointmentActionHistory();
+        var row = new AppointmentActionHistory();
         row.setAppointmentId(a.getId()); row.setAppointmentItemId(item == null ? null : item.getId());
         row.setActorUserId(SecurityUtils.getCurrentUserIdOptional().orElse(null)); row.setAction(action);
         row.setFromState(from != null && from.length() <= 40 ? from : null); row.setToState(to);
         row.setDetails(details); history.save(row);
-        if(customerInbox!=null && row.getId()!=null && java.util.Set.of("BOOK","ASSIGN_STAFF","CHANGE_STATUS","CANCEL","EXPIRE_PENDING","RESCHEDULE","CHECK_IN").contains(action)) {
+        if(customerInbox!=null && row.getId()!=null && Set.of("BOOK","ASSIGN_STAFF","CHANGE_STATUS","CANCEL","EXPIRE_PENDING","RESCHEDULE","CHECK_IN").contains(action)) {
             String title=switch(action) {
                 case "BOOK" -> "Đã tiếp nhận yêu cầu đặt lịch Spa";
                 case "RESCHEDULE" -> "Lịch hẹn Spa đã đổi giờ";
@@ -749,11 +775,11 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
     }
 
-    private java.util.Map<Long, UserServiceTicket> lockTicketsInOrder(List<AppointmentItem> items) {
-        java.util.Map<Long, UserServiceTicket> locked = new java.util.HashMap<>();
+    private Map<Long, UserServiceTicket> lockTicketsInOrder(List<AppointmentItem> items) {
+        Map<Long, UserServiceTicket> locked = new HashMap<>();
         items.stream()
                 .map(AppointmentItem::getTicket)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .map(UserServiceTicket::getId)
                 .distinct()
                 .sorted()
@@ -807,20 +833,20 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .filter(a -> !Boolean.TRUE.equals(a.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lịch hẹn"));
         access.requireCanViewAppointment(appointment);
-        if (!java.util.Objects.equals(appointment.getUserId(),SecurityUtils.getCurrentUserId()) && !canManageAppointments())
+        if (!Objects.equals(appointment.getUserId(), SecurityUtils.getCurrentUserId()) && !canManageAppointments())
             throw new AccessDeniedException("Không có quyền đổi lịch hẹn này");
-        if (!java.util.Set.of(AppointmentStatus.PENDING,AppointmentStatus.CONFIRMED).contains(appointment.getStatus()) || appointment.getCheckedInAt()!=null)
+        if (!Set.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED).contains(appointment.getStatus()) || appointment.getCheckedInAt() != null)
             throw new BusinessException("Lịch hẹn này không còn được đổi giờ");
-        if (date==null || date.isBefore(LocalDate.now(SpaTimeRules.ZONE))) throw new BusinessException("Ngày hẹn không hợp lệ");
-        var hours=calendar.forDate(date); if(hours.closed()) return List.of();
-        var result=new ArrayList<String>();
-        for(int minute=hours.opensAt().getHour()*60+hours.opensAt().getMinute(); minute<hours.closesAt().getHour()*60+hours.closesAt().getMinute(); minute+=30) {
-            LocalTime start=LocalTime.of(minute/60,minute%60), cursor=start;
-            if(!date.atTime(start).isAfter(java.time.LocalDateTime.now(SpaTimeRules.ZONE))) continue;
-            boolean valid=true;
-            for(AppointmentItem item:appointment.getItems()) {
-                long duration=java.time.Duration.between(item.getStartTime(),item.getEndTime()).toMinutes();
-                if(duration<=0 || duration>java.time.Duration.between(cursor,hours.closesAt()).toMinutes()) { valid=false; break; }
+        if (date == null || date.isBefore(LocalDate.now(SpaTimeRules.ZONE))) throw new BusinessException("Ngày hẹn không hợp lệ");
+        var hours = calendar.forDate(date); if (hours.closed()) return List.of();
+        var result = new ArrayList<String>();
+        for (int minute = hours.opensAt().getHour() * 60 + hours.opensAt().getMinute(); minute < hours.closesAt().getHour() * 60 + hours.closesAt().getMinute(); minute += 30) {
+            LocalTime start = LocalTime.of(minute / 60, minute % 60), cursor = start;
+            if (!date.atTime(start).isAfter(LocalDateTime.now(SpaTimeRules.ZONE))) continue;
+            boolean valid = true;
+            for (AppointmentItem item : appointment.getItems()) {
+                long duration = Duration.between(item.getStartTime(), item.getEndTime()).toMinutes();
+                if (duration <= 0 || duration > Duration.between(cursor, hours.closesAt()).toMinutes()) { valid = false; break; }
                 LocalTime end=cursor.plusMinutes(duration), itemStart=cursor;
                 try {
                     validateService(item.getService());

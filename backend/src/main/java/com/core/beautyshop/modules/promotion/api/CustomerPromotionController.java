@@ -6,6 +6,7 @@ import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class CustomerPromotionController {
     @Operation(summary = "Kiểm tra tính hợp lệ và tính số tiền giảm của Voucher")
     @PostMapping("/validate")
     public ApiResponse<VoucherService.VoucherValidationResponse> validateVoucher(
-            @jakarta.validation.Valid @RequestBody ValidateVoucherRequest request) {
+            @Valid @RequestBody ValidateVoucherRequest request) {
         Long userId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
         VoucherService.VoucherValidationResponse response = voucherService.validateForCustomer(
                 request.code(),

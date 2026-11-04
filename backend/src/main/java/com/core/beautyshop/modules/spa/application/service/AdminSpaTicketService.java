@@ -9,7 +9,13 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
+import java.util.Map;
+import java.util.UUID;
 import com.core.beautyshop.modules.order.api.OrderFacade;
 
 @Service
@@ -40,7 +46,7 @@ public class AdminSpaTicketService {
 
     @Transactional
     public UserServiceTicketResponse extend(Long id, int days) {
-        return extend(id, days, "Legacy administrative extension", java.util.UUID.randomUUID().toString());
+        return extend(id, days, "Legacy administrative extension", UUID.randomUUID().toString());
     }
 
     @Transactional
@@ -57,7 +63,7 @@ public class AdminSpaTicketService {
         if (ticket.getUsedSessions() < ticket.getTotalSessions()) {
             if (ticket.getEntitlements().isEmpty()) throw new BusinessException("Thiếu quyền lợi trong vé; cần đối soát lại vé");
             ticket.getEntitlements().entrySet().stream().filter(entry -> entry.getValue().getTotal() > entry.getValue().getUsed())
-                    .map(java.util.Map.Entry::getKey).sorted().forEach(this::requireAvailableService);
+                    .map(Map.Entry::getKey).sorted().forEach(this::requireAvailableService);
         }
         Instant base = ticket.getExpiryDate().isBefore(Instant.now()) ? Instant.now() : ticket.getExpiryDate();
         ticket.setExpiryDate(base.plusSeconds(Math.multiplyExact((long) days, 86400L)));
@@ -68,7 +74,7 @@ public class AdminSpaTicketService {
 
     @Transactional
     public UserServiceTicketResponse compensate(Long id, Long serviceId, int sessions) {
-        return compensate(id, serviceId, sessions, "Legacy administrative compensation", java.util.UUID.randomUUID().toString());
+        return compensate(id, serviceId, sessions, "Legacy administrative compensation", UUID.randomUUID().toString());
     }
 
     @Transactional
@@ -91,8 +97,8 @@ public class AdminSpaTicketService {
     }
 
     private String fingerprint(String value) {
-        try { return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8))); }
-        catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
+        catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
     }
     private boolean replayed(UserServiceTicket ticket, String operation, String reason, String key, String fingerprint) {
         if (reason == null || reason.isBlank() || reason.length() > 1000 || key == null || !key.matches("[A-Za-z0-9:._-]{1,80}"))

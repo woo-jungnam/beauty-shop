@@ -4,8 +4,11 @@ import com.core.beautyshop.modules.spa.domain.enums.TicketStatus;
 import com.core.beautyshop.shared.domain.Base;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @Entity
 @Table(name = "user_service_tickets")
@@ -36,7 +39,7 @@ public class UserServiceTicket extends Base {
     @CollectionTable(name = "ticket_service_names", joinColumns = @JoinColumn(name = "ticket_id"))
     @MapKeyColumn(name = "service_id") @Column(name = "service_name", nullable = false, length = 255)
     @Builder.Default
-    private java.util.Map<Long, String> serviceNames = new java.util.HashMap<>();
+    private Map<Long, String> serviceNames = new HashMap<>();
 
     @Column(name = "total_sessions", nullable = false)
     private Integer totalSessions;
@@ -54,11 +57,11 @@ public class UserServiceTicket extends Base {
     private String expiryCheckMode = "BOOKING_TIME";
 
     @ElementCollection
-    @org.hibernate.annotations.BatchSize(size = 50)
+    @BatchSize(size = 50)
     @CollectionTable(name = "ticket_entitlements", joinColumns = @JoinColumn(name = "ticket_id"))
     @MapKeyColumn(name = "service_id")
     @Builder.Default
-    private java.util.Map<Long, TicketEntitlement> entitlements = new java.util.HashMap<>();
+    private Map<Long, TicketEntitlement> entitlements = new HashMap<>();
 
     @Column(name = "expiry_date")
     private Instant expiryDate;

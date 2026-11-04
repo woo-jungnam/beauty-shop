@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.identity.application.mapper;
 
+import com.core.beautyshop.modules.identity.api.StaffPermissionService;
 import com.core.beautyshop.modules.identity.application.dto.response.AuthResponse;
 import com.core.beautyshop.modules.identity.application.dto.response.UserProfileResponse;
 import com.core.beautyshop.modules.identity.domain.Role;
@@ -57,7 +58,7 @@ public class AuthMapper {
 
     private List<String> permissions(User user) {
         if(user.getRoles()!=null && user.getRoles().stream().anyMatch(r->"ROLE_ADMIN".equals(r.getName())))
-            return com.core.beautyshop.modules.identity.api.StaffPermissionService.KNOWN;
+            return StaffPermissionService.KNOWN;
         return user.getStaffPermissions()==null ? List.of() : user.getStaffPermissions().stream().sorted().toList();
     }
 }

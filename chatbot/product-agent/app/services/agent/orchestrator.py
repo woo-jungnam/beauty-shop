@@ -3,8 +3,8 @@ from typing import Any, AsyncGenerator, List, Optional
 
 from app.core.logging import LatencyTracker, getLogger
 from app.llm.client import llmClient
-from app.schemas.chat import ChatRequest, ChatResponse, ProductCard, SourceRef
-from app.schemas.query import UnderstandingResult
+from app.schemas.chat import ChatAction, ChatRequest, ChatResponse, ProductCard, SourceRef
+from app.schemas.query import PrimaryIntent, UnderstandingResult
 from app.schemas.retrieval import RerankedCandidate
 from app.services.agent.dialogue import conversationManager
 from app.services.agent.generation import generationService
@@ -29,6 +29,7 @@ class PipelinePreparedContext:
         isRetrieval: bool = True,
         nonRetrievalReply: Optional[str] = None,
         rerankedCandidates: Optional[List[RerankedCandidate]] = None,
+        actions: Optional[List[ChatAction]] = None,
         **kwargs: Any,
     ):
         self.sessionId = sessionId or kwargs.get("session_id", "")
@@ -42,6 +43,7 @@ class PipelinePreparedContext:
             self.isRetrieval = isRetrieval
         self.nonRetrievalReply = nonRetrievalReply or kwargs.get("non_retrieval_reply")
         self.rerankedCandidates = rerankedCandidates or kwargs.get("reranked_candidates")
+        self.actions = actions if actions is not None else kwargs.get("actions", [])
 
     @property
     def session_id(self) -> str:
@@ -132,6 +134,70 @@ class AgentOrchestrator:
 
     format_sources = formatSources
 
+    @staticmethod
+    def generateActions(
+        understanding: Optional[UnderstandingResult],
+        candidates: List[RerankedCandidate],
+        userMessage: str = "",
+    ) -> List[ChatAction]:
+        actions: List[ChatAction] = []
+        if not candidates:
+            return actions
+
+        pIntent = getattr(understanding, "primary_intent", None)
+        pIntentVal = getattr(pIntent, "value", str(pIntent or ""))
+        uMsgLower = userMessage.lower()
+
+        isBookingIntent = (
+            pIntentVal in (PrimaryIntent.DAT_LICH.value, "DAT_LICH", "DỊCH_VỤ_LÀM_ĐẸP", "DICH_VU_LAM_DEP")
+            or any(k in uMsgLower for k in ["đặt lịch", "dat lich", "hẹn", "booking"])
+        )
+
+        serviceCand = next(
+            (c for c in candidates if getattr(c.product, "targetType", "PRODUCT") == "SERVICE"),
+            None,
+        )
+        if serviceCand and (isBookingIntent or getattr(candidates[0].product, "targetType", "PRODUCT") == "SERVICE"):
+            sp = serviceCand.product
+            cleanSvcId = str(sp.id).replace("service_", "").replace("mysql_", "")
+            actions.append(
+                ChatAction(
+                    actionType="BOOKING_PROPOSAL",
+                    label=f"Đặt Lịch: {sp.name[:28]}",
+                    payload={
+                        "service_id": cleanSvcId,
+                        "service_name": sp.name,
+                        "price": sp.price,
+                        "duration_minutes": getattr(sp, "durationMinutes", 0) or getattr(sp, "duration_minutes", 60) or 60,
+                    },
+                )
+            )
+
+        productCand = next(
+            (c for c in candidates if getattr(c.product, "targetType", "PRODUCT") != "SERVICE"),
+            None,
+        )
+        if productCand:
+            pp = productCand.product
+            cleanProdId = str(pp.id).replace("mysql_", "").replace("product_", "")
+            actions.append(
+                ChatAction(
+                    actionType="ADD_TO_CART",
+                    label=f"Thêm Vào Giỏ: {pp.name[:25]}",
+                    payload={
+                        "product_id": cleanProdId,
+                        "product_name": pp.name,
+                        "price": pp.price,
+                        "quantity": 1,
+                        "image_url": getattr(pp, "imageUrl", getattr(pp, "image_url", None)),
+                    },
+                )
+            )
+
+        return actions
+
+    generate_actions = generateActions
+
     async def preparePipeline(
         self,
         request: ChatRequest,
@@ -194,13 +260,32 @@ class AgentOrchestrator:
             history = conversationManager.getHistoryFormatted(reqSessionId)
 
         if not queryRouter.shouldRetrieve(mergedUnderstanding):
-            clarificationQ = mergedUnderstanding.clarificationQuestion or getattr(mergedUnderstanding, "clarification_question", None)
-            needsClarify = mergedUnderstanding.needsClarification or getattr(mergedUnderstanding, "needs_clarification", False)
-            replyText = queryRouter.handleNonRetrieval(mergedUnderstanding) or (
-                clarificationQ
-                if needsClarify and clarificationQ
-                else "Đã nhận yêu cầu đang chuyển tìm kiếm sản phẩm"
-            )
+            uIntent = getattr(mergedUnderstanding.intent, "value", str(mergedUnderstanding.intent))
+            pIntent = getattr(mergedUnderstanding.primary_intent, "value", str(mergedUnderstanding.primary_intent or ""))
+            isOrderIntent = uIntent == "ORDER_STATUS" or pIntent in ("HO_TRO_DON_HANG", "HỖ_TRỢ_ĐƠN_HÀNG", "HO_TRO_DON_HANG")
+
+            actions: List[ChatAction] = []
+            if isOrderIntent:
+                replyText, orderObj = queryRouter.handleOrderLookup(request.message)
+                if orderObj:
+                    actions.append(
+                        ChatAction(
+                            actionType="VIEW_ORDER",
+                            label=f"Chi tiết đơn #{orderObj.get('order_number')}",
+                            payload={
+                                "order_number": orderObj.get("order_number"),
+                                "order_id": orderObj.get("id"),
+                            },
+                        )
+                    )
+            else:
+                clarificationQ = mergedUnderstanding.clarificationQuestion or getattr(mergedUnderstanding, "clarification_question", None)
+                needsClarify = mergedUnderstanding.needsClarification or getattr(mergedUnderstanding, "needs_clarification", False)
+                replyText = queryRouter.handleNonRetrieval(mergedUnderstanding, userMessage=request.message) or (
+                    clarificationQ
+                    if needsClarify and clarificationQ
+                    else "Đã nhận yêu cầu đang chuyển tìm kiếm sản phẩm"
+                )
             replyText = remove_emojis(replyText)
             return PipelinePreparedContext(
                 sessionId=reqSessionId,
@@ -208,6 +293,7 @@ class AgentOrchestrator:
                 history=history,
                 isRetrieval=False,
                 nonRetrievalReply=replyText,
+                actions=actions,
             )
 
         with tracker.measure("hybrid_retrieval"):
@@ -224,7 +310,7 @@ class AgentOrchestrator:
             else:
                 rerankLimit = 1 if uIntent == "PRODUCT_DETAIL" else (
                     2 if uIntent in ("COMPARISON", "PRODUCT_COMPARISON") else (
-                        4 if uIntent in ("ROUTINE_RECOMMENDATION", "ROUTINE") else 3
+                        3 if uIntent in ("ROUTINE_RECOMMENDATION", "ROUTINE") else 2
                     )
                 )
 
@@ -241,12 +327,14 @@ class AgentOrchestrator:
                 logger.exception("Chưa xác minh được tồn an toàn; không quảng bá sản phẩm từ snapshot cũ")
                 rerankedCandidates = [candidate for candidate in rerankedCandidates if candidate.product.targetType == "SERVICE"]
 
+        actions = self.generateActions(mergedUnderstanding, rerankedCandidates, request.message)
         return PipelinePreparedContext(
             sessionId=reqSessionId,
             mergedUnderstanding=mergedUnderstanding,
             history=history,
             isRetrieval=True,
             rerankedCandidates=rerankedCandidates,
+            actions=actions,
         )
 
     _prepare_pipeline = preparePipeline
@@ -273,6 +361,7 @@ class AgentOrchestrator:
                 intent=intentVal,
                 answer=prep.nonRetrievalReply or "",
                 message=prep.nonRetrievalReply or "",
+                actions=prep.actions or [],
                 needsClarification=prep.mergedUnderstanding.needsClarification,
                 understanding=prep.mergedUnderstanding,
                 stageLatenciesMs=tracker.finish(),
@@ -311,6 +400,7 @@ class AgentOrchestrator:
             message=answer,
             products=productCards,
             sources=sources,
+            actions=prep.actions or [],
             needsClarification=False,
             understanding=prep.mergedUnderstanding,
             stageLatenciesMs=tracker.finish(),
@@ -332,14 +422,16 @@ class AgentOrchestrator:
                     botResponse=replyText,
                     understanding=prep.mergedUnderstanding,
                 )
-                yield f"data: {json.dumps({'type': 'metadata', 'products': [], 'stage_latencies_ms': tracker.finish()}, ensure_ascii=False)}\n\n"
+                actionDicts = [a.model_dump(by_alias=True) for a in (prep.actions or [])]
+                yield f"data: {json.dumps({'type': 'metadata', 'products': [], 'actions': actionDicts, 'stage_latencies_ms': tracker.finish()}, ensure_ascii=False)}\n\n"
                 yield f"data: {json.dumps({'type': 'token', 'content': replyText}, ensure_ascii=False)}\n\n"
                 yield f"data: {json.dumps({'type': 'done', 'session_id': reqSessionId}, ensure_ascii=False)}\n\n"
                 return
 
             candidates = prep.rerankedCandidates or []
             cards = [{**c.model_dump(), **c.model_dump(by_alias=True)} for c in self.formatProductCards(candidates)]
-            yield f"data: {json.dumps({'type': 'metadata', 'products': cards, 'stage_latencies_ms': tracker.getDurations()}, ensure_ascii=False)}\n\n"
+            actionDicts = [a.model_dump(by_alias=True) for a in (prep.actions or [])]
+            yield f"data: {json.dumps({'type': 'metadata', 'products': cards, 'actions': actionDicts, 'stage_latencies_ms': tracker.getDurations()}, ensure_ascii=False)}\n\n"
 
             fullTextChunks = []
             async for token in generationService.generateStream(

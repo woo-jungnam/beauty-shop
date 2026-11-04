@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.notification.application.consumer;
 
+import com.core.beautyshop.modules.notification.application.service.NotificationInbox;
 import com.core.beautyshop.modules.notification.application.service.NotificationService;
 import com.core.beautyshop.shared.config.KafkaTopicConstants;
 import com.core.beautyshop.shared.event.OrderKafkaMessage;
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class OrderNotificationKafkaListener {
 
     private final NotificationService notificationService;
-    private final com.core.beautyshop.modules.notification.application.service.NotificationInbox inbox;
+    private final NotificationInbox inbox;
 
     @KafkaListener(
             topics = KafkaTopicConstants.ORDER_CREATED_TOPIC,

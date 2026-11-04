@@ -7,9 +7,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -34,28 +36,28 @@ public class AppointmentResponse {
     private AppointmentStatus status;
     private String notes;
     @Schema(description = "Thời điểm khách đến đã ghi nhận; Instant UTC, có thể null")
-    private java.time.Instant checkedInAt;
+    private Instant checkedInAt;
     private Long checkedInByUserId;
     @Schema(description = "Thời điểm bắt đầu buổi thực tế; không thay actual của từng item")
-    private java.time.Instant actualStartedAt;
+    private Instant actualStartedAt;
     @Schema(description = "Thời điểm hoàn tất buổi thực tế; legacy có thể null")
-    private java.time.Instant actualCompletedAt;
+    private Instant actualCompletedAt;
     @Schema(description = "Hạn PENDING nếu TTL đã bật; null khi TTL=0 hoặc lịch không còn PENDING")
-    private java.time.Instant pendingExpiresAt;
+    private Instant pendingExpiresAt;
     @Schema(description = "Chuỗi JSON của policy đã chụp lúc đặt, không phải object JSON; null với legacy booking")
     private String policySnapshot;
 
     private List<AppointmentItemResponse> items;
 
     public static AppointmentResponse of(Appointment entity, String customerName) {
-        return of(entity, customerName, null, java.util.Map.of());
+        return of(entity, customerName, null, Map.of());
     }
 
     public static AppointmentResponse of(Appointment entity, String customerName, String customerPhone) {
-        return of(entity, customerName, customerPhone, java.util.Map.of());
+        return of(entity, customerName, customerPhone, Map.of());
     }
 
-    public static AppointmentResponse of(Appointment entity, String customerName, String customerPhone, java.util.Map<Long, String> staffNames) {
+    public static AppointmentResponse of(Appointment entity, String customerName, String customerPhone, Map<Long, String> staffNames) {
         if (entity == null) return null;
 
         List<AppointmentItemResponse> itemResponses = entity.getItems() != null ?

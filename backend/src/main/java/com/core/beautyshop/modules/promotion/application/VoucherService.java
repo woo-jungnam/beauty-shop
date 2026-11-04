@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.*;
+import java.text.NumberFormat;
 import java.time.Instant;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -118,7 +120,7 @@ public class VoucherService implements PromotionFacade {
         }
         if (orderAmount.compareTo(voucher.getMinOrderAmount()) < 0) {
             throw new BusinessException("Đơn hàng chưa đạt giá trị tối thiểu "
-                    + java.text.NumberFormat.getIntegerInstance().format(voucher.getMinOrderAmount())
+                    + NumberFormat.getIntegerInstance().format(voucher.getMinOrderAmount())
                     + " ₫ để áp dụng mã này");
         }
         BigDecimal discount = voucher.getDiscountType() == DiscountType.PERCENTAGE
@@ -130,7 +132,7 @@ public class VoucherService implements PromotionFacade {
         BigDecimal finalDiscount = discount.min(orderAmount).max(BigDecimal.ZERO);
         String message = voucher.getDiscountType() == DiscountType.PERCENTAGE
                 ? "Áp dụng giảm " + voucher.getDiscountValue() + "% thành công"
-                : "Áp dụng giảm " + java.text.NumberFormat.getIntegerInstance().format(finalDiscount) + " ₫ thành công";
+                : "Áp dụng giảm " + NumberFormat.getIntegerInstance().format(finalDiscount) + " ₫ thành công";
         return new VoucherValidationResponse(
                 voucher.getId(),
                 voucher.getCode(),
@@ -220,7 +222,7 @@ public class VoucherService implements PromotionFacade {
         }
     }
 
-    private String normalize(String code) { return code.trim().toUpperCase(java.util.Locale.ROOT); }
+    private String normalize(String code) { return code.trim().toUpperCase(Locale.ROOT); }
 
     @Schema(description = "Tạo/thay cấu hình voucher; validation nghiệp vụ tại service. Dùng voucher qua checkout đăng nhập, không có API apply công khai riêng")
     public record VoucherCommand(

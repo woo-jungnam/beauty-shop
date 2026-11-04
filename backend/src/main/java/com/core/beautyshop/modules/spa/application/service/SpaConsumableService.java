@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.spa.application.service;
 
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
+import com.core.beautyshop.modules.inventory.api.dto.SpaMaterialOption;
 import com.core.beautyshop.modules.spa.domain.*;
 import com.core.beautyshop.modules.spa.domain.enums.*;
 import com.core.beautyshop.shared.exception.*;
@@ -9,9 +10,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 @Service @RequiredArgsConstructor
@@ -25,7 +32,7 @@ public class SpaConsumableService {
     public record UsageCommand(Long variantId,Long warehouseId,int quantity,String reason) {}
     public record Usage(Long id,Long appointmentItemId,String reference,Long variantId,Long warehouseId,int quantity,BigDecimal totalCost,String allocationJson,String reason,Long actorId,String createdAt) {}
     public record ItemMaterials(Long appointmentItemId,List<Material> planned,List<Usage> usages,String waiverReason) {}
-    public List<com.core.beautyshop.modules.inventory.api.dto.SpaMaterialOption> options() { return inventory.listSpaMaterialOptions(); }
+    public List<SpaMaterialOption> options() { return inventory.listSpaMaterialOptions(); }
 
     @Transactional(readOnly=true)
     public List<Material> definitions(Long serviceId) {
@@ -52,7 +59,7 @@ public class SpaConsumableService {
     public List<ItemMaterials> view(Long appointmentId) {
         Appointment a=appointment(appointmentId,false); access.requireCanViewAppointment(a);
         if(!access.canManageReception() && !(access.permission("SPA_EXECUTION") && access.isAssignedTechnician(a)))
-            throw new org.springframework.security.access.AccessDeniedException("Sổ vật tư chỉ dành cho lễ tân hoặc người được giao thực hiện");
+            throw new AccessDeniedException("Sổ vật tư chỉ dành cho lễ tân hoặc người được giao thực hiện");
         return a.getItems().stream().map(item->new ItemMaterials(item.getId(),planned(item.getId()),usages(appointmentId,item.getId()),waiver(item.getId()))).toList();
     }
     @Transactional
@@ -89,13 +96,13 @@ public class SpaConsumableService {
     }
     private List<Material> planned(Long id) { return jdbc.query("SELECT variant_id,quantity FROM spa_appointment_material_plans WHERE appointment_item_id=? ORDER BY variant_id",(rs,n)->new Material(rs.getLong(1),rs.getInt(2)),id); }
     private List<Usage> usages(Long appointmentId,Long itemId) { return jdbc.query("SELECT * FROM spa_material_usages WHERE appointment_id=? AND appointment_item_id=? ORDER BY id",this::usage,appointmentId,itemId); }
-    private Usage usage(java.sql.ResultSet rs,int n) throws java.sql.SQLException { return new Usage(rs.getLong("id"),rs.getLong("appointment_item_id"),rs.getString("reference"),rs.getLong("variant_id"),rs.getLong("warehouse_id"),rs.getInt("quantity"),rs.getBigDecimal("total_cost"),rs.getString("allocation_json"),rs.getString("reason"),rs.getLong("actor_id"),rs.getTimestamp("created_at").toInstant().toString()); }
+    private Usage usage(ResultSet rs,int n) throws SQLException { return new Usage(rs.getLong("id"),rs.getLong("appointment_item_id"),rs.getString("reference"),rs.getLong("variant_id"),rs.getLong("warehouse_id"),rs.getInt("quantity"),rs.getBigDecimal("total_cost"),rs.getString("allocation_json"),rs.getString("reason"),rs.getLong("actor_id"),rs.getTimestamp("created_at").toInstant().toString()); }
     private String waiver(Long id) { return jdbc.query("SELECT reason FROM spa_material_usage_waivers WHERE appointment_item_id=?",(rs,n)->rs.getString(1),id).stream().findFirst().orElse(null); }
     private Appointment appointment(Long id,boolean lock) { Appointment a=em.find(Appointment.class,id,lock?LockModeType.PESSIMISTIC_WRITE:LockModeType.NONE); if(a==null || Boolean.TRUE.equals(a.getIsDeleted())) throw new ResourceNotFoundException("Không tìm thấy lịch hẹn"); return a; }
     private AppointmentItem item(Appointment a,Long id) { return a.getItems().stream().filter(i->Objects.equals(i.getId(),id)).findFirst().orElseThrow(()->new ResourceNotFoundException("Không tìm thấy dịch vụ trong lịch")); }
     private BeautyService requireService(Long id) { BeautyService s=em.find(BeautyService.class,id); if(s==null || Boolean.TRUE.equals(s.getIsDeleted())) throw new ResourceNotFoundException("Không tìm thấy dịch vụ"); return s; }
     private static String usageKey(Long itemId,String reference) {
-        try { return "SPA-"+itemId+"-"+HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(reference.getBytes(java.nio.charset.StandardCharsets.UTF_8))); }
-        catch(java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+        try { return "SPA-"+itemId+"-"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(reference.getBytes(StandardCharsets.UTF_8))); }
+        catch(NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 }

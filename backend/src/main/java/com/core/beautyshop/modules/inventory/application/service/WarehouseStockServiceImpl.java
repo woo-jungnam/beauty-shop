@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -77,7 +79,7 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
             batches.restoreEmptyBatch(stock);
             if (!receipt && (request.getQuantity() < stock.getReservedQuantity()
                     || request.getReservedQuantity() != null && !request.getReservedQuantity().equals(stock.getReservedQuantity()))) {
-                throw new com.core.beautyshop.shared.exception.BusinessException("Không thể ghi đè số lượng tồn kho đang giữ chỗ cho đơn hàng");
+                throw new BusinessException("Không thể ghi đè số lượng tồn kho đang giữ chỗ cho đơn hàng");
             }
             quantityBefore = stock.getQuantity();
             if (receipt) {
@@ -87,16 +89,16 @@ public class WarehouseStockServiceImpl implements WarehouseStockService {
                     throw new BusinessException("Hàng đã hết hạn không thể nhập vào kho bán lẻ");
                 if (request.getCostPrice() == null) request.setCostPrice(stock.getCostPrice());
                 if (quantityBefore > 0 && request.getCostPrice() != null && stock.getCostPrice() != null) {
-                    request.setCostPrice(stock.getCostPrice().multiply(java.math.BigDecimal.valueOf(quantityBefore))
-                            .add(request.getCostPrice().multiply(java.math.BigDecimal.valueOf(request.getQuantity())))
-                            .divide(java.math.BigDecimal.valueOf((long) quantityBefore + request.getQuantity()),2,java.math.RoundingMode.HALF_UP));
+                    request.setCostPrice(stock.getCostPrice().multiply(BigDecimal.valueOf(quantityBefore))
+                            .add(request.getCostPrice().multiply(BigDecimal.valueOf(request.getQuantity())))
+                            .divide(BigDecimal.valueOf((long) quantityBefore + request.getQuantity()), 2, RoundingMode.HALF_UP));
                 }
             }
             stock.setQuantity(receipt ? Math.addExact(quantityBefore, request.getQuantity()) : request.getQuantity());
             stock.setBatchCode(batchCode);
         } else {
             if (request.getReservedQuantity() != null && request.getReservedQuantity() != 0) {
-                throw new com.core.beautyshop.shared.exception.BusinessException("Số lượng giữ chỗ chỉ được tạo qua quy trình đặt hàng/thanh toán");
+                throw new BusinessException("Số lượng giữ chỗ chỉ được tạo qua quy trình đặt hàng/thanh toán");
             }
             quantityBefore = 0;
             stock = WarehouseStock.builder()

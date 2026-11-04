@@ -1,6 +1,12 @@
 package com.core.beautyshop.modules.spa.domain;
+
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+
 @Entity @Table(name = "spa_purchase_snapshots") @Getter @Setter @NoArgsConstructor
 public class SpaPurchaseSnapshot {
     @Id @Column(name = "order_id")
@@ -10,11 +16,11 @@ public class SpaPurchaseSnapshot {
     @Column(name = "package_name", length = 255)
     private String packageName;
     @Column(name = "purchase_amount", precision = 19, scale = 2)
-    private java.math.BigDecimal purchaseAmount;
+    private BigDecimal purchaseAmount;
     @ElementCollection
     @CollectionTable(name = "spa_purchase_service_details", joinColumns = @JoinColumn(name = "order_id"))
     @MapKeyColumn(name = "service_id")
-    private java.util.Map<Long, PurchasedServiceDetail> serviceDetails = new java.util.HashMap<>();
+    private Map<Long, PurchasedServiceDetail> serviceDetails = new HashMap<>();
     @Column(name = "validity_days")
     private Integer validityDays;
     @Column(name="expiry_check_mode", nullable=false, length=30)
@@ -23,5 +29,5 @@ public class SpaPurchaseSnapshot {
     @CollectionTable(name = "spa_purchase_entitlements", joinColumns = @JoinColumn(name = "order_id"))
     @MapKeyColumn(name = "service_id")
     @Column(name = "quantity", nullable = false)
-    private java.util.Map<Long, Integer> entitlements = new java.util.HashMap<>();
+    private Map<Long, Integer> entitlements = new HashMap<>();
 }

@@ -1,11 +1,14 @@
 package com.core.beautyshop.modules.procurement.application;
 
+import com.core.beautyshop.modules.catalog.api.CatalogFacade;
+import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.inventory.api.InventoryAdminFacade;
 import com.core.beautyshop.modules.procurement.domain.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
+import com.core.beautyshop.shared.time.BusinessTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -20,10 +23,10 @@ public class ProcurementService {
     private final SupplierRepository suppliers;
     private final PurchaseOrderRepository orders;
     private final InventoryAdminFacade inventory;
-    private final com.core.beautyshop.modules.catalog.api.CatalogFacade catalog;
+    private final CatalogFacade catalog;
 
     @Transactional(readOnly = true)
-    public List<com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto> lookupVariants(VariantLookup command) {
+    public List<ProductVariantSummaryDto> lookupVariants(VariantLookup command) {
         if (command == null || command.skus() == null || command.skus().isEmpty() || command.skus().size() > 500)
             throw new BusinessException("Cần từ 1 đến 500 mã SKU để đối chiếu");
         Set<String> skus = new LinkedHashSet<>();
@@ -86,7 +89,7 @@ public class ProcurementService {
 
     @Transactional
     public PurchaseOrderView create(OrderCommand command) {
-        String orderNumber = "PO-" + com.core.beautyshop.shared.time.BusinessTime.today().toString().replace("-", "") + "-"
+        String orderNumber = "PO-" + BusinessTime.today().toString().replace("-", "") + "-"
                 + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
         PurchaseOrder order = PurchaseOrder.builder().orderNumber(orderNumber).status(PurchaseOrder.Status.DRAFT).build();
         applyCommand(order, command);
@@ -106,7 +109,7 @@ public class ProcurementService {
                 || command.items() == null || command.items().isEmpty())
             throw new BusinessException("Nhà cung cấp, kho nhận và danh sách hàng hóa là bắt buộc");
         if (command.note() != null && command.note().length() > 500) throw new BusinessException("Ghi chú không được vượt quá 500 ký tự");
-        if (command.expectedDate() != null && command.expectedDate().isBefore(com.core.beautyshop.shared.time.BusinessTime.today())) {
+        if (command.expectedDate() != null && command.expectedDate().isBefore(BusinessTime.today())) {
             throw new BusinessException("Ngày dự kiến giao hàng phải từ hôm nay trở đi");
         }
         Supplier supplier = suppliers.findById(command.supplierId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
@@ -121,7 +124,7 @@ public class ProcurementService {
                 throw new BusinessException("Mỗi mặt hàng phải có biến thể hợp lệ, số lượng nguyên dương, giá vốn từ 0 đến 9999999999.99 và tối đa 2 số lẻ");
             catalog.getVariantSummaryForInventory(item.variantId());
             if (item.batchCode() != null && item.batchCode().trim().length() > 100) throw new BusinessException("Mã số lô hàng không được vượt quá 100 ký tự");
-            if (item.expirationDate() != null && !item.expirationDate().isAfter(com.core.beautyshop.shared.time.BusinessTime.today()))
+            if (item.expirationDate() != null && !item.expirationDate().isAfter(BusinessTime.today()))
                 throw new BusinessException("Hạn sử dụng của hàng nhập kho phải ở trong tương lai");
             PurchaseOrderItem entity = PurchaseOrderItem.builder().purchaseOrder(order).productVariantId(item.variantId())
                     .quantity(item.quantity()).receivedQuantity(0).unitCost(item.unitCost()).batchCode(item.batchCode() == null ? "" : item.batchCode().trim())
@@ -182,7 +185,7 @@ public class ProcurementService {
     private PurchaseOrder locked(Long id) { return orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu mua hàng")); }
     private SupplierView supplierView(Supplier s) { return new SupplierView(s.getId(), s.getCode(), s.getName(), s.getContactName(), s.getEmail(), s.getPhone(), s.getAddress(), s.getTaxCode(), s.getActive()); }
     private PurchaseOrderView orderView(PurchaseOrder o) { return orderView(o, Map.of()); }
-    private PurchaseOrderView orderView(PurchaseOrder o, Map<Long, com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto> variants) {
+    private PurchaseOrderView orderView(PurchaseOrder o, Map<Long, ProductVariantSummaryDto> variants) {
         var items = o.getItems().stream().map(i -> {
             var variant = variants.get(i.getProductVariantId());
             return new ItemView(i.getId(), i.getProductVariantId(), i.getQuantity(), i.getReceivedQuantity(),

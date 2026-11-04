@@ -3,34 +3,49 @@ package com.core.beautyshop.modules.order.application.facade;
 import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.modules.order.api.dto.CreateSpaPackageOrderCommand;
 import com.core.beautyshop.modules.order.api.dto.SpaPackageOrderResult;
+import com.core.beautyshop.modules.order.api.dto.SpaRefundBalance;
+import com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult;
 import com.core.beautyshop.modules.order.domain.Order;
 import com.core.beautyshop.modules.order.domain.OrderRepository;
 import com.core.beautyshop.modules.order.domain.OrderStatusHistory;
+import com.core.beautyshop.modules.order.domain.RefundConfirmationRepository;
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import com.core.beautyshop.modules.order.domain.enums.PaymentStatus;
 import com.core.beautyshop.modules.order.api.event.OrderEvents;
+import com.core.beautyshop.modules.order.application.service.OrderExpirationService;
+import com.core.beautyshop.modules.order.application.service.OrderRefundService;
+import com.core.beautyshop.modules.order.application.service.SpaVisitOrderService;
+import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto;
 import com.core.beautyshop.shared.domain.enums.PaymentMethod;
+import com.core.beautyshop.shared.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import com.core.beautyshop.shared.exception.BusinessException;
 
 @Slf4j
 @Component
 public class OrderFacadeImpl implements OrderFacade {
     @Override
-    public com.core.beautyshop.modules.order.api.dto.SpaRefundBalance lockSpaRefundBalance(Long orderId) {
+    public SpaRefundBalance lockSpaRefundBalance(Long orderId) {
         return orderRefunds.lockSpaBalance(orderId);
     }
     @Override
@@ -38,25 +53,25 @@ public class OrderFacadeImpl implements OrderFacade {
         orderRefunds.confirmSpaServiceRefund(orderId, amount, reference, reason);
     }
     @Override
-    public com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult applySpaVisitAdvance(Long appointmentId,BigDecimal amount,String reference) {
-        return visits.applyAdvance(appointmentId,amount,reference);
+    public SpaVisitInvoiceResult applySpaVisitAdvance(Long appointmentId, BigDecimal amount, String reference) {
+        return visits.applyAdvance(appointmentId, amount, reference);
     }
 
     private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentFacade paymentFacade;
-    private final com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refunds;
-    private final com.core.beautyshop.modules.order.application.service.OrderExpirationService expirationService;
-    private final com.core.beautyshop.modules.order.application.service.SpaVisitOrderService visits;
-    private final com.core.beautyshop.modules.order.application.service.OrderRefundService orderRefunds;
-    private final com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade;
+    private final RefundConfirmationRepository refunds;
+    private final OrderExpirationService expirationService;
+    private final SpaVisitOrderService visits;
+    private final OrderRefundService orderRefunds;
+    private final IdentityFacade identityFacade;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public OrderFacadeImpl(OrderRepository orderRepository, ApplicationEventPublisher eventPublisher,
-                           PaymentFacade paymentFacade, com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refunds,
-                           com.core.beautyshop.modules.order.application.service.OrderExpirationService expirationService,
-                           com.core.beautyshop.modules.order.application.service.SpaVisitOrderService visits,
-                           com.core.beautyshop.modules.order.application.service.OrderRefundService orderRefunds,
+                           PaymentFacade paymentFacade, RefundConfirmationRepository refunds,
+                           OrderExpirationService expirationService,
+                           SpaVisitOrderService visits,
+                           OrderRefundService orderRefunds,
                            com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade) {
         this.orderRepository = orderRepository;
         this.eventPublisher = eventPublisher;
@@ -105,13 +120,13 @@ public class OrderFacadeImpl implements OrderFacade {
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal getConfirmedRefundAmount(java.time.Instant from, java.time.Instant to) {
+    public BigDecimal getConfirmedRefundAmount(Instant from, Instant to) {
         return refunds.sumConfirmed(from, to);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<java.time.Instant> findPaidAtForUser(Long orderId, Long userId) {
+    public Optional<Instant> findPaidAtForUser(Long orderId, Long userId) {
         if (orderId == null || userId == null) return Optional.empty();
         return orderRepository.findById(orderId).filter(order -> !Boolean.TRUE.equals(order.getIsDeleted()))
                 .filter(order -> userId.equals(order.getUserId()) && order.getPaymentStatus() == PaymentStatus.PAID)
@@ -125,7 +140,7 @@ public class OrderFacadeImpl implements OrderFacade {
                 || command.getAmount() == null || command.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Thông tin đơn mua gói Spa không hợp lệ");
         }
-        BigDecimal amount = command.getAmount().setScale(0, java.math.RoundingMode.HALF_UP);
+        BigDecimal amount = command.getAmount().setScale(0, RoundingMode.HALF_UP);
         if (amount.signum() == 0) throw new BusinessException("Giá gói dịch vụ Spa sau làm tròn phải từ 1 VNĐ trở lên");
 
         String checkoutKey = spaCheckoutKey(command);
@@ -147,11 +162,11 @@ public class OrderFacadeImpl implements OrderFacade {
             Integer discountPercentage = userSummary != null ? userSummary.getMembershipDiscountPercentage() : null;
             if (discountPercentage != null && discountPercentage > 0) {
                 BigDecimal discountPercent = BigDecimal.valueOf(discountPercentage).divide(BigDecimal.valueOf(100));
-                membershipDiscount = subTotal.multiply(discountPercent).setScale(0, java.math.RoundingMode.HALF_UP);
+                membershipDiscount = subTotal.multiply(discountPercent).setScale(0, RoundingMode.HALF_UP);
             }
         }
         BigDecimal discountAmount = membershipDiscount.min(subTotal);
-        BigDecimal total = subTotal.subtract(discountAmount).max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP);
+        BigDecimal total = subTotal.subtract(discountAmount).max(BigDecimal.ZERO).setScale(0, RoundingMode.HALF_UP);
 
         Order order = Order.builder()
                 .orderNumber("ORD-" + UUID.randomUUID().toString().replace("-", "").toUpperCase())
@@ -165,8 +180,8 @@ public class OrderFacadeImpl implements OrderFacade {
                 .shippingAddress("SPA_SERVICE")
                 .paymentMethod(PaymentMethod.BANK)
                 .paymentStatus(total.signum() == 0 ? PaymentStatus.PAID : PaymentStatus.PENDING)
-                .paidAt(total.signum() == 0 ? java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS) : null)
-                .paymentDeadline(total.signum() == 0 ? null : java.time.Instant.now().plusSeconds(paymentTimeoutMinutes * 60))
+                .paidAt(total.signum() == 0 ? Instant.now().truncatedTo(ChronoUnit.MICROS) : null)
+                .paymentDeadline(total.signum() == 0 ? null : Instant.now().plusSeconds(paymentTimeoutMinutes * 60))
                 .status(total.signum() == 0 ? OrderStatus.PROCESSING : OrderStatus.PENDING)
                 .subTotal(subTotal)
                 .shippingFee(BigDecimal.ZERO)
@@ -227,7 +242,7 @@ public class OrderFacadeImpl implements OrderFacade {
         Order order = orderOptional.get();
         boolean expiredNow = false;
         if (order.getAppointmentId() == null && (order.getStatus() == OrderStatus.PENDING || order.getStatus() == OrderStatus.CONFIRMED) && order.getPaymentDeadline() != null
-                && !order.getPaymentDeadline().isAfter(java.time.Instant.now())) {
+                && !order.getPaymentDeadline().isAfter(Instant.now())) {
             expiredNow = expirationService.expire(order.getId());
             if (expiredNow) {
                 order.setStatus(OrderStatus.CANCELLED);
@@ -267,7 +282,7 @@ public class OrderFacadeImpl implements OrderFacade {
         }
 
         order.setPaymentStatus(PaymentStatus.PAID);
-        if (order.getPaidAt() == null) order.setPaidAt(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+        if (order.getPaidAt() == null) order.setPaidAt(Instant.now().truncatedTo(ChronoUnit.MICROS));
 
         if (order.getStatus() == OrderStatus.PENDING) {
             order.setStatus(OrderStatus.PROCESSING);
@@ -296,7 +311,7 @@ public class OrderFacadeImpl implements OrderFacade {
                             .quantity(item.getQuantity())
                             .build())
                     .toList()
-                    : java.util.List.of();
+                    : List.of();
 
             eventPublisher.publishEvent(OrderEvents.OrderPaidEvent.builder()
                     .orderId(order.getId())
@@ -404,9 +419,9 @@ public class OrderFacadeImpl implements OrderFacade {
 
     private String sha256(String value) {
         try {
-            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-        } catch (java.security.NoSuchAlgorithmException exception) {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
         }
     }

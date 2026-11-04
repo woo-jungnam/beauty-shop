@@ -7,6 +7,7 @@ import com.core.beautyshop.modules.chatbot.application.service.ChatbotService;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -23,9 +24,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.UUID;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.Semaphore;
 @Service
 @Slf4j
 public class ChatbotServiceImpl implements ChatbotService {
@@ -38,7 +41,7 @@ public class ChatbotServiceImpl implements ChatbotService {
     private final Semaphore streams;
     private final ScheduledExecutorService deadlines = Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().daemon().name("chat-deadlines").factory());
 
-    @jakarta.annotation.PreDestroy
+    @PreDestroy
     public void shutdown() { deadlines.shutdownNow(); }
 
     public ChatbotServiceImpl(
@@ -69,7 +72,7 @@ public class ChatbotServiceImpl implements ChatbotService {
     public ChatResponse chat(ChatRequest request) {
         try {
             if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-                request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+                request.setSessionId("sess_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
             }
             log.info("Chuyển tiếp yêu cầu chat (non-streaming) sang Chatbot AI [session_id: {}, url: {}/chat]", request.getSessionId(), this.chatbotBaseUrl);
             return restClient.post()
@@ -90,9 +93,9 @@ public class ChatbotServiceImpl implements ChatbotService {
             throw new BusinessException(ErrorCode.CHATBOT_SERVICE_UNAVAILABLE, "Chat service is busy; please retry");
         }
         if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-            request.setSessionId("sess_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+            request.setSessionId("sess_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         }
-        java.util.concurrent.ScheduledFuture<?> deadline = null;
+        ScheduledFuture<?> deadline = null;
         try {
             log.info("Khởi tạo luồng SSE stream sang Chatbot AI [session_id: {}]", request.getSessionId());
             String requestJson = objectMapper.writeValueAsString(request);

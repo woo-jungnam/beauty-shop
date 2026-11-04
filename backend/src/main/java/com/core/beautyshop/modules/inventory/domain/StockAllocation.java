@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.inventory.domain;
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "stock_allocations", uniqueConstraints = @UniqueConstraint(columnNames = {"order_number", "stock_id"}))
@@ -19,7 +20,7 @@ public class StockAllocation {
     @Column(name = "returned_quantity", nullable = false)
     private int returnedQuantity;
     @Column(name = "unit_cost_snapshot", precision = 12, scale = 2)
-    private java.math.BigDecimal unitCostSnapshot;
+    private BigDecimal unitCostSnapshot;
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private Status status = Status.RESERVED;

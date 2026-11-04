@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service @RequiredArgsConstructor
 public class InventoryMovementService {
     private final WarehouseStockRepository stocks;
@@ -52,7 +54,7 @@ public class InventoryMovementService {
                         .minQuantity(source.getMinQuantity()).maxQuantity(source.getMaxQuantity()).location(source.getLocation())
                         .expirationDate(source.getExpirationDate()).batchCode(InventoryBatchService.normalizeBatchCode(source.getBatchCode())).costPrice(source.getCostPrice()).build());
         batches.restoreEmptyBatch(target);
-        if (!java.util.Objects.equals(target.getExpirationDate(), source.getExpirationDate()))
+        if (!Objects.equals(target.getExpirationDate(), source.getExpirationDate()))
             throw new BusinessException("Hạn sử dụng của lô hàng tại kho xuất và kho nhập không khớp");
         int targetBefore = target.getQuantity(); target.setQuantity(Math.addExact(targetBefore, quantity)); target = stocks.save(target);
         ledger.record(target, InventoryTransactionType.TRANSFER_IN, quantity, targetBefore, target.getQuantity(), "TRANSFER", null, reason);

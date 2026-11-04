@@ -1,8 +1,10 @@
 package com.core.beautyshop.modules.spa.application.service;
 
+import com.core.beautyshop.modules.identity.api.StaffPermissionService;
 import com.core.beautyshop.modules.spa.domain.Appointment;
 import com.core.beautyshop.modules.spa.domain.AppointmentItem;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,8 +14,8 @@ import java.util.Objects;
 
 @Service
 public class SpaAccessService {
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.core.beautyshop.modules.identity.api.StaffPermissionService staffPermissions;
+    @Autowired
+    private StaffPermissionService staffPermissions;
 
     public boolean permission(String code) { return hasRole("ADMIN") || (staffPermissions != null && staffPermissions.has(code)); }
     public boolean hasRole(String role) {

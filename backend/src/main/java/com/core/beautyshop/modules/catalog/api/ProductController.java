@@ -2,9 +2,11 @@ package com.core.beautyshop.modules.catalog.api;
 
 import com.core.beautyshop.modules.catalog.application.dto.request.CreateProductRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.InteractionTrackingRequest;
+import com.core.beautyshop.modules.catalog.application.dto.request.ProductImageRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.ProductVariantRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.UpdateProductRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.ProductSearchRequest;
+import com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductVariantResponse;
@@ -16,6 +18,9 @@ import com.core.beautyshop.shared.dto.PageResponse;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -71,10 +76,10 @@ public class ProductController {
     }
 
     @Operation(summary = "Tìm kiếm và lọc sản phẩm", description = "API công khai, chỉ sản phẩm ACTIVE chưa xóa. Mọi bộ lọc đều tùy chọn; AND giữa các tiêu chí, OR giữa ID cùng nhóm. Lọc tại database trước phân trang, không trùng sản phẩm. Giá/onSale/inStock=true phải thỏa trên cùng SKU active chưa xóa. sort hỗ trợ id, name, createdAt, updatedAt, price hoặc minPrice, maxPrice, averageRating, totalSold; dạng sort=price,asc và có thể lặp sort. Mặc định createdAt,desc; thêm id,desc để phân trang ổn định. page >= 0, size 1..100 (mặc định 20). Tham số không hợp lệ trả 400.")
-    @io.swagger.v3.oas.annotations.Parameters({
-        @Parameter(name = "page", description = "Trang bắt đầu từ 0", schema = @io.swagger.v3.oas.annotations.media.Schema(type = "integer", minimum = "0", defaultValue = "0")),
-        @Parameter(name = "size", description = "Số sản phẩm mỗi trang, từ 1 đến 100", schema = @io.swagger.v3.oas.annotations.media.Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20")),
-        @Parameter(name = "sort", description = "id/name/createdAt/updatedAt/price/minPrice/maxPrice/averageRating/totalSold,asc|desc; có thể lặp", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", example = "price,asc")))
+    @Parameters({
+        @Parameter(name = "page", description = "Trang bắt đầu từ 0", schema = @Schema(type = "integer", minimum = "0", defaultValue = "0")),
+        @Parameter(name = "size", description = "Số sản phẩm mỗi trang, từ 1 đến 100", schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20")),
+        @Parameter(name = "sort", description = "id/name/createdAt/updatedAt/price/minPrice/maxPrice/averageRating/totalSold,asc|desc; có thể lặp", array = @ArraySchema(schema = @Schema(type = "string", example = "price,asc")))
     })
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PageResponse<ProductListResponse>>> searchProducts(
@@ -210,7 +215,7 @@ public class ProductController {
 
     @Operation(summary = "Lấy danh sách hình ảnh của sản phẩm", description = "API công khai. Sản phẩm phải ACTIVE chưa xóa; trả ảnh chưa xóa theo displayOrder tăng dần.")
     @GetMapping("/{id}/images")
-    public ResponseEntity<ApiResponse<java.util.List<com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse>>> getProductImages(
+    public ResponseEntity<ApiResponse<List<ProductImageResponse>>> getProductImages(
             @Parameter(description = "ID sản phẩm", example = "101") @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(
                 productImageService.getImagesByProductId(id)));
@@ -220,9 +225,9 @@ public class ProductController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã tạo dữ liệu", useReturnTypeSchema = true)
     @PostMapping("/{id}/images")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<ApiResponse<com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse>> addProductImage(
+    public ResponseEntity<ApiResponse<ProductImageResponse>> addProductImage(
             @Parameter(description = "ID sản phẩm", example = "101") @PathVariable Long id,
-            @Valid @RequestBody com.core.beautyshop.modules.catalog.application.dto.request.ProductImageRequest request) {
+            @Valid @RequestBody ProductImageRequest request) {
         return ResponseEntity.status(201).body(ApiResponse.created(
                 productImageService.addImage(id, request), "Thêm hình ảnh thành công"));
     }

@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.order.application.service;
 
+import com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter;
 import com.core.beautyshop.modules.order.application.dto.request.CheckoutRequest;
 import com.core.beautyshop.modules.order.application.dto.request.UpdateOrderStatusRequest;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
@@ -20,7 +21,7 @@ public interface OrderService {
     Page<OrderResponse> getOrdersByUser(Long userId, Pageable pageable);
 
     Page<OrderResponse> getAllOrders(Pageable pageable);
-    Page<OrderResponse> searchAdminOrders(com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter filter, Pageable pageable);
+    Page<OrderResponse> searchAdminOrders(AdminOrderFilter filter, Pageable pageable);
 
     OrderResponse updateOrderStatus(Long id, UpdateOrderStatusRequest request);
 
@@ -30,4 +31,3 @@ public interface OrderService {
 
     OrderResponse manualMarkPaid(Long id, String reference);
 }
-

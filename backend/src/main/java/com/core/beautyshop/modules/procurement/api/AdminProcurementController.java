@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.procurement.api;
 
+import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.procurement.application.ProcurementService;
 import com.core.beautyshop.modules.procurement.domain.PurchaseOrder;
 import com.core.beautyshop.shared.dto.*;
@@ -12,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "Nhà cung cấp & Mua hàng (Admin)", description = "ADMIN/STAFF quản lý nhà cung cấp và phiếu DRAFT→APPROVED→RECEIVED; receive nhận toàn bộ số lượng còn lại")
 @RestController @RequestMapping("/api/v1/admin/procurement")
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')") @RequiredArgsConstructor
@@ -20,7 +23,7 @@ public class AdminProcurementController {
 
     @Operation(summary = "Đối chiếu SKU khi lập phiếu mua", description = "Chỉ đọc; 1–500 SKU, tối đa 100 ký tự/mã. Khớp chính xác sau trim, gồm hàng ngưng bán, loại hàng đã xóa. SKU không thấy không có trong kết quả; không tạo phiếu hoặc cộng tồn.")
     @PostMapping("/variants/lookup")
-    public ApiResponse<java.util.List<com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto>> lookupVariants(
+    public ApiResponse<List<ProductVariantSummaryDto>> lookupVariants(
             @RequestBody ProcurementService.VariantLookup command) {
         return ApiResponse.success(service.lookupVariants(command));
     }

@@ -15,6 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 @Tag(name = "Webhook thanh toán SePay", description = "Tuyến tích hợp máy chủ SePay, xác thực bằng API key webhook riêng; không dùng JWT khách hàng")
 @RestController
 @RequestMapping("/api/v1/payment")
@@ -68,9 +71,9 @@ public class PaymentController {
             return false;
         }
 
-        return java.security.MessageDigest.isEqual(
-                sePayWebhookApiKey.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                apiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        return MessageDigest.isEqual(
+                sePayWebhookApiKey.trim().getBytes(StandardCharsets.UTF_8),
+                apiKey.getBytes(StandardCharsets.UTF_8)
         );
     }
 }

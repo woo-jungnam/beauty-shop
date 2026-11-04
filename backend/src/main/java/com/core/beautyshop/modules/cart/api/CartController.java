@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.cart.api;
 
 import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import com.core.beautyshop.modules.cart.application.dto.request.AddToCartRequest;
 import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.cart.application.service.CartService;
@@ -75,7 +76,7 @@ public class CartController {
     public ResponseEntity<ApiResponse<CartResponse>> mergeCart(
             @Parameter(description = "Session ID của khách vãng lai trước khi đăng nhập", example = "guest-session-uuid-12345")
             @RequestParam String sessionId) {
-        Long userId = com.core.beautyshop.shared.security.utils.SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         CartResponse updatedCart = cartService.mergeCart(sessionId, userId);
         return ResponseEntity.ok(ApiResponse.success(updatedCart, "Gộp giỏ hàng thành công"));
     }

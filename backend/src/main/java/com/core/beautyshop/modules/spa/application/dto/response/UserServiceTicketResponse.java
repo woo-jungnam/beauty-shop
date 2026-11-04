@@ -2,13 +2,16 @@ package com.core.beautyshop.modules.spa.application.dto.response;
 
 import com.core.beautyshop.modules.spa.domain.UserServiceTicket;
 import com.core.beautyshop.modules.spa.domain.enums.TicketStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
-import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -24,7 +27,7 @@ public class UserServiceTicketResponse {
     private boolean nameSnapshot;
     private String benefitType;
     private Long treatmentCourseId;
-    private java.util.List<ServiceBalance> services;
+    private List<ServiceBalance> services;
     public record ServiceBalance(Long serviceId, String serviceName, boolean nameSnapshot, int total, int used, int reserved, int available) {}
     private Long orderId;
     @Schema(description = "Tổng quyền lợi gồm bù lượt đã duyệt")
@@ -42,7 +45,7 @@ public class UserServiceTicketResponse {
     private TicketStatus status;
     private Instant createdAt;
     @Schema(description = "Map serviceId→quota khả dụng theo đúng entitlement, đã trừ used/reserved")
-    private java.util.Map<Long, Integer> remainingByService;
+    private Map<Long, Integer> remainingByService;
 
     public static UserServiceTicketResponse of(UserServiceTicket ticket) {
         if (ticket == null) return null;
@@ -57,7 +60,7 @@ public class UserServiceTicketResponse {
                 .nameSnapshot(ticket.getPackageNameSnapshot() != null)
                 .benefitType(ticket.getServicePackage() != null && Boolean.TRUE.equals(ticket.getServicePackage().getTreatmentManaged()) ? "TREATMENT_COURSE" : "SERVICE_PACKAGE")
                 .treatmentCourseId(ticket.getTreatmentCourseId())
-                .services(ticket.getEntitlements().entrySet().stream().sorted(java.util.Map.Entry.comparingByKey()).map(entry -> {
+                .services(ticket.getEntitlements().entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry -> {
                     var e = entry.getValue(); String name = ticket.getServiceNames().get(entry.getKey());
                     return new ServiceBalance(entry.getKey(), name != null ? name : "Dịch vụ #" + entry.getKey(), name != null,
                             e.getTotal(), e.getUsed(), e.getReserved(), Math.max(0, e.available()));
@@ -66,8 +69,8 @@ public class UserServiceTicketResponse {
                 .totalSessions(ticket.getTotalSessions())
                 .usedSessions(ticket.getUsedSessions()).reservedSessions(ticket.getReservedSessions()).expiryCheckMode(ticket.getExpiryCheckMode())
                 .remainingSessions(remaining)
-                .remainingByService(ticket.getEntitlements().entrySet().stream().collect(java.util.stream.Collectors.toMap(
-                        java.util.Map.Entry::getKey, entry -> Math.max(0, entry.getValue().available()))))
+                .remainingByService(ticket.getEntitlements().entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey, entry -> Math.max(0, entry.getValue().available()))))
                 .expiryDate(ticket.getExpiryDate())
                 .status(ticket.getStatus())
                 .createdAt(ticket.getCreatedAt())

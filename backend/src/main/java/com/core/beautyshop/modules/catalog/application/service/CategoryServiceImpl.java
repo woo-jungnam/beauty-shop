@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -184,7 +185,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category current = proposedParent;
 
         while (current != null) {
-            if (java.util.Objects.equals(category.getId(), current.getId())) {
+            if (Objects.equals(category.getId(), current.getId())) {
                 throw new BusinessException("Không thể chọn danh mục con làm danh mục cha");
             }
             if (current.getId() != null && !visited.add(current.getId())) {

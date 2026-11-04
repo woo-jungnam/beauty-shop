@@ -21,17 +21,17 @@ public interface OutboxMessageRepository extends JpaRepository<OutboxMessage, Lo
             + "and m.retryCount < 5 and not exists (select earlier.id from OutboxMessage earlier "
             + "where earlier.aggregateType = m.aggregateType and earlier.aggregateId = m.aggregateId "
             + "and earlier.id < m.id and earlier.status <> 'PUBLISHED') order by m.id")
-    List<OutboxMessage> findClaimable(java.time.LocalDateTime now, Pageable pageable);
+    List<OutboxMessage> findClaimable(LocalDateTime now, Pageable pageable);
 
     @Modifying
     @Query("update OutboxMessage m set m.status = 'PROCESSING', m.claimToken = :token, m.leaseUntil = :until "
             + "where m.id = :id and (m.status = 'PENDING' or (m.status = 'PROCESSING' and m.leaseUntil < :now))")
-    int claim(Long id, String token, java.time.LocalDateTime until, java.time.LocalDateTime now);
+    int claim(Long id, String token, LocalDateTime until, LocalDateTime now);
 
     @Modifying
     @Query("update OutboxMessage m set m.status = 'PUBLISHED', m.sentAt = :now, m.claimToken = null, m.leaseUntil = null "
             + "where m.id = :id and m.claimToken = :token and m.status = 'PROCESSING'")
-    int completeClaim(Long id, String token, java.time.LocalDateTime now);
+    int completeClaim(Long id, String token, LocalDateTime now);
 
     @Modifying
     @Query("update OutboxMessage m set m.status = :status, m.retryCount = m.retryCount + 1, m.errorMessage = :error, "

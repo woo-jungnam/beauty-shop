@@ -1,15 +1,19 @@
 package com.core.beautyshop.modules.identity.application.service;
 
+import com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository;
 import com.core.beautyshop.shared.security.jwt.AccessTokenRevocationChecker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
 public class AccessTokenRevocationService implements AccessTokenRevocationChecker {
 
     private final TokenVersionCache tokenVersionCache;
-    private final com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository sessions;
+    private final RefreshTokenSessionRepository sessions;
 
     @Override
     public boolean isCurrent(Long userId, Integer tokenVersion) {
@@ -22,9 +26,9 @@ public class AccessTokenRevocationService implements AccessTokenRevocationChecke
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Transactional(readOnly = true)
     public boolean isSessionCurrent(Long userId, String familyId) {
         return userId != null && familyId != null && !familyId.isBlank()
-                && sessions.existsByUserIdAndFamilyIdAndRevokedAtIsNullAndExpiresAtAfterAndIsDeletedFalse(userId, familyId, java.time.Instant.now());
+                && sessions.existsByUserIdAndFamilyIdAndRevokedAtIsNullAndExpiresAtAfterAndIsDeletedFalse(userId, familyId, Instant.now());
     }
 }

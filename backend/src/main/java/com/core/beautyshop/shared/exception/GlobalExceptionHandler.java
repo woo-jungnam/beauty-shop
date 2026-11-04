@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -35,8 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
-    public ResponseEntity<ApiResponse<Void>> handleConcurrentUpdate(org.springframework.dao.OptimisticLockingFailureException ex) {
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConcurrentUpdate(OptimisticLockingFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(
                 ErrorCode.DATA_INTEGRITY_VIOLATION, "Dữ liệu đã bị thay đổi đồng thời bởi thao tác khác; vui lòng tải lại trang và thử lại"));
     }

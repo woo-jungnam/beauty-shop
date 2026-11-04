@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
+import java.util.Set;
 
 @Service @RequiredArgsConstructor
 public class SpaBookingPolicyService {
@@ -16,14 +17,14 @@ public class SpaBookingPolicyService {
                          int rescheduleCutoffMinutes, int noShowGraceMinutes, String noShowQuotaAction) { }
     public Policy current() {
         String noShow = value("spa.booking.no_show_quota_action", "FORFEIT");
-        if (!java.util.Set.of("FORFEIT", "RELEASE").contains(noShow)) throw new BusinessException("Quy định xử lý buổi vé khi khách vắng mặt không hợp lệ");
+        if (!Set.of("FORFEIT", "RELEASE").contains(noShow)) throw new BusinessException("Quy định xử lý buổi vé khi khách vắng mặt không hợp lệ");
         return new Policy(value("spa.booking.policy_version", "legacy-compatible-v1"),
                 minutes("spa.booking.pending_ttl_minutes"), minutes("spa.booking.cancel_cutoff_minutes"),
                 minutes("spa.booking.reschedule_cutoff_minutes"), minutes("spa.booking.no_show_grace_minutes"), noShow);
     }
     public String expiryCheckMode() {
         String mode = value("spa.ticket.expiry_check_mode", "BOOKING_TIME");
-        if (!java.util.Set.of("BOOKING_TIME", "SERVICE_START").contains(mode)) throw new BusinessException("Cách tính hạn dùng vé liệu trình không hợp lệ");
+        if (!Set.of("BOOKING_TIME", "SERVICE_START").contains(mode)) throw new BusinessException("Cách tính hạn dùng vé liệu trình không hợp lệ");
         return mode;
     }
     public void snapshot(Appointment appointment) {

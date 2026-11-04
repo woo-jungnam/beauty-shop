@@ -8,10 +8,14 @@ import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,12 +24,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
 
 @Service @RequiredArgsConstructor
 public class CustomerAccountService {
+    private static final Logger log = LoggerFactory.getLogger(CustomerAccountService.class);
     private final UserRepository users;
     private final EntityManager em;
     private final PasswordEncoder encoder;
@@ -103,8 +110,8 @@ public class CustomerAccountService {
         message.setSubject("Đặt lại mật khẩu BeautyShop");
         String baseUrl = (clientOrigin != null && !clientOrigin.isBlank()) ? clientOrigin.trim().replaceAll("/+$", "") : customerUrl.replaceAll("/+$", "");
         message.setText("Bạn đã yêu cầu đặt lại mật khẩu. Liên kết có hiệu lực 30 phút và chỉ dùng một lần:\n"+baseUrl+"/#/reset-password?token="+token+"\nNếu bạn không yêu cầu, hãy bỏ qua email này.");
-        try {mail.get().send(message);} catch(org.springframework.mail.MailException ex){
-            org.slf4j.LoggerFactory.getLogger(getClass()).error("Password recovery mail delivery failed; check SMTP configuration");
+        try {mail.get().send(message);} catch(MailException ex){
+            log.error("Password recovery mail delivery failed; check SMTP configuration");
             em.remove(record);
         }
     }
@@ -112,7 +119,7 @@ public class CustomerAccountService {
         var r=em.find(PasswordRecovery.class,hash(c.token()));
         if(r==null)throw new BusinessException("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
         User u=users.findByIdForUpdate(r.getUserId()).orElseThrow(()->new BusinessException("Liên kết không hợp lệ"));
-        em.refresh(r,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        em.refresh(r,LockModeType.PESSIMISTIC_WRITE);
         if(r.getUsedAt()!=null || !r.getExpiresAt().isAfter(Instant.now()) || u.getStatus()!=AccountStatus.ACTIVE)throw new BusinessException("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
         setPassword(u,c.newPassword());
         em.createQuery("update PasswordRecovery r set r.usedAt=:now where r.userId=:uid and r.usedAt is null").setParameter("now",Instant.now()).setParameter("uid",u.getId()).executeUpdate();
@@ -127,7 +134,7 @@ public class CustomerAccountService {
         if(!consent)throw new BusinessException("Cần đồng ý nhận bản tin");
         String normalized=email.trim().toLowerCase(Locale.ROOT);
         jdbc.update("INSERT INTO newsletter_subscriptions(email,consented_at,active) VALUES (?,?,TRUE) ON DUPLICATE KEY UPDATE consented_at=VALUES(consented_at),active=TRUE",
-                normalized,java.sql.Timestamp.from(Instant.now()));
+                normalized,Timestamp.from(Instant.now()));
     }
     @Transactional(readOnly=true) public OrderStatistics statistics(){
         return jdbc.queryForObject("select count(*) cnt,coalesce(sum(paid_amount),0) paid,coalesce(sum(refunded_amount),0) refunded from orders where user_id=? and is_deleted=false",
@@ -135,7 +142,7 @@ public class CustomerAccountService {
     }
     private User lockCurrent(){return users.findByIdForUpdate(SecurityUtils.getCurrentUserId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy tài khoản"));}
     private static String clean(String value){return value==null || value.isBlank()?null:value.trim();}
-    public static String hash(String value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));}catch(java.security.NoSuchAlgorithmException ex){throw new IllegalStateException(ex);}}
+    public static String hash(String value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException ex){throw new IllegalStateException(ex);}}
 
     public record SkinCommand(@Size(max=100) String skinType,@Size(max=100) String sensitivity,@Size(max=1000) String allergies,@Size(max=1000) String contraindications,@Size(max=1000) String preferredIngredients,@Size(max=2000) String notes){}
     public record SkinView(String skinType,String sensitivity,String allergies,String contraindications,String preferredIngredients,String notes,Instant updatedAt,boolean declaredByCustomer){}

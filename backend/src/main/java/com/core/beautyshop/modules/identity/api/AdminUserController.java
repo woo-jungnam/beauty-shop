@@ -1,18 +1,25 @@
 package com.core.beautyshop.modules.identity.api;
 
+import com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse;
 import com.core.beautyshop.modules.identity.application.dto.response.UserProfileResponse;
-import com.core.beautyshop.modules.identity.application.service.*;
+import com.core.beautyshop.modules.identity.application.service.AuthService;
+import com.core.beautyshop.modules.identity.application.service.UserService;
+import com.core.beautyshop.modules.identity.domain.UserStatusHistory;
 import com.core.beautyshop.modules.identity.domain.enums.AccountStatus;
-import com.core.beautyshop.shared.dto.*;
+import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.shared.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springdoc.core.annotations.ParameterObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.List;
 
 @Tag(name = "Quản lý người dùng & Bảo mật (Admin)", description = "API quản trị tài khoản, khóa/mở khóa, phân vai trò và quản lý phiên làm việc")
 @RestController
@@ -54,13 +61,13 @@ public class AdminUserController {
 
     @Operation(summary = "Xem lịch sử phiên đăng nhập của người dùng", description = "ADMIN. Bao gồm các bản refresh session đã hết hạn/thu hồi/luân chuyển, theo createdAt giảm dần; các dòng cùng familyId thuộc cùng một họ phiên. Không trả token hoặc token hash.")
     @GetMapping("/{id}/sessions")
-    public ApiResponse<java.util.List<SessionView>> sessions(@PathVariable Long id) {
+    public ApiResponse<List<SessionView>> sessions(@PathVariable Long id) {
         return ApiResponse.success(userService.getUserSessions(id));
     }
 
     @GetMapping("/{id}/status-history")
     @Operation(summary = "Xem lịch sử thay đổi trạng thái tài khoản")
-    public ApiResponse<PageResponse<com.core.beautyshop.modules.identity.domain.UserStatusHistory>> statusHistory(@PathVariable Long id, @ParameterObject Pageable pageable) {
+    public ApiResponse<PageResponse<UserStatusHistory>> statusHistory(@PathVariable Long id, @ParameterObject Pageable pageable) {
         return ApiResponse.success(PageResponse.of(userService.getStatusHistory(id, pageable)));
     }
 
@@ -80,7 +87,7 @@ public class AdminUserController {
 
     @Operation(summary = "Đặt lại mật khẩu tạm thời cho người dùng", description = "Chỉ ADMIN. Tự động sinh mật khẩu tạm thời ngẫu nhiên an toàn, cập nhật tài khoản và thu hồi toàn bộ phiên đăng nhập hiện tại.")
     @PostMapping("/{id}/reset-password")
-    public ApiResponse<com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse> resetPassword(@PathVariable Long id) {
+    public ApiResponse<ResetPasswordResponse> resetPassword(@PathVariable Long id) {
         return ApiResponse.success(userService.resetPassword(id));
     }
 
@@ -88,11 +95,11 @@ public class AdminUserController {
     public record StatusRequest(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, example = "SUSPENDED") AccountStatus status,
                                 @Schema(description = "Lý do ghi vào lịch sử", maxLength = 500) String reason) { }
     @Schema(name = "AdminUserRolesRequest", description = "Danh sách thay thế toàn bộ role hiện tại")
-    public record RolesRequest(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Ít nhất một ID role tồn tại", example = "[2, 11]") java.util.List<Long> roleIds) { }
+    public record RolesRequest(@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Ít nhất một ID role tồn tại", example = "[2, 11]") List<Long> roleIds) { }
     @Schema(name = "AdminUserSessionView", description = "Bản ghi refresh session; familyId liên kết các lần luân chuyển")
     public record SessionView(@Schema(description = "ID bản ghi session") Long id,
                               @Schema(description = "ID họ phiên") String familyId,
-                              @Schema(description = "Thời điểm tạo, UTC") java.time.Instant createdAt,
-                              @Schema(description = "Thời điểm hết hạn, UTC") java.time.Instant expiresAt,
-                              @Schema(description = "Thời điểm thu hồi, null nếu chưa thu hồi") java.time.Instant revokedAt) { }
+                              @Schema(description = "Thời điểm tạo, UTC") Instant createdAt,
+                              @Schema(description = "Thời điểm hết hạn, UTC") Instant expiresAt,
+                              @Schema(description = "Thời điểm thu hồi, null nếu chưa thu hồi") Instant revokedAt) { }
 }

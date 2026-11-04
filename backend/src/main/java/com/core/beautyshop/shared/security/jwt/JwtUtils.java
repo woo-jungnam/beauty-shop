@@ -3,6 +3,7 @@ package com.core.beautyshop.shared.security.jwt;
 import com.core.beautyshop.shared.security.services.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,7 +29,7 @@ public class JwtUtils {
     @Value("${jwt.secret:}")
     private String jwtSecret;
 
-    @jakarta.annotation.PostConstruct
+    @PostConstruct
     public void validateSecret() {
         if (jwtSecret == null || jwtSecret.isBlank()
                 || jwtSecret.equals("beautyshop_jwt_secret_key_must_be_at_least_256_bits_long_1234567890!")

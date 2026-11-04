@@ -238,6 +238,7 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
     let botMsgCreated = false;
     let accumulatedText = '';
     let accumulatedProducts = undefined;
+    let accumulatedActions = undefined;
 
     try {
       const url = `${serverBaseUrl(import.meta.env.VITE_API_BASE_URL)}${ENDPOINTS.CHATBOT.STREAM}`;
@@ -297,7 +298,14 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                 reason: p.reasonForRecommendation || p.reason_for_recommendation || '',
                 targetType: p.targetType || p.target_type || 'PRODUCT',
               }));
-              // Chỉ lưu danh sách sản phẩm, KHÔNG hiển thị ngay để đợi text stream xong
+
+              const rawActions = Array.isArray(payload.actions) ? payload.actions : [];
+              accumulatedActions = rawActions.map((a) => ({
+                actionType: a.actionType || a.action_type || '',
+                label: a.label || '',
+                payload: a.payload || {},
+              }));
+              // Chỉ lưu danh sách sản phẩm & hành động, đợi text stream xong mới render
             } else if (payload.type === 'token') {
               setIsTyping(false);
               accumulatedText += (payload.content || '');
@@ -312,6 +320,7 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                     text: accumulatedText,
                     products: undefined,
                     product: null,
+                    actions: undefined,
                   }
                 ]);
               } else {
@@ -324,15 +333,16 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                 );
               }
             } else if (payload.type === 'done') {
-              // Khi hoàn thành sinh text, mới kích hoạt hiển thị các thẻ sản phẩm
-              if (accumulatedProducts && accumulatedProducts.length > 0) {
+              // Khi hoàn thành sinh text, mới kích hoạt hiển thị các thẻ sản phẩm và hành động
+              if ((accumulatedProducts && accumulatedProducts.length > 0) || (accumulatedActions && accumulatedActions.length > 0)) {
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === botMsgId
                       ? {
                           ...m,
                           products: accumulatedProducts,
-                          product: accumulatedProducts[0] || null,
+                          product: (accumulatedProducts && accumulatedProducts[0]) || null,
+                          actions: accumulatedActions,
                         }
                       : m
                   )
@@ -342,20 +352,21 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
               throw new Error(payload.detail || 'Lỗi xử lý luồng AI');
             }
           } catch (e) {
-            if (e.message && e.message.includes('Lỗi xử lý luồng AI')) throw e;
+            throw e;
           }
         }
       }
 
-      // Đảm bảo gắn thẻ sản phẩm khi stream kết thúc
-      if (accumulatedProducts && accumulatedProducts.length > 0) {
+      // Đảm bảo gắn thẻ sản phẩm và hành động khi stream kết thúc
+      if ((accumulatedProducts && accumulatedProducts.length > 0) || (accumulatedActions && accumulatedActions.length > 0)) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === botMsgId
               ? {
                   ...m,
                   products: accumulatedProducts,
-                  product: accumulatedProducts[0] || null,
+                  product: (accumulatedProducts && accumulatedProducts[0]) || null,
+                  actions: accumulatedActions,
                 }
               : m
           )
@@ -572,6 +583,60 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                   ) : (
                     <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                       {msg.text}
+                    </div>
+                  )}
+
+                  {msg.actions && msg.actions.length > 0 && (
+                    <div style={{
+                      marginTop: '10px',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '6px',
+                      animation: 'chatbotFadeIn 0.35s ease-out forwards',
+                    }}>
+                      {msg.actions.map((act, actIdx) => (
+                        <button
+                          key={actIdx}
+                          onClick={() => {
+                            if (act.actionType === 'ADD_TO_CART') {
+                              addItem({
+                                id: act.payload.product_id,
+                                name: act.payload.product_name,
+                                price: act.payload.price,
+                                image: act.payload.image_url,
+                              }, null, act.payload.quantity || 1);
+                            } else if (act.actionType === 'BOOKING_PROPOSAL') {
+                              setIsOpen(false);
+                              const route = `booking?serviceId=${encodeURIComponent(act.payload.service_id)}`;
+                              if (typeof onNavigate === 'function') onNavigate(route);
+                              else window.location.hash = `/${route}`;
+                            } else if (act.actionType === 'VIEW_ORDER') {
+                              setIsOpen(false);
+                              const route = `account/orders?code=${encodeURIComponent(act.payload.order_number || '')}`;
+                              if (typeof onNavigate === 'function') onNavigate(route);
+                              else window.location.hash = `/${route}`;
+                            }
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            borderRadius: '9999px',
+                            backgroundColor: act.actionType === 'BOOKING_PROPOSAL' ? 'var(--c-primary)' : 'var(--c-gold)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                          }}
+                        >
+                          {act.actionType === 'BOOKING_PROPOSAL' && <CalendarCheck size={12} />}
+                          {act.actionType === 'ADD_TO_CART' && <ShoppingBag size={12} />}
+                          {act.label}
+                        </button>
+                      ))}
                     </div>
                   )}
 

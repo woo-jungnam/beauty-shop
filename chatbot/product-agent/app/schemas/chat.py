@@ -106,6 +106,18 @@ class SourceRef(BaseModel):
         return self.chunkType
 
 
+class ChatAction(BaseModel):
+    actionType: str = Field(..., alias="action_type", description="Loại hành động: ADD_TO_CART, BOOKING_PROPOSAL, VIEW_ORDER")
+    label: str = Field(..., description="Chữ hiển thị trên nút bấm tương tác")
+    payload: dict[str, Any] = Field(default_factory=dict, description="Dữ liệu payload đi kèm hành động")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @property
+    def action_type(self) -> str:
+        return self.actionType
+
+
 class ChatResponse(BaseModel):
     sessionId: str = ""
     intent: str = "PRODUCT_SEARCH"
@@ -113,6 +125,7 @@ class ChatResponse(BaseModel):
     message: str | None = None
     products: list[ProductCard] = Field(default_factory=list)
     sources: list[SourceRef] = Field(default_factory=list)
+    actions: list[ChatAction] = Field(default_factory=list)
     needsClarification: bool = Field(default=False, alias="needs_clarification")
     understanding: Any | None = None
     stageLatenciesMs: dict[str, float] | None = Field(default=None, alias="stage_latencies_ms")

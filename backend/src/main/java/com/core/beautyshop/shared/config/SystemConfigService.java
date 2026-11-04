@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -120,7 +122,7 @@ public class SystemConfigService {
     @Transactional(readOnly = true)
     public Map<String, Object> getPublicConfigs() {
         var list = repository.findByIsPublicTrueAndIsDeletedFalse();
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>();
         for (var c : list) {
             Object val = c.getConfigValue();
             if ("DECIMAL".equalsIgnoreCase(c.getValueType())) {
@@ -148,7 +150,7 @@ public class SystemConfigService {
 
     private String normalizeType(String key, String suppliedType) {
         String known = key.startsWith("recommendation.")
-                ? java.util.Optional.ofNullable(RecommendationSettings.SPECS.get(key.substring(15)))
+                ? Optional.ofNullable(RecommendationSettings.SPECS.get(key.substring(15)))
                     .orElseThrow(() -> new BusinessException("Khóa cấu hình gợi ý không được hỗ trợ")).type()
                 : KNOWN_TYPES.get(key);
         String type = suppliedType == null || suppliedType.isBlank() ? (known == null ? "STRING" : known) : suppliedType.toUpperCase(Locale.ROOT);

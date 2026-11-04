@@ -1,9 +1,13 @@
 package com.core.beautyshop.modules.inventory.application.facade;
 
-import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.inventory.api.InventoryExpiryPolicy;
+import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.inventory.api.dto.ExpiringVariantStockDto;
+import com.core.beautyshop.modules.inventory.api.dto.InventoryConsumptionResult;
+import com.core.beautyshop.modules.inventory.api.dto.SpaMaterialOption;
+import com.core.beautyshop.modules.inventory.application.service.InventoryConsumptionService;
 import com.core.beautyshop.modules.inventory.application.service.InventoryService;
+import com.core.beautyshop.modules.inventory.application.service.SpaMaterialOptionsService;
 import com.core.beautyshop.modules.inventory.application.service.StockAllocationService;
 import com.core.beautyshop.modules.inventory.domain.StockAllocation.Status;
 import com.core.beautyshop.modules.inventory.domain.WarehouseStock;
@@ -15,7 +19,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -23,8 +29,8 @@ public class InventoryFacadeImpl implements InventoryFacade {
 
     private final InventoryService inventoryService;
     private final StockAllocationService allocations;
-    private final com.core.beautyshop.modules.inventory.application.service.InventoryConsumptionService consumptions;
-    private final com.core.beautyshop.modules.inventory.application.service.SpaMaterialOptionsService materialOptions;
+    private final InventoryConsumptionService consumptions;
+    private final SpaMaterialOptionsService materialOptions;
 
     @Override
     public boolean isStockAvailable(Long variantId, int requiredQuantity) {
@@ -42,7 +48,7 @@ public class InventoryFacadeImpl implements InventoryFacade {
     }
 
     @Override
-    public java.util.Map<Long, Integer> getAvailableQuantities(java.util.Collection<Long> variantIds) {
+    public Map<Long, Integer> getAvailableQuantities(Collection<Long> variantIds) {
         return inventoryService.getAvailableQuantities(variantIds);
     }
 
@@ -102,8 +108,12 @@ public class InventoryFacadeImpl implements InventoryFacade {
     @Override public void replaceAllocation(String orderNumber,Long variantId,int quantity) { allocations.replace(orderNumber,variantId,quantity); }
 
     @Override
-    public com.core.beautyshop.modules.inventory.api.dto.InventoryConsumptionResult consumeSpaUsage(String reference, Long variantId, Long warehouseId, int quantity) {
+    public InventoryConsumptionResult consumeSpaUsage(String reference, Long variantId, Long warehouseId, int quantity) {
         return consumptions.consume(reference, variantId, warehouseId, quantity);
     }
-    @Override public java.util.List<com.core.beautyshop.modules.inventory.api.dto.SpaMaterialOption> listSpaMaterialOptions() { return materialOptions.list(); }
+
+    @Override
+    public List<SpaMaterialOption> listSpaMaterialOptions() {
+        return materialOptions.list();
+    }
 }

@@ -1,24 +1,41 @@
 package com.core.beautyshop.modules.identity.application.service;
 
+import com.core.beautyshop.modules.identity.api.AdminUserController.SessionView;
 import com.core.beautyshop.modules.identity.application.dto.request.UpdateProfileRequest;
+import com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse;
 import com.core.beautyshop.modules.identity.application.dto.response.UserProfileResponse;
-import com.core.beautyshop.modules.identity.domain.User;
+import com.core.beautyshop.modules.identity.application.mapper.AuthMapper;
 import com.core.beautyshop.modules.identity.domain.LoyaltyPointAward;
 import com.core.beautyshop.modules.identity.domain.LoyaltyPointAwardRepository;
+import com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository;
+import com.core.beautyshop.modules.identity.domain.RoleRepository;
+import com.core.beautyshop.modules.identity.domain.User;
+import com.core.beautyshop.modules.identity.domain.UserRepository;
+import com.core.beautyshop.modules.identity.domain.UserStatusHistory;
+import com.core.beautyshop.modules.identity.domain.UserStatusHistoryRepository;
+import com.core.beautyshop.modules.identity.domain.enums.AccountStatus;
+import com.core.beautyshop.modules.identity.domain.enums.MembershipTier;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.exception.UnauthorizedException;
-import com.core.beautyshop.modules.identity.application.mapper.AuthMapper;
-import com.core.beautyshop.modules.identity.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -27,17 +44,17 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final LoyaltyPointAwardRepository loyaltyPointAwardRepository;
     private final AuthMapper authMapper;
-    private final com.core.beautyshop.modules.identity.domain.UserStatusHistoryRepository statusHistoryRepository;
-    private final com.core.beautyshop.modules.identity.domain.RoleRepository roleRepository;
+    private final UserStatusHistoryRepository statusHistoryRepository;
+    private final RoleRepository roleRepository;
     private final IdentityAdministrationGuard administrationGuard;
     private final AuthService authService;
-    private final com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository sessionRepository;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final RefreshTokenSessionRepository sessionRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private String getAuthenticatedUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() 
-                || auth instanceof AnonymousAuthenticationToken 
+        if (auth == null || !auth.isAuthenticated()
+                || auth instanceof AnonymousAuthenticationToken
                 || "anonymousUser".equalsIgnoreCase(auth.getName())) {
             throw new UnauthorizedException("Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!");
         }
@@ -103,10 +120,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserProfileResponse> getAllUsers(String keyword, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String role, Pageable pageable) {
-        org.springframework.data.jpa.domain.Specification<User> spec = (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
+    public Page<UserProfileResponse> getAllUsers(String keyword, AccountStatus status, String role, Pageable pageable) {
+        Specification<User> spec = (root, query, cb) -> cb.isFalse(root.get("isDeleted"));
         if (keyword != null && !keyword.isBlank()) {
-            String value = "%" + keyword.trim().toLowerCase(java.util.Locale.ROOT) + "%";
+            String value = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
             spec = spec.and((root, query, cb) -> cb.or(cb.like(cb.lower(root.get("username")), value),
                     cb.like(cb.lower(root.get("email")), value), cb.like(cb.lower(root.get("fullName")), value), cb.like(root.get("phone"), value)));
         }
@@ -120,7 +137,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<com.core.beautyshop.modules.identity.domain.UserStatusHistory> getStatusHistory(Long userId, Pageable pageable) {
+    public Page<UserStatusHistory> getStatusHistory(Long userId, Pageable pageable) {
         getUserById(userId);
         return statusHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
@@ -143,10 +160,10 @@ public class UserServiceImpl implements UserService {
             if (!userId.equals(award.getUserId())) throw new BusinessException("Chủ sở hữu phần thưởng khách hàng thân thiết không khớp");
             int points = Math.max(0, user.getLoyaltyPoints() - award.getPoints());
             user.setLoyaltyPoints(points);
-            user.setMembershipTier(java.util.Arrays.stream(com.core.beautyshop.modules.identity.domain.enums.MembershipTier.values())
+            user.setMembershipTier(Arrays.stream(MembershipTier.values())
                     .filter(tier -> points >= tier.getRequiredPoints())
-                    .max(java.util.Comparator.comparingInt(com.core.beautyshop.modules.identity.domain.enums.MembershipTier::getRequiredPoints))
-                    .orElse(com.core.beautyshop.modules.identity.domain.enums.MembershipTier.MEMBER));
+                    .max(Comparator.comparingInt(MembershipTier::getRequiredPoints))
+                    .orElse(MembershipTier.MEMBER));
             award.setReversed(true);
             loyaltyPointAwardRepository.save(award);
             userRepository.save(user);
@@ -155,26 +172,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserProfileResponse updateStatus(Long userId, com.core.beautyshop.modules.identity.domain.enums.AccountStatus status, String reason) {
+    public UserProfileResponse updateStatus(Long userId, AccountStatus status, String reason) {
         if (status == null) throw new BusinessException("Trạng thái tài khoản là bắt buộc");
         if (reason != null && reason.length() > 500) throw new BusinessException("Lý do trạng thái không được vượt quá 500 ký tự");
         administrationGuard.lockAdministration();
         User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
-        var previous = user.getStatus() == null ? com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE : user.getStatus();
+        var previous = user.getStatus() == null ? AccountStatus.ACTIVE : user.getStatus();
         if (previous == status) return authMapper.toUserProfileResponse(user);
-        if (status != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) administrationGuard.requireAnotherActiveAdmin(user);
+        if (status != AccountStatus.ACTIVE) administrationGuard.requireAnotherActiveAdmin(user);
         user.setStatus(status);
-        statusHistoryRepository.save(com.core.beautyshop.modules.identity.domain.UserStatusHistory.builder()
+        statusHistoryRepository.save(UserStatusHistory.builder()
                 .userId(userId).oldStatus(previous).newStatus(status).reason(reason).build());
-        if (status != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) authService.forceLogoutUser(userId);
+        if (status != AccountStatus.ACTIVE) authService.forceLogoutUser(userId);
         return authMapper.toUserProfileResponse(user);
     }
 
     @Override
     @Transactional
-    public UserProfileResponse updateRoles(Long userId, java.util.List<Long> roleIds) {
+    public UserProfileResponse updateRoles(Long userId, List<Long> roleIds) {
         if (roleIds == null || roleIds.isEmpty()) throw new BusinessException("Cần chọn ít nhất một vai trò");
-        if (roleIds.stream().anyMatch(java.util.Objects::isNull)) throw new BusinessException("Danh sách mã vai trò là bắt buộc");
+        if (roleIds.stream().anyMatch(Objects::isNull)) throw new BusinessException("Danh sách mã vai trò là bắt buộc");
         administrationGuard.lockAdministration();
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
@@ -182,7 +199,7 @@ public class UserServiceImpl implements UserService {
         if (roles.size() != roleIds.stream().distinct().count()) throw new BusinessException("Một hoặc nhiều vai trò không tồn tại trong hệ thống");
         if (roles.stream().anyMatch(role -> Boolean.TRUE.equals(role.getIsDeleted()))) throw new BusinessException("Không thể gán vai trò đã bị xóa");
         if (roles.stream().noneMatch(role -> "ROLE_ADMIN".equals(role.getName()))) administrationGuard.requireAnotherActiveAdmin(user);
-        user.setRoles(new java.util.ArrayList<>(roles));
+        user.setRoles(new ArrayList<>(roles));
         userRepository.save(user);
         authService.forceLogoutUser(userId);
         return authMapper.toUserProfileResponse(user);
@@ -190,7 +207,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse resetPassword(Long userId) {
+    public ResetPasswordResponse resetPassword(Long userId) {
         administrationGuard.lockAdministration();
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
@@ -201,7 +218,7 @@ public class UserServiceImpl implements UserService {
         user.setPasswordHash(passwordEncoder.encode(tempPassword));
         userRepository.save(user);
         authService.forceLogoutUser(userId);
-        return com.core.beautyshop.modules.identity.application.dto.response.ResetPasswordResponse.builder()
+        return ResetPasswordResponse.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
@@ -212,10 +229,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.List<com.core.beautyshop.modules.identity.api.AdminUserController.SessionView> getUserSessions(Long userId) {
+    public List<SessionView> getUserSessions(Long userId) {
         getUserById(userId);
         return sessionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(session -> new com.core.beautyshop.modules.identity.api.AdminUserController.SessionView(
+                .map(session -> new SessionView(
                         session.getId(), session.getFamilyId(), session.getCreatedAt(), session.getExpiresAt(), session.getRevokedAt()))
                 .toList();
     }
@@ -226,7 +243,7 @@ public class UserServiceImpl implements UserService {
         final String digits = "23456789";
         final String special = "@#$%&*";
         final String all = uppercase + lowercase + digits + special;
-        java.security.SecureRandom random = new java.security.SecureRandom();
+        SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder();
         sb.append(uppercase.charAt(random.nextInt(uppercase.length())));
         sb.append(lowercase.charAt(random.nextInt(lowercase.length())));

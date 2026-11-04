@@ -9,6 +9,7 @@ import com.core.beautyshop.modules.cart.domain.CartItemRepository;
 import com.core.beautyshop.modules.cart.domain.CartRepository;
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
+import com.core.beautyshop.modules.catalog.api.event.ProductInteractionEvent;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.inventory.api.exception.InsufficientStockException;
 import com.core.beautyshop.shared.exception.BusinessException;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -122,7 +124,7 @@ public class CartServiceImpl implements CartService {
         }
 
         Cart updatedCart = cartRepository.findById(cart.getId()).orElse(cart);
-        eventPublisher.publishEvent(new com.core.beautyshop.modules.catalog.api.event.ProductInteractionEvent(userId,
+        eventPublisher.publishEvent(new ProductInteractionEvent(userId,
                 request.getSessionId(), variant.getProductId(), "ADD_TO_CART", null));
         return mapToCartResponse(updatedCart);
     }
@@ -246,7 +248,7 @@ public class CartServiceImpl implements CartService {
                 .map(CartItem::getProductVariantId)
                 .collect(Collectors.toList());
 
-        java.util.Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
+        Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
 
         List<CartItemResponse> itemResponses = cartItems.stream()
                 .map(item -> {

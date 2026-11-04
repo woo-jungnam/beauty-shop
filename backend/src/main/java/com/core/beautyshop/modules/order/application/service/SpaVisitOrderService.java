@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.order.application.service;
 
+import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.order.api.dto.*;
 import com.core.beautyshop.modules.order.domain.*;
 import com.core.beautyshop.modules.order.domain.enums.*;
@@ -8,30 +9,37 @@ import com.core.beautyshop.modules.payment.api.dto.*;
 import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import com.core.beautyshop.shared.exception.*;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.*;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
 public class SpaVisitOrderService {
-    @org.springframework.beans.factory.annotation.Autowired
-    private org.springframework.context.ApplicationEventPublisher events;
+    @Autowired
+    private ApplicationEventPublisher events;
     private final OrderRepository orders;
     private final PaymentFacade payments;
-    private final jakarta.persistence.EntityManager entities;
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
-    private final com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade;
+    private final EntityManager entities;
+    private final JdbcTemplate jdbc;
+    private final IdentityFacade identityFacade;
 
-    @org.springframework.beans.factory.annotation.Autowired
-    public SpaVisitOrderService(OrderRepository orders, PaymentFacade payments, jakarta.persistence.EntityManager entities,
-                                org.springframework.jdbc.core.JdbcTemplate jdbc, com.core.beautyshop.modules.identity.api.IdentityFacade identityFacade) {
+    @Autowired
+    public SpaVisitOrderService(OrderRepository orders, PaymentFacade payments, EntityManager entities,
+                                JdbcTemplate jdbc, IdentityFacade identityFacade) {
         this.orders = orders;
         this.payments = payments;
         this.entities = entities;
@@ -39,8 +47,8 @@ public class SpaVisitOrderService {
         this.identityFacade = identityFacade;
     }
 
-    public SpaVisitOrderService(OrderRepository orders, PaymentFacade payments, jakarta.persistence.EntityManager entities,
-                                org.springframework.jdbc.core.JdbcTemplate jdbc) {
+    public SpaVisitOrderService(OrderRepository orders, PaymentFacade payments, EntityManager entities,
+                                JdbcTemplate jdbc) {
         this(orders, payments, entities, jdbc, null);
     }
 
@@ -50,7 +58,7 @@ public class SpaVisitOrderService {
             throw new BusinessException("Số cọc phân bổ và mã tham chiếu không hợp lệ");
         Long id=orders.findIdByAppointmentId(appointmentId).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy hóa đơn Spa"));
         Order invoice=orders.findByIdForUpdate(id).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy hóa đơn Spa"));
-        entities.refresh(invoice,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        entities.refresh(invoice, LockModeType.PESSIMISTIC_WRITE);
         var previous=jdbc.query("SELECT order_id,amount FROM spa_invoice_advances WHERE reference=?",(rs,n)->Map.entry(rs.getLong(1),rs.getBigDecimal(2)),reference);
         if(!previous.isEmpty()) {
             if(!previous.getFirst().getKey().equals(id) || previous.getFirst().getValue().compareTo(amount)!=0) throw new BusinessException("Mã phân bổ cọc đã được sử dụng khác nội dung");
@@ -191,7 +199,7 @@ public class SpaVisitOrderService {
     }
     private String text(String value, String fallback) { return value == null || value.isBlank() ? fallback : value; }
     private String digest(String value) {
-        try { return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
-        catch (java.security.NoSuchAlgorithmException failure) { throw new IllegalStateException(failure); }
+        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
+        catch (NoSuchAlgorithmException failure) { throw new IllegalStateException(failure); }
     }
 }

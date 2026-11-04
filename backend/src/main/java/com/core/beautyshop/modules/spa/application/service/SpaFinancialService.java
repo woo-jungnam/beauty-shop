@@ -1,23 +1,28 @@
 package com.core.beautyshop.modules.spa.application.service;
 
+import com.core.beautyshop.modules.order.api.OrderFacade;
+import com.core.beautyshop.modules.payment.api.PaymentFacade;
+import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
+import com.core.beautyshop.modules.spa.api.SpaDepositFacade;
 import com.core.beautyshop.modules.spa.domain.*;
 import com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus;
-import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.shared.exception.*;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import jakarta.persistence.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.*;
+import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
 
 @Service @RequiredArgsConstructor
-public class SpaFinancialService implements com.core.beautyshop.modules.spa.api.SpaDepositFacade {
- @org.springframework.beans.factory.annotation.Autowired
- private com.core.beautyshop.modules.payment.api.PaymentFacade payments;
+public class SpaFinancialService implements SpaDepositFacade {
+ @Autowired
+ private PaymentFacade payments;
  private final JdbcTemplate jdbc;
  private final EntityManager em;
  private final SpaAccessService access;
@@ -27,7 +32,7 @@ public class SpaFinancialService implements com.core.beautyshop.modules.spa.api.
  public record Finance(Long appointmentId,int policyVersion,BigDecimal depositRequired,BigDecimal depositCollected,BigDecimal appliedToInvoice,
                        BigDecimal assessedFee,BigDecimal feePaid,BigDecimal feeDue,BigDecimal refundable,BigDecimal refunded,boolean closed,List<Entry> entries,
                        BigDecimal depositDue,DepositPayment depositPayment,List<String> reviewReasons,String status,String pendingExpiresAt) {}
- public record DepositPayment(String transferCode,boolean canPay,com.core.beautyshop.modules.payment.api.dto.PaymentInstruction paymentInstruction) {}
+ public record DepositPayment(String transferCode,boolean canPay,PaymentInstruction paymentInstruction) {}
  public record Receipt(BigDecimal amount,String method,String externalReference,String reason) {}
  @Transactional(readOnly=true)
  public Policy policy() { return jdbc.queryForObject("SELECT * FROM spa_financial_policy WHERE id=1",(rs,n)->new Policy(rs.getInt("version"),rs.getBigDecimal("deposit_amount"),rs.getBigDecimal("cancellation_fee"),rs.getBigDecimal("no_show_fee"))); }
@@ -59,7 +64,7 @@ public class SpaFinancialService implements com.core.beautyshop.modules.spa.api.
   }
   String code=depositReq.signum()>0?"SPADEP-"+UUID.randomUUID().toString().replace("-","").toUpperCase(Locale.ROOT):null;
   jdbc.update("INSERT INTO spa_appointment_finance(appointment_id,policy_version,deposit_required,cancellation_fee,no_show_fee,accepted_by,accepted_at,deposit_transfer_code) VALUES(?,?,?,?,?,?,?,?)",
-          appointment.getId(),p.version(),depositReq,treatment?BigDecimal.ZERO:p.cancellationFee(),treatment?BigDecimal.ZERO:p.noShowFee(),enabled?SecurityUtils.getCurrentUserId():null,enabled?java.sql.Timestamp.from(Instant.now()):null,code);
+          appointment.getId(),p.version(),depositReq,treatment?BigDecimal.ZERO:p.cancellationFee(),treatment?BigDecimal.ZERO:p.noShowFee(),enabled?SecurityUtils.getCurrentUserId():null,enabled?Timestamp.from(Instant.now()):null,code);
   return depositReq;
  }
  public void requireDeposit(Appointment appointment) {

@@ -2,9 +2,16 @@ package com.core.beautyshop.modules.inventory.application.facade;
 
 import com.core.beautyshop.modules.inventory.api.InventoryAdminFacade;
 import com.core.beautyshop.modules.inventory.application.dto.request.WarehouseStockRequest;
+import com.core.beautyshop.modules.inventory.application.service.InventoryBatchService;
+import com.core.beautyshop.modules.inventory.application.service.InventoryLedgerService;
 import com.core.beautyshop.modules.inventory.application.service.WarehouseStockService;
+import com.core.beautyshop.modules.inventory.domain.WarehouseRepository;
+import com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType;
+import com.core.beautyshop.shared.exception.BusinessException;
+import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,31 +20,41 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class InventoryAdminFacadeImpl implements InventoryAdminFacade {
     private final WarehouseStockService service;
-    private final com.core.beautyshop.modules.inventory.domain.WarehouseRepository warehouses;
-    private final com.core.beautyshop.modules.inventory.application.service.InventoryBatchService batches;
-    private final com.core.beautyshop.modules.inventory.application.service.InventoryLedgerService ledger;
+    private final WarehouseRepository warehouses;
+    private final InventoryBatchService batches;
+    private final InventoryLedgerService ledger;
 
-    @Override @org.springframework.transaction.annotation.Transactional
-    public Long receiveBatch(Long warehouseId,Long variantId,int quantity,BigDecimal cost,String batchCode,LocalDate expiry,String reference) {
-        WarehouseStockRequest request=new WarehouseStockRequest();request.setProductVariantId(variantId);request.setQuantity(quantity);request.setCostPrice(cost);request.setBatchCode(batchCode);request.setExpirationDate(expiry);
-        return service.receiveStock(warehouseId,request,"PURCHASE_RECEIPT",reference).getId();
+    @Override @Transactional
+    public Long receiveBatch(Long warehouseId, Long variantId, int quantity, BigDecimal cost, String batchCode, LocalDate expiry, String reference) {
+        WarehouseStockRequest request = new WarehouseStockRequest();
+        request.setProductVariantId(variantId);
+        request.setQuantity(quantity);
+        request.setCostPrice(cost);
+        request.setBatchCode(batchCode);
+        request.setExpirationDate(expiry);
+        return service.receiveStock(warehouseId, request, "PURCHASE_RECEIPT", reference).getId();
     }
-    @Override @org.springframework.transaction.annotation.Transactional
-    public void returnToSupplier(Long warehouseId,Long variantId,String batchCode,int quantity,String reference) {
-        batches.lockWarehouse(warehouseId);var stock=batches.lockBatch(warehouseId,variantId,batchCode).orElseThrow(()->new com.core.beautyshop.shared.exception.BusinessException("Supplier return batch not found"));
-        if(quantity<=0||quantity>stock.getQuantity()-stock.getReservedQuantity())throw new com.core.beautyshop.shared.exception.BusinessException("Supplier return exceeds available unreserved stock");
-        int before=stock.getQuantity();stock.setQuantity(before-quantity);
-        ledger.record(stock,com.core.beautyshop.modules.inventory.domain.enums.InventoryTransactionType.SUPPLIER_RETURN,-quantity,before,stock.getQuantity(),"SUPPLIER_RETURN",reference,"Goods returned to supplier");
+
+    @Override @Transactional
+    public void returnToSupplier(Long warehouseId, Long variantId, String batchCode, int quantity, String reference) {
+        batches.lockWarehouse(warehouseId);
+        var stock = batches.lockBatch(warehouseId, variantId, batchCode).orElseThrow(() -> new BusinessException("Supplier return batch not found"));
+        if (quantity <= 0 || quantity > stock.getQuantity() - stock.getReservedQuantity()) {
+            throw new BusinessException("Supplier return exceeds available unreserved stock");
+        }
+        int before = stock.getQuantity();
+        stock.setQuantity(before - quantity);
+        ledger.record(stock, InventoryTransactionType.SUPPLIER_RETURN, -quantity, before, stock.getQuantity(), "SUPPLIER_RETURN", reference, "Goods returned to supplier");
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Transactional(readOnly = true)
     public void validateWarehouse(Long warehouseId) {
-        if (warehouseId == null) throw new com.core.beautyshop.shared.exception.BusinessException("Warehouse is required");
+        if (warehouseId == null) throw new BusinessException("Warehouse is required");
         var warehouse = warehouses.findByIdAndIsDeletedFalse(warehouseId)
-                .orElseThrow(() -> new com.core.beautyshop.shared.exception.ResourceNotFoundException("Warehouse not found: " + warehouseId));
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found: " + warehouseId));
         if (!Boolean.TRUE.equals(warehouse.getIsActive()))
-            throw new com.core.beautyshop.shared.exception.BusinessException("Warehouse is inactive");
+            throw new BusinessException("Warehouse is inactive");
     }
 
     @Override

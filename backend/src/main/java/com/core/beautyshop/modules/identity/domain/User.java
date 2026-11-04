@@ -7,7 +7,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import com.core.beautyshop.modules.identity.domain.enums.MembershipTier;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 @Entity
@@ -78,5 +80,5 @@ public class User extends Base {
             uniqueConstraints = @UniqueConstraint(name = "uk_staff_permission", columnNames = {"user_id", "permission"}))
     @Column(name = "permission", nullable = false, length = 40)
     @Builder.Default
-    private java.util.Set<String> staffPermissions = new java.util.HashSet<>();
+    private Set<String> staffPermissions = new HashSet<>();
 }

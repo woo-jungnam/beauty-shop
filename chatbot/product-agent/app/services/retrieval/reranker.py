@@ -488,17 +488,23 @@ class ProductReranker:
 
             results: List[RerankedCandidate] = []
             seenBaseKeys: Set[str] = set()
+            seenBrandCats: Set[str] = set()
             seenRoutineCategories: Set[str] = set()
             uIntentStr = getattr(understanding.intent, "value", str(understanding.intent))
             isRoutine = uIntentStr in ("ROUTINE_RECOMMENDATION", "ROUTINE")
+            isComparison = uIntentStr in ("COMPARISON", "PRODUCT_COMPARISON")
+            relativeDropRatio = 0.45 if isComparison else 0.60
 
             reqTType = cDict.get("target_type") or (understanding.entities.get("target_type") if getattr(understanding, "entities", None) else None)
             if reqTType:
                 reqTType = str(reqTType).upper().strip()
 
+            topScore: Optional[float] = None
+
             for cand in reranked:
                 if cand.rerankScore <= 0:
-                    continue
+                    break
+
                 prod = cand.product
 
                 if reqTType in ("SERVICE", "PRODUCT"):
@@ -514,19 +520,38 @@ class ProductReranker:
                 if baseKey in seenBaseKeys:
                     continue
 
+                # Tránh đề xuất 2 sản phẩm cùng hãng trong cùng 1 danh mục (ví dụ 2 chai xịt khoáng Avène)
+                brandCatKey = f"{(prod.brand or '').lower().strip()}:{(prod.category or '').lower().strip()}"
+                if not isComparison and not userBrand and brandCatKey in seenBrandCats:
+                    continue
+
                 if isRoutine:
                     pCat = (prod.category or "").lower()
                     if pCat in seenRoutineCategories:
                         continue
+
+                # Cơ chế cắt tỉa theo ngưỡng rơi điểm tương đối (Relative Score Drop-off)
+                if topScore is None:
+                    topScore = cand.rerankScore
+                else:
+                    if not isRoutine and topScore > 0:
+                        ratio = cand.rerankScore / topScore
+                        if ratio < relativeDropRatio:
+                            logger.info(
+                                "Cắt tỉa ứng viên '%s' (id=%s) do rơi điểm tương đối: %.2f / %.2f = %.2f < %.2f",
+                                prod.name, cand.productId, cand.rerankScore, topScore, ratio, relativeDropRatio
+                            )
+                            break
+
+                if isRoutine:
+                    pCat = (prod.category or "").lower()
                     seenRoutineCategories.add(pCat)
 
                 seenBaseKeys.add(baseKey)
+                seenBrandCats.add(brandCatKey)
                 results.append(cand)
                 if len(results) >= limit:
                     break
-
-            if not results and reranked:
-                results = reranked[:min(1 if limit == 1 else 3, limit)]
 
         logger.info(
             "Đã tái xếp hạng %d ứng viên thành %d sản phẩm đa dạng trong %.2f ms",

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -154,7 +155,7 @@ public class AdminSpaCatalogService {
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa: " + id)); }
     private void requireNoServiceObligations(Long id) {
         if (appointments.hasOutstandingServiceAppointments(id)
-                || snapshots.countServiceOrderObligations(id, java.time.Instant.now()) > 0) {
+                || snapshots.countServiceOrderObligations(id, Instant.now()) > 0) {
             throw new BusinessException("Vui lòng xử lý các lịch hẹn, vé đã mua và đơn hàng đang chờ trước khi ngưng dịch vụ này");
         }
     }

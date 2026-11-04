@@ -2,15 +2,19 @@ package com.core.beautyshop.modules.notification.application.service;
 
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
+import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
 import com.core.beautyshop.modules.notification.application.dto.EmailMessageDto;
+import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.modules.notification.domain.NotificationReceiptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
 
 import jakarta.mail.internet.MimeMessage;
 import java.math.BigDecimal;
@@ -27,8 +31,8 @@ public class NotificationServiceImpl implements NotificationService {
     private final IdentityFacade identityFacade;
     private final NotificationReceiptRepository receiptRepository;
     private final Optional<JavaMailSender> mailSender;
-    private final com.core.beautyshop.modules.order.api.OrderFacade orderFacade;
-    private final com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerNotifications;
+    private final OrderFacade orderFacade;
+    private final CustomerNotificationFacade customerNotifications;
 
     public NotificationServiceImpl(IdentityFacade identityFacade,
                                    NotificationReceiptRepository receiptRepository,
@@ -36,12 +40,12 @@ public class NotificationServiceImpl implements NotificationService {
         this(identityFacade, receiptRepository, mailSender, null, null);
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public NotificationServiceImpl(IdentityFacade identityFacade,
                                    NotificationReceiptRepository receiptRepository,
                                    Optional<JavaMailSender> mailSender,
-                                   com.core.beautyshop.modules.order.api.OrderFacade orderFacade,
-                                   com.core.beautyshop.modules.notification.api.CustomerNotificationFacade customerNotifications) {
+                                   OrderFacade orderFacade,
+                                   CustomerNotificationFacade customerNotifications) {
         this.identityFacade = identityFacade;
         this.receiptRepository = receiptRepository;
         this.mailSender = mailSender;
@@ -146,14 +150,14 @@ public class NotificationServiceImpl implements NotificationService {
 
     private String buildEmailHtml(EmailMessageDto dto) {
         if ("SPA_APPOINTMENT_REMINDER".equals(dto.getTemplateCode()) || "SPA_STAFF_FOLLOW_UP".equals(dto.getTemplateCode()) || "ORDER_EVENT".equals(dto.getTemplateCode())) {
-            String recipient = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getRecipientName() == null ? "Quý khách" : dto.getRecipientName());
-            String subject = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getSubject() == null ? "BeautyShop Spa" : dto.getSubject());
-            String body = org.springframework.web.util.HtmlUtils.htmlEscape(String.valueOf(dto.getParameters().getOrDefault("body", "")))
+            String recipient = HtmlUtils.htmlEscape(dto.getRecipientName() == null ? "Quý khách" : dto.getRecipientName());
+            String subject = HtmlUtils.htmlEscape(dto.getSubject() == null ? "BeautyShop Spa" : dto.getSubject());
+            String body = HtmlUtils.htmlEscape(String.valueOf(dto.getParameters().getOrDefault("body", "")))
                     .replace("\n", "<br/>");
             return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h2>" + subject
                     + "</h2><p>Xin chào " + recipient + ",</p><p>" + body + "</p></body></html>";
         }
-        String name = org.springframework.web.util.HtmlUtils.htmlEscape(dto.getRecipientName() != null ? dto.getRecipientName() : "Quý khách");
+        String name = HtmlUtils.htmlEscape(dto.getRecipientName() != null ? dto.getRecipientName() : "Quý khách");
         String orderNumber = dto.getParameters() != null && dto.getParameters().get("orderNumber") != null
                 ? String.valueOf(dto.getParameters().get("orderNumber")) : "";
         String amount = dto.getParameters() != null && dto.getParameters().get("totalAmount") != null

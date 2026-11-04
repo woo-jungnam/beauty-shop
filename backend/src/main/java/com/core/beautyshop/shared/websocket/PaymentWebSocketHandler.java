@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -12,6 +14,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -30,7 +33,7 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) {
         Object attribute = session.getAttributes().get("paymentScope");
         if (!(attribute instanceof PaymentSubscriptionTokenService.Scope scope)
-                || !scope.expiresAt().isAfter(java.time.Instant.now())) {
+                || !scope.expiresAt().isAfter(Instant.now())) {
             try { session.close(CloseStatus.POLICY_VIOLATION); } catch (IOException ignored) {}
             return;
         }
@@ -89,7 +92,7 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
         log.info("WebSocket disconnected: sessionId={}, code={}", session.getId(), status.getCode());
     }
 
-    @org.springframework.transaction.event.TransactionalEventListener(phase = org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleOrderPaidEvent(OrderEvents.OrderPaidEvent event) {
         if (event == null) return;
         log.info("Received OrderPaidEvent for orderId={}, orderNumber={}, broadcasting via WebSocket",
@@ -132,7 +135,7 @@ public class PaymentWebSocketHandler extends TextWebSocketHandler {
         for (WebSocketSession s : targetSessions) {
             Object attribute = s.getAttributes().get("paymentScope");
             if (!(attribute instanceof PaymentSubscriptionTokenService.Scope scope)
-                    || !scope.expiresAt().isAfter(java.time.Instant.now())) {
+                    || !scope.expiresAt().isAfter(Instant.now())) {
                 try { s.close(CloseStatus.POLICY_VIOLATION); } catch (IOException ignored) {}
                 continue;
             }

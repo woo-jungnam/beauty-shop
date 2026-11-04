@@ -1,14 +1,19 @@
 package com.core.beautyshop.modules.spa.application.dto.response;
 
 import com.core.beautyshop.modules.spa.domain.ServicePackage;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 @Data
 @Builder
@@ -28,11 +33,14 @@ public class ServicePackageResponse {
     private List<Item> items;
     private String purchaseToken;
     public static String token(ServicePackage entity) {
-        String value = entity.getId()+"|"+entity.getName()+"|"+entity.getPrice()+"|"+entity.getValidityDays()+"|"+
-                entity.getItems().stream().sorted(java.util.Comparator.comparing(i -> i.getService().getId()))
-                .map(i -> i.getService().getId()+":"+i.getService().getName()+":"+i.getQuantity()+":"+i.getService().getBasePrice()).toList();
-        try { return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8))); }
-        catch(java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+        String value = entity.getId() + "|" + entity.getName() + "|" + entity.getPrice() + "|" + entity.getValidityDays() + "|" +
+                entity.getItems().stream().sorted(Comparator.comparing(i -> i.getService().getId()))
+                .map(i -> i.getService().getId() + ":" + i.getService().getName() + ":" + i.getQuantity() + ":" + i.getService().getBasePrice()).toList();
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch(NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Data

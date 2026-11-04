@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(
@@ -62,7 +63,7 @@ public class WarehouseStock extends Base {
     private String location;
 
     @Column(name = "expiration_date")
-    private java.time.LocalDate expirationDate;
+    private LocalDate expirationDate;
 
     @Column(name = "batch_code", length = 100)
     private String batchCode;

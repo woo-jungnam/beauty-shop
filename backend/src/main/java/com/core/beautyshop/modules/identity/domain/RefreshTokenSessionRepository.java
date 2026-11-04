@@ -8,12 +8,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
 
 @Repository
 public interface RefreshTokenSessionRepository extends JpaRepository<RefreshTokenSession, Long> {
-    java.util.List<RefreshTokenSession> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<RefreshTokenSession> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<RefreshTokenSession> findByTokenHashAndIsDeletedFalse(String tokenHash);
     @Query("SELECT session.userId FROM RefreshTokenSession session WHERE session.tokenHash = :tokenHash AND session.isDeleted = false")
     Optional<Long> findUserIdByTokenHash(@Param("tokenHash") String tokenHash);

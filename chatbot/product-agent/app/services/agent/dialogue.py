@@ -181,6 +181,10 @@ class ConversationContext(BaseModel):
         tCat = targetCat if targetCat is not None else kwargs.get("target_cat")
         cTargetType = curTargetType if "curTargetType" in kwargs or curTargetType != "PRODUCT" else kwargs.get("cur_target_type", curTargetType)
 
+        oldTarget = str(self.accumulatedConstraints.get("target_type") or "").upper()
+        if oldTarget and cTargetType and oldTarget != cTargetType:
+            self.resetAccumulated()
+
         if tCat and cTargetType != "SERVICE":
             oldDom = Taxonomy.getDomain(Taxonomy.normalizeCategory(self.accumulatedCategory))
             newDom = Taxonomy.getDomain(Taxonomy.normalizeCategory(tCat))
@@ -360,22 +364,29 @@ class ConversationContextManager:
             if refEntity.product_name.lower() not in semanticQ.lower():
                 semanticQ = f"{refEntity.product_name} {semanticQ}".strip()
 
-        curTargetType = None
-        if hasattr(cur, "constraints") and isinstance(cur.constraints, dict):
+        rawLower = rawMsg.lower()
+        curTargetType = getattr(cur, "target_type", None) or getattr(cur, "target", None)
+        if hasattr(cur, "constraints") and isinstance(cur.constraints, dict) and cur.constraints.get("target_type"):
             curTargetType = cur.constraints.get("target_type")
-        if not curTargetType and hasattr(cur, "entities") and isinstance(cur.entities, dict):
+        if not curTargetType and hasattr(cur, "entities") and isinstance(cur.entities, dict) and cur.entities.get("target_type"):
             curTargetType = cur.entities.get("target_type")
+
+        # Từ khóa rõ ràng trong tin nhắn người dùng có quyền ưu tiên cao nhất
+        if any(w in rawLower for w in ["sản phẩm", "đặt hàng", "mua hàng", "lên đơn", "mua mỹ phẩm"]):
+            curTargetType = "PRODUCT"
+        elif any(w in rawLower for w in ["dịch vụ", "liệu trình", "spa", "đặt lịch spa", "hẹn spa"]):
+            curTargetType = "SERVICE"
+
         curTargetType = str(curTargetType or "PRODUCT").upper()
 
-        oldTargetType = str(ctx.accumulatedConstraints.get("target_type", "PRODUCT")).upper()
+        oldTargetType = str(ctx.accumulatedConstraints.get("target_type") or "").upper()
 
-        if curTargetType != oldTargetType:
+        if oldTargetType and curTargetType != oldTargetType:
             ctx.resetAccumulated()
             targetBrand = None
             targetCat = None
-            if curTargetType == "SERVICE":
-                cur.category = None
-                cur.brand = None
+            cur.category = None
+            cur.brand = None
 
         # Luôn cập nhật ngữ cảnh tích lũy với bất kỳ thông tin nào người dùng đã cung cấp
         ctx.updateAccumulatedState(

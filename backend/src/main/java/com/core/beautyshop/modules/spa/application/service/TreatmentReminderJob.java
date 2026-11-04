@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.sql.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Component @RequiredArgsConstructor @Slf4j
 @ConditionalOnProperty(name = "app.jobs.enabled", havingValue = "true", matchIfMissing = true)
@@ -57,7 +58,7 @@ public class TreatmentReminderJob {
                         "DUE:" + rs.getLong("session_id") + ":" + today,
                         "Đến thời gian đặt buổi tiếp theo", "Một buổi trong lộ trình đã đủ điều kiện về thời gian. Mở hồ sơ để chọn lịch còn trống.");
             return null;
-        }).stream().filter(java.util.Objects::nonNull).forEach(this::deliver);
+        }).stream().filter(Objects::nonNull).forEach(this::deliver);
     }
 
     private void deliver(Reminder r) {

@@ -1,11 +1,13 @@
 package com.core.beautyshop.shared.config.api;
 
+import com.core.beautyshop.shared.config.SystemConfigService;
 import com.core.beautyshop.shared.config.domain.SystemConfig;
 import com.core.beautyshop.shared.config.domain.SystemConfigRepository;
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminSystemConfigController {
     private final SystemConfigRepository repository;
-    private final com.core.beautyshop.shared.config.SystemConfigService configService;
+    private final SystemConfigService configService;
 
     @Operation(summary = "Lấy toàn bộ danh sách cấu hình hệ thống")
     @GetMapping
@@ -59,12 +61,12 @@ public class AdminSystemConfigController {
     }
 
     public record ConfigRequest(
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Giá trị dưới dạng chuỗi, theo kiểu cấu hình hiện có", example = "30", requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) String value,
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Thiếu/null giữ trạng thái công khai; false ngừng công khai; true chỉ hỗ trợ các khóa công khai đã duyệt") Boolean isPublic) { }
+            @Schema(description = "Giá trị dưới dạng chuỗi, theo kiểu cấu hình hiện có", example = "30", requiredMode = Schema.RequiredMode.REQUIRED) String value,
+            @Schema(description = "Thiếu/null giữ trạng thái công khai; false ngừng công khai; true chỉ hỗ trợ các khóa công khai đã duyệt") Boolean isPublic) { }
     public record CreateConfigRequest(
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Key duy nhất; trim, tối đa 100 ký tự", example = "spa.booking.pending_ttl_minutes", requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) String key,
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Chuỗi không rỗng. BOOLEAN là true/false; JSON phải parse được. Các giá trị số chuẩn không âm; phút policy Spa tối đa 525600", example = "30", requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED) String value,
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Mô tả, tối đa 500 ký tự") String description,
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Nếu bỏ trống, suy từ key chuẩn hoặc dùng STRING", allowableValues = {"STRING","INTEGER","DECIMAL","BOOLEAN","JSON"}, example = "INTEGER") String valueType,
-            @io.swagger.v3.oas.annotations.media.Schema(description = "Mặc định false. Chỉ bật cho store.address, store.hotline, store.email, shipping.free_threshold, shipping.default_fee, spa.opening_time, spa.closing_time") Boolean isPublic) { }
+            @Schema(description = "Key duy nhất; trim, tối đa 100 ký tự", example = "spa.booking.pending_ttl_minutes", requiredMode = Schema.RequiredMode.REQUIRED) String key,
+            @Schema(description = "Chuỗi không rỗng. BOOLEAN là true/false; JSON phải parse được. Các giá trị số chuẩn không âm; phút policy Spa tối đa 525600", example = "30", requiredMode = Schema.RequiredMode.REQUIRED) String value,
+            @Schema(description = "Mô tả, tối đa 500 ký tự") String description,
+            @Schema(description = "Nếu bỏ trống, suy từ key chuẩn hoặc dùng STRING", allowableValues = {"STRING","INTEGER","DECIMAL","BOOLEAN","JSON"}, example = "INTEGER") String valueType,
+            @Schema(description = "Mặc định false. Chỉ bật cho store.address, store.hotline, store.email, shipping.free_threshold, shipping.default_fee, spa.opening_time, spa.closing_time") Boolean isPublic) { }
 }

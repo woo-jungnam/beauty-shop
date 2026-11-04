@@ -4,9 +4,10 @@ import com.core.beautyshop.modules.identity.application.dto.request.CreateRoleRe
 import com.core.beautyshop.modules.identity.application.dto.request.UpdateRoleRequest;
 import com.core.beautyshop.modules.identity.application.dto.response.RoleResponse;
 import com.core.beautyshop.modules.identity.domain.Role;
+import com.core.beautyshop.modules.identity.domain.RoleRepository;
+import com.core.beautyshop.modules.identity.domain.UserRepository;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
-import com.core.beautyshop.modules.identity.domain.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +20,7 @@ import java.util.stream.Collectors;
 public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
-    private final com.core.beautyshop.modules.identity.domain.UserRepository userRepository;
+    private final UserRepository userRepository;
     private final IdentityAdministrationGuard administrationGuard;
     private final AuthService authService;
 

@@ -8,6 +8,7 @@ import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
+import com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter;
 import com.core.beautyshop.modules.order.application.dto.request.CheckoutRequest;
 import com.core.beautyshop.modules.order.application.dto.request.UpdateOrderStatusRequest;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
@@ -24,20 +25,39 @@ import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto;
 import com.core.beautyshop.modules.promotion.api.PromotionFacade;
+import com.core.beautyshop.modules.spa.api.TreatmentOrderPolicy;
+import com.core.beautyshop.shared.config.SystemConfigService;
+import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,11 +75,11 @@ public class OrderServiceImpl implements OrderService {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final PromotionFacade promotionFacade;
-    private final com.core.beautyshop.shared.config.SystemConfigService systemConfigService;
-    private final com.core.beautyshop.modules.spa.api.TreatmentOrderPolicy treatmentOrderPolicy;
+    private final SystemConfigService systemConfigService;
+    private final TreatmentOrderPolicy treatmentOrderPolicy;
     private final ProductReturnService productReturns;
 
-    @org.springframework.beans.factory.annotation.Value("${app.order.payment-timeout-minutes:30}")
+    @Value("${app.order.payment-timeout-minutes:30}")
     private long paymentTimeoutMinutes = 30;
 
     @Override
@@ -72,7 +92,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse checkout(Long userId, CheckoutRequest request) {
-        if (request.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.CASH)
+        if (request.getPaymentMethod() == PaymentMethod.CASH)
             throw new BusinessException("Thanh toán tiền mặt (CASH) chỉ áp dụng khi thanh toán tại quầy Spa");
         String key = checkoutKey(userId, request);
         String hash = requestHash(request);
@@ -104,8 +124,8 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderFactory.createOrder(request, userId);
         order.setCheckoutKey(key);
         order.setCheckoutHash(hash);
-        if (order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK) {
-            order.setPaymentDeadline(java.time.Instant.now().plusSeconds(paymentTimeoutMinutes * 60));
+        if (order.getPaymentMethod() == PaymentMethod.BANK) {
+            order.setPaymentDeadline(Instant.now().plusSeconds(paymentTimeoutMinutes * 60));
         }
 
         BigDecimal subTotal = buildOrderItems(order, cart);
@@ -120,7 +140,7 @@ public class OrderServiceImpl implements OrderService {
                 membershipDiscount = subTotal.multiply(discountPercent);
             }
         }
-        
+
         BigDecimal shippingFee = systemConfigService != null
                 ? systemConfigService.calculateShippingFee(subTotal)
                 : BigDecimal.ZERO;
@@ -139,14 +159,14 @@ public class OrderServiceImpl implements OrderService {
 
         order.setDiscountAmount(applicableDiscount);
         order.setSubTotal(subTotal);
-        order.setTotalAmount(grossAmount.subtract(applicableDiscount).setScale(0, java.math.RoundingMode.HALF_UP));
+        order.setTotalAmount(grossAmount.subtract(applicableDiscount).setScale(0, RoundingMode.HALF_UP));
 
         createStatusHistory(order, OrderStatus.PENDING, "Đơn hàng được tạo khi thanh toán");
-        boolean freeBankOrder = order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK
+        boolean freeBankOrder = order.getPaymentMethod() == PaymentMethod.BANK
                 && order.getTotalAmount().signum() == 0;
         if (freeBankOrder) {
-            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID);
-            order.setPaidAt(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setPaidAt(Instant.now().truncatedTo(ChronoUnit.MICROS));
             order.setPaymentDeadline(null);
             order.setStatus(OrderStatus.PROCESSING);
             createStatusHistory(order, OrderStatus.PROCESSING, "Zero amount payment obligation settled");
@@ -172,7 +192,7 @@ public class OrderServiceImpl implements OrderService {
                             .quantity(item.getQuantity())
                             .build())
                     .toList()
-                    : java.util.List.of();
+                    : List.of();
 
             eventPublisher.publishEvent(OrderEvents.OrderStatusChangedEvent.builder().orderId(savedOrder.getId())
                     .orderNumber(savedOrder.getOrderNumber()).previousStatus(OrderStatus.PENDING).newStatus(OrderStatus.PROCESSING).build());
@@ -217,7 +237,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'ORDER_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ORDER_STAFF')")
     public OrderResponse getAdminOrderById(Long id) {
         Order order = orderRepository.findById(id)
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
@@ -229,9 +249,9 @@ public class OrderServiceImpl implements OrderService {
         if (expected == null || expected.isBlank() || provided == null || provided.isBlank()) {
             return false;
         }
-        return java.security.MessageDigest.isEqual(
-                expected.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                provided.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                provided.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -263,13 +283,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> searchAdminOrders(com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter filter, Pageable pageable) {
-        org.springframework.data.jpa.domain.Specification<Order> specification = (root, query, cb) -> {
-            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+    public Page<OrderResponse> searchAdminOrders(AdminOrderFilter filter, Pageable pageable) {
+        Specification<Order> specification = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isFalse(root.get("isDeleted")));
             if (filter != null) {
                 if (filter.keyword() != null && !filter.keyword().isBlank()) {
-                    String pattern = "%" + filter.keyword().trim().toLowerCase(java.util.Locale.ROOT) + "%";
+                    String pattern = "%" + filter.keyword().trim().toLowerCase(Locale.ROOT) + "%";
                     predicates.add(cb.or(cb.like(cb.lower(root.get("orderNumber")), pattern),
                             cb.like(cb.lower(root.get("customerName")), pattern),
                             cb.like(cb.lower(root.get("customerPhone")), pattern)));
@@ -324,8 +344,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         if ((newStatus == OrderStatus.PROCESSING || newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED)
-                && order.getPaymentMethod() == com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK
-                && order.getPaymentStatus() != com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID) {
+                && order.getPaymentMethod() == PaymentMethod.BANK
+                && order.getPaymentStatus() != PaymentStatus.PAID) {
             throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán trước khi giao hàng");
         }
         if (newStatus == OrderStatus.SHIPPED) {
@@ -334,12 +354,12 @@ public class OrderServiceImpl implements OrderService {
                 inventoryFacade.deductStock(order.getOrderNumber(), item.getProductVariantId(), item.getQuantity());
             }
         }
-        if (newStatus == OrderStatus.DELIVERED && order.getDeliveredAt() == null) order.setDeliveredAt(java.time.Instant.now());
+        if (newStatus == OrderStatus.DELIVERED && order.getDeliveredAt() == null) order.setDeliveredAt(Instant.now());
         if ((newStatus == OrderStatus.DELIVERY_FAILED || newStatus == OrderStatus.RETURN_TO_SENDER)
                 && (request.getNotes() == null || request.getNotes().isBlank())) throw new BusinessException("Delivery exception reason required");
         if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED || newStatus == OrderStatus.RETURN_TO_SENDER)
                 && order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
-            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.REFUND_PENDING);
+            order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
         }
         order.setStatus(newStatus);
         createStatusHistory(order, newStatus, request.getNotes());
@@ -401,7 +421,7 @@ public class OrderServiceImpl implements OrderService {
         order.setCancelledBy(userId);
         order.setCancelReason("Cancelled by customer");
         if (order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
-            order.setPaymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.REFUND_PENDING);
+            order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
         }
         createStatusHistory(order, OrderStatus.CANCELLED, "Khách hàng hủy đơn hàng");
 
@@ -429,7 +449,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setPaymentStatus(PaymentStatus.PAID);
         order.setPaidAmount(order.getTotalAmount());
-        order.setPaidAt(java.time.Instant.now());
+        order.setPaidAt(Instant.now());
         String ref = reference != null && !reference.isBlank() ? reference.trim() : "MANUAL-TEST-" + System.currentTimeMillis();
         createStatusHistory(order, order.getStatus(), "Quản trị viên xác nhận thanh toán thành công (Ref: " + ref + ")");
         Order saved = orderRepository.save(order);
@@ -457,9 +477,9 @@ public class OrderServiceImpl implements OrderService {
 
     private String sha256(String value) {
         try {
-            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-        } catch (java.security.NoSuchAlgorithmException exception) {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
         }
     }
@@ -481,10 +501,10 @@ public class OrderServiceImpl implements OrderService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        java.util.Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
+        Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
 
         List<CartItemResponse> sortedItems = cart.getItems().stream()
-                .sorted(java.util.Comparator.comparing(CartItemResponse::getVariantId))
+                .sorted(Comparator.comparing(CartItemResponse::getVariantId))
                 .toList();
 
         for (CartItemResponse item : sortedItems) {

@@ -1,5 +1,10 @@
 package com.core.beautyshop.modules.spa.application.service.impl;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,6 +19,8 @@ import com.core.beautyshop.modules.spa.domain.ServicePackageRepository;
 import com.core.beautyshop.modules.spa.domain.StaffRepository;
 import com.core.beautyshop.modules.spa.domain.AppointmentRepository;
 import com.core.beautyshop.modules.spa.domain.StaffScheduleRepository;
+import com.core.beautyshop.modules.spa.application.service.FacilitySchedulingService;
+import com.core.beautyshop.modules.spa.application.service.SpaBusinessCalendarService;
 import com.core.beautyshop.modules.spa.application.service.SpaTimeRules;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
@@ -35,8 +42,8 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
     private final AppointmentRepository appointmentRepository;
     private final IdentityFacade identityFacade;
     private final StaffScheduleRepository schedules;
-    private final com.core.beautyshop.modules.spa.application.service.FacilitySchedulingService facilities;
-    private final com.core.beautyshop.modules.spa.application.service.SpaBusinessCalendarService calendar;
+    private final FacilitySchedulingService facilities;
+    private final SpaBusinessCalendarService calendar;
 
     @Override
     @Cacheable(value = "spa_services", key = "'all-active'")
@@ -92,13 +99,13 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
     }
 
     @Override
-    public List<String> getAvailableSlots(Long serviceId, java.time.LocalDate date, Long staffId) {
+    public List<String> getAvailableSlots(Long serviceId, LocalDate date, Long staffId) {
         var service = beautyServiceRepository.findWithCategoryById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
         if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
             throw new BusinessException("Dịch vụ spa hiện không khả dụng");
         }
-        if (date == null || date.isBefore(java.time.LocalDate.now(SpaTimeRules.ZONE))) {
+        if (date == null || date.isBefore(LocalDate.now(SpaTimeRules.ZONE))) {
             throw new BusinessException("Ngày hẹn không thể ở trong quá khứ");
         }
         var qualifiedStaff = staffRepository.findQualifiedActiveStaff(serviceId).stream().filter(person ->
@@ -109,15 +116,15 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
             throw new BusinessException("Chuyên viên không có kỹ năng phù hợp cho dịch vụ này");
         }
         long duration = SpaTimeRules.durationMinutes(service);
-        var result = new java.util.ArrayList<String>();
+        var result = new ArrayList<String>();
         var hours = calendar.forDate(date);
         if (hours.closed()) return List.of();
         var slot = hours.opensAt();
         var close = hours.closesAt();
-        while (java.time.Duration.between(slot, close).toMinutes() >= duration) {
+        while (Duration.between(slot, close).toMinutes() >= duration) {
             var currentSlot = slot;
             var end = currentSlot.plusMinutes(duration);
-            boolean future = date.atTime(currentSlot).isAfter(java.time.LocalDateTime.now(SpaTimeRules.ZONE));
+            boolean future = date.atTime(currentSlot).isAfter(LocalDateTime.now(SpaTimeRules.ZONE));
             boolean available = future && (staffId != null
                     ? isStaffAvailable(staffId, date, currentSlot, end)
                     : qualifiedStaff.stream().anyMatch(staff -> isStaffAvailable(staff.getId(), date, currentSlot, end)));
@@ -130,7 +137,7 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
         return result;
     }
 
-    private boolean isStaffAvailable(Long staffId, java.time.LocalDate date, java.time.LocalTime start, java.time.LocalTime end) {
+    private boolean isStaffAvailable(Long staffId, LocalDate date, LocalTime start, LocalTime end) {
         if (appointmentRepository.existsOverlappingAppointmentForStaff(staffId, date, start, end)) {
             return false;
         }

@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ProductInteractionRecorder {
@@ -19,7 +21,7 @@ public class ProductInteractionRecorder {
                 || (event.userId() == null && (event.sessionId() == null || event.sessionId().isBlank()))) return;
         if (event.sourceKey() != null && repository.existsBySourceKey(event.sourceKey())) return;
         if (event.sourceKey() == null && repository.existsByUserIdAndSessionIdAndProductIdAndActionTypeAndCreatedAtAfter(
-                event.userId(), event.sessionId(), event.productId(), event.actionType(), java.time.LocalDateTime.now().minusSeconds(30))) return;
+                event.userId(), event.sessionId(), event.productId(), event.actionType(), LocalDateTime.now().minusSeconds(30))) return;
         repository.saveAndFlush(UserProductInteraction.builder().userId(event.userId()).sessionId(event.sessionId())
                 .productId(event.productId()).actionType(event.actionType()).sourceKey(event.sourceKey()).build());
     }

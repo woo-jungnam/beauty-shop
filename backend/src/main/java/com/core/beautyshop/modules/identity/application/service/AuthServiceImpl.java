@@ -8,6 +8,7 @@ import com.core.beautyshop.modules.identity.domain.Role;
 import com.core.beautyshop.modules.identity.domain.RefreshTokenSession;
 import com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository;
 import com.core.beautyshop.modules.identity.domain.User;
+import com.core.beautyshop.modules.identity.domain.enums.AccountStatus;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.identity.application.factory.UserFactory;
@@ -16,6 +17,8 @@ import com.core.beautyshop.modules.identity.domain.RoleRepository;
 import com.core.beautyshop.modules.identity.domain.UserRepository;
 import com.core.beautyshop.shared.security.jwt.JwtUtils;
 import com.core.beautyshop.shared.security.services.UserDetailsImpl;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +27,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -31,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
@@ -48,10 +53,10 @@ public class AuthServiceImpl implements AuthService {
     private final AuthMapper authMapper;
     private final RefreshTokenSessionRepository refreshTokenSessionRepository;
     private final TokenVersionCache tokenVersionCache;
-    private final jakarta.persistence.EntityManager entityManager;
+    private final EntityManager entityManager;
 
     @Override
-    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -63,7 +68,7 @@ public class AuthServiceImpl implements AuthService {
         UserDetailsImpl authenticated = (UserDetailsImpl) authentication.getPrincipal();
         User user = userRepository.findByIdForUpdate(authenticated.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        entityManager.refresh(user, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         requireActiveUser(user);
         UserDetailsImpl userDetails = UserDetailsImpl.build(user);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
@@ -128,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(noRollbackFor = BusinessException.class, isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+    @Transactional(noRollbackFor = BusinessException.class, isolation = Isolation.READ_COMMITTED)
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
         if (jwtUtils.validateRefreshToken(refreshToken)) {
@@ -197,7 +202,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void requireActiveUser(User user) {
-        if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getStatus() != com.core.beautyshop.modules.identity.domain.enums.AccountStatus.ACTIVE) {
+        if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getStatus() != AccountStatus.ACTIVE) {
             throw new BusinessException("Tài khoản hiện đang bị khóa hoặc ngưng hoạt động");
         }
     }
@@ -246,7 +251,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public int cleanupExpiredSessions(int retentionDays) {
-        Instant cutoff = Instant.now().minus(retentionDays, java.time.temporal.ChronoUnit.DAYS);
+        Instant cutoff = Instant.now().minus(retentionDays, ChronoUnit.DAYS);
         int deleted = refreshTokenSessionRepository.deleteExpiredOrRevokedBefore(cutoff);
         log.info("Đã dọn dẹp {} refresh token sessions cũ hơn {} ngày", deleted, retentionDays);
         return deleted;

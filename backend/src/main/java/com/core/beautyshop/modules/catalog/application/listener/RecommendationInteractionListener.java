@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -41,9 +45,9 @@ public class RecommendationInteractionListener {
         catch (RuntimeException error) { log.warn("Chưa điều chỉnh được tín hiệu mua của đơn {}", orderId); }
     }
 
-    private void purchase(Long orderId, Long userId, String sessionId, java.util.List<OrderEvents.OrderItemSummary> items) {
+    private void purchase(Long orderId, Long userId, String sessionId, List<OrderEvents.OrderItemSummary> items) {
         if (items == null) return;
-        java.util.Set<Long> products = new java.util.HashSet<>();
+        Set<Long> products = new HashSet<>();
         for (var item : items) {
             try {
                 variants.findById(item.getVariantId()).ifPresent(variant -> {

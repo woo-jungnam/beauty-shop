@@ -1,17 +1,22 @@
 package com.core.beautyshop.modules.spa.domain;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
-import java.util.Optional;
-
+import com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus;
+import com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
@@ -20,23 +25,24 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             + "com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.IN_PROGRESS "
             + "and i.appointment.status = com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus.IN_PROGRESS")
     boolean hasActiveExecutionForStaff(@Param("staffId") Long staffId, @Param("itemId") Long itemId);
+
     @Query("select a from Appointment a where a.isDeleted = false and (:date is null or a.appointmentDate = :date) "
             + "and (:status is null or a.status = :status) order by a.appointmentDate desc, a.startTime desc")
-    org.springframework.data.domain.Page<Appointment> findManagedAppointments(@Param("date") LocalDate date,
-            @Param("status") com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus status, org.springframework.data.domain.Pageable pageable);
+    Page<Appointment> findManagedAppointments(@Param("date") LocalDate date,
+            @Param("status") AppointmentStatus status, Pageable pageable);
 
     @Query("select a from Appointment a where a.isDeleted = false and (:date is null or a.appointmentDate = :date) "
             + "and (:status is null or a.status = :status) and exists (select i.id from AppointmentItem i "
             + "where i.appointment = a and i.isDeleted = false and i.staff.isDeleted = false and i.staff.userId = :userId) "
             + "order by a.appointmentDate desc, a.startTime desc")
-    org.springframework.data.domain.Page<Appointment> findAssignedAppointments(@Param("userId") Long userId,
-            @Param("date") LocalDate date, @Param("status") com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus status,
-            org.springframework.data.domain.Pageable pageable);
+    Page<Appointment> findAssignedAppointments(@Param("userId") Long userId,
+            @Param("date") LocalDate date, @Param("status") AppointmentStatus status, Pageable pageable);
 
     @Query("select a.id from Appointment a where a.isDeleted = false and a.id > :cursor and a.status = "
             + "com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus.PENDING "
             + "and a.pendingExpiresAt <= :now order by a.id")
-    List<Long> findExpiredPendingIds(@Param("cursor") Long cursor, @Param("now") java.time.Instant now, org.springframework.data.domain.Pageable pageable);
+    List<Long> findExpiredPendingIds(@Param("cursor") Long cursor, @Param("now") Instant now, Pageable pageable);
+
     @Query("select count(ai) > 0 from AppointmentItem ai join ai.appointment a "
             + "where ai.service.id = :serviceId and ai.isDeleted = false and a.isDeleted = false and ai.executionStatus not in (com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.SKIPPED, com.core.beautyshop.modules.spa.domain.enums.AppointmentItemExecutionStatus.NO_SHOW) "
             + "and a.status in (com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus.PENDING, "
@@ -59,7 +65,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByUserId(Long userId);
 
     @Query("SELECT COUNT(a) FROM Appointment a WHERE a.userId = :userId AND a.status = :status AND a.isDeleted = false")
-    long countByUserIdAndStatusAndIsDeletedFalse(@Param("userId") Long userId, @Param("status") com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus status);
+    long countByUserIdAndStatusAndIsDeletedFalse(@Param("userId") Long userId, @Param("status") AppointmentStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Appointment a WHERE a.id = :id")
@@ -69,13 +75,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE a.id = :id")
     Optional<Appointment> findByIdWithItems(@Param("id") Long id);
 
-    org.springframework.data.domain.Page<Appointment> findAllByOrderByAppointmentDateDescStartTimeDesc(org.springframework.data.domain.Pageable pageable);
+    Page<Appointment> findAllByOrderByAppointmentDateDescStartTimeDesc(Pageable pageable);
 
-    org.springframework.data.domain.Page<Appointment> findByAppointmentDateOrderByStartTimeAsc(LocalDate date, org.springframework.data.domain.Pageable pageable);
+    Page<Appointment> findByAppointmentDateOrderByStartTimeAsc(LocalDate date, Pageable pageable);
 
-    org.springframework.data.domain.Page<Appointment> findByStatusOrderByAppointmentDateDescStartTimeDesc(com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus status, org.springframework.data.domain.Pageable pageable);
+    Page<Appointment> findByStatusOrderByAppointmentDateDescStartTimeDesc(AppointmentStatus status, Pageable pageable);
 
-    org.springframework.data.domain.Page<Appointment> findByAppointmentDateAndStatusOrderByStartTimeAsc(LocalDate date, com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus status, org.springframework.data.domain.Pageable pageable);
+    Page<Appointment> findByAppointmentDateAndStatusOrderByStartTimeAsc(LocalDate date, AppointmentStatus status, Pageable pageable);
 
     @Query("SELECT COUNT(ai) > 0 FROM AppointmentItem ai " +
            "WHERE ai.staff.id = :staffId " +

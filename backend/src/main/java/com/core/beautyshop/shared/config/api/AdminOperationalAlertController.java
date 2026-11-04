@@ -1,5 +1,6 @@
 package com.core.beautyshop.shared.config.api;
 
+import com.core.beautyshop.shared.config.SystemConfigService;
 import com.core.beautyshop.shared.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminOperationalAlertController {
     private final JdbcTemplate jdbc;
-    private final com.core.beautyshop.shared.config.SystemConfigService configs;
+    private final SystemConfigService configs;
 
     @Operation(summary = "Lấy cảnh báo vận hành đang có số lượng", description = "ADMIN. Chỉ trả nhóm có count > 0: đơn cần xử lý, tồn khả dụng thấp theo từng lô, lô gần hạn theo cấu hình, lịch hôm nay chưa hoàn tất/hủy, giao dịch cần đối soát. target là gợi ý màn hình, không phải URL API. Không tự xử lý cảnh báo.")
     @GetMapping

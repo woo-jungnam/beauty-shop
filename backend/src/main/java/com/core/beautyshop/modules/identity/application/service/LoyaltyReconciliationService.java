@@ -3,6 +3,7 @@ package com.core.beautyshop.modules.identity.application.service;
 import com.core.beautyshop.modules.identity.domain.*;
 import com.core.beautyshop.modules.identity.domain.enums.MembershipTier;
 import com.core.beautyshop.shared.exception.BusinessException;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,7 @@ public class LoyaltyReconciliationService {
     private final UserRepository users;
     private final LoyaltyPointAwardRepository awards;
     private final JdbcTemplate jdbc;
-    private final jakarta.persistence.EntityManager em;
+    private final EntityManager em;
     @Transactional public void reconcile(Long orderId,Long userId,BigDecimal requested){
         if(orderId==null||userId==null)return;
         em.flush();

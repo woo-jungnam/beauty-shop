@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -39,8 +40,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = parseJwt(request);
             if (jwt != null) SecurityContextHolder.clearContext();
-            java.util.Optional<UserDetailsImpl> principal = jwt == null
-                    ? java.util.Optional.empty()
+            Optional<UserDetailsImpl> principal = jwt == null
+                    ? Optional.empty()
                     : jwtUtils.parseAccessToken(jwt);
             if (principal.isPresent()) {
                 UserDetailsImpl userDetails = principal.get();

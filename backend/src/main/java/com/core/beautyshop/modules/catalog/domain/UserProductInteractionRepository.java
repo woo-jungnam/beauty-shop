@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -13,7 +14,7 @@ public interface UserProductInteractionRepository extends JpaRepository<UserProd
     boolean existsBySourceKey(String sourceKey);
     void deleteBySourceKeyStartingWith(String prefix);
     boolean existsByUserIdAndSessionIdAndProductIdAndActionTypeAndCreatedAtAfter(Long userId, String sessionId,
-            Long productId, String actionType, java.time.LocalDateTime since);
+            Long productId, String actionType, LocalDateTime since);
 
     @Query("SELECT upi.productId FROM UserProductInteraction upi " +
            "WHERE upi.userId = :userId " +
