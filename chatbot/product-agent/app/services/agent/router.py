@@ -22,8 +22,10 @@ class QueryRouter:
         Intent.PRICE_QUERY,
         Intent.AVAILABILITY_QUERY,
         Intent.ROUTINE_RECOMMENDATION,
+        Intent.BOOKING,
         "RECOMMENDATION",
         "ROUTINE_RECOMMENDATION",
+        "BOOKING",
     }
 
     CANNED_RESPONSES = {

@@ -10,7 +10,7 @@ public final class CustomerAccountData {
 
     @Entity(name="CustomerSkinProfile") @Table(name="customer_skin_profiles") @Getter @Setter
     public static class SkinProfile {
-        @Id private Long userId;
+        @Id @Column(name="user_id") private Long userId;
         @Column(length=100) private String skinType;
         @Column(length=100) private String sensitivity;
         @Column(length=1000) private String allergies;

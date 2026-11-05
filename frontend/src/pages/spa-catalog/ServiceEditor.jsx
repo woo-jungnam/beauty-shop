@@ -48,6 +48,17 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
   const fileInputRef = useRef(null);
   const update = (key, value) => setForm(previous => ({ ...previous, [key]: value }));
 
+  const handleNameChange = (val) => {
+    setForm(previous => {
+      const isAutoSlug = !previous.slug || previous.slug === slugify(previous.name);
+      return {
+        ...previous,
+        name: val,
+        slug: isAutoSlug ? slugify(val) : previous.slug
+      };
+    });
+  };
+
   const handleImageFileChange = async event => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -162,14 +173,50 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
         ['info', 'Thông tin dịch vụ', Sparkles], ['resources', 'Tài nguyên bắt buộc', Building],
       ].map(([key, label, Icon]) => <button key={key} type="button" role="tab" id={`${tabId}-${key}`} aria-selected={tab === key} aria-controls={`${tabId}-${key}-panel`} tabIndex={tab === key ? 0 : -1}
         onKeyDown={event => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) { event.preventDefault(); const next = key === 'info' ? 'resources' : 'info'; setTab(event.key === 'Home' ? 'info' : event.key === 'End' ? 'resources' : next); requestAnimationFrame(() => document.getElementById(`${tabId}-${event.key === 'Home' ? 'info' : event.key === 'End' ? 'resources' : next}`)?.focus()); } }}
-        onClick={() => setTab(key)}><Icon size={16} />{label}{key === 'resources' && <span>{requirements.length}</span>}</button>)}</div>
+        onClick={() => setTab(key)}>
+        <Icon size={16} />{label}
+        {key === 'resources' && (
+          <span style={{
+            backgroundColor: requirements.length === 0 ? '#FEF3C7' : '#E0E7FF',
+            color: requirements.length === 0 ? '#92400E' : '#3730A3',
+            padding: '1px 6px',
+            borderRadius: '10px',
+            fontSize: '11px',
+            fontWeight: 700
+          }}>
+            {requirements.length}
+          </span>
+        )}
+      </button>)}</div>
       {error && <div role="alert" className="spa-catalog-notice error">{error}</div>}
       <fieldset disabled={busy || uncertain}>
         <div role="tabpanel" id={`${tabId}-info-panel`} aria-labelledby={`${tabId}-info`} hidden={tab !== 'info'}>
           <div className="spa-service-editor-layout"><div className="spa-editor-fields">
-            <Input label="Tên dịch vụ" required maxLength={150} value={form.name} onChange={event => update('name', event.target.value)} placeholder="Ví dụ: Phục hồi da chuyên sâu" />
+            <Input label="Tên dịch vụ" required maxLength={150} value={form.name} onChange={event => handleNameChange(event.target.value)} placeholder="Ví dụ: Phục hồi da chuyên sâu" />
             <Select label="Loại dịch vụ" value={form.serviceType} onChange={event => update('serviceType', event.target.value)} options={[{ value: 'SINGLE_SESSION', label: 'Một lần — sử dụng trong ngày hẹn' }, { value: 'TREATMENT_COURSE', label: 'Điều trị theo lộ trình — nhiều buổi có theo dõi' }]} helperText="Dịch vụ theo lộ trình cần mẫu đã xuất bản tại mục Lộ trình điều trị trước khi khách mua." />
-            <Input label="Đường dẫn slug" maxLength={150} value={form.slug} onChange={event => update('slug', event.target.value)} helperText={`Đường dẫn: /${form.slug || slugify(form.name) || 'ten-dich-vu'} · Tự tạo từ tên khi để trống.`} placeholder="phuc-hoi-da-chuyen-sau" />
+            <div style={{ position: 'relative' }}>
+              <Input label="Đường dẫn slug" maxLength={150} value={form.slug} onChange={event => update('slug', event.target.value)} helperText={`Đường dẫn: /${form.slug || slugify(form.name) || 'ten-dich-vu'} · Tự động sinh từ tên dịch vụ.`} placeholder="phuc-hoi-da-chuyen-sau" />
+              {form.name && (
+                <button
+                  type="button"
+                  onClick={() => update('slug', slugify(form.name))}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '26px',
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '11.5px',
+                    color: '#0284C7',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                  title="Tạo lại slug từ tên hiện tại"
+                >
+                  Tạo lại slug
+                </button>
+              )}
+            </div>
             <Select label="Danh mục liệu trình" value={form.categoryId} onChange={event => update('categoryId', event.target.value)} options={[{ value: '', label: 'Chưa phân nhóm' }, ...categories.map(category => ({ value: String(category.id), label: category.name }))]} />
             <Input label="Giá niêm yết (VND)" type="number" min={0} max={99999999} step={1} required value={form.basePrice} onChange={event => update('basePrice', event.target.value)} />
             <div className="spa-editor-two-columns"><Input label="Thời gian thực hiện (phút)" type="number" min={1} max={720} step={1} required value={form.durationMinutes} onChange={event => update('durationMinutes', event.target.value)} />
@@ -190,7 +237,7 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
                 <div style={{
                   position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '11px', color: '#AA3F5A', fontWeight: 600, gap: '6px', borderRadius: '9px'
+                  fontSize: '11px', color: 'var(--color-accent-700, #6040ce)', fontWeight: 600, gap: '6px', borderRadius: '9px'
                 }}>
                   <Upload size={22} className="animate-spin" />
                   <span>Đang tải ảnh lên…</span>

@@ -7,58 +7,58 @@
   --radius-full: 0px;
   --border-radius: 0px;
 
-  /* Solid Enterprise Color Palette (NO GRADIENTS) */
-  --color-primary-950: #090D16;
-  --color-primary-900: #0F172A;
-  --color-primary-800: #1E293B;
-  --color-primary-700: #334155;
-  --color-primary-600: #475569;
-  --color-primary-500: #64748B;
-  --color-primary-400: #94A3B8;
-  --color-primary-300: #CBD5E1;
-  --color-primary-200: #E2E8F0;
-  --color-primary-100: #F1F5F9;
-  --color-primary-50:  #F8FAFC;
+  /* Solid Enterprise Color Palette - Unified Atelier Palette */
+  --color-primary-950: #211a35;
+  --color-primary-900: #302640;
+  --color-primary-800: #453b55;
+  --color-primary-700: #594e6a;
+  --color-primary-600: #6d637c;
+  --color-primary-500: #82798f;
+  --color-primary-400: #aaa1b8;
+  --color-primary-300: #cdc5d9;
+  --color-primary-200: #e5dfed;
+  --color-primary-100: #f1edf8;
+  --color-primary-50:  #faf8fd;
 
-  /* Brand Solid Accent */
-  --color-accent-900: #1E3A8A;
-  --color-accent-700: #1D4ED8;
-  --color-accent-600: #2563EB;
-  --color-accent-500: #3B82F6;
-  --color-accent-100: #DBEAFE;
-  --color-accent-50:  #EFF6FF;
+  /* Brand Solid Accent - Atelier Royal Violet */
+  --color-accent-900: #432880;
+  --color-accent-700: #6040ce;
+  --color-accent-600: #7457e8;
+  --color-accent-500: #9378f2;
+  --color-accent-100: #eae3ff;
+  --color-accent-50:  #f5f1ff;
 
   /* Semantic Feedback Solid Tones */
-  --color-success-700: #15803D;
-  --color-success-600: #16A34A;
-  --color-success-100: #DCFCE7;
-  --color-success-50:  #F0FDF4;
+  --color-success-700: #16766b;
+  --color-success-600: #259d90;
+  --color-success-100: #d6f3eb;
+  --color-success-50:  #edfaf5;
 
-  --color-warning-700: #B45309;
-  --color-warning-600: #D97706;
-  --color-warning-100: #FEF3C7;
-  --color-warning-50:  #FFFBEB;
+  --color-warning-700: #a56514;
+  --color-warning-600: #d99c3c;
+  --color-warning-100: #faedcf;
+  --color-warning-50:  #fff9ed;
 
-  --color-danger-700: #B91C1C;
-  --color-danger-600: #DC2626;
-  --color-danger-100: #FEE2E2;
-  --color-danger-50:  #FEF2F2;
+  --color-danger-700: #b53d59;
+  --color-danger-600: #d35476;
+  --color-danger-100: #f9dce5;
+  --color-danger-50:  #fff2f5;
 
-  --color-info-700: #0369A1;
-  --color-info-600: #0284C7;
-  --color-info-100: #E0F2FE;
-  --color-info-50:  #F0F9FF;
+  --color-info-700: #3c67a4;
+  --color-info-600: #618bd1;
+  --color-info-100: #deebfb;
+  --color-info-50:  #f1f6ff;
 
   /* Surface & Border System */
-  --bg-app: #F8FAFC;
+  --bg-app: #f7f6fb;
   --bg-surface: #FFFFFF;
-  --bg-surface-subtle: #F1F5F9;
-  --bg-surface-hover: #E2E8F0;
-  --border-subtle: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --border-focus: #2563EB;
-  --text-main: #0F172A;
-  --text-muted: #64748B;
+  --bg-surface-subtle: #f6f3fb;
+  --bg-surface-hover: #f0ebfa;
+  --border-subtle: #eee9f4;
+  --border-strong: #dcd4e9;
+  --border-focus: #7457e8;
+  --text-main: #29243a;
+  --text-muted: #777086;
   --text-inverted: #FFFFFF;
 
   /* Typography */

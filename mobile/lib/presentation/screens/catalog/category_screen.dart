@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
+import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 import 'package:beautyshop_mobile/providers/product_provider.dart';
 import 'package:beautyshop_mobile/data/models/product_model.dart';
 import 'package:beautyshop_mobile/presentation/screens/product_detail/product_detail_screen.dart';
@@ -164,7 +165,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 0.65,
+                childAspectRatio: 0.60,
               ),
               itemBuilder: (context, idx) {
                 final p = _searchResults![idx];
@@ -267,30 +268,32 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 ),
                               ),
                               child: ClipOval(
-                                child:
-                                    (cat.displayImage != null &&
-                                        cat.displayImage!.isNotEmpty)
-                                    ? CachedNetworkImage(
-                                        imageUrl: cat.displayImage!,
-                                        fit: BoxFit.cover,
-                                        placeholder: (_, __) => Container(
-                                          color: Colors.transparent,
-                                        ),
-                                        errorWidget: (_, __, ___) => Icon(
+                                child: () {
+                                  final imgUrl =
+                                      ImageUtils.resolveUrl(cat.displayImage);
+                                  return imgUrl != null && imgUrl.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: imgUrl,
+                                          fit: BoxFit.cover,
+                                          placeholder: (_, __) => Container(
+                                            color: Colors.transparent,
+                                          ),
+                                          errorWidget: (_, __, ___) => Icon(
+                                            Icons.spa_outlined,
+                                            size: 16,
+                                            color: isSelected
+                                                ? AppColors.primary
+                                                : AppColors.textLight,
+                                          ),
+                                        )
+                                      : Icon(
                                           Icons.spa_outlined,
                                           size: 16,
                                           color: isSelected
                                               ? AppColors.primary
                                               : AppColors.textLight,
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.spa_outlined,
-                                        size: 16,
-                                        color: isSelected
-                                            ? AppColors.primary
-                                            : AppColors.textLight,
-                                      ),
+                                        );
+                                }(),
                               ),
                             ),
                             const SizedBox(height: 5),
@@ -377,7 +380,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                       crossAxisCount: 2,
                                       crossAxisSpacing: 8,
                                       mainAxisSpacing: 8,
-                                      childAspectRatio: 0.68,
+                                      childAspectRatio: 0.58,
                                     ),
                                 itemBuilder: (context, idx) {
                                   final p = displayList[idx];
@@ -419,30 +422,33 @@ class _CategoryScreenState extends State<CategoryScreen> {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
-                child: p.thumbnailUrl != null && p.thumbnailUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: p.thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        placeholder: (_, __) =>
-                            Container(color: AppColors.canvas),
-                        errorWidget: (_, __, ___) => Container(
+                child: () {
+                  final imgUrl = ImageUtils.resolveUrl(p.thumbnailUrl);
+                  return imgUrl != null && imgUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imgUrl,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          placeholder: (_, __) =>
+                              Container(color: AppColors.canvas),
+                          errorWidget: (_, __, ___) => Container(
+                            color: AppColors.canvas,
+                            child: const Icon(
+                              Icons.spa_outlined,
+                              color: AppColors.textLight,
+                              size: 24,
+                            ),
+                          ),
+                        )
+                      : Container(
                           color: AppColors.canvas,
                           child: const Icon(
                             Icons.spa_outlined,
                             color: AppColors.textLight,
                             size: 24,
                           ),
-                        ),
-                      )
-                    : Container(
-                        color: AppColors.canvas,
-                        child: const Icon(
-                          Icons.spa_outlined,
-                          color: AppColors.textLight,
-                          size: 24,
-                        ),
-                      ),
+                        );
+                }(),
               ),
             ),
             const SizedBox(height: 6),

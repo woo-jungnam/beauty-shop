@@ -5,6 +5,7 @@ import {
   Edit,
   Trash2,
   RefreshCw,
+  Zap,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -18,8 +19,11 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
+import { FlashSaleCampaignManager } from './flash-sale/FlashSaleCampaignManager';
 
 export const VouchersPage = () => {
+  const [activeSection, setActiveSection] = useState('vouchers');
   const [vouchers, setVouchers] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -244,44 +248,69 @@ export const VouchersPage = () => {
 
   return (
     <div className="content-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quản lý Khuyến mãi & Voucher</h1>
-          <p className="page-subtitle">
-            Cấu hình mã giảm giá phần trăm, tiền mặt, kiểm soát số lượt dùng và điều kiện đơn hàng
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchVouchers(page)}
-            loading={loading}
-            icon={RefreshCw}
-          >
-            Làm mới
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleOpenCreate}
-            icon={Plus}
-          >
-            Tạo Voucher mới
-          </Button>
-        </div>
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={vouchers}
-        loading={loading}
-        emptyMessage="Chưa có mã khuyến mãi nào trong hệ thống."
-        page={page}
-        totalPages={totalPages}
-        totalElements={totalElements}
-        onPageChange={(p) => fetchVouchers(p)}
+      <AdminSectionNav
+        rootTitle="Tiếp thị & Khuyến mãi"
+        activeTab={activeSection}
+        onChange={setActiveSection}
+        subtitle="Cấu hình mã giảm giá (Vouchers), chiến dịch Flash Sale theo khung giờ và hạn mức suất bán"
+        items={[
+          {
+            id: 'vouchers',
+            label: 'Mã giảm giá Voucher',
+            count: totalElements,
+            icon: TicketPercent,
+            description: 'Mã coupon giảm giá đơn hàng, điều kiện kích hoạt và giới hạn lượt dùng'
+          },
+          {
+            id: 'flash-sales',
+            label: 'Chiến dịch Flash Sale',
+            icon: Zap,
+            description: 'Lên lịch Flash Sale theo giờ vàng, hạn ngạch suất bán và đồng hồ đếm ngược'
+          }
+        ]}
+        actions={
+          activeSection === 'vouchers' ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchVouchers(page)}
+                loading={loading}
+                icon={RefreshCw}
+              >
+                Làm mới
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleOpenCreate}
+                icon={Plus}
+              >
+                Tạo Voucher mới
+              </Button>
+            </>
+          ) : null
+        }
       />
+
+      {activeSection === 'vouchers' && (
+        <div className="card">
+          <DataTable
+            columns={columns}
+            data={vouchers}
+            loading={loading}
+            emptyMessage="Chưa có mã khuyến mãi nào trong hệ thống."
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            onPageChange={(p) => fetchVouchers(p)}
+          />
+        </div>
+      )}
+
+      {activeSection === 'flash-sales' && (
+        <FlashSaleCampaignManager />
+      )}
 
       <Modal
         isOpen={modalOpen}

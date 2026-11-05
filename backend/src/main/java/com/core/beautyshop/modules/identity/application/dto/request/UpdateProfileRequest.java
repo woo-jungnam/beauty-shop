@@ -22,7 +22,7 @@ public class UpdateProfileRequest {
     private String fullName;
 
     @Size(max = 20)
-    @jakarta.validation.constraints.Pattern(regexp = "^$|^0[35789]\\d{8}$", message = "Số điện thoại di động Việt Nam không hợp lệ")
+    @jakarta.validation.constraints.Pattern(regexp = "^$|^(0|\\+84)[35789]\\d{8}$", message = "Số điện thoại di động Việt Nam không hợp lệ")
     @Schema(description = "Số điện thoại", maxLength = 20)
     private String phone;
 

@@ -66,6 +66,14 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrderById(id, guestSessionId)));
     }
 
+    @Operation(summary = "Tra cứu đơn hàng an toàn qua Mã đơn và Số điện thoại", description = "Công khai; tra cứu chính xác theo cặp mã đơn và số điện thoại đặt hàng để tránh dò quét ID.")
+    @GetMapping("/lookup")
+    public ResponseEntity<ApiResponse<OrderResponse>> lookupOrder(
+            @Parameter(description = "Mã đơn hàng", required = true) @RequestParam("orderNumber") String orderNumber,
+            @Parameter(description = "Số điện thoại người nhận", required = true) @RequestParam("phone") String phone) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.lookupOrder(orderNumber, phone)));
+    }
+
     @Operation(summary = "Xem danh sách đơn hàng của tôi", description = "Lấy lịch sử đơn hàng của người dùng đang đăng nhập. Yêu cầu Bearer Token.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Thành công"),

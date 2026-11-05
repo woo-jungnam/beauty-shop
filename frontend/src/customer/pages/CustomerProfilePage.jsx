@@ -244,7 +244,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
       items: [
         { id: 'settings', label: 'Thông tin & Bảo mật', icon: Shield },
         { id: 'addresses', label: 'Sổ địa chỉ nhận hàng', icon: MapPin },
-        { id: 'notifications', label: 'Hộp thư thông báo', icon: Bell }
+        { id: 'notifications', label: 'Thông báo & Khuyến mãi', icon: Bell }
       ]
     }
   ];

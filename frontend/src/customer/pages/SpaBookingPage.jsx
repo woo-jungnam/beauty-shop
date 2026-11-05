@@ -23,11 +23,14 @@ import {
   Sun,
   Ticket,
   User,
+  Building2,
 } from "lucide-react";
 import { apiClient } from "../../shared/api/client";
 import { ENDPOINTS } from "../../shared/api/endpoints";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { AppointmentFinance } from "../../features/treatments/AppointmentFinance";
+import { BankPaymentInstruction } from "../../shared/ui/BankPaymentInstruction";
+import { Button } from "../../shared/ui/Button";
 import {
   buildGoogleCalendarUrl,
   getVietnamDateString,
@@ -125,6 +128,12 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const [financialPolicy, setFinancialPolicy] = useState(null);
   const [financialAccepted, setFinancialAccepted] = useState(false);
   const [paymentOption, setPaymentOption] = useState("DEPOSIT_AT_COUNTER");
+  const [facilities, setFacilities] = useState([]);
+  const [selectedFacilityId, setSelectedFacilityId] = useState("");
+  const [loadingFacilities, setLoadingFacilities] = useState(false);
+  const [paymentWaiting, setPaymentWaiting] = useState(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     apiClient
@@ -166,6 +175,35 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             id: selectedStaff,
           },
         );
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('spa_pending_booking');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.selectedDate && parsed.selectedDate >= today) setSelectedDate(parsed.selectedDate);
+        if (parsed.selectedStaff) setSelectedStaff(parsed.selectedStaff);
+        if (parsed.selectedSlot) setSelectedSlot(parsed.selectedSlot);
+        if (Array.isArray(parsed.skinTags)) setSkinTags(parsed.skinTags);
+        if (parsed.note) setContact(c => ({ ...c, note: parsed.note }));
+        sessionStorage.removeItem('spa_pending_booking');
+      }
+    } catch {}
+  }, []);
+
+  const handleLoginToBook = () => {
+    try {
+      sessionStorage.setItem('spa_pending_booking', JSON.stringify({
+        selectedServiceId: selectedService?.id,
+        selectedDate,
+        selectedStaff,
+        selectedSlot,
+        skinTags,
+        note: contact.note
+      }));
+    } catch {}
+    onNavigate("login");
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -245,6 +283,79 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
 
   useEffect(() => {
     let cancelled = false;
+    setLoadingFacilities(true);
+    apiClient
+      .get("/api/v1/spa/services/facilities")
+      .then((response) => {
+        if (cancelled) return;
+        const data = readData(response);
+        setFacilities(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setFacilities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingFacilities(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!paymentWaiting?.appointmentId) return;
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiClient.get(`/api/v1/spa/appointments/${paymentWaiting.appointmentId}/finance`);
+        if (cancelled) return;
+        const data = readData(res);
+        if (data.status === "CONFIRMED" || Number(data.depositCollected || 0) > 0) {
+          clearInterval(interval);
+          setBookingResult({
+            ...paymentWaiting.bookingInfo,
+            status: "CONFIRMED",
+            paidAmount: Number(data.depositCollected || paymentWaiting.amount),
+          });
+          setPaymentWaiting(null);
+        }
+      } catch (e) {
+        console.warn("Polling payment notice:", e);
+      }
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [paymentWaiting]);
+
+  const handleManualCheckPayment = async () => {
+    if (!paymentWaiting?.appointmentId || checkingPayment) return;
+    setCheckingPayment(true);
+    setPaymentError('');
+    try {
+      const res = await apiClient.get(`/api/v1/spa/appointments/${paymentWaiting.appointmentId}/finance`);
+      const data = readData(res);
+      if (data.status === "CONFIRMED" || Number(data.depositCollected || 0) > 0) {
+        setBookingResult({
+          ...paymentWaiting.bookingInfo,
+          status: "CONFIRMED",
+          paidAmount: Number(data.depositCollected || paymentWaiting.amount),
+        });
+        setPaymentWaiting(null);
+      } else {
+        setPaymentError('Hệ thống chưa nhận được giao dịch chuyển khoản từ ngân hàng. Nếu bạn vừa chuyển, vui lòng đợi 5-10 giây để cổng VietQR khớp lệnh.');
+      }
+    } catch (e) {
+      setPaymentError(e.message || 'Chưa kiểm tra được giao dịch.');
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
     setSelectedSlot("");
     setSlots([]);
     setLoadedSlotContext("");
@@ -263,11 +374,19 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       .then((response) => {
         if (cancelled) return;
         const data = readData(response);
-        setSlots(
-          Array.isArray(data)
-            ? data.filter((slot) => typeof slot === "string")
-            : [],
-        );
+        const rawSlots = Array.isArray(data)
+          ? data.filter((slot) => typeof slot === "string")
+          : [];
+        let validSlots = rawSlots;
+        if (selectedDate === today) {
+          const now = new Date();
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          validSlots = rawSlots.filter((slot) => {
+            const parts = slot.split(":");
+            return Number(parts[0]) * 60 + Number(parts[1] || 0) > currentMinutes + 15;
+          });
+        }
+        setSlots(validSlots);
         setLoadedSlotContext(slotContext);
       })
       .catch(() => {
@@ -426,7 +545,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     event.preventDefault();
     if (submitting) return;
     setBookingError("");
-    if (!isAuthenticated) return onNavigate("login");
+    if (!isAuthenticated) return handleLoginToBook();
     if (!selectedService || !validSlot) {
       if (!selectedService) goToStep(1);
       else if (!validSlot) goToStep(2);
@@ -437,6 +556,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       if (!financialPolicy)
         throw new Error("Chưa tải được chính sách cọc. Vui lòng tải lại trang.");
       if (
+        !selectedTicketId &&
+        depositDueEstimate > 0 &&
         [
           financialPolicy.depositAmount,
           financialPolicy.cancellationFee,
@@ -449,17 +570,20 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         .filter(Boolean)
         .join("; ");
       const response = await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, {
-        acceptedFinancialPolicy: financialAccepted,
+        acceptedFinancialPolicy: selectedTicketId ? true : financialAccepted,
         financialPolicyVersion: financialPolicy.version,
         paymentOption: selectedTicketId ? "WAIVE_WALK_IN" : paymentOption,
         appointmentDate: selectedDate,
         startTime:
           selectedSlot.length === 5 ? selectedSlot + ":00" : selectedSlot,
+        customerName: contact.fullName.trim() || undefined,
+        customerPhone: contact.phone.trim() || undefined,
         notes: notes || undefined,
         items: [
           {
             serviceId: selectedService.id,
             staffId: selectedStaff === "AUTO" ? null : Number(selectedStaff),
+            facilityId: selectedFacilityId ? Number(selectedFacilityId) : null,
             ticketId: selectedTicketId ? Number(selectedTicketId) : null,
           },
         ],
@@ -467,7 +591,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       const created = readData(response);
       if (!created?.id)
         throw new Error("Chưa nhận được xác nhận lịch hẹn. Vui lòng thử lại.");
-      setBookingResult({
+
+      const isBankPayment = !selectedTicketId && (paymentOption === "PAY_FULL" || depositDueEstimate > 0);
+      const chosenFacility = facilities.find(f => String(f.id) === String(selectedFacilityId))?.name || "Spa tự phân bổ phòng";
+
+      const bookingInfo = {
         id: created.id,
         code: `SPA-${created.id}`,
         status: created.status || "PENDING",
@@ -476,13 +604,44 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         service: created.items?.[0]?.serviceName || selectedService.name,
         duration: selectedService.durationMinutes || 60,
         staff: selectedStaffName,
+        facility: chosenFacility,
         price: total,
         ticketId: selectedTicketId,
         paymentOption: selectedTicketId ? "TICKET" : paymentOption,
         depositEstimate: Math.min(Number(financialPolicy?.depositAmount || 0), total),
         customer: created.customerName || contact.fullName,
         phone: created.customerPhone || contact.phone,
-      });
+      };
+
+      if (!isBankPayment) {
+        setBookingResult(bookingInfo);
+      } else {
+        try {
+          const payRes = await apiClient.post(`/api/v1/spa/appointments/${created.id}/deposit-payment`);
+          const finData = readData(payRes);
+          setPaymentWaiting({
+            appointmentId: created.id,
+            instruction: finData?.depositPayment?.paymentInstruction,
+            amount: Number(finData?.depositDue || depositDueEstimate),
+            expiresAt: finData?.expiresAt || created.pendingExpiresAt,
+            bookingInfo
+          });
+        } catch {
+          try {
+            const finRes = await apiClient.get(`/api/v1/spa/appointments/${created.id}/finance`);
+            const finData = readData(finRes);
+            setPaymentWaiting({
+              appointmentId: created.id,
+              instruction: finData?.depositPayment?.paymentInstruction,
+              amount: Number(finData?.depositDue || depositDueEstimate),
+              expiresAt: finData?.expiresAt || created.pendingExpiresAt,
+              bookingInfo
+            });
+          } catch {
+            setBookingResult(bookingInfo);
+          }
+        }
+      }
     } catch (error) {
       setBookingError(
         error.response?.data?.message ||
@@ -501,7 +660,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const continueBooking = () => {
     if (!selectedService) return goToStep(1);
     if (!validSlot) return goToStep(2);
-    if (!isAuthenticated) return onNavigate("login");
+    if (!isAuthenticated) return handleLoginToBook();
     if (!contactComplete) {
       goToStep(3);
       document
@@ -531,6 +690,75 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       setCopied(false);
     }
   };
+
+  if (paymentWaiting && !bookingResult) {
+    return (
+      <div className="spa-booking-page" style={{ maxWidth: '680px', margin: '40px auto', padding: '0 20px' }}>
+        <div className="card" style={{ padding: '32px 28px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--c-border, #E5E7EB)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#FEF3C7', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+            <Clock size={28} color="#D97706" />
+          </div>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-primary, #721B29)', margin: '0 0 8px 0' }}>
+            Quét mã VietQR chuyển khoản giữ lịch hẹn
+          </h1>
+          <p style={{ fontSize: '13.5px', color: 'var(--c-text-muted, #6B7280)', margin: '0 0 20px 0', lineHeight: 1.5 }}>
+            Sau khi ngân hàng ghi nhận chuyển khoản thành công, hệ thống sẽ <strong>tự động xuất Phiếu thông tin cuộc hẹn cùng Mã thẻ đặt lịch</strong> cho bạn.
+          </p>
+
+          <div style={{ backgroundColor: '#FDF2F8', border: '1px dashed #F472B6', borderRadius: '8px', padding: '14px 18px', marginBottom: '20px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
+            <div>Dịch vụ: <strong style={{ color: '#9D174D' }}>{paymentWaiting.bookingInfo.service}</strong></div>
+            <div>Thời gian: <strong>{formatDate(paymentWaiting.bookingInfo.date)} · {paymentWaiting.bookingInfo.time?.slice(0, 5)}</strong></div>
+            <div>Chuyên viên: <strong>{paymentWaiting.bookingInfo.staff}</strong> · Phòng: <strong>{paymentWaiting.bookingInfo.facility}</strong></div>
+            <div style={{ fontSize: '15px', color: '#DC2626', fontWeight: 800, marginTop: '4px', borderTop: '1px dashed #FBCFE8', paddingTop: '6px' }}>
+              Số tiền cần chuyển khoản: {formatCurrency(paymentWaiting.amount)}
+            </div>
+          </div>
+
+          {paymentWaiting.instruction ? (
+            <div style={{ marginBottom: '20px' }}>
+              <BankPaymentInstruction instruction={paymentWaiting.instruction} label="VietQR Chuyển khoản Spa" />
+            </div>
+          ) : (
+            <div style={{ padding: '20px', color: 'var(--c-text-muted)' }}>
+              Đang tải mã VietQR thanh toán...
+            </div>
+          )}
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12.5px', color: '#059669', marginBottom: '20px', fontWeight: 600 }}>
+            <RefreshCw size={14} className="animate-spin" />
+            <span>Hệ thống đang tự động kiểm tra giao dịch mỗi 4 giây...</span>
+          </div>
+
+          {paymentError && (
+            <div style={{ padding: '10px 14px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#991B1B', fontSize: '13px', marginBottom: '16px' }}>
+              {paymentError}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Button
+              variant="primary"
+              onClick={handleManualCheckPayment}
+              loading={checkingPayment}
+              style={{ minWidth: '220px' }}
+            >
+              {checkingPayment ? 'Đang kiểm tra...' : 'Tôi đã chuyển khoản - Kiểm tra ngay'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (window.confirm("Bạn có muốn hủy ca đặt lịch này và quay lại không?")) {
+                  setPaymentWaiting(null);
+                }
+              }}
+            >
+              Hủy thanh toán
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (bookingResult) {
     return (
@@ -598,8 +826,16 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 <dd>{bookingResult.phone}</dd>
               </div>
               <div>
-                <dt>Chuyên viên</dt>
+                <dt>
+                  <User size={16} /> Chuyên viên
+                </dt>
                 <dd>{bookingResult.staff}</dd>
+              </div>
+              <div>
+                <dt>
+                  <Building2 size={16} /> Phòng thực hiện
+                </dt>
+                <dd>{bookingResult.facility}</dd>
               </div>
               <div>
                 <dt>Hình thức thanh toán</dt>
@@ -1016,26 +1252,15 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 ))}
               </div>
 
-              <details className="booking-provider" open={selectedStaff !== "AUTO"}>
-                <summary>
-                  <span>
-                    <User size={16} />{" "}
-                    {selectedStaff === "AUTO"
-                      ? "Để Spa sắp xếp chuyên viên"
-                      : selectedStaffName}
-                    <small>
-                      {selectedStaff === "AUTO"
-                        ? "Bấm để chọn chuyên viên mong muốn (tùy chọn)"
-                        : "Đã chọn chuyên viên riêng cho ca chăm sóc"}
-                    </small>
+              <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-primary, #721B29)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <User size={16} /> Chọn chuyên viên chăm sóc
+                  </label>
+                  <span style={{ fontSize: '12px', color: 'var(--c-text-muted, #6B7280)' }}>
+                    {selectedStaff === "AUTO" ? "Spa tự sắp xếp" : `Đã chọn: ${selectedStaffName}`}
                   </span>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                    <span className="booking-provider-tag">
-                      {selectedStaff === "AUTO" ? "Tự động" : "Đã chọn"}
-                    </span>
-                    <ChevronDown size={16} />
-                  </div>
-                </summary>
+                </div>
                 <div className="booking-staff-grid">
                   <button
                     type="button"
@@ -1093,16 +1318,67 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   ))}
                 </div>
                 {loadingStaff && (
-                  <p role="status" className="booking-muted">
+                  <p role="status" className="booking-muted" style={{ marginTop: '6px' }}>
                     Đang tải chuyên viên…
                   </p>
                 )}
                 {staffError && (
-                  <p className="booking-muted">
+                  <p className="booking-muted" style={{ marginTop: '6px' }}>
                     Chưa tải được danh sách chuyên viên. Bạn vẫn có thể để Spa sắp xếp.
                   </p>
                 )}
-              </details>
+              </div>
+
+              {facilities.length > 0 && (
+                <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <label style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-primary, #721B29)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Building2 size={16} /> Lựa chọn phòng / giường dịch vụ (Tùy chọn)
+                    </label>
+                    <span style={{ fontSize: '12px', color: 'var(--c-text-muted, #6B7280)' }}>
+                      {selectedFacilityId ? (facilities.find(f => String(f.id) === String(selectedFacilityId))?.name || "Đã chọn phòng") : "Spa tự phân bổ phòng"}
+                    </span>
+                  </div>
+                  <div className="booking-staff-grid">
+                    <button
+                      type="button"
+                      className={`booking-staff-card ${selectedFacilityId === "" ? "is-selected" : ""}`}
+                      aria-pressed={selectedFacilityId === ""}
+                      onClick={() => setSelectedFacilityId("")}
+                    >
+                      <span className="booking-staff-avatar" style={{ backgroundColor: '#F3F4F6', color: '#4B5563' }}>
+                        <Building2 size={18} />
+                      </span>
+                      <span>
+                        <strong>Mặc định hệ thống</strong>
+                        <small>Spa phân bổ phòng phù hợp nhất</small>
+                      </span>
+                      {selectedFacilityId === "" && <Check size={15} />}
+                    </button>
+                    {facilities.map((fac) => {
+                      const isChosen = selectedFacilityId === String(fac.id);
+                      return (
+                        <button
+                          type="button"
+                          key={fac.id}
+                          className={`booking-staff-card ${isChosen ? "is-selected" : ""}`}
+                          aria-pressed={isChosen}
+                          onClick={() => setSelectedFacilityId(String(fac.id))}
+                        >
+                          <span className="booking-staff-avatar" style={{ backgroundColor: isChosen ? '#FCE7F3' : '#F3F4F6', color: isChosen ? '#9D174D' : '#4B5563' }}>
+                            <Building2 size={18} />
+                          </span>
+                          <span>
+                            <strong>{fac.name}</strong>
+                            <small>{fac.description || `Sức chứa ${fac.capacity || 1} người`}</small>
+                          </span>
+                          {isChosen && <Check size={15} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="booking-slot-heading">
                 <strong>Khung giờ bắt đầu</strong>
@@ -1214,7 +1490,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 <div className="booking-login-note">
                   <User size={18} />
                   <span>Đăng nhập để lưu và theo dõi lịch hẹn trong tài khoản của bạn.</span>
-                  <button type="button" onClick={() => onNavigate("login")}>
+                  <button type="button" onClick={handleLoginToBook}>
                     Đăng nhập <ArrowRight size={14} />
                   </button>
                 </div>
@@ -1376,6 +1652,12 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               </div>
               <div>
                 <dt>
+                  <Building2 size={16} /> Phòng thực hiện
+                </dt>
+                <dd>{facilities.find(f => String(f.id) === String(selectedFacilityId))?.name || "Spa tự phân bổ phòng"}</dd>
+              </div>
+              <div>
+                <dt>
                   <MapPin size={16} /> Cơ sở Spa
                 </dt>
                 <dd>123 Đồng Khởi, Quận 1, TP.HCM</dd>
@@ -1467,7 +1749,9 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               </div>
             )}
 
-            {financialPolicy &&
+            {!selectedTicketId &&
+              depositDueEstimate > 0 &&
+              financialPolicy &&
               [
                 financialPolicy.depositAmount,
                 financialPolicy.cancellationFee,

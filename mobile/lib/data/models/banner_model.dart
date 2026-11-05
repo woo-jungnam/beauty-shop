@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 class BannerItem {
   final int id;
   final String title;
@@ -21,7 +23,10 @@ class BannerItem {
     return BannerItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
       title: json['title']?.toString() ?? '',
-      imageUrl: json['imageUrl']?.toString() ?? json['image']?.toString() ?? '',
+      imageUrl: ImageUtils.resolveUrl(
+            json['imageUrl']?.toString() ?? json['image']?.toString(),
+          ) ??
+          '',
       targetUrl: json['targetUrl']?.toString(),
       position: json['position']?.toString(),
       displayOrder: (json['displayOrder'] as num?)?.toInt() ?? 0,

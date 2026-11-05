@@ -12,7 +12,7 @@ class AppFlashDealCard extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 145,
+    width: 152,
     child: AppProductCard(product: product, onTap: onTap),
   );
 }

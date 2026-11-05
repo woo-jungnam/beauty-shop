@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import '../../../core/utils/cart_actions.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
+import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 import 'package:beautyshop_mobile/providers/chatbot_provider.dart';
 import 'package:beautyshop_mobile/data/models/chat_model.dart';
 import 'package:beautyshop_mobile/data/models/product_model.dart';
@@ -330,14 +331,17 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
             child: SizedBox(
               width: 44,
               height: 44,
-              child: product.thumbnailUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: product.thumbnailUrl!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
-                          Container(color: AppColors.canvas),
-                    )
-                  : Container(color: AppColors.canvas),
+              child: () {
+                final imgUrl = ImageUtils.resolveUrl(product.thumbnailUrl);
+                return imgUrl != null && imgUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imgUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) =>
+                            Container(color: AppColors.canvas),
+                      )
+                    : Container(color: AppColors.canvas);
+              }(),
             ),
           ),
           const SizedBox(width: 8),

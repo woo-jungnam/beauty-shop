@@ -34,6 +34,14 @@ public class BookAppointmentRequest {
     @Schema(description = "Ghi chú đặt lịch", maxLength = 500, example = "Khách muốn trao đổi quy trình trước buổi")
     private String notes;
 
+    @Size(max = 100)
+    @Schema(description = "Họ tên người đến sử dụng dịch vụ hoặc người nhận liên hệ", example = "Nguyễn Văn A")
+    private String customerName;
+
+    @Size(max = 20)
+    @Schema(description = "Số điện thoại nhận thông báo và gọi xác nhận cuộc hẹn", example = "0987654321")
+    private String customerPhone;
+
     @Schema(description = "ID khách hàng nếu Lễ tân hoặc Quản trị viên đặt lịch hộ; người dùng thông thường luôn đặt cho chính mình", example = "10")
     private Long targetUserId;
     

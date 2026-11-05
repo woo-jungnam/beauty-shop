@@ -14,6 +14,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import com.core.beautyshop.modules.spa.application.dto.response.BeautyServiceResponse;
 import com.core.beautyshop.modules.spa.application.dto.response.ServicePackageResponse;
 import com.core.beautyshop.modules.spa.application.dto.response.StaffResponse;
+import com.core.beautyshop.modules.spa.application.service.AdminFacilityService;
 import com.core.beautyshop.modules.spa.application.service.BeautyServiceService;
 import com.core.beautyshop.shared.dto.ApiResponse;
 
@@ -29,6 +30,17 @@ import lombok.RequiredArgsConstructor;
 public class SpaServiceController {
 
     private final BeautyServiceService beautyServiceService;
+    private final AdminFacilityService adminFacilityService;
+
+    @Operation(summary = "Lấy danh sách phòng/giường Spa khả dụng", description = "API công khai; chỉ phòng/giường đang hoạt động, chưa xóa.")
+    @GetMapping("/facilities")
+    public ResponseEntity<ApiResponse<List<AdminFacilityService.FacilityView>>> getPublicFacilities() {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminFacilityService.list().stream()
+                        .filter(f -> Boolean.TRUE.equals(f.active()))
+                        .toList()
+        ));
+    }
 
     @Operation(summary = "Lấy danh sách dịch vụ Spa đang hoạt động", description = "API công khai; chỉ dịch vụ hoạt động, chưa xóa. Không phân trang.")
     @GetMapping

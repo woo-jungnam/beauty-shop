@@ -24,6 +24,7 @@ import com.core.beautyshop.modules.order.api.event.OrderEvents;
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto;
+import com.core.beautyshop.modules.promotion.api.FlashSaleFacade;
 import com.core.beautyshop.modules.promotion.api.PromotionFacade;
 import com.core.beautyshop.modules.spa.api.TreatmentOrderPolicy;
 import com.core.beautyshop.shared.config.SystemConfigService;
@@ -58,6 +59,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -75,6 +77,7 @@ public class OrderServiceImpl implements OrderService {
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final PromotionFacade promotionFacade;
+    private final FlashSaleFacade flashSaleFacade;
     private final SystemConfigService systemConfigService;
     private final TreatmentOrderPolicy treatmentOrderPolicy;
     private final ProductReturnService productReturns;
@@ -232,6 +235,19 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        return buildOrderResponse(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponse lookupOrder(String orderNumber, String phone) {
+        if (orderNumber == null || orderNumber.isBlank() || phone == null || phone.isBlank()) {
+            throw new BusinessException("Vui lòng cung cấp cả mã đơn hàng và số điện thoại đặt hàng");
+        }
+        String cleanOrder = orderNumber.trim();
+        String cleanPhone = phone.trim();
+        Order order = orderRepository.findByOrderNumberAndPhone(cleanOrder, cleanPhone)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng khớp với mã đơn và số điện thoại"));
         return buildOrderResponse(order);
     }
 
@@ -515,9 +531,26 @@ public class OrderServiceImpl implements OrderService {
 
             inventoryFacade.reserveStock(order.getOrderNumber(), item.getVariantId(), item.getQuantity());
 
-            BigDecimal price = variant.getDiscountPrice() != null
-                    ? variant.getDiscountPrice()
-                    : variant.getPrice();
+            Optional<BigDecimal> flashSalePrice = flashSaleFacade.tryAllocateFlashSale(
+                    item.getVariantId(),
+                    item.getQuantity(),
+                    order.getId(),
+                    order.getUserId()
+            );
+
+            BigDecimal price;
+            BigDecimal discount;
+            if (flashSalePrice.isPresent()) {
+                price = flashSalePrice.get();
+                discount = variant.getPrice().subtract(price).max(BigDecimal.ZERO);
+            } else {
+                price = variant.getDiscountPrice() != null
+                        ? variant.getDiscountPrice()
+                        : variant.getPrice();
+                discount = variant.getDiscountPrice() != null
+                        ? variant.getPrice().subtract(variant.getDiscountPrice()).max(BigDecimal.ZERO)
+                        : BigDecimal.ZERO;
+            }
 
             subTotal = subTotal.add(price.multiply(new BigDecimal(item.getQuantity())));
 
@@ -530,9 +563,7 @@ public class OrderServiceImpl implements OrderService {
                     .imageUrl(variant.getProductThumbnailUrl())
                     .quantity(item.getQuantity())
                     .price(variant.getPrice())
-                    .discount(variant.getDiscountPrice() != null
-                            ? variant.getPrice().subtract(variant.getDiscountPrice())
-                            : BigDecimal.ZERO)
+                    .discount(discount)
                     .build();
             order.getItems().add(orderItem);
         }

@@ -575,7 +575,7 @@ class LLMClient:
                 "DETAIL": ("PRODUCT_DETAIL", "THÔNG_TIN_SẢN_PHẨM"),
                 "COMPARE": ("COMPARISON", "SO_SÁNH_SẢN_PHẨM"),
                 "ROUTINE": ("ROUTINE_RECOMMENDATION", "XÂY_DỰNG_CHU_TRINH"),
-                "BOOKING": ("PRODUCT_SEARCH", "ĐẶT_LỊCH"),
+                "BOOKING": ("BOOKING", "ĐẶT_LỊCH"),
                 "ORDER": ("ORDER_STATUS", "HỖ_TRỢ_ĐƠN_HÀNG"),
                 "CHAT": ("GENERAL_CHAT", "CHÀO_HỎI"),
                 "OUT_OF_DOMAIN": ("OUT_OF_DOMAIN", "NGOÀI_PHẠM_VI"),
@@ -588,23 +588,37 @@ class LLMClient:
                 parsedData["constraints"] = {}
             if not isinstance(parsedData.get("preferences"), dict):
                 parsedData["preferences"] = {}
+            if not isinstance(parsedData.get("entities"), dict):
+                parsedData["entities"] = {}
 
             cDict = parsedData["constraints"]
             pDict = parsedData["preferences"]
+            eDict = parsedData["entities"]
 
             if "skin_type" in parsedData and parsedData["skin_type"] and "skin_type" not in cDict:
                 cDict["skin_type"] = parsedData["skin_type"]
+                eDict["skin_type"] = parsedData["skin_type"]
             if "max_price" in parsedData and parsedData["max_price"] and "max_price" not in cDict:
                 cDict["max_price"] = parsedData["max_price"]
+                try:
+                    eDict["price_mentioned"] = float(parsedData["max_price"])
+                except (ValueError, TypeError):
+                    pass
             if "category" in parsedData and parsedData["category"] and "category" not in cDict:
                 cDict["category"] = parsedData["category"]
+                eDict["product_category"] = parsedData["category"]
             if "brand" in parsedData and parsedData["brand"] and "brand" not in cDict:
                 cDict["brand"] = parsedData["brand"]
+                eDict["brands"] = [parsedData["brand"]]
 
             if "concerns" in parsedData and parsedData["concerns"] and "concerns" not in pDict:
-                pDict["concerns"] = parsedData["concerns"] if isinstance(parsedData["concerns"], list) else [str(parsedData["concerns"])]
+                cList = parsedData["concerns"] if isinstance(parsedData["concerns"], list) else [str(parsedData["concerns"])]
+                pDict["concerns"] = cList
+                eDict["target_concerns"] = cList
             if "ingredients" in parsedData and parsedData["ingredients"] and "ingredients" not in pDict:
-                pDict["ingredients"] = parsedData["ingredients"] if isinstance(parsedData["ingredients"], list) else [str(parsedData["ingredients"])]
+                iList = parsedData["ingredients"] if isinstance(parsedData["ingredients"], list) else [str(parsedData["ingredients"])]
+                pDict["ingredients"] = iList
+                eDict["ingredients_mentioned"] = iList
 
             if parsedData.get("clarify_question") and not parsedData.get("clarification_question"):
                 parsedData["clarification_question"] = parsedData["clarify_question"]

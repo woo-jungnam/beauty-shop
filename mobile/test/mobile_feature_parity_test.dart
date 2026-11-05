@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beautyshop_mobile/data/models/order_model.dart';
 import 'package:beautyshop_mobile/core/constants/api_constants.dart';
+import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 
 void main() {
   group('Order Model Backend Parity Tests', () {
@@ -64,6 +65,39 @@ void main() {
     test('ApiConstants baseUrl defaults or connects to https://api.dermascan.world', () {
       ApiConstants.setCustomBaseUrl('https://api.dermascan.world');
       expect(ApiConstants.baseUrl, 'https://api.dermascan.world');
+    });
+
+    test('ImageUtils correctly resolves relative uploads to absolute backend URLs', () {
+      ApiConstants.setCustomBaseUrl('https://api.dermascan.world');
+      expect(
+        ImageUtils.resolveUrl('/uploads/product1.png'),
+        'https://api.dermascan.world/uploads/product1.png',
+      );
+      expect(
+        ImageUtils.resolveUrl('uploads/product2.png'),
+        'https://api.dermascan.world/uploads/product2.png',
+      );
+    });
+
+    test('ImageUtils handles external, protocol-relative and null image URLs', () {
+      expect(
+        ImageUtils.resolveUrl('https://images.unsplash.com/photo-1'),
+        'https://images.unsplash.com/photo-1',
+      );
+      expect(
+        ImageUtils.resolveUrl('//cdn.example.com/photo.jpg'),
+        'https://cdn.example.com/photo.jpg',
+      );
+      expect(ImageUtils.resolveUrl(null), isNull);
+      expect(ImageUtils.resolveUrl('   '), isNull);
+    });
+
+    test('ImageUtils remaps localhost URLs to active backend URL host', () {
+      ApiConstants.setCustomBaseUrl('http://10.0.2.2:8080');
+      expect(
+        ImageUtils.resolveUrl('http://localhost:8080/uploads/banner.jpg'),
+        'http://10.0.2.2:8080/uploads/banner.jpg',
+      );
     });
   });
 }

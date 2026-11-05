@@ -12,14 +12,15 @@ class ApiConstants {
     if (_customBaseUrl != null && _customBaseUrl!.isNotEmpty) {
       return _customBaseUrl!;
     }
+    const envUrl = String.fromEnvironment('BACKEND_URL');
+    if (envUrl.isNotEmpty) {
+      return envUrl;
+    }
     final savedUrl = StorageService.getBaseUrl();
     if (savedUrl != null && savedUrl.isNotEmpty) {
       return savedUrl;
     }
-    return const String.fromEnvironment(
-      'BACKEND_URL',
-      defaultValue: 'https://api.dermascan.world',
-    );
+    return 'https://api.dermascan.world';
   }
 
   static const Duration connectTimeout = Duration(seconds: 15);

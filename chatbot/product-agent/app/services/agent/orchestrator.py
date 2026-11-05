@@ -4,7 +4,7 @@ from typing import Any, AsyncGenerator, List, Optional
 from app.core.logging import LatencyTracker, getLogger
 from app.llm.client import llmClient
 from app.schemas.chat import ChatAction, ChatRequest, ChatResponse, ProductCard, SourceRef
-from app.schemas.query import PrimaryIntent, UnderstandingResult
+from app.schemas.query import Intent, PrimaryIntent, UnderstandingResult
 from app.schemas.retrieval import RerankedCandidate
 from app.services.agent.dialogue import conversationManager
 from app.services.agent.generation import generationService
@@ -148,8 +148,12 @@ class AgentOrchestrator:
         pIntentVal = getattr(pIntent, "value", str(pIntent or ""))
         uMsgLower = userMessage.lower()
 
+        uIntent = getattr(understanding, "intent", None)
+        uIntentVal = getattr(uIntent, "value", str(uIntent or ""))
+
         isBookingIntent = (
             pIntentVal in (PrimaryIntent.DAT_LICH.value, "DAT_LICH", "DỊCH_VỤ_LÀM_ĐẸP", "DICH_VU_LAM_DEP")
+            or uIntentVal in (Intent.BOOKING.value, "BOOKING")
             or any(k in uMsgLower for k in ["đặt lịch", "dat lich", "hẹn", "booking"])
         )
 

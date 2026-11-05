@@ -18,6 +18,9 @@ class ProductProvider extends ChangeNotifier {
   List<BrandItem> _brands = [];
   List<BannerItem> _banners = [];
   bool _isLoading = false, _isLoadingDetail = false;
+  int _productsPage = 0;
+  bool _hasMoreCatalog = true;
+  bool _isLoadingMoreCatalog = false;
   String? _errorMessage,
       _categoriesError,
       _dealsError,
@@ -40,6 +43,8 @@ class ProductProvider extends ChangeNotifier {
   List<BannerItem> get banners => _banners;
   bool get isLoading => _isLoading;
   bool get isLoadingDetail => _isLoadingDetail;
+  bool get hasMoreCatalog => _hasMoreCatalog;
+  bool get isLoadingMoreCatalog => _isLoadingMoreCatalog;
   String? get errorMessage => _errorMessage;
   String? get categoriesError => _categoriesError;
   String? get dealsError => _dealsError;
@@ -63,6 +68,8 @@ class ProductProvider extends ChangeNotifier {
 
   Future<void> loadInitialData() async {
     _isLoading = true;
+    _productsPage = 0;
+    _hasMoreCatalog = true;
     _categoryProductsMap.clear();
     _categoryErrors.clear();
     notifyListeners();
@@ -106,11 +113,40 @@ class ProductProvider extends ChangeNotifier {
       _products = await fetchCatalogProducts(
         filters: {'page': page, 'size': size},
       );
+      _productsPage = page;
+      _hasMoreCatalog = _products.length >= size;
     } catch (_) {
       _products = [];
       _errorMessage = 'Không thể tải sản phẩm. Vui lòng thử lại.';
     }
     notifyListeners();
+  }
+
+  Future<bool> loadMoreCatalogProducts({int size = 6}) async {
+    if (_isLoadingMoreCatalog || !_hasMoreCatalog) return false;
+    _isLoadingMoreCatalog = true;
+    notifyListeners();
+    try {
+      final nextPage = _productsPage + 1;
+      final newItems = await fetchCatalogProducts(
+        filters: {'page': nextPage, 'size': size},
+      );
+      if (newItems.isEmpty) {
+        _hasMoreCatalog = false;
+      } else {
+        _products.addAll(newItems);
+        _productsPage = nextPage;
+        if (newItems.length < size) {
+          _hasMoreCatalog = false;
+        }
+      }
+      return newItems.isNotEmpty;
+    } catch (_) {
+      return false;
+    } finally {
+      _isLoadingMoreCatalog = false;
+      notifyListeners();
+    }
   }
 
   Future<void> fetchBestSellingProducts() async {

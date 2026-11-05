@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
-import 'core/constants/api_constants.dart';
 import 'core/storage/storage_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
@@ -16,7 +15,6 @@ import 'presentation/screens/main_wrapper_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await StorageService.init();
-  ApiConstants.setCustomBaseUrl('https://api.dermascan.world');
 
   runApp(
     MultiProvider(

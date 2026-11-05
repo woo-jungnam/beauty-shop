@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.*;
 import java.text.NumberFormat;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -262,4 +263,45 @@ public class VoucherService implements PromotionFacade {
             BigDecimal minOrderAmount,
             BigDecimal maxDiscountAmount,
             String message) { }
+
+    @Transactional(readOnly = true)
+    public List<CustomerVoucherView> getAvailableVouchersForCustomer(Long userId) {
+        Instant now = Instant.now();
+        List<Voucher> active = voucherRepository.findActiveVouchers(now);
+        return active.stream()
+                .filter(v -> v.getUsageLimit() == null || v.getUsedCount() < v.getUsageLimit())
+                .filter(v -> {
+                    if (userId == null) return true;
+                    long userUsed = usageRepository.countByVoucherIdAndUserIdAndIsDeletedFalse(v.getId(), userId);
+                    return userUsed < v.getPerUserLimit();
+                })
+                .map(CustomerVoucherView::from)
+                .toList();
+    }
+
+    @Schema(description = "Thông tin mã giảm giá dành cho khách hàng tham khảo và áp dụng")
+    public record CustomerVoucherView(
+            Long id,
+            String code,
+            String name,
+            String description,
+            DiscountType discountType,
+            BigDecimal discountValue,
+            BigDecimal minOrderAmount,
+            BigDecimal maxDiscountAmount,
+            Instant endsAt) {
+        static CustomerVoucherView from(Voucher v) {
+            return new CustomerVoucherView(
+                    v.getId(),
+                    v.getCode(),
+                    v.getName(),
+                    v.getDescription(),
+                    v.getDiscountType(),
+                    v.getDiscountValue(),
+                    v.getMinOrderAmount(),
+                    v.getMaxDiscountAmount(),
+                    v.getEndsAt()
+            );
+        }
+    }
 }

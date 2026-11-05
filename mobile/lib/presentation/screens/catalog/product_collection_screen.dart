@@ -264,7 +264,7 @@ class _ProductCollectionScreenState extends State<ProductCollectionScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            childAspectRatio: 0.65,
+            childAspectRatio: 0.60,
           ),
           itemBuilder: (context, index) {
             final product = products[index];

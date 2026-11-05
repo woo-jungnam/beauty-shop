@@ -27,6 +27,10 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @EntityGraph(attributePaths = {"items"})
     Optional<Order> findByOrderNumber(String orderNumber);
 
+    @EntityGraph(attributePaths = {"items"})
+    @Query("select o from Order o where o.orderNumber = :orderNumber and (o.customerPhone = :phone or replace(o.customerPhone, '+84', '0') = replace(:phone, '+84', '0')) and o.isDeleted = false")
+    Optional<Order> findByOrderNumberAndPhone(String orderNumber, String phone);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from Order o where o.orderNumber = :orderNumber")
     Optional<Order> findByOrderNumberForUpdate(String orderNumber);
@@ -58,7 +62,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Page<Order> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
-    @Query("select o from Order o where o.userId = :userId and o.isDeleted = false and (o.paymentMethod <> com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK or o.paidAt is not null) order by o.createdAt desc")
+    @Query("select o from Order o where o.userId = :userId and o.isDeleted = false order by o.createdAt desc")
     Page<Order> findVisibleCustomerHistoryByUserId(Long userId, Pageable pageable);
 
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Tag(name = "Khuyến mãi & Mã giảm giá Voucher (Khách hàng)", description = "API kiểm tra và áp dụng mã voucher cho khách hàng")
 @RestController
@@ -21,6 +22,13 @@ import java.math.BigDecimal;
 public class CustomerPromotionController {
 
     private final VoucherService voucherService;
+
+    @Operation(summary = "Lấy danh sách mã giảm giá Voucher khả dụng cho khách hàng")
+    @GetMapping("/available")
+    public ApiResponse<List<VoucherService.CustomerVoucherView>> getAvailableVouchers() {
+        Long userId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
+        return ApiResponse.success(voucherService.getAvailableVouchersForCustomer(userId));
+    }
 
     @Operation(summary = "Kiểm tra tính hợp lệ và tính số tiền giảm của Voucher")
     @PostMapping("/validate")

@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 class SpaService {
   final int id;
   final String name;
@@ -41,8 +43,9 @@ class SpaService {
       originalPrice: (json['originalPrice'] as num?)?.toDouble(),
       durationMinutes:
           ((json['durationMinutes'] ?? json['duration']) as num?)?.toInt() ?? 0,
-      thumbnailUrl:
-          json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
+      thumbnailUrl: ImageUtils.resolveUrl(
+        json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
+      ),
       steps:
           (json['steps'] as List<dynamic>?)
               ?.map((s) => s.toString())
@@ -221,7 +224,7 @@ class UserServiceTicket {
       status: json['status']?.toString() ?? 'UNKNOWN',
       expiresAt:
           json['expiresAt']?.toString() ?? json['expiryDate']?.toString(),
-      qrCodeUrl: json['qrCodeUrl']?.toString(),
+      qrCodeUrl: ImageUtils.resolveUrl(json['qrCodeUrl']?.toString()),
       benefitType: json['benefitType']?.toString() ?? 'SERVICE_PACKAGE',
       treatmentCourseId: (json['treatmentCourseId'] as num?)?.toInt(),
       nameSnapshot: json['nameSnapshot'] == true,

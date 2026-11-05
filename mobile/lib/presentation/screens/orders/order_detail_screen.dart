@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/storage_service.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../data/models/order_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../checkout/vietqr_payment_screen.dart';
@@ -200,7 +201,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ...(value['items'] as List? ?? []).map(
               (item) {
-                final img = item['imageUrl']?.toString() ?? item['thumbnailUrl']?.toString();
+                final img = ImageUtils.resolveUrl(
+                  item['imageUrl']?.toString() ??
+                      item['thumbnailUrl']?.toString(),
+                );
                 final price = ((item['price'] as num?) ?? 0) - ((item['discount'] as num?) ?? 0);
                 final qty = (item['quantity'] as num?)?.toInt() ?? 1;
                 return ListTile(

@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
+import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 import 'package:beautyshop_mobile/providers/spa_provider.dart';
 import 'package:beautyshop_mobile/data/models/spa_model.dart';
 import 'package:beautyshop_mobile/presentation/screens/spa/spa_booking_screen.dart';
@@ -181,14 +182,17 @@ class SpaScreen extends StatelessWidget {
                 ),
                 child: AspectRatio(
                   aspectRatio: 2.2,
-                  child: service.thumbnailUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: service.thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) =>
-                              Container(color: AppColors.primaryLight),
-                        )
-                      : Container(color: AppColors.primaryLight),
+                  child: () {
+                    final imgUrl = ImageUtils.resolveUrl(service.thumbnailUrl);
+                    return imgUrl != null && imgUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imgUrl,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) =>
+                                Container(color: AppColors.primaryLight),
+                          )
+                        : Container(color: AppColors.primaryLight);
+                  }(),
                 ),
               ),
               Positioned(

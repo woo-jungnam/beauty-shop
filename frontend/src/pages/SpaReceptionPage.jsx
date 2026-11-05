@@ -540,7 +540,7 @@ export const SpaReceptionPage = () => {
                           <span className="reception-staff-avatar">{getStaffInitials(item.staffName)}</span>
                           <span>{item.staffName}</span>
                         </div>
-                        {item.ticketId && <small style={{ color: '#AD3F5A', fontWeight: 600 }}>Vé liệu trình</small>}
+                        {item.ticketId && <small style={{ color: 'var(--color-accent-700, #6040ce)', fontWeight: 600 }}>Vé liệu trình</small>}
                       </div>
                     ) : (
                       <small className="reception-block reception-muted">Chưa chỉ định KTV{item.ticketId ? ' · Vé liệu trình' : ''}</small>

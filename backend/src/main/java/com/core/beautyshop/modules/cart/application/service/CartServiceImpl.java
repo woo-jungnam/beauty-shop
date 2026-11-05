@@ -36,6 +36,7 @@ public class CartServiceImpl implements CartService {
     private final CatalogFacade catalogFacade;
     private final InventoryFacade inventoryFacade;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final Optional<com.core.beautyshop.modules.promotion.api.FlashSaleFacade> flashSaleFacade;
 
     @Override
     @Transactional(readOnly = true)
@@ -253,7 +254,13 @@ public class CartServiceImpl implements CartService {
         List<CartItemResponse> itemResponses = cartItems.stream()
                 .map(item -> {
                     ProductVariantSummaryDto variant = variantMap.get(item.getProductVariantId());
-                    return CartItemResponse.of(item, variant);
+                    java.math.BigDecimal flashPrice = null;
+                    if (variant != null && flashSaleFacade.isPresent()) {
+                        flashPrice = flashSaleFacade.get().resolveActiveFlashSale(variant.getId())
+                                .map(com.core.beautyshop.modules.promotion.api.FlashSaleFacade.FlashSalePriceResolution::flashPrice)
+                                .orElse(null);
+                    }
+                    return CartItemResponse.of(item, variant, flashPrice);
                 })
                 .collect(Collectors.toList());
 

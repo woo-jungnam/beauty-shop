@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
+import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 import 'package:beautyshop_mobile/providers/cart_provider.dart';
 import 'package:beautyshop_mobile/presentation/screens/checkout/checkout_screen.dart';
 import '../../widgets/catalog_state.dart';
@@ -316,14 +317,17 @@ class _CartScreenState extends State<CartScreen> {
             child: SizedBox(
               width: 70,
               height: 70,
-              child: item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: item.thumbnailUrl!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
-                          Container(color: AppColors.canvas),
-                    )
-                  : Container(color: AppColors.canvas),
+              child: () {
+                final imgUrl = ImageUtils.resolveUrl(item.thumbnailUrl);
+                return imgUrl != null && imgUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imgUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) =>
+                            Container(color: AppColors.canvas),
+                      )
+                    : Container(color: AppColors.canvas);
+              }(),
             ),
           ),
           const SizedBox(width: 10),

@@ -42,6 +42,10 @@ public class CartItemResponse {
     private Boolean available;
 
     public static CartItemResponse of(CartItem entity, ProductVariantSummaryDto variant) {
+        return of(entity, variant, null);
+    }
+
+    public static CartItemResponse of(CartItem entity, ProductVariantSummaryDto variant, BigDecimal overridePrice) {
         if (entity == null) return null;
         BigDecimal price = null;
         String sku = null;
@@ -50,7 +54,11 @@ public class CartItemResponse {
         if (variant != null) {
             sku = variant.getSku();
             variantName = variant.getVariantName();
-            price = variant.getDiscountPrice() != null ? variant.getDiscountPrice() : variant.getPrice();
+            if (overridePrice != null) {
+                price = overridePrice;
+            } else {
+                price = variant.getDiscountPrice() != null ? variant.getDiscountPrice() : variant.getPrice();
+            }
         }
 
         return CartItemResponse.builder()

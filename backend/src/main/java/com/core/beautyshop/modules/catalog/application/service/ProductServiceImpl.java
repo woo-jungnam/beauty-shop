@@ -509,7 +509,7 @@ public class ProductServiceImpl implements ProductService {
         String text = keyword == null ? "" : keyword.trim();
         String pattern = text.isEmpty() ? null : "%" + text.toLowerCase(Locale.ROOT)
                 .replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
-        Sort sort = pageable.getSort().isUnsorted() ? Sort.by(Sort.Order.desc("createdAt")) : pageable.getSort();
+        Sort sort = pageable.getSort().isUnsorted() ? Sort.by(Sort.Order.desc("id")) : pageable.getSort();
         if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by(Sort.Order.desc("id")));
         Pageable sorted = pageable.isPaged() ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort) : Pageable.unpaged(sort);
         Page<ProductListResponse> page = productRepository.findAllAdminProductList(pattern, categoryId, brandId, status, sorted);

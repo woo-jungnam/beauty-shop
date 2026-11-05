@@ -16,11 +16,13 @@ import {
   RefreshCw,
   Search,
   X,
+  MoreHorizontal,
 } from 'lucide-react';
 import { apiClient, uploadFile } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
 import {
   formatCurrency,
+  formatNumber,
   resolveMediaUrl,
 } from '../shared/utils/formatters';
 import { Button } from '../shared/ui/Button';
@@ -30,6 +32,7 @@ import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { ProductFeaturesModal } from './ProductFeaturesModal';
 import { lines, ingredientCatalog } from './productFeatures.js';
 
@@ -58,7 +61,8 @@ export const ProductsPage = () => {
   const [draftFilters, setDraftFilters] = useState(EMPTY_PRODUCT_FILTERS);
   const [productLoadError, setProductLoadError] = useState('');
   const [catalogLoadError, setCatalogLoadError] = useState('');
-  const productView = useRef({ page: 0, filters: EMPTY_PRODUCT_FILTERS, active: true, request: 0 });
+  const productView = useRef({ page: 0, filters: EMPTY_PRODUCT_FILTERS, sort: 'id,desc', active: true, request: 0 });
+  const [productSort, setProductSort] = useState('id,desc');
 
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -94,6 +98,7 @@ export const ProductsPage = () => {
   const [variantsModalOpen, setVariantsModalOpen] = useState(false);
   const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
   const [variantList, setVariantList] = useState([]);
+  const [variantsLoading, setVariantsLoading] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
   const [stockDetailList, setStockDetailList] = useState([]);
@@ -219,20 +224,28 @@ export const ProductsPage = () => {
     if (failures.length) setCatalogLoadError(`Không tải được ${failures.join(', ')}. Các lựa chọn lọc có thể chưa đầy đủ.`);
   };
 
-  const fetchProducts = useCallback(async function loadProducts(p = productView.current.page, filters = productView.current.filters) {
+  const fetchProducts = useCallback(async function loadProducts(
+    p = productView.current.page,
+    filters = productView.current.filters,
+    sort = productView.current.sort || 'id,desc'
+  ) {
     if (!productView.current.active) return;
     productView.current.page = p;
+    productView.current.sort = sort;
     const request = ++productView.current.request;
     setLoading(true); setProductLoadError('');
     const params = new URLSearchParams({ page: String(p), size: '15' });
-    params.append('sort', 'createdAt,desc'); params.append('sort', 'id,desc');
+    params.append('sort', sort);
+    if (!sort.startsWith('id')) {
+      params.append('sort', 'id,desc');
+    }
     Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
     try {
       const res = await apiClient.get(`${ENDPOINTS.CATALOG.PRODUCTS}?${params}`);
       if (request !== productView.current.request) return;
       const pageData = res.data || res;
       const lastPage = Math.max(0, (pageData.totalPages || 1) - 1);
-      if (p > lastPage) { await loadProducts(lastPage, filters); return; }
+      if (p > lastPage) { await loadProducts(lastPage, filters, sort); return; }
       setProducts(pageData.content || []);
       setPage(pageData.page ?? p);
       productView.current.page = pageData.page ?? p;
@@ -245,11 +258,12 @@ export const ProductsPage = () => {
     }
   }, []);
 
-  const applyProductFilters = filters => {
+  const applyProductFilters = (filters, sort = productSort) => {
     const normalized = { ...filters, keyword: filters.keyword.trim() };
     setDraftFilters(normalized);
     productView.current.filters = normalized;
-    fetchProducts(0, normalized);
+    productView.current.sort = sort;
+    fetchProducts(0, normalized, sort);
   };
 
   const fetchIngredients = async () => {
@@ -505,31 +519,25 @@ export const ProductsPage = () => {
   };
 
   const handleOpenVariants = async (product) => {
+    if (!product?.id) return;
     setSelectedProductForVariants(product);
+    setVariantList([]);
+    setVariantsLoading(true);
+    setVariantsModalOpen(true);
     try {
       const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(product.id));
-      const pDetail = res.data || res;
-      setVariantList(pDetail.variants || []);
-    } catch {
+      const pDetail = res?.data ?? res;
+      setVariantList(Array.isArray(pDetail?.variants) ? pDetail.variants : []);
+    } catch (err) {
+      console.error('Lỗi khi tải chi tiết biến thể SKU:', err);
       setVariantList([]);
+    } finally {
+      setVariantsLoading(false);
     }
-    setVariantsModalOpen(true);
   };
 
   const handleOpenStockDetail = async (product) => {
-    setSelectedProductForStock(product);
-    setStockDetailLoading(true);
-    setStockDetailList([]);
-    setStockModalOpen(true);
-    try {
-      const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(product.id));
-      const pDetail = res.data || res;
-      setStockDetailList(pDetail.variants || []);
-    } catch {
-      setStockDetailList([]);
-    } finally {
-      setStockDetailLoading(false);
-    }
+    handleOpenVariants(product);
   };
 
   const handleOpenCreateVariant = () => {
@@ -1063,9 +1071,34 @@ export const ProductsPage = () => {
 
   const productColumns = [
     {
-      header: 'ID',
+      header: (
+        <button
+          type="button"
+          onClick={() => {
+            const nextSort = productSort === 'id,desc' ? 'id,asc' : 'id,desc';
+            setProductSort(nextSort);
+            applyProductFilters(draftFilters, nextSort);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            font: 'inherit',
+            fontWeight: 700,
+            color: productSort.startsWith('id') ? 'var(--color-accent-700, #6040ce)' : 'inherit'
+          }}
+          title="Bấm để đổi chiều sắp xếp theo ID (Tăng dần / Giảm dần)"
+        >
+          ID {productSort === 'id,asc' ? '▲' : productSort === 'id,desc' ? '▼' : '↕'}
+        </button>
+      ),
       accessor: 'id',
-      width: '60px',
+      width: '65px',
+      align: 'center',
     },
     {
       header: 'Ảnh',
@@ -1074,35 +1107,23 @@ export const ProductsPage = () => {
           <img
             src={resolveMediaUrl(row.thumbnailUrl)}
             alt={row.name}
-            style={{ width: '36px', height: '36px', objectFit: 'cover', border: '1px solid var(--border-subtle)', borderRadius: '4px' }}
+            style={{ width: '38px', height: '38px', objectFit: 'cover', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}
             onError={(e) => { e.currentTarget.style.opacity = '0.3'; }}
           />
         ) : (
-          <div style={{ width: '36px', height: '36px', backgroundColor: 'var(--color-primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}>
+          <div style={{ width: '38px', height: '38px', backgroundColor: 'var(--color-primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}>
             <Image size={16} color="var(--text-muted)" />
           </div>
         ),
-      render: (row) =>
-        row.thumbnailUrl ? (
-          <img
-            src={resolveMediaUrl(row.thumbnailUrl)}
-            alt={row.name}
-            style={{ width: '36px', height: '36px', objectFit: 'cover', border: '1px solid var(--border-subtle)', borderRadius: '4px' }}
-            onError={(e) => { e.currentTarget.style.opacity = '0.3'; }}
-          />
-        ) : (
-          <div style={{ width: '36px', height: '36px', backgroundColor: 'var(--color-primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}>
-            <Image size={16} color="var(--text-muted)" />
-          </div>
-        ),
-      width: '60px',
+      width: '56px',
+      align: 'center',
     },
     {
-      header: 'Tên sản phẩm',
+      header: 'Tên sản phẩm & Mã đường dẫn',
       accessor: (row) => (
-        <div>
+        <div style={{ minWidth: '240px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{row.name}</span>
+            <span style={{ fontWeight: 650, color: 'var(--text-main)', fontSize: '13.5px', lineHeight: 1.35 }}>{row.name}</span>
             {row.isFeatured && (
               <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
                 NỔI BẬT
@@ -1114,7 +1135,7 @@ export const ProductsPage = () => {
               </span>
             )}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
             /{row.slug}
           </div>
         </div>
@@ -1123,15 +1144,15 @@ export const ProductsPage = () => {
     {
       header: 'Danh mục',
       accessor: (row) => {
-        if (row.categoryName) return row.categoryName;
+        if (row.categoryName) return <span style={{ fontSize: '12.5px' }}>{row.categoryName}</span>;
         const cat = categories.find((c) => String(c.id) === String(row.categoryId));
-        return cat ? cat.name : (row.categoryId ? `Danh mục #${row.categoryId}` : 'Chưa phân loại');
+        return <span style={{ fontSize: '12.5px' }}>{cat ? cat.name : (row.categoryId ? `Danh mục #${row.categoryId}` : 'Chưa phân loại')}</span>;
       },
-      width: '140px',
+      width: '130px',
     },
     {
       header: 'Thương hiệu',
-      accessor: (row) => row.brandName || 'Chính hãng',
+      accessor: (row) => <span style={{ fontSize: '12.5px', fontWeight: 500 }}>{row.brandName || 'Chính hãng'}</span>,
       width: '120px',
     },
     {
@@ -1142,19 +1163,19 @@ export const ProductsPage = () => {
         if (min === undefined || min === null) return '-';
         if (max && Number(max) > Number(min)) {
           return (
-            <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--color-accent-700, #6040ce)' }}>
               {formatCurrency(min)} - {formatCurrency(max)}
             </span>
           );
         }
         return (
-          <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--color-accent-700, #6040ce)' }}>
             {formatCurrency(min)}
           </span>
         );
       },
       align: 'right',
-      width: '140px',
+      width: '135px',
     },
     {
       header: 'Tồn kho',
@@ -1162,32 +1183,32 @@ export const ProductsPage = () => {
         const total = row.totalStock != null ? row.totalStock : 0;
         const isOut = total <= 0;
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{
-              fontWeight: 700,
-              fontSize: '12.5px',
-              fontVariantNumeric: 'tabular-nums',
-              color: isOut ? 'var(--color-danger-700)' : 'var(--color-success-700)',
-              backgroundColor: isOut ? '#FEE2E2' : '#ECFDF5',
-              padding: '2px 8px',
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleOpenVariants(row); }}
+            style={{
+              background: isOut ? '#FEE2E2' : 'var(--color-success-50, #edfaf5)',
+              color: isOut ? 'var(--color-danger-700, #b53d59)' : 'var(--color-success-700, #16766b)',
+              border: `1px solid ${isOut ? '#FCA5A5' : 'var(--color-success-100, #d6f3eb)'}`,
+              padding: '3px 8px',
               borderRadius: '6px',
-              border: `1px solid ${isOut ? '#FCA5A5' : '#A7F3D0'}`
-            }}>
-              {isOut ? 'Hết hàng (0)' : `${total} SP`}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); handleOpenStockDetail(row); }}
-              title="Xem số lượng tồn kho từng biến thể"
-              style={{ fontSize: '11px', padding: '2px 7px', minHeight: '26px' }}
-            >
-              Chi tiết
-            </Button>
-          </div>
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontVariantNumeric: 'tabular-nums',
+              transition: 'all 0.15s ease'
+            }}
+            title="Nhấn để xem chi tiết số lượng và thông tin từng biến thể"
+          >
+            {isOut ? 'Hết hàng (0)' : `${formatNumber(total)} SP`}
+          </button>
         );
       },
-      width: '160px',
+      align: 'center',
+      width: '120px',
     },
     {
       header: 'Trạng thái',
@@ -1196,41 +1217,22 @@ export const ProductsPage = () => {
           {PRODUCT_STATUSES[row.status]?.label || row.status}
         </Badge>
       ),
-      width: '100px',
+      width: '95px',
+      align: 'center',
     },
     {
       header: 'Thao tác',
       accessor: (row) => (
-        <div className="table-actions">
-          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setFeatureProduct(row); }} icon={Sparkles}>
-            Thuộc tính & Thành phần
-          </Button>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
           <Button
-            variant="outline"
+            variant="primary"
             size="sm"
             onClick={(e) => { e.stopPropagation(); handleOpenVariants(row); }}
             icon={Sliders}
-            title="Quản lý Biến thể SKU"
+            title="Quản lý biến thể SKU & tồn kho chi tiết"
+            style={{ fontSize: '11.5px', padding: '6px 10px', whiteSpace: 'nowrap' }}
           >
             Biến thể
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); handleOpenImages(row); }}
-            icon={Image}
-            title="Quản lý ảnh sản phẩm"
-          >
-            Ảnh
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); handleOpenDerma(row); }}
-            icon={BookOpen}
-            title="Quy trình HDSD & Da liễu"
-          >
-            HDSD
           </Button>
           <Button
             variant="outline"
@@ -1238,78 +1240,54 @@ export const ProductsPage = () => {
             onClick={(e) => { e.stopPropagation(); handleOpenEditProduct(row); }}
             icon={Edit}
             title="Sửa thông tin sản phẩm"
+            style={{ fontSize: '11.5px', padding: '6px 9px', whiteSpace: 'nowrap' }}
           >
             Sửa
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); handleDeleteProduct(row.id); }}
-            icon={Trash2}
-            title="Xóa sản phẩm"
+            onClick={(e) => { e.stopPropagation(); handleOpenImages(row); }}
+            icon={Image}
+            title="Thư viện ảnh sản phẩm"
+            style={{ padding: '6px 8px' }}
           />
-        </div>
-      ),
-      render: (row) => (
-        <div className="table-actions">
-          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setFeatureProduct(row); }} icon={Sparkles}>
-            Thuộc tính & Thành phần
-          </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={(e) => { e.stopPropagation(); handleOpenVariants(row); }}
-            icon={Sliders}
-            title="Quản lý Biến thể SKU"
-          >
-            Biến thể
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); handleOpenImages(row); }}
-            icon={Image}
-            title="Quản lý ảnh sản phẩm"
-          >
-            Ảnh
-          </Button>
+            onClick={(e) => { e.stopPropagation(); setFeatureProduct(row); }}
+            icon={Sparkles}
+            title="Thuộc tính & Hoạt chất thành phần"
+            style={{ padding: '6px 8px' }}
+          />
           <Button
             variant="outline"
             size="sm"
             onClick={(e) => { e.stopPropagation(); handleOpenDerma(row); }}
             icon={BookOpen}
             title="Quy trình HDSD & Da liễu"
-          >
-            HDSD
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); handleOpenEditProduct(row); }}
-            icon={Edit}
-            title="Sửa thông tin sản phẩm"
-          >
-            Sửa
-          </Button>
+            style={{ padding: '6px 8px' }}
+          />
           <Button
             variant="outline"
             size="sm"
             onClick={(e) => { e.stopPropagation(); handleDeleteProduct(row.id); }}
             icon={Trash2}
             title="Xóa sản phẩm"
+            style={{ padding: '6px 8px', color: 'var(--color-danger-700, #b53d59)' }}
           />
         </div>
       ),
       align: 'right',
-      width: '320px',
+      width: '260px',
     },
   ];
 
   const attributeColumns = [
-    { header: 'ID', accessor: 'id', width: '70px' },
-    { header: 'Tên thuộc tính', accessor: (row) => <strong style={{ color: 'var(--text-main)' }}>{row.name}</strong> },
-    { header: 'Mã Code', accessor: (row) => <code style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{row.code}</code> },
-    { header: 'Kiểu dữ liệu', accessor: (row) => <Badge variant="info">{row.dataType}</Badge>, width: '130px' },
+    { header: 'ID', accessor: 'id', width: '65px', align: 'center' },
+    { header: 'Tên thuộc tính', accessor: (row) => <strong style={{ color: 'var(--text-main)' }}>{row.name}</strong>, width: '220px' },
+    { header: 'Mã Code', accessor: (row) => <code style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{row.code}</code>, width: '140px' },
+    { header: 'Kiểu dữ liệu', accessor: (row) => <Badge variant="info">{row.dataType}</Badge>, width: '120px', align: 'center' },
     { header: 'Mô tả', accessor: (row) => row.description || '—' },
     {
       header: 'Thao tác',
@@ -1320,7 +1298,7 @@ export const ProductsPage = () => {
         </div>
       ),
       align: 'right',
-      width: '110px',
+      width: '100px',
     },
   ];
 
@@ -1559,119 +1537,118 @@ export const ProductsPage = () => {
 
   return (
     <div className="content-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quản lý Danh mục & Sản phẩm (Catalog Hub)</h1>
-          <p className="page-subtitle">
-            Quản trị toàn bộ danh mục sản phẩm, biến thể SKU, thương hiệu và bảng thành phần hoạt chất
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {activeTab === 'products' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateProduct} icon={Plus}>
-              Thêm sản phẩm mới
+      <AdminSectionNav
+        rootTitle="Quản lý Sản phẩm"
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        subtitle="Quản trị toàn bộ danh mục sản phẩm, biến thể SKU, thương hiệu và bảng thành phần hoạt chất"
+        items={[
+          {
+            id: 'products',
+            label: 'Sản phẩm & Biến thể SKU',
+            count: totalElements,
+            icon: Package,
+            description: 'Danh sách sản phẩm, giá bán, tồn kho và trạng thái'
+          },
+          {
+            id: 'categories',
+            label: 'Danh mục sản phẩm',
+            count: categories.length,
+            icon: FolderTree,
+            description: 'Cây phân cấp danh mục mỹ phẩm & chăm sóc da'
+          },
+          {
+            id: 'brands',
+            label: 'Thương hiệu mỹ phẩm',
+            count: brands.length,
+            icon: Award,
+            description: 'Các hãng sản xuất đối tác chính hãng'
+          },
+          {
+            id: 'ingredients',
+            label: 'Hoạt chất & Thành phần',
+            count: ingredients.length,
+            icon: Sparkles,
+            description: 'Từ điển hoạt chất da liễu và công dụng mỹ phẩm'
+          },
+          {
+            id: 'attributes',
+            label: 'Đặc tính sản phẩm',
+            count: attributes.length,
+            icon: Sliders,
+            description: 'Thuộc tính dung tích, tông màu, loại da phù hợp'
+          },
+          {
+            id: 'tags',
+            label: 'Thẻ phân loại nhãn',
+            count: tags.length,
+            icon: TagIcon,
+            description: 'Nhãn gắn sản phẩm (Bán chạy, Mới về, Khuyến mãi)'
+          },
+          {
+            id: 'banners',
+            label: 'Ảnh bìa & Banner quảng cáo',
+            count: banners.length,
+            icon: Image,
+            description: 'Banner quảng bá truyền thông và trang chủ'
+          }
+        ]}
+        actions={
+          <>
+            {activeTab === 'products' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateProduct} icon={Plus}>
+                Thêm sản phẩm mới
+              </Button>
+            )}
+            {activeTab === 'categories' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateCategory} icon={Plus}>
+                Thêm danh mục
+              </Button>
+            )}
+            {activeTab === 'brands' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateBrand} icon={Plus}>
+                Thêm thương hiệu
+              </Button>
+            )}
+            {activeTab === 'ingredients' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateIngredient} icon={Plus}>
+                Thêm hoạt chất
+              </Button>
+            )}
+            {activeTab === 'attributes' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateAttr} icon={Plus}>
+                Thêm thuộc tính
+              </Button>
+            )}
+            {activeTab === 'tags' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateTag} icon={Plus}>
+                Thêm thẻ nhãn
+              </Button>
+            )}
+            {activeTab === 'banners' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateBanner} icon={Plus}>
+                Thêm banner mới
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (activeTab === 'products') fetchProducts();
+                else if (activeTab === 'categories' || activeTab === 'brands') fetchCatalogs();
+                else if (activeTab === 'ingredients') fetchIngredients();
+                else if (activeTab === 'attributes') fetchAttributes();
+                else if (activeTab === 'tags') fetchTags();
+                else if (activeTab === 'banners') fetchBanners();
+              }}
+              loading={loading}
+              icon={RefreshCw}
+            >
+              Làm mới
             </Button>
-          )}
-          {activeTab === 'categories' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateCategory} icon={Plus}>
-              Thêm danh mục
-            </Button>
-          )}
-          {activeTab === 'brands' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateBrand} icon={Plus}>
-              Thêm thương hiệu
-            </Button>
-          )}
-          {activeTab === 'ingredients' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateIngredient} icon={Plus}>
-              Thêm hoạt chất
-            </Button>
-          )}
-          {activeTab === 'attributes' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateAttr} icon={Plus}>
-              Thêm thuộc tính
-            </Button>
-          )}
-          {activeTab === 'tags' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateTag} icon={Plus}>
-              Thêm thẻ nhãn
-            </Button>
-          )}
-          {activeTab === 'banners' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateBanner} icon={Plus}>
-              Thêm banner mới
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (activeTab === 'products') fetchProducts();
-              else if (activeTab === 'categories' || activeTab === 'brands') fetchCatalogs();
-              else if (activeTab === 'ingredients') fetchIngredients();
-              else if (activeTab === 'attributes') fetchAttributes();
-              else if (activeTab === 'tags') fetchTags();
-              else if (activeTab === 'banners') fetchBanners();
-            }}
-            loading={loading}
-            icon={RefreshCw}
-          >
-            Làm mới
-          </Button>
-        </div>
-      </div>
-
-      <div className="tabs-header">
-        <button
-          className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
-          onClick={() => setActiveTab('products')}
-        >
-          <Package size={15} />
-          Sản phẩm & Biến thể SKU ({totalElements})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
-          onClick={() => setActiveTab('categories')}
-        >
-          <FolderTree size={15} />
-          Danh mục sản phẩm ({categories.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'brands' ? 'active' : ''}`}
-          onClick={() => setActiveTab('brands')}
-        >
-          <Award size={15} />
-          Thương hiệu ({brands.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'ingredients' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ingredients')}
-        >
-          <Sparkles size={15} />
-          Hoạt chất & Thành phần mỹ phẩm ({ingredients.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'attributes' ? 'active' : ''}`}
-          onClick={() => setActiveTab('attributes')}
-        >
-          <Sliders size={15} />
-          Đặc tính sản phẩm ({attributes.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'tags' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tags')}
-        >
-          <TagIcon size={15} />
-          Thẻ phân loại sản phẩm ({tags.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'banners' ? 'active' : ''}`}
-          onClick={() => setActiveTab('banners')}
-        >
-          <Image size={15} />
-          Ảnh bìa & Banner quảng cáo ({banners.length})
-        </button>
-      </div>
+          </>
+        }
+      />
 
       {activeTab === 'products' && (
         <div className="card">
@@ -1682,6 +1659,22 @@ export const ProductsPage = () => {
               <Select label="Lọc thương hiệu" value={draftFilters.brandId} onChange={event => setDraftFilters({ ...draftFilters, brandId: event.target.value })} options={[{ value: '', label: 'Tất cả thương hiệu' }, ...brands.map(brand => ({ value: String(brand.id), label: brand.name }))]} />
               <Select label="Lọc trạng thái" value={draftFilters.status} onChange={event => setDraftFilters({ ...draftFilters, status: event.target.value })} options={[{ value: '', label: 'Tất cả trạng thái' }, ...Object.entries(PRODUCT_STATUSES).map(([value, meta]) => ({ value, label: meta.label }))]} />
               <Select label="Lọc Flash Sale / Khuyến mãi" value={draftFilters.onSale} onChange={event => setDraftFilters({ ...draftFilters, onSale: event.target.value })} options={[{ value: '', label: 'Tất cả sản phẩm' }, { value: 'true', label: 'Đang Flash Sale / Giảm giá' }]} />
+              <Select
+                label="Sắp xếp theo"
+                value={productSort}
+                onChange={event => {
+                  const nextSort = event.target.value;
+                  setProductSort(nextSort);
+                  applyProductFilters(draftFilters, nextSort);
+                }}
+                options={[
+                  { value: 'id,desc', label: 'Mã ID giảm dần (Mới nhất)' },
+                  { value: 'id,asc', label: 'Mã ID tăng dần (Cũ nhất)' },
+                  { value: 'name,asc', label: 'Tên sản phẩm A-Z' },
+                  { value: 'name,desc', label: 'Tên sản phẩm Z-A' },
+                  { value: 'createdAt,desc', label: 'Thời gian tạo mới nhất' }
+                ]}
+              />
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
               <Button type="submit" icon={Search}>Áp dụng</Button>
@@ -2010,160 +2003,368 @@ export const ProductsPage = () => {
       <Modal
         isOpen={variantsModalOpen}
         onClose={() => setVariantsModalOpen(false)}
-        title={`Quản lý Biến thể SKU: ${selectedProductForVariants?.name}`}
-        maxWidth="800px"
+        title={`Quản lý Biến thể SKU: ${selectedProductForVariants?.name || ''}`}
+        maxWidth="1140px"
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Danh sách các SKU định giá, dung tích, barcode riêng biệt
-          </span>
-          <Button variant="primary" size="sm" icon={Plus} onClick={handleOpenCreateVariant}>
-            Thêm biến thể SKU
-          </Button>
-        </div>
+        {selectedProductForVariants && (() => {
+          const vList = Array.isArray(variantList) ? variantList : [];
+          const totalStock = vList.reduce((acc, v) => acc + (Number(v.stockQuantity) || 0), 0);
+          const inStockCount = vList.filter((v) => (Number(v.stockQuantity) || 0) > 0).length;
+          const prices = vList.map((v) => Number(v.price || 0)).filter((p) => Number.isFinite(p) && p > 0);
+          const minP = prices.length ? Math.min(...prices) : 0;
+          const maxP = prices.length ? Math.max(...prices) : 0;
+          const cat = Array.isArray(categories) ? categories.find((c) => String(c.id) === String(selectedProductForVariants.categoryId)) : null;
+          const thumb = selectedProductForVariants.thumbnailUrl ? resolveMediaUrl(selectedProductForVariants.thumbnailUrl) : null;
 
-        <table className="data-table" style={{ width: '100%' }}>
-          <thead>
-            <tr>
-              <th>Mã SKU</th>
-              <th>Tên biến thể</th>
-              <th>Dung tích / Màu</th>
-              <th>Giá bán</th>
-              <th style={{ textAlign: 'center' }}>Tồn kho</th>
-              <th>Barcode</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {variantList.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
-                  Chưa có biến thể SKU nào. Nhấn "Thêm biến thể SKU" để cấu hình.
-                </td>
-              </tr>
-            ) : (
-              variantList.map((v) => {
-                const qty = v.stockQuantity != null ? v.stockQuantity : 0;
-                const inStock = qty > 0;
-                return (
-                  <tr key={v.id}>
-                    <td>
-                      <code style={{ fontWeight: 700, color: 'var(--color-accent-700)' }}>{v.sku}</code>
-                      {v.isDefault && <Badge variant="info" style={{ marginLeft: '6px', fontSize: '9px' }}>Mặc định</Badge>}
-                    </td>
-                    <td>{v.variantName}</td>
-                    <td>{v.volume || v.color || 'Mặc định'}</td>
-                    <td><strong>{formatCurrency(v.price)}</strong></td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span style={{
-                        fontWeight: 700,
-                        fontSize: '12px',
-                        color: inStock ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-                        backgroundColor: inStock ? '#ECFDF5' : '#FEE2E2',
-                        padding: '2px 7px',
-                        borderRadius: '4px',
-                      }}>
-                        {qty}
-                      </span>
-                    </td>
-                    <td>{v.barcode || 'N/A'}</td>
-                    <td>
-                      <div className="table-actions">
-                        <Button variant="outline" size="sm" icon={Edit} onClick={() => handleOpenEditVariant(v)} title="Sửa biến thể" />
-                        <Button variant="outline" size="sm" icon={Trash2} onClick={() => handleDeleteVariant(v.id)} title="Xóa biến thể" />
-                      </div>
+          return (
+            <div style={{
+              background: 'var(--bg-surface-subtle, #f6f3fb)',
+              border: '1px solid var(--border-subtle, #eee9f4)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              marginBottom: '18px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: '280px' }}>
+                <div style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  background: '#FFFFFF',
+                  border: '1px solid var(--border-subtle, #eee9f4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {thumb ? (
+                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  ) : (
+                    <Package size={24} color="var(--text-muted)" />
+                  )}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                      {selectedProductForVariants.name}
+                    </h3>
+                    <span style={{ fontSize: '11px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                      Mã #{selectedProductForVariants.id}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span>Danh mục: <strong style={{ color: 'var(--text-main)' }}>{cat?.name || selectedProductForVariants.categoryName || 'Chưa phân loại'}</strong></span>
+                    <span>·</span>
+                    <span>Thương hiệu: <strong style={{ color: 'var(--text-main)' }}>{selectedProductForVariants.brandName || 'Chính hãng'}</strong></span>
+                    {selectedProductForVariants.slug && (
+                      <>
+                        <span>·</span>
+                        <code style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>/{selectedProductForVariants.slug}</code>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI stat chips */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 650 }}>Số lượng SKU</div>
+                  <div style={{ fontSize: '16px', fontWeight: 750, color: 'var(--color-accent-700, #6040ce)' }}>{vList.length}</div>
+                </div>
+                <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 650 }}>Tổng tồn kho</div>
+                  <div style={{ fontSize: '16px', fontWeight: 750, color: totalStock > 0 ? 'var(--color-success-700, #16766b)' : 'var(--color-danger-700, #b53d59)' }}>
+                    {formatNumber(totalStock)} <span style={{ fontSize: '11px', fontWeight: 500 }}>SP</span>
+                  </div>
+                </div>
+                {prices.length > 0 && (
+                  <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 650 }}>Khung giá bán</div>
+                    <div style={{ fontSize: '15px', fontWeight: 750, color: 'var(--text-main)' }}>
+                      {minP === maxP ? formatCurrency(minP) : `${formatCurrency(minP)} – ${formatCurrency(maxP)}`}
+                    </div>
+                  </div>
+                )}
+                <Button variant="primary" icon={Plus} onClick={handleOpenCreateVariant}>
+                  Thêm biến thể SKU
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {variantsLoading ? (
+          <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--text-muted)' }}>
+            <RefreshCw size={26} className="spin" style={{ margin: '0 auto 10px', display: 'block', color: 'var(--color-accent-600, #7457e8)' }} />
+            <span style={{ fontSize: '13px', fontWeight: 650 }}>Đang tải danh sách biến thể SKU…</span>
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table" style={{ width: '100%' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '140px' }}>Mã SKU</th>
+                  <th style={{ minWidth: '180px' }}>Tên biến thể</th>
+                  <th style={{ width: '130px' }}>Dung tích / Màu</th>
+                  <th style={{ width: '130px', textAlign: 'right' }}>Giá niêm yết</th>
+                  <th style={{ width: '130px', textAlign: 'right' }}>Giá khuyến mãi</th>
+                  <th style={{ width: '130px', textAlign: 'center' }}>Tồn kho</th>
+                  <th style={{ width: '130px' }}>Barcode</th>
+                  <th style={{ width: '110px', textAlign: 'right' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {variantList.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      Chưa có biến thể SKU nào cho sản phẩm này. Nhấn "Thêm biến thể SKU" để tạo mới.
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                ) : (
+                  variantList.map((v) => {
+                    const qty = v.stockQuantity != null ? v.stockQuantity : 0;
+                    const inStock = qty > 0;
+                    const hasDiscount = v.discountPrice != null && Number(v.discountPrice) < Number(v.price);
+
+                    return (
+                      <tr key={v.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <code style={{ fontWeight: 700, color: 'var(--color-accent-700, #6040ce)', fontFamily: 'var(--font-mono)' }}>{v.sku}</code>
+                            {v.isDefault && <Badge variant="info" style={{ fontSize: '9px', padding: '1px 5px' }}>Mặc định</Badge>}
+                          </div>
+                        </td>
+                        <td>
+                          <strong style={{ color: 'var(--text-main)', fontSize: '13px' }}>{v.variantName}</strong>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{v.volume || v.color || 'Mặc định'}</span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <span style={{
+                            fontWeight: 650,
+                            fontSize: '13px',
+                            textDecoration: hasDiscount ? 'line-through' : 'none',
+                            color: hasDiscount ? 'var(--text-muted)' : 'var(--text-main)',
+                            fontVariantNumeric: 'tabular-nums'
+                          }}>
+                            {formatCurrency(v.price)}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          {hasDiscount ? (
+                            <span style={{ fontWeight: 750, color: 'var(--color-danger-700, #b53d59)', fontVariantNumeric: 'tabular-nums', fontSize: '13px' }}>
+                              {formatCurrency(v.discountPrice)}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            color: inStock ? 'var(--color-success-700, #16766b)' : 'var(--color-danger-700, #b53d59)',
+                            backgroundColor: inStock ? 'var(--color-success-50, #edfaf5)' : '#FEE2E2',
+                            border: `1px solid ${inStock ? 'var(--color-success-100, #d6f3eb)' : '#FCA5A5'}`,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontVariantNumeric: 'tabular-nums',
+                            display: 'inline-block'
+                          }}>
+                            {inStock ? `${formatNumber(qty)} SP` : 'Hết hàng (0)'}
+                          </span>
+                        </td>
+                        <td>
+                          <code style={{ fontSize: '11.5px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                            {v.barcode || '—'}
+                          </code>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                            <Button variant="outline" size="sm" icon={Edit} onClick={() => handleOpenEditVariant(v)} title="Sửa biến thể" />
+                            <Button variant="outline" size="sm" icon={Trash2} onClick={() => handleDeleteVariant(v.id)} title="Xóa biến thể" />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Modal>
 
       <Modal
         isOpen={stockModalOpen}
         onClose={() => setStockModalOpen(false)}
-        title={`Chi tiết tồn kho: ${selectedProductForStock?.name}`}
-        maxWidth="720px"
+        title={`Chi tiết tồn kho biến thể: ${selectedProductForStock?.name || ''}`}
+        maxWidth="1140px"
       >
-        <div style={{ marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          <div>
-            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-              Mã sản phẩm: <strong>#{selectedProductForStock?.id}</strong> · Tổng số lượng: <strong style={{ color: (selectedProductForStock?.totalStock > 0) ? 'var(--color-success-700)' : 'var(--color-danger-700)', fontSize: '15px' }}>{selectedProductForStock?.totalStock ?? 0} sản phẩm</strong>
-            </span>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setStockModalOpen(false);
-              handleOpenVariants(selectedProductForStock);
-            }}
-          >
-            Quản lý biến thể SKU
-          </Button>
-        </div>
+        {selectedProductForStock && (() => {
+          const sList = Array.isArray(stockDetailList) ? stockDetailList : [];
+          const totalStock = sList.reduce((acc, v) => acc + (Number(v.stockQuantity) || 0), 0);
+          const inStockCount = sList.filter((v) => (Number(v.stockQuantity) || 0) > 0).length;
+          const cat = Array.isArray(categories) ? categories.find((c) => String(c.id) === String(selectedProductForStock.categoryId)) : null;
+          const thumb = selectedProductForStock.thumbnailUrl ? resolveMediaUrl(selectedProductForStock.thumbnailUrl) : null;
+
+          return (
+            <div style={{
+              background: 'var(--bg-surface-subtle, #f6f3fb)',
+              border: '1px solid var(--border-subtle, #eee9f4)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              marginBottom: '18px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: '280px' }}>
+                <div style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  background: '#FFFFFF',
+                  border: '1px solid var(--border-subtle, #eee9f4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {thumb ? (
+                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  ) : (
+                    <Package size={24} color="var(--text-muted)" />
+                  )}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
+                      {selectedProductForStock.name}
+                    </h3>
+                    <span style={{ fontSize: '11px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                      Mã #{selectedProductForStock.id}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span>Danh mục: <strong style={{ color: 'var(--text-main)' }}>{cat?.name || selectedProductForStock.categoryName || 'Chưa phân loại'}</strong></span>
+                    <span>·</span>
+                    <span>Thương hiệu: <strong style={{ color: 'var(--text-main)' }}>{selectedProductForStock.brandName || 'Chính hãng'}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI stat chips */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 650 }}>Tổng tồn khả dụng</div>
+                  <div style={{ fontSize: '18px', fontWeight: 750, color: totalStock > 0 ? 'var(--color-success-700, #16766b)' : 'var(--color-danger-700, #b53d59)' }}>
+                    {formatNumber(totalStock)} <span style={{ fontSize: '11px', fontWeight: 500 }}>SP</span>
+                  </div>
+                </div>
+                <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '8px', padding: '8px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 650 }}>Tình trạng SKU</div>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
+                    <span style={{ color: 'var(--color-success-700, #16766b)' }}>{inStockCount}</span> / {sList.length} còn hàng
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStockModalOpen(false);
+                    handleOpenVariants(selectedProductForStock);
+                  }}
+                  icon={Sliders}
+                >
+                  Quản lý biến thể SKU
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
 
         {stockDetailLoading ? (
-          <p style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>Đang tải số lượng tồn kho từng biến thể…</p>
+          <p style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Đang tải số lượng tồn kho từng biến thể…</p>
         ) : (
-          <table className="data-table" style={{ width: '100%' }}>
-            <thead>
-              <tr>
-                <th>Mã SKU</th>
-                <th>Tên biến thể</th>
-                <th>Phân loại</th>
-                <th style={{ textAlign: 'right' }}>Giá bán</th>
-                <th style={{ textAlign: 'center' }}>Tồn kho khả dụng</th>
-                <th>Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stockDetailList.length === 0 ? (
+          <div className="table-wrapper">
+            <table className="data-table" style={{ width: '100%' }}>
+              <thead>
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
-                    Chưa có biến thể SKU nào cho sản phẩm này.
-                  </td>
+                  <th style={{ width: '150px' }}>Mã SKU</th>
+                  <th style={{ minWidth: '220px' }}>Tên biến thể</th>
+                  <th style={{ width: '150px' }}>Phân loại / Quy cách</th>
+                  <th style={{ width: '140px', textAlign: 'right' }}>Giá bán hiện hành</th>
+                  <th style={{ width: '150px', textAlign: 'center' }}>Tồn kho khả dụng</th>
+                  <th style={{ width: '130px', textAlign: 'center' }}>Trạng thái kho</th>
                 </tr>
-              ) : (
-                stockDetailList.map((v) => {
-                  const qty = v.stockQuantity != null ? v.stockQuantity : 0;
-                  const inStock = qty > 0;
-                  return (
-                    <tr key={v.id}>
-                      <td>
-                        <code style={{ fontWeight: 700, color: 'var(--color-accent-700)' }}>{v.sku}</code>
-                        {v.isDefault && <Badge variant="info" style={{ marginLeft: '6px', fontSize: '9px' }}>Mặc định</Badge>}
-                      </td>
-                      <td>{v.variantName}</td>
-                      <td>{v.volume || v.color || 'Tiêu chuẩn'}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <strong>{formatCurrency(v.discountPrice ?? v.price)}</strong>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span style={{
-                          fontWeight: 700,
-                          fontSize: '13px',
-                          color: inStock ? 'var(--color-success-700)' : 'var(--color-danger-700)',
-                          backgroundColor: inStock ? '#ECFDF5' : '#FEE2E2',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                        }}>
-                          {qty}
-                        </span>
-                      </td>
-                      <td>
-                        <Badge variant={inStock ? 'success' : 'danger'}>
-                          {inStock ? 'Còn hàng' : 'Hết hàng'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {stockDetailList.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      Chưa có biến thể SKU nào cho sản phẩm này.
+                    </td>
+                  </tr>
+                ) : (
+                  stockDetailList.map((v) => {
+                    const qty = v.stockQuantity != null ? v.stockQuantity : 0;
+                    const inStock = qty > 0;
+                    return (
+                      <tr key={v.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <code style={{ fontWeight: 700, color: 'var(--color-accent-700, #6040ce)', fontFamily: 'var(--font-mono)' }}>{v.sku}</code>
+                            {v.isDefault && <Badge variant="info" style={{ fontSize: '9px', padding: '1px 5px' }}>Mặc định</Badge>}
+                          </div>
+                        </td>
+                        <td>
+                          <strong style={{ color: 'var(--text-main)', fontSize: '13px' }}>{v.variantName}</strong>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{v.volume || v.color || 'Tiêu chuẩn'}</span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <strong style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text-main)', fontSize: '13px' }}>
+                            {formatCurrency(v.discountPrice ?? v.price)}
+                          </strong>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '12.5px',
+                            color: inStock ? 'var(--color-success-700, #16766b)' : 'var(--color-danger-700, #b53d59)',
+                            backgroundColor: inStock ? 'var(--color-success-50, #edfaf5)' : '#FEE2E2',
+                            border: `1px solid ${inStock ? 'var(--color-success-100, #d6f3eb)' : '#FCA5A5'}`,
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            fontVariantNumeric: 'tabular-nums',
+                            display: 'inline-block'
+                          }}>
+                            {inStock ? `${formatNumber(qty)} SP` : 'Hết hàng (0)'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <Badge variant={inStock ? 'success' : 'danger'}>
+                            {inStock ? 'Còn hàng' : 'Hết hàng'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </Modal>
 
@@ -2171,7 +2372,7 @@ export const ProductsPage = () => {
         isOpen={variantModalOpen}
         onClose={() => setVariantModalOpen(false)}
         title={editingVariant ? `Cập nhật Biến thể: ${editingVariant.sku}` : "Thêm Biến thể SKU Mới"}
-        maxWidth="500px"
+        maxWidth="640px"
       >
         <form onSubmit={handleAddVariant}>
           <div className="grid-2">

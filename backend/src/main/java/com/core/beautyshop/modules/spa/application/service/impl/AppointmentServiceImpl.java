@@ -123,12 +123,26 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         checkStoreSchedule(request.getAppointmentDate(), request.getStartTime(), null);
 
+        String effectiveNotes = request.getNotes();
+        if ((request.getCustomerName() != null && !request.getCustomerName().isBlank())
+                || (request.getCustomerPhone() != null && !request.getCustomerPhone().isBlank())) {
+            String namePart = request.getCustomerName() != null ? request.getCustomerName().trim() : "";
+            String phonePart = request.getCustomerPhone() != null ? request.getCustomerPhone().trim() : "";
+            String contactTag = "[Khách: " + namePart + (namePart.isEmpty() || phonePart.isEmpty() ? "" : " · ") + phonePart + "]";
+            effectiveNotes = (effectiveNotes != null && !effectiveNotes.isBlank())
+                    ? contactTag + " " + effectiveNotes
+                    : contactTag;
+            if (effectiveNotes.length() > 500) {
+                effectiveNotes = effectiveNotes.substring(0, 500);
+            }
+        }
+
         Appointment appointment = Appointment.builder()
                 .userId(bookingUserId)
                 .appointmentDate(request.getAppointmentDate())
                 .startTime(request.getStartTime())
                 .status(AppointmentStatus.PENDING)
-                .notes(request.getNotes())
+                .notes(effectiveNotes)
                 .build();
 
         policies.snapshot(appointment);

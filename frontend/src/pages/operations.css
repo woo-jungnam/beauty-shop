@@ -1,0 +1,280 @@
+/* =========================================================================
+   OPERATIONS & SYSTEM CONFIGURATION STYLES (ATELIER SYSTEM)
+   STRICTLY NO EMOJI - CLEAN SVG ICONS ONLY
+   ========================================================================= */
+
+.operations-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--text-main, #29243a);
+  font-family: inherit;
+}
+
+/* KPI Summary Cards */
+.operations-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.operations-stat-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #eee9f4);
+  border-radius: var(--radius-md, 14px);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px -2px rgba(33, 26, 53, 0.05);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.operations-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-accent-500, #9378f2);
+  box-shadow: 0 6px 18px -4px rgba(33, 26, 53, 0.08);
+}
+
+.operations-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm, 10px);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.operations-stat-icon.violet {
+  background: var(--color-accent-50, #f5f1ff);
+  color: var(--color-accent-600, #7457e8);
+}
+
+.operations-stat-icon.green {
+  background: #edfbf5;
+  color: #16766b;
+}
+
+.operations-stat-icon.rose {
+  background: #fff0f4;
+  color: #b53d59;
+}
+
+.operations-stat-info h4 {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #777086);
+  font-weight: 650;
+}
+
+.operations-stat-info strong {
+  display: block;
+  font-size: 19px;
+  font-weight: 750;
+  color: var(--text-main, #29243a);
+  margin: 4px 0 2px 0;
+}
+
+.operations-stat-info small {
+  font-size: 11px;
+  color: var(--text-muted, #777086);
+}
+
+/* Collapsible Panel */
+.operations-collapsible-panel {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #eee9f4);
+  border-radius: var(--radius-md, 14px);
+  overflow: hidden;
+  box-shadow: 0 2px 8px -2px rgba(33, 26, 53, 0.05);
+  margin-bottom: 20px;
+}
+
+.operations-collapsible-header {
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: var(--bg-surface-subtle, #f6f3fb);
+  border-bottom: 1px solid transparent;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.operations-collapsible-header:hover {
+  background: #f1edf8;
+}
+
+.operations-collapsible-panel.expanded .operations-collapsible-header {
+  border-bottom-color: var(--border-subtle, #eee9f4);
+}
+
+.operations-collapsible-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.operations-collapsible-title h3 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-main, #29243a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.operations-collapsible-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* System Config Card Rows */
+.operations-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.operations-config-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #eee9f4);
+  border-radius: var(--radius-sm, 10px);
+  transition: all 0.15s ease;
+}
+
+.operations-config-row:hover {
+  border-color: var(--color-accent-500, #9378f2);
+  background: #fdfcff;
+}
+
+.operations-config-key {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent-700, #6040ce);
+}
+
+.operations-config-desc {
+  font-size: 11.5px;
+  color: var(--text-muted, #777086);
+  margin-top: 3px;
+}
+
+.operations-config-public-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted, #777086);
+  cursor: pointer;
+  margin-top: 6px;
+  user-select: none;
+}
+
+.operations-config-public-toggle input[type="checkbox"] {
+  accent-color: var(--color-accent-600, #7457e8);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.operations-config-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong, #dcd4e9);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-main, #29243a);
+  background: #ffffff;
+  outline: none;
+}
+
+.operations-config-input:focus {
+  border-color: var(--color-accent-600, #7457e8);
+  box-shadow: 0 0 0 3px rgba(116, 87, 232, 0.12);
+}
+
+/* Chatbot Diagnostic Panels */
+.operations-chatbot-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.operations-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #eee9f4);
+  border-radius: var(--radius-md, 14px);
+  padding: 22px;
+  box-shadow: 0 2px 8px -2px rgba(33, 26, 53, 0.05);
+}
+
+.operations-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.operations-card-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main, #29243a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.operations-card-title p {
+  margin: 4px 0 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted, #777086);
+  line-height: 1.5;
+}
+
+.operations-json-box {
+  background: var(--bg-surface-subtle, #f6f3fb);
+  border: 1px solid var(--border-subtle, #eee9f4);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.operations-json-box pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle, #eee9f4);
+  border-radius: 6px;
+  padding: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  color: var(--text-main, #29243a);
+}
+
+@media (max-width: 900px) {
+  .operations-config-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}

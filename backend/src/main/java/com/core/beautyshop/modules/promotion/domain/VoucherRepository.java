@@ -21,4 +21,7 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from Voucher v where upper(v.code) = upper(:code) and v.isDeleted = false")
     Optional<Voucher> findByCodeForUpdate(@Param("code") String code);
+
+    @Query("select v from Voucher v where v.isDeleted = false and v.isActive = true and v.startsAt <= :now and v.endsAt > :now order by v.discountValue desc")
+    java.util.List<Voucher> findActiveVouchers(@Param("now") java.time.Instant now);
 }

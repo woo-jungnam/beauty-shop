@@ -7,6 +7,7 @@ import '../../../core/utils/cart_actions.dart';
 import '../../widgets/catalog_state.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
+import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 import 'package:beautyshop_mobile/providers/product_provider.dart';
 import 'package:beautyshop_mobile/providers/cart_provider.dart';
 import 'package:beautyshop_mobile/providers/auth_provider.dart';
@@ -265,9 +266,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           );
 
         final detail = provider.selectedProductDetail!;
-        final images = detail.imageUrls.isNotEmpty
+        final rawImages = detail.imageUrls.isNotEmpty
             ? detail.imageUrls
             : [detail.thumbnailUrl ?? ''];
+        final images = rawImages
+            .map(ImageUtils.resolveUrl)
+            .whereType<String>()
+            .where((s) => s.isNotEmpty)
+            .toList();
 
         final activeVariant = detail.variantForSelection(_selectedVariantId);
         final canBuy =
@@ -317,50 +323,61 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   color: AppColors.getSurface(context),
                   child: AspectRatio(
                     aspectRatio: 1.0,
-                    child: Stack(
-                      children: [
-                        PageView.builder(
-                          itemCount: images.length,
-                          onPageChanged: (idx) =>
-                              setState(() => _selectedImageIndex = idx),
-                          itemBuilder: (context, idx) {
-                            return CachedNetworkImage(
-                              imageUrl: images[idx],
-                              fit: BoxFit.contain,
-                              placeholder: (_, __) =>
-                                  Container(color: AppColors.canvas),
-                              errorWidget: (_, __, ___) => const Icon(
+                    child: images.isEmpty
+                        ? Container(
+                            color: AppColors.canvas,
+                            child: const Center(
+                              child: Icon(
                                 Icons.spa,
                                 size: 50,
                                 color: AppColors.textLight,
                               ),
-                            );
-                          },
-                        ),
-                        Positioned(
-                          bottom: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.65),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${_selectedImageIndex + 1}/${images.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                          )
+                        : Stack(
+                            children: [
+                              PageView.builder(
+                                itemCount: images.length,
+                                onPageChanged: (idx) =>
+                                    setState(() => _selectedImageIndex = idx),
+                                itemBuilder: (context, idx) {
+                                  return CachedNetworkImage(
+                                    imageUrl: images[idx],
+                                    fit: BoxFit.contain,
+                                    placeholder: (_, __) =>
+                                        Container(color: AppColors.canvas),
+                                    errorWidget: (_, __, ___) => const Icon(
+                                      Icons.spa,
+                                      size: 50,
+                                      color: AppColors.textLight,
+                                    ),
+                                  );
+                                },
                               ),
-                            ),
+                              Positioned(
+                                bottom: 12,
+                                right: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.65),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_selectedImageIndex + 1}/${images.length}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
 
@@ -871,7 +888,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                         const SizedBox(height: 10),
                         SizedBox(
-                          height: 245,
+                          height: 265,
                           child: ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             scrollDirection: Axis.horizontal,
@@ -881,7 +898,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             itemBuilder: (context, index) {
                               final p = provider.similarProducts[index];
                               return SizedBox(
-                                width: 145,
+                                width: 152,
                                 child: AppProductCard(
                                   product: p,
                                   onTap: () {

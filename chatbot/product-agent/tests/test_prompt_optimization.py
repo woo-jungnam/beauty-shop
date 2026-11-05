@@ -114,3 +114,39 @@ def test_parse_and_validate_bare_clarification_response():
     assert result.needs_clarification is True
     assert result.clarification_question is not None
     assert "serum" in result.clarification_question
+
+
+def test_parse_and_validate_flat_booking_and_entity_sync():
+    client = LLMClient()
+
+    flat_booking_json = {
+        "intent": "BOOKING",
+        "target": "SERVICE",
+        "category": None,
+        "brand": None,
+        "skin_type": None,
+        "concerns": ["mụn"],
+        "ingredients": [],
+        "max_price": None,
+        "needs_clarification": False,
+        "clarification_question": None,
+    }
+
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {
+        "choices": [
+            {
+                "message": {
+                    "content": str(flat_booking_json).replace("'", '"').replace("None", "null").replace("False", "false")
+                }
+            }
+        ]
+    }
+
+    result = client.parseAndValidateResponse(mock_resp, originalMessage="đặt lịch peel da trị mụn")
+
+    assert isinstance(result, UnderstandingResult)
+    assert result.intent == Intent.BOOKING
+    assert result.primary_intent == PrimaryIntent.DAT_LICH.value
+    assert result.target_type == "SERVICE"
+    assert result.entities.get("target_concerns") == ["mụn"]

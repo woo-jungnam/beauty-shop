@@ -1,7 +1,7 @@
 import { ProcurementOperationsPanel } from '../features/commerce/AdminCommercePanels';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { businessToday, downloadTemplate, matchVariants, orderPayload, validDate, validateImportFile, validateItem } from '../features/procurement/procurementImport';
-import { Check, Eye, PackageCheck, Plus, RefreshCw, X } from 'lucide-react';
+import { Check, Eye, PackageCheck, Plus, RefreshCw, X, Building2, ClipboardList } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
 import { Button } from '../shared/ui/Button';
@@ -11,6 +11,7 @@ import { Modal } from '../shared/ui/Modal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { formatCurrency, formatDate, formatDateTime } from '../shared/utils/formatters';
 
 const blankItem = () => ({ variantId: '', quantity: 1, unitCost: '', batchCode: '', expirationDate: '' });
@@ -366,11 +367,41 @@ export const ProcurementPage = () => {
   ];
 
   return <div className="content-container">
-    <div className="page-header"><div><h1 className="page-title">Nhà cung cấp & Nhập hàng</h1><p className="page-subtitle">Kiểm soát đơn nhập từ nhà cung cấp, nhận hàng theo lô và cập nhật tồn kho</p></div><div style={{display:'flex',gap:8}}><Button variant="outline" icon={RefreshCw} onClick={load} loading={loading}>Làm mới</Button><Button icon={Plus} onClick={() => { if (tab === 'orders') { setSuccessNotice(''); setOrderOpen(true); } else { handleOpenCreateSupplier(); } }}>{tab === 'orders' ? 'Tạo đơn nhập' : 'Thêm nhà cung cấp'}</Button></div></div>
+    <AdminSectionNav
+      rootTitle="Quản lý Mua hàng"
+      activeTab={tab}
+      onChange={setTab}
+      subtitle="Kiểm soát đơn nhập từ nhà cung cấp, nhận hàng theo lô và cập nhật tồn kho"
+      items={[
+        {
+          id: 'orders',
+          label: 'Đơn mua hàng (PO)',
+          count: orderCount,
+          icon: ClipboardList,
+          description: 'Phiếu đặt hàng nhập, duyệt đơn và nhập kho'
+        },
+        {
+          id: 'suppliers',
+          label: 'Nhà cung cấp',
+          count: suppliers.length,
+          icon: Building2,
+          description: 'Hồ sơ đối tác cung ứng và thông tin liên hệ'
+        }
+      ]}
+      actions={
+        <>
+          <Button variant="outline" icon={RefreshCw} onClick={load} loading={loading}>
+            Làm mới
+          </Button>
+          <Button icon={Plus} onClick={() => { if (tab === 'orders') { setSuccessNotice(''); setOrderOpen(true); } else { handleOpenCreateSupplier(); } }}>
+            {tab === 'orders' ? 'Tạo đơn nhập' : 'Thêm nhà cung cấp'}
+          </Button>
+        </>
+      }
+    />
     {successNotice && <AlertBanner type="success" title="Thành công" message={successNotice} action={<Button size="sm" variant="outline" onClick={() => setSuccessNotice('')}>Đóng</Button>} />}
     {loadError && <AlertBanner type="danger" title="Không thể tải đầy đủ dữ liệu" message={loadError} action={<Button size="sm" variant="outline" onClick={load}>Thử lại</Button>} />}
     <ProcurementOperationsPanel orders={orders} onChanged={load} />
-    <div className="tabs-header"><button className={`tab-btn ${tab==='orders'?'active':''}`} onClick={() => setTab('orders')}>Đơn nhập hàng</button><button className={`tab-btn ${tab==='suppliers'?'active':''}`} onClick={() => setTab('suppliers')}>Nhà cung cấp</button></div>
     <div className="card"><DataTable columns={tab === 'orders' ? orderColumns : supplierColumns} data={tab === 'orders' ? orders : suppliers} loading={loading} page={tab === 'orders' ? orderPage : 0} totalPages={tab === 'orders' ? orderPages : 1} totalElements={tab === 'orders' ? orderCount : suppliers.length} onPageChange={tab === 'orders' ? setOrderPage : undefined} /></div>
     <Modal isOpen={supplierOpen} onClose={() => setSupplierOpen(false)} title={editingSupplier ? "Cập nhật nhà cung cấp" : "Thêm nhà cung cấp"}><form onSubmit={saveSupplier}><div className="grid-2"><Input label="Mã *" required value={supplierForm.code} onChange={(e)=>setSupplierForm({...supplierForm,code:e.target.value})}/><Input label="Tên *" required value={supplierForm.name} onChange={(e)=>setSupplierForm({...supplierForm,name:e.target.value})}/><Input label="Người liên hệ" value={supplierForm.contactName} onChange={(e)=>setSupplierForm({...supplierForm,contactName:e.target.value})}/><Input label="Số điện thoại" value={supplierForm.phone} onChange={(e)=>setSupplierForm({...supplierForm,phone:e.target.value})}/><Input label="Email" type="email" value={supplierForm.email} onChange={(e)=>setSupplierForm({...supplierForm,email:e.target.value})}/><Input label="Mã số thuế" value={supplierForm.taxCode} onChange={(e)=>setSupplierForm({...supplierForm,taxCode:e.target.value})}/></div><Input label="Địa chỉ" value={supplierForm.address} onChange={(e)=>setSupplierForm({...supplierForm,address:e.target.value})}/><div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}><Button type="submit">Lưu nhà cung cấp</Button></div></form></Modal>
     <Modal isOpen={detailId !== null} onClose={() => setDetailId(null)} title={`Chi tiết phiếu mua ${detail?.orderNumber || `#${detailId}`}`} maxWidth="1100px" footer={<Button variant="outline" onClick={() => setDetailId(null)}>Đóng</Button>}>

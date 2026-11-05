@@ -261,7 +261,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 0.65,
+                  childAspectRatio: 0.60,
                 ),
                 itemBuilder: (context, idx) {
                   final p = _results![idx];

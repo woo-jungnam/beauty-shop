@@ -32,6 +32,7 @@ import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { StaffPermissionEditor } from './StaffPermissionEditor';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 
 export const UsersPage = () => {
   const [activeTab, setActiveTab] = useState('users');
@@ -529,15 +530,29 @@ export const UsersPage = () => {
 
   return (
     <div className="content-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quản trị Người dùng & Phân quyền RBAC</h1>
-          <p className="page-subtitle">
-            Quản lý tài khoản người dùng, cấp bậc thẻ tích điểm, giám sát bảo mật tài khoản và ma trận vai trò quyền hạn
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {activeTab === 'users' ? (
+      <AdminSectionNav
+        rootTitle="Quản trị Người dùng"
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        subtitle="Quản lý tài khoản người dùng, cấp bậc thẻ tích điểm, giám sát bảo mật tài khoản và ma trận vai trò quyền hạn"
+        items={[
+          {
+            id: 'users',
+            label: 'Danh sách tài khoản',
+            count: totalElements,
+            icon: Users,
+            description: 'Thông tin tài khoản, số điện thoại, điểm Loyalty và trạng thái hoạt động'
+          },
+          {
+            id: 'roles',
+            label: 'Vai trò & Phân quyền RBAC',
+            count: roles.length,
+            icon: KeyRound,
+            description: 'Ma trận nhóm quyền quản trị viên, nhân viên spa và khách hàng'
+          }
+        ]}
+        actions={
+          activeTab === 'users' ? (
             <Button
               variant="outline"
               size="sm"
@@ -567,84 +582,9 @@ export const UsersPage = () => {
                 Thêm vai trò
               </Button>
             </>
-          )}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          borderBottom: '2px solid var(--border-subtle)',
-          marginBottom: '20px',
-          gap: '8px',
-        }}
-      >
-        <button
-          onClick={() => setActiveTab('users')}
-          style={{
-            padding: '10px 18px',
-            backgroundColor: activeTab === 'users' ? 'var(--color-primary-900)' : 'transparent',
-            color: activeTab === 'users' ? '#FFFFFF' : 'var(--text-main)',
-            border: 'none',
-            borderRadius: '0px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}
-        >
-          <Users size={15} />
-          Danh sách tài khoản
-          {totalElements > 0 && (
-            <span
-              style={{
-                fontSize: '11px',
-                padding: '1px 6px',
-                backgroundColor: activeTab === 'users' ? 'rgba(255,255,255,0.2)' : 'var(--border-subtle)',
-              }}
-            >
-              {totalElements}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('roles')}
-          style={{
-            padding: '10px 18px',
-            backgroundColor: activeTab === 'roles' ? 'var(--color-primary-900)' : 'transparent',
-            color: activeTab === 'roles' ? '#FFFFFF' : 'var(--text-main)',
-            border: 'none',
-            borderRadius: '0px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}
-        >
-          <KeyRound size={15} />
-          Vai trò & Phân quyền tài khoản
-          {roles.length > 0 && (
-            <span
-              style={{
-                fontSize: '11px',
-                padding: '1px 6px',
-                backgroundColor: activeTab === 'roles' ? 'rgba(255,255,255,0.2)' : 'var(--border-subtle)',
-              }}
-            >
-              {roles.length}
-            </span>
-          )}
-        </button>
-      </div>
+          )
+        }
+      />
 
       {activeTab === 'users' && (
         <div>

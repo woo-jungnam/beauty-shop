@@ -144,6 +144,7 @@ public class CustomerAccountService {
     private static String clean(String value){return value==null || value.isBlank()?null:value.trim();}
     public static String hash(String value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException ex){throw new IllegalStateException(ex);}}
 
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public record SkinCommand(@Size(max=100) String skinType,@Size(max=100) String sensitivity,@Size(max=1000) String allergies,@Size(max=1000) String contraindications,@Size(max=1000) String preferredIngredients,@Size(max=2000) String notes){}
     public record SkinView(String skinType,String sensitivity,String allergies,String contraindications,String preferredIngredients,String notes,Instant updatedAt,boolean declaredByCustomer){}
     public record AddressCommand(@NotBlank @Size(max=100) String recipientName,@NotBlank @Pattern(regexp="^(0|\\+84)[35789][0-9]{8}$") String phone,@NotBlank @Size(max=500) String address,@NotBlank @Size(max=100) String ward,@Size(max=100) String district,@NotBlank @Size(max=100) String city,boolean isDefault){}

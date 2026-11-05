@@ -372,6 +372,18 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
             : `SKU ${selectedVariant.sku} · Còn ${clearanceStock} sản phẩm cận hạn tại lúc tải${knownCount(product.daysRemaining) != null ? ` · HSD gần nhất còn ${product.daysRemaining} ngày` : ''}`}
         </p>}
 
+        {product.flashQuota && (
+          <div style={{ marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 700, color: '#B91C1C', marginBottom: '3px' }}>
+              <span>Đã bán {product.flashSold || 0}/{product.flashQuota} suất</span>
+              <span>{product.flashPercent || 0}%</span>
+            </div>
+            <div style={{ width: '100%', height: '5px', background: '#FEE2E2', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ width: `${product.flashPercent || 0}%`, height: '100%', background: 'linear-gradient(90deg, #DC2626, #EF4444)', borderRadius: '3px' }} />
+            </div>
+          </div>
+        )}
+
         <div className="product-card-price" style={{
           display: 'flex',
           alignItems: 'baseline',

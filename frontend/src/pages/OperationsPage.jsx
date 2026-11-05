@@ -1,5 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Plus, RefreshCw, Save, Search, Trash2, Bot, Sparkles, Database, Activity, CheckCircle2, AlertTriangle, Send } from 'lucide-react';
+import {
+  Download,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Trash2,
+  Bot,
+  Sparkles,
+  Database,
+  Activity,
+  CheckCircle2,
+  AlertTriangle,
+  Send,
+  CreditCard,
+  FileText,
+  Sliders,
+  DollarSign,
+  ShieldCheck,
+  Server,
+  Layers,
+  X,
+  Cpu,
+} from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
 import { Button } from '../shared/ui/Button';
@@ -7,19 +30,32 @@ import { Input } from '../shared/ui/Input';
 import { Modal } from '../shared/ui/Modal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
-import { formatCurrency, formatDateTime } from '../shared/utils/formatters';
+import { formatCurrency, formatDateTime, formatNumber } from '../shared/utils/formatters';
 import { RecommendationAdminPanel } from './RecommendationAdminPanel';
 import { PaymentExceptionPanel } from './PaymentExceptionPanel';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
+import './operations.css';
 
-const PUBLIC_CONFIG_KEYS = new Set(['store.address', 'store.hotline', 'store.email', 'shipping.free_threshold', 'shipping.default_fee', 'spa.opening_time', 'spa.closing_time']);
+const PUBLIC_CONFIG_KEYS = new Set([
+  'store.address',
+  'store.hotline',
+  'store.email',
+  'shipping.free_threshold',
+  'shipping.default_fee',
+  'spa.opening_time',
+  'spa.closing_time',
+]);
 
 const exportCsv = (name, rows) => {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]);
   const escape = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
-  const csv = [headers.map(escape).join(','), ...rows.map((row) => headers.map((key) => escape(row[key])).join(','))].join('\n');
+  const csv = [
+    headers.map(escape).join(','),
+    ...rows.map((row) => headers.map((key) => escape(row[key])).join(',')),
+  ].join('\n');
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }));
+  link.href = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
   link.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
@@ -71,7 +107,6 @@ export const OperationsPage = () => {
       const res = await apiClient.post(url);
       const data = res?.data || res;
       setSyncResult(data);
-      alert('Đồng bộ cơ sở dữ liệu vào RAG thành công!');
     } catch (err) {
       alert(err.message || 'Lỗi khi đồng bộ dữ liệu vào RAG');
     } finally {
@@ -108,28 +143,39 @@ export const OperationsPage = () => {
         setRows((list.data || list).content || []);
         setSummary(stats.data || stats);
       } else if (tab === 'audit') {
-        const res = await apiClient.get(`${ENDPOINTS.SYSTEM.AUDIT_LOGS}?size=50&sort=createdAt,desc&keyword=${encodeURIComponent(keyword)}`);
+        const res = await apiClient.get(
+          `${ENDPOINTS.SYSTEM.AUDIT_LOGS}?size=50&sort=createdAt,desc&keyword=${encodeURIComponent(keyword)}`
+        );
         setRows((res.data || res).content || []);
       } else if (tab === 'chatbot') {
         checkChatbotHealth();
       } else if (tab === 'recommendations') {
+        // Managed by RecommendationAdminPanel
       } else {
         const res = await apiClient.get(ENDPOINTS.SYSTEM.CONFIGS);
         setConfigs(res.data || res || []);
       }
     } catch (err) {
-      alert(err.message || 'Không thể tải dữ liệu vận hành');
+      console.error('Không thể tải dữ liệu vận hành', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [tab]);
+  useEffect(() => {
+    load();
+  }, [tab]);
 
   const saveConfig = async (config) => {
     try {
-      const isPublic = config.isPublicDraft == null || config.isPublicDraft === Boolean(config.isPublic) ? null : config.isPublicDraft;
-      await apiClient.put(ENDPOINTS.SYSTEM.CONFIG(config.configKey), { value: config.configValue, isPublic });
+      const isPublic =
+        config.isPublicDraft == null || config.isPublicDraft === Boolean(config.isPublic)
+          ? null
+          : config.isPublicDraft;
+      await apiClient.put(ENDPOINTS.SYSTEM.CONFIG(config.configKey), {
+        value: config.configValue,
+        isPublic,
+      });
       load();
     } catch (err) {
       alert(err.message || 'Lỗi khi lưu cấu hình');
@@ -167,10 +213,42 @@ export const OperationsPage = () => {
   };
 
   const paymentColumns = [
-    { header: 'Đơn hàng', accessor: 'orderNumber' },
-    { header: 'Mã đối soát', accessor: 'referenceCode' },
-    { header: 'Cổng thanh toán', accessor: 'gateway' },
-    { header: 'Số tiền', accessor: (row) => <strong>{formatCurrency(row.amount)}</strong>, align: 'right' },
+    {
+      header: 'Đơn hàng',
+      accessor: (row) => (
+        <div>
+          <strong style={{ color: 'var(--text-main)', fontSize: '13px' }}>{row.orderNumber}</strong>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Mã #{row.id}</div>
+        </div>
+      ),
+      width: '150px',
+    },
+    {
+      header: 'Mã đối soát giao dịch',
+      accessor: (row) => (
+        <code style={{ fontWeight: 700, color: 'var(--color-accent-700)', fontFamily: 'var(--font-mono)' }}>
+          {row.referenceCode || '—'}
+        </code>
+      ),
+      width: '180px',
+    },
+    {
+      header: 'Cổng thanh toán',
+      accessor: (row) => (
+        <span style={{ fontWeight: 600, fontSize: '12px' }}>{row.gateway || 'SePay (VietQR)'}</span>
+      ),
+      width: '150px',
+    },
+    {
+      header: 'Số tiền thanh toán',
+      accessor: (row) => (
+        <strong style={{ fontSize: '13.5px', fontVariantNumeric: 'tabular-nums', color: 'var(--text-main)' }}>
+          {formatCurrency(row.amount)}
+        </strong>
+      ),
+      align: 'right',
+      width: '150px',
+    },
     {
       header: 'Trạng thái',
       accessor: (row) => {
@@ -179,218 +257,570 @@ export const OperationsPage = () => {
         const label = isSuccess ? 'Thành công' : isFailed ? 'Thất bại' : 'Đang xử lý';
         return <Badge variant={isSuccess ? 'success' : isFailed ? 'danger' : 'warning'}>{label}</Badge>;
       },
+      width: '120px',
+      align: 'center',
     },
-    { header: 'Thời gian', accessor: (row) => formatDateTime(row.createdAt) },
+    {
+      header: 'Thời gian',
+      accessor: (row) => (
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{formatDateTime(row.createdAt)}</span>
+      ),
+      width: '150px',
+    },
   ];
+
   const auditColumns = [
-    { header: 'Thời gian', accessor: (row) => formatDateTime(row.createdAt), width: '150px' },
-    { header: 'Người thao tác', accessor: (row) => row.username === 'SYSTEM' ? 'Hệ thống tự động' : (row.username || 'Hệ thống') },
-    { header: 'Hành động', accessor: 'action' },
-    { header: 'Đối tượng', accessor: (row) => `${row.resourceType || '-'} #${row.resourceId || '-'}` },
+    {
+      header: 'Thời gian',
+      accessor: (row) => (
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{formatDateTime(row.createdAt)}</span>
+      ),
+      width: '150px',
+    },
+    {
+      header: 'Người thao tác',
+      accessor: (row) => {
+        const name = row.username === 'SYSTEM' ? 'Hệ thống tự động' : (row.username || 'Hệ thống');
+        const isSystem = row.username === 'SYSTEM';
+
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: isSystem ? 'var(--bg-surface-subtle)' : 'var(--color-accent-100)',
+                color: isSystem ? 'var(--text-muted)' : 'var(--color-accent-700)',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '11px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {isSystem ? 'HT' : name.charAt(0).toUpperCase()}
+            </div>
+            <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>{name}</strong>
+          </div>
+        );
+      },
+      width: '180px',
+    },
+    {
+      header: 'Hành động',
+      accessor: (row) => (
+        <span style={{ fontWeight: 600, fontSize: '12.5px', color: 'var(--color-accent-700)' }}>
+          {row.action}
+        </span>
+      ),
+      width: '160px',
+    },
+    {
+      header: 'Đối tượng tác động',
+      accessor: (row) => (
+        <code style={{ fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--text-muted)' }}>
+          {row.resourceType || '-'} #{row.resourceId || '-'}
+        </code>
+      ),
+      width: '180px',
+    },
     {
       header: 'Kết quả',
       accessor: (row) => {
         const isSuccess = row.status === 'SUCCESS';
         return <Badge variant={isSuccess ? 'success' : 'danger'}>{isSuccess ? 'Thành công' : 'Thất bại'}</Badge>;
       },
+      width: '110px',
+      align: 'center',
     },
-    { header: 'Địa chỉ IP', accessor: 'ipAddress' },
+    {
+      header: 'Địa chỉ IP',
+      accessor: (row) => (
+        <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+          {row.ipAddress || '—'}
+        </span>
+      ),
+      width: '130px',
+    },
   ];
 
-  return <div className="content-container">
-    <div className="page-header">
-      <div><h1 className="page-title">Tài chính, Lịch sử thao tác & Cấu hình</h1><p className="page-subtitle">Đối soát giao dịch, truy vết thao tác và quản lý chỉ tiêu vận hành</p></div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {tab === 'config' && <Button icon={Plus} onClick={() => setConfigModalOpen(true)}>Thêm cấu hình</Button>}
-        {tab !== 'recommendations' && <><Button variant="outline" icon={Download} onClick={() => exportCsv(tab, tab === 'config' ? configs : rows)}>Xuất CSV</Button>
-        <Button variant="outline" icon={RefreshCw} loading={loading} onClick={load}>Làm mới</Button></>}
-      </div>
-    </div>
-    <div className="tabs-header">
-      {[
-        ['payments', 'Thanh toán & Đối soát'],
-        ['audit', 'Nhật ký thao tác'],
-        ['config', 'Chỉ tiêu & Cấu hình'],
-        ['chatbot', 'Trợ lý tư vấn AI'],
-        ['recommendations', 'Gợi ý sản phẩm tương tự'],
-      ].map(([id, label]) => (
-        <button
-          key={id}
-          className={`tab-btn ${tab === id ? 'active' : ''}`}
-          onClick={() => setTab(id)}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-    {tab === 'recommendations' && <RecommendationAdminPanel />}
-    {tab === 'payments' && <PaymentExceptionPanel onChanged={load} />}
-    {tab === 'chatbot' && (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Activity size={18} color="var(--color-primary-600)" />
-                Trạng thái máy chủ Trợ lý AI
-              </h3>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-                Hệ thống hỗ trợ tư vấn chăm sóc da, giải đáp thành phần mỹ phẩm và gợi ý dịch vụ Spa qua AI.
-              </p>
-            </div>
-            <Button variant="outline" size="sm" icon={RefreshCw} loading={checkingChatbot} onClick={checkChatbotHealth}>
-              Kiểm tra kết nối trực tiếp
-            </Button>
-          </div>
+  return (
+    <div className="content-container operations-container">
+      {/* Header Dropdown Switcher */}
+      <AdminSectionNav
+        rootTitle="Vận hành & Giám sát"
+        activeTab={tab}
+        onChange={setTab}
+        subtitle="Đối soát giao dịch thanh toán, truy vết thao tác người dùng và kiểm soát cấu hình hệ thống"
+        items={[
+          {
+            id: 'payments',
+            label: 'Thanh toán & Đối soát',
+            icon: CreditCard,
+            description: 'Lịch sử thanh toán đơn hàng, đối soát SePay và xử lý ngoại lệ',
+          },
+          {
+            id: 'audit',
+            label: 'Nhật ký thao tác (Audit)',
+            icon: FileText,
+            description: 'Truy vết thay đổi dữ liệu của quản trị viên và nhân viên',
+          },
+          {
+            id: 'config',
+            label: 'Chỉ tiêu & Cấu hình',
+            count: configs.length,
+            icon: Sliders,
+            description: 'Hạn mức miễn phí vận chuyển, hotline và tham số hệ thống',
+          },
+          {
+            id: 'chatbot',
+            label: 'Trợ lý tư vấn AI',
+            icon: Bot,
+            description: 'Giám sát hoạt động Agent tư vấn và kiểm thử kịch bản NLU',
+          },
+          {
+            id: 'recommendations',
+            label: 'Gợi ý sản phẩm tương tự',
+            icon: Sparkles,
+            description: 'Huấn luyện ma trận TF-IDF và thuật toán gợi ý mỹ phẩm',
+          },
+        ]}
+        actions={
+          <>
+            {tab === 'config' && (
+              <Button icon={Plus} variant="primary" size="sm" onClick={() => setConfigModalOpen(true)}>
+                Thêm cấu hình
+              </Button>
+            )}
+            {tab !== 'recommendations' && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Download}
+                  onClick={() => exportCsv(tab, tab === 'config' ? configs : rows)}
+                >
+                  Xuất CSV
+                </Button>
+                <Button variant="outline" size="sm" icon={RefreshCw} loading={loading} onClick={load}>
+                  Làm mới
+                </Button>
+              </>
+            )}
+          </>
+        }
+      />
 
-          <div style={{ padding: 14, backgroundColor: 'var(--color-primary-50)', border: '1px solid var(--border-subtle)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  backgroundColor:
-                    chatbotStatus?.status === 'ok' || chatbotStatus?.status === 'UP'
-                      ? '#22C55E'
-                      : chatbotStatus?.status === 'DOWN'
-                        ? '#EF4444'
-                        : '#94A3B8',
-                }}
-              />
-              <div>
-                <strong>
-                  {chatbotStatus?.status === 'ok' || chatbotStatus?.status === 'UP'
-                    ? 'Máy chủ Trợ lý AI đang hoạt động bình thường'
-                    : chatbotStatus?.status === 'DOWN'
-                      ? 'Không thể kết nối tới máy chủ Trợ lý AI (Mất kết nối)'
-                      : 'Chưa kiểm tra trạng thái'}
-                </strong>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  Dịch vụ tư vấn AI tự động giúp giải đáp thắc mắc và gợi ý sản phẩm cho khách hàng.
+      {/* TAB 1: THANH TOÁN & ĐỐI SOÁT */}
+      {tab === 'payments' && (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Collapsible Payment Exception Panel */}
+          <PaymentExceptionPanel onChanged={load} />
+
+          {/* KPI Summary Cards */}
+          {summary && (
+            <div className="operations-stats-grid">
+              <div className="operations-stat-card">
+                <div className="operations-stat-icon violet">
+                  <CreditCard size={20} />
+                </div>
+                <div className="operations-stat-info">
+                  <h4>Tổng số giao dịch</h4>
+                  <strong>{formatNumber(summary.totalTransactions || 0)}</strong>
+                  <small>Giao dịch thanh toán SePay</small>
+                </div>
+              </div>
+
+              <div className="operations-stat-card">
+                <div className="operations-stat-icon green">
+                  <DollarSign size={20} />
+                </div>
+                <div className="operations-stat-info">
+                  <h4>Số tiền thực nhận</h4>
+                  <strong>{formatCurrency(summary.receivedAmount || 0)}</strong>
+                  <small>Đã đối soát ghi nhận vào đơn</small>
+                </div>
+              </div>
+
+              <div className="operations-stat-card">
+                <div className="operations-stat-icon rose">
+                  <AlertTriangle size={20} />
+                </div>
+                <div className="operations-stat-info">
+                  <h4>Giao dịch thất bại / Lỗi</h4>
+                  <strong>{formatNumber(summary.failedTransactions || 0)}</strong>
+                  <small>Cần kiểm tra hoặc hoàn tiền</small>
                 </div>
               </div>
             </div>
-            <Badge variant={chatbotStatus?.status === 'ok' || chatbotStatus?.status === 'UP' ? 'success' : 'danger'}>
-              {chatbotStatus?.status || 'UNKNOWN'}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Database size={18} color="var(--color-primary-600)" />
-                Đồng bộ kiến thức sản phẩm & Spa cho Trợ lý AI
-              </h3>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-                Cập nhật danh mục sản phẩm, hoạt chất và dịch vụ spa mới nhất để Trợ lý AI tư vấn chính xác cho khách hàng.
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 14 }}>
-            <div style={{ width: 220 }}>
-              <Input
-                label="Giới hạn bản ghi (bỏ trống = tất cả)"
-                type="number"
-                placeholder="VD: 50, 100..."
-                value={syncLimit}
-                onChange={(e) => setSyncLimit(e.target.value)}
-              />
-            </div>
-            <Button
-              variant="primary"
-              icon={Database}
-              loading={syncingDatabase}
-              onClick={handleSyncDatabase}
-            >
-              Kích hoạt đồng bộ kiến thức AI
-            </Button>
-          </div>
-
-          {syncResult && (
-            <div style={{ padding: 14, backgroundColor: '#F8FAFC', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 13 }}>
-              <div style={{ fontWeight: 600, color: 'var(--color-success-700)', marginBottom: 6 }}>
-                ✓ Kết quả đồng bộ từ dịch vụ AI:
-              </div>
-              <pre style={{ margin: 0, fontSize: 12, overflowX: 'auto', backgroundColor: '#FFFFFF', padding: 10, borderRadius: 4, border: '1px solid #E2E8F0' }}>
-                {JSON.stringify(syncResult, null, 2)}
-              </pre>
-            </div>
           )}
-        </div>
 
+          {/* Payment List Card */}
+          <div className="card">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <span className="card-title">Lịch sử thanh toán đơn hàng & Đối soát</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                  Hiển thị {rows.length} giao dịch gần nhất
+                </span>
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  load();
+                }}
+                style={{ display: 'flex', gap: '8px', minWidth: '280px' }}
+              >
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    placeholder="Mã đơn hàng, mã đối soát..."
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px 7px 32px',
+                      fontSize: '12.5px',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid var(--border-color, #E5E7EB)',
+                      outline: 'none',
+                    }}
+                  />
+                  {keyword && (
+                    <button
+                      type="button"
+                      onClick={() => { setKeyword(''); load(); }}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)' }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <Button type="submit" size="sm" variant="primary">
+                  Tìm
+                </Button>
+              </form>
+            </div>
+
+            <DataTable columns={paymentColumns} data={rows} loading={loading} />
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: NHẬT KÝ THAO TÁC AUDIT */}
+      {tab === 'audit' && (
         <div className="card">
-          <div style={{ marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={18} color="var(--color-primary-600)" />
-              Thử nghiệm phân tích câu hỏi của khách hàng
-            </h3>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-              Mô phỏng cách AI hiểu ý định, loại da, vấn đề cần chăm sóc và tên sản phẩm từ câu hỏi tiếng Việt của khách hàng.
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <span className="card-title">Nhật ký truy vết thao tác người dùng (Audit Log)</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                Lưu giữ mọi hành động thêm, sửa, xóa, duyệt của quản trị viên và nhân viên
+              </span>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                load();
+              }}
+              style={{ display: 'flex', gap: '8px', minWidth: '280px' }}
+            >
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="Tìm theo tài khoản, hành động, IP..."
+                  style={{
+                    width: '100%',
+                    padding: '7px 10px 7px 32px',
+                    fontSize: '12.5px',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    border: '1px solid var(--border-color, #E5E7EB)',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+              <Button type="submit" size="sm" variant="primary">
+                Tìm
+              </Button>
+            </form>
+          </div>
+
+          <DataTable columns={auditColumns} data={rows} loading={loading} />
+        </div>
+      )}
+
+      {/* TAB 3: CHỈ TIÊU & CẤU HÌNH */}
+      {tab === 'config' && (
+        <div className="card">
+          <div style={{ background: '#FFFDF9', border: '1px solid #FDE68A', borderRadius: '10px', padding: '14px 18px', marginBottom: '18px' }}>
+            <strong style={{ fontSize: '13px', color: '#926C2A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ShieldCheck size={16} /> Hướng dẫn cấu hình hệ thống:
+            </strong>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#785A24', lineHeight: 1.5 }}>
+              Thông tin cửa hàng, hotline và ngưỡng miễn phí vận chuyển sử dụng các khóa chuẩn (<code>store.address</code>, <code>store.hotline</code>, <code>store.email</code>, <code>shipping.free_threshold</code>). Chỉ tích chọn "Công khai trên website" với các tham số cho phép hiển thị với khách hàng.
             </p>
           </div>
 
-          <form onSubmit={handleTestNlu} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 16 }}>
-            <div style={{ flex: 1 }}>
-              <Input
-                label="Câu hỏi / Truy vấn người dùng cần phân tích *"
-                value={nluMessage}
-                onChange={(e) => setNluMessage(e.target.value)}
-                placeholder="Nhập câu hỏi test NLU..."
-                required
-              />
-            </div>
-            <Button type="submit" variant="primary" icon={Send} loading={testingNlu}>
-              Phân tích NLU
-            </Button>
-          </form>
+          <div className="operations-config-list">
+            {configs.map((config, index) => (
+              <div key={config.id || index} className="operations-config-row">
+                <div>
+                  <span className="operations-config-key">{config.configKey}</span>
+                  <div className="operations-config-desc">
+                    {config.description || 'Không có mô tả chi tiết'}
+                  </div>
+                  <label className="operations-config-public-toggle">
+                    <input
+                      type="checkbox"
+                      checked={config.isPublicDraft ?? Boolean(config.isPublic)}
+                      disabled={!config.isPublic && !PUBLIC_CONFIG_KEYS.has(config.configKey)}
+                      onChange={(e) =>
+                        setConfigs((current) =>
+                          current.map((item, i) =>
+                            i === index ? { ...item, isPublicDraft: e.target.checked } : item
+                          )
+                        )
+                      }
+                    />
+                    <span>Công khai trên website</span>
+                  </label>
+                </div>
 
-          {nluResult && (
-            <div style={{ padding: 14, backgroundColor: '#F8FAFC', border: '1px solid var(--border-subtle)', borderRadius: 8, fontSize: 13 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CheckCircle2 size={16} color="var(--color-success-600)" />
-                Kết quả bóc tách ý định & thực thể:
+                <div>
+                  <input
+                    className="operations-config-input"
+                    value={config.configValue || ''}
+                    onChange={(e) =>
+                      setConfigs((current) =>
+                        current.map((item, i) =>
+                          i === index ? { ...item, configValue: e.target.value } : item
+                        )
+                      )
+                    }
+                  />
+                </div>
+
+                <Button size="sm" variant="primary" icon={Save} onClick={() => saveConfig(config)}>
+                  Lưu
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={Trash2}
+                  style={{ color: 'var(--color-danger-700)', borderColor: '#FECACA' }}
+                  onClick={() => handleDeleteConfig(config.configKey)}
+                  title="Xóa cấu hình"
+                />
               </div>
-              <pre style={{ margin: 0, fontSize: 12, overflowX: 'auto', backgroundColor: '#FFFFFF', padding: 12, borderRadius: 4, border: '1px solid #E2E8F0', maxHeight: 300 }}>
-                {JSON.stringify(nluResult, null, 2)}
-              </pre>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
-    )}
-    {(tab === 'payments' || tab === 'audit') && <div className="card">
-      <form onSubmit={(e) => { e.preventDefault(); load(); }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}><Input aria-label="Tìm kiếm" icon={Search} value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Mã đơn, mã giao dịch, tài khoản..." /><Button type="submit">Tìm</Button></form>
-      {tab === 'payments' && summary && <div className="grid-3" style={{ marginBottom: 16 }}><div className="stat-card">Giao dịch: <strong>{summary.totalTransactions}</strong></div><div className="stat-card">Thực nhận: <strong>{formatCurrency(summary.receivedAmount)}</strong></div><div className="stat-card">Lỗi: <strong>{summary.failedTransactions}</strong></div></div>}
-      <DataTable columns={tab === 'payments' ? paymentColumns : auditColumns} data={rows} loading={loading} />
-    </div>}
-    {tab === 'config' && <div className="card admin-config-list">
-      <p>Thông tin chân trang dùng các khóa <strong>store.address</strong>, <strong>store.hotline</strong>, <strong>store.email</strong>. Chỉ bật công khai cho giá trị bạn muốn khách xem trên website.</p>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Các khóa hỗ trợ công khai: {Array.from(PUBLIC_CONFIG_KEYS).join(', ')}.</p>
-      {configs.map((config, index) => <div key={config.id} className="admin-config-row">
-        <div className="admin-config-details"><strong id={`admin-config-key-${config.id ?? index}`}>{config.configKey}</strong><div id={`admin-config-description-${config.id ?? index}`} style={{ fontSize: 12, color: 'var(--text-muted)' }}>{config.description}</div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 8 }}><input type="checkbox" aria-label={`Công khai trên website: ${config.configKey}`} checked={config.isPublicDraft ?? Boolean(config.isPublic)} disabled={!config.isPublic && !PUBLIC_CONFIG_KEYS.has(config.configKey)} onChange={(e) => setConfigs((current) => current.map((item, i) => i === index ? { ...item, isPublicDraft: e.target.checked } : item))} />Công khai trên website</label>
-        </div>
-        <Input aria-labelledby={`admin-config-key-${config.id ?? index}`} aria-describedby={`admin-config-description-${config.id ?? index}`} value={config.configValue} onChange={(e) => setConfigs((current) => current.map((item, i) => i === index ? { ...item, configValue: e.target.value } : item))} />
-        <Button size="sm" icon={Save} onClick={() => saveConfig(config)}>Lưu</Button>
-        <Button size="sm" variant="danger" className="admin-config-delete" icon={Trash2} onClick={() => handleDeleteConfig(config.configKey)} title="Xóa cấu hình" aria-label={`Xóa cấu hình ${config.configKey}`} />
-      </div>)}
-    </div>}
+      )}
 
-    <Modal isOpen={configModalOpen} onClose={() => setConfigModalOpen(false)} title="Thêm cấu hình hệ thống">
-      <form onSubmit={handleCreateConfig}>
-        <Input label="Khóa cấu hình (KEY) *" required value={newKey} onChange={(e) => { setNewKey(e.target.value); if (!PUBLIC_CONFIG_KEYS.has(e.target.value.trim())) setNewIsPublic(false); }} placeholder="Vd: store.address" />
-        <Input label="Giá trị *" required value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="Vd: 500000000" />
-        <Input label="Mô tả" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Mô tả mục đích cấu hình..." />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}><input type="checkbox" checked={newIsPublic} disabled={!PUBLIC_CONFIG_KEYS.has(newKey.trim())} onChange={(e) => setNewIsPublic(e.target.checked)} />Công khai trên website</label>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Mặc định riêng tư. Hỗ trợ công khai thông tin cửa hàng, phí giao hàng và giờ phục vụ Spa.</p>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-          <Button type="submit">Tạo cấu hình</Button>
+      {/* TAB 4: TRỢ LÝ TƯ VẤN AI */}
+      {tab === 'chatbot' && (
+        <div className="operations-chatbot-grid">
+          {/* Machine Health Card */}
+          <div className="operations-card">
+            <div className="operations-card-header">
+              <div className="operations-card-title">
+                <h3>
+                  <Activity size={18} color="var(--color-accent-600)" />
+                  Trạng thái Máy chủ Trợ lý AI (FastAPI / Gemini / Qdrant)
+                </h3>
+                <p>
+                  Dịch vụ xử lý ngôn ngữ tự nhiên (NLU), truy vấn RAG hybrid và điều phối kịch bản tư vấn da liễu.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" icon={RefreshCw} loading={checkingChatbot} onClick={checkChatbotHealth}>
+                Kiểm tra kết nối trực tiếp
+              </Button>
+            </div>
+
+            <div style={{
+              padding: '14px 18px',
+              backgroundColor: 'var(--bg-surface-subtle)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '10px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor:
+                      chatbotStatus?.status === 'ok' || chatbotStatus?.status === 'UP'
+                        ? '#16A34A'
+                        : chatbotStatus?.status === 'DOWN'
+                          ? '#DC2626'
+                          : '#94A3B8',
+                    boxShadow: chatbotStatus?.status === 'ok' ? '0 0 0 3px rgba(34, 197, 94, 0.2)' : 'none',
+                  }}
+                />
+                <div>
+                  <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                    {chatbotStatus?.status === 'ok' || chatbotStatus?.status === 'UP'
+                      ? 'Máy chủ Trợ lý AI đang hoạt động bình thường'
+                      : chatbotStatus?.status === 'DOWN'
+                        ? 'Không thể kết nối tới máy chủ Trợ lý AI (Mất kết nối)'
+                        : 'Chưa kiểm tra trạng thái máy chủ'}
+                  </strong>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Phiên bản engine: v2.5 · Cổng kết nối nội bộ Docker network
+                  </div>
+                </div>
+              </div>
+
+              <Badge variant={chatbotStatus?.status === 'ok' || chatbotStatus?.status === 'UP' ? 'success' : 'danger'}>
+                {chatbotStatus?.status || 'UNKNOWN'}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Knowledge Sync Card */}
+          <div className="operations-card">
+            <div className="operations-card-header">
+              <div className="operations-card-title">
+                <h3>
+                  <Database size={18} color="var(--color-accent-600)" />
+                  Đồng bộ Kiến thức Sản phẩm & Liệu trình vào Vector RAG
+                </h3>
+                <p>
+                  Nhúng văn bản (Embedding) toàn bộ danh mục sản phẩm, hoạt chất da liễu và dịch vụ spa vào kho vector Qdrant.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ width: '240px' }}>
+                <Input
+                  label="Giới hạn số lượng bản ghi (trống = tất cả)"
+                  type="number"
+                  placeholder="VD: 50, 100..."
+                  value={syncLimit}
+                  onChange={(e) => setSyncLimit(e.target.value)}
+                />
+              </div>
+              <Button
+                variant="primary"
+                icon={Database}
+                loading={syncingDatabase}
+                onClick={handleSyncDatabase}
+              >
+                Kích hoạt đồng bộ kiến thức
+              </Button>
+            </div>
+
+            {syncResult && (
+              <div className="operations-json-box">
+                <div style={{ fontWeight: 600, color: 'var(--color-success-700)', marginBottom: '6px' }}>
+                  Kết quả phản hồi từ dịch vụ AI:
+                </div>
+                <pre>{JSON.stringify(syncResult, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+
+          {/* NLU Diagnostic Playground */}
+          <div className="operations-card">
+            <div className="operations-card-header">
+              <div className="operations-card-title">
+                <h3>
+                  <Cpu size={18} color="var(--color-accent-600)" />
+                  Kiểm thử Phân tích Ý định & Bóc tách Thực thể NLU
+                </h3>
+                <p>
+                  Mô phỏng 6-layer NLU: Bóc tách loại da, tình trạng mụn/thâm, thành phần hóa học và dịch vụ khách đang quan tâm.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleTestNlu} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '280px' }}>
+                <Input
+                  label="Câu hỏi / Lời thoại của khách hàng *"
+                  required
+                  value={nluMessage}
+                  onChange={(e) => setNluMessage(e.target.value)}
+                  placeholder="Nhập câu hỏi test NLU..."
+                />
+              </div>
+              <Button type="submit" variant="primary" icon={Send} loading={testingNlu}>
+                Phân tích NLU
+              </Button>
+            </form>
+
+            {nluResult && (
+              <div className="operations-json-box">
+                <div style={{ fontWeight: 600, color: 'var(--color-accent-700)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CheckCircle2 size={15} color="var(--color-accent-600)" />
+                  Dữ liệu thực thể bóc tách từ Gemini NLU:
+                </div>
+                <pre>{JSON.stringify(nluResult, null, 2)}</pre>
+              </div>
+            )}
+          </div>
         </div>
-      </form>
-    </Modal>
-  </div>;
+      )}
+
+      {/* TAB 5: GỢI Ý SẢN PHẨM TƯƠNG TỰ */}
+      {tab === 'recommendations' && <RecommendationAdminPanel />}
+
+      {/* Modal Thêm cấu hình */}
+      <Modal isOpen={configModalOpen} onClose={() => setConfigModalOpen(false)} title="Thêm cấu hình hệ thống mới" maxWidth="540px">
+        <form onSubmit={handleCreateConfig} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <Input
+            label="Khóa cấu hình (KEY) *"
+            required
+            value={newKey}
+            onChange={(e) => {
+              setNewKey(e.target.value);
+              if (!PUBLIC_CONFIG_KEYS.has(e.target.value.trim())) setNewIsPublic(false);
+            }}
+            placeholder="VD: store.hotline, shipping.free_threshold..."
+          />
+          <Input
+            label="Giá trị cấu hình (VALUE) *"
+            required
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            placeholder="VD: 1900 6868"
+          />
+          <Input
+            label="Mô tả mục đích cấu hình"
+            value={newDesc}
+            onChange={(e) => setNewDesc(e.target.value)}
+            placeholder="Ghi chú mục đích sử dụng..."
+          />
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={newIsPublic}
+              disabled={!PUBLIC_CONFIG_KEYS.has(newKey.trim())}
+              onChange={(e) => setNewIsPublic(e.target.checked)}
+              style={{ accentColor: 'var(--color-accent-600)', width: 15, height: 15 }}
+            />
+            <span>Công khai trên website (Khách hàng có thể đọc)</span>
+          </label>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+            <Button type="button" variant="outline" onClick={() => setConfigModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button type="submit" variant="primary">
+              Tạo cấu hình
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
 };

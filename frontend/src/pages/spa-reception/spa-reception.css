@@ -1,33 +1,40 @@
 .spa-reception-page, .reception-dialog {
-  --reception-rose: #D45D79; --reception-rose-dark: #AD3F5A; --reception-gold: #A97C35;
-  --reception-ink: #332A2E; --reception-muted: #7C7076; --reception-line: #EDE3E7;
-  --color-primary-600: #AD3F5A; --color-primary-500: #D45D79; --color-primary-400: #D45D79;
-  --text-main: #332A2E; --text-muted: #7C7076;
-  color: var(--reception-ink); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5;
+  --reception-rose: var(--color-accent-600, #7457e8);
+  --reception-rose-dark: var(--color-accent-700, #6040ce);
+  --reception-gold: #A97C35;
+  --reception-ink: var(--text-main, #29243a);
+  --reception-muted: var(--text-muted, #777086);
+  --reception-line: var(--border-subtle, #eee9f4);
+  --color-primary-600: var(--color-accent-700, #6040ce);
+  --color-primary-500: var(--color-accent-600, #7457e8);
+  --color-primary-400: var(--color-accent-500, #9378f2);
+  --text-main: var(--text-main, #29243a);
+  --text-muted: var(--text-muted, #777086);
+  color: var(--text-main, #29243a); font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5;
 }
-.spa-reception-page { background: #FAF7F8; min-height: 100vh; width: 100%; }
+.spa-reception-page { background: var(--bg-app, #f7f6fb); min-height: 100vh; width: 100%; }
 .spa-reception-page *, .reception-dialog * { box-sizing: border-box; }
-.spa-reception-page h1, .spa-reception-page h2, .spa-reception-page h3, .spa-reception-page h4, .reception-dialog h4 { margin: 0; color: var(--reception-ink); }
+.spa-reception-page h1, .spa-reception-page h2, .spa-reception-page h3, .spa-reception-page h4, .reception-dialog h4 { margin: 0; color: var(--text-main, #29243a); }
 .spa-reception-page button, .reception-dialog button { cursor: pointer; font-family: inherit; }
 .spa-reception-page button:disabled, .reception-dialog button:disabled { cursor: not-allowed; }
-.spa-reception-page a { color: var(--reception-rose-dark); text-decoration: none; }
-.spa-reception-page :focus-visible, .reception-dialog :focus-visible { outline: 3px solid #D45D79; outline-offset: 3px; }
+.spa-reception-page a { color: var(--color-accent-700, #6040ce); text-decoration: none; }
+.spa-reception-page :focus-visible, .reception-dialog :focus-visible { outline: 3px solid var(--color-accent-500, #9378f2); outline-offset: 3px; }
 .spa-reception-page .btn, .reception-dialog .btn { border-radius: 10px; min-height: 38px; font-size: 13px; gap: 7px; white-space: normal; }
-.spa-reception-page .btn-primary, .reception-dialog .btn-primary { background: #D45D79; border-color: #D45D79; color: white; box-shadow: 0 3px 8px #D45D7920; }
-.spa-reception-page .btn-primary:hover, .reception-dialog .btn-primary:hover { background: #AD3F5A; border-color: #AD3F5A; }
-.spa-reception-page .btn-outline, .reception-dialog .btn-outline { background: white; border-color: #E4D2D9; color: #AD3F5A; }
-.spa-reception-page .btn-ghost, .reception-dialog .btn-ghost { color: #7C7076; }
-.spa-reception-page .form-input, .spa-reception-page .form-select, .reception-dialog .form-input, .reception-dialog .form-select { border: 1px solid #E4D9DE; background: white; border-radius: 9px; min-height: 42px; color: #332A2E; font-size: 13px; box-shadow: none; }
+.spa-reception-page .btn-primary, .reception-dialog .btn-primary { background: linear-gradient(120deg, #7b5ce4, #6848d4 75%); border-color: transparent; color: white; box-shadow: 0 4px 12px -3px rgba(116, 87, 232, 0.4); }
+.spa-reception-page .btn-primary:hover, .reception-dialog .btn-primary:hover { background: linear-gradient(120deg, #7454dd, #5d3cc6 75%); }
+.spa-reception-page .btn-outline, .reception-dialog .btn-outline { background: white; border-color: var(--border-strong, #dcd4e9); color: var(--color-accent-700, #6040ce); }
+.spa-reception-page .btn-ghost, .reception-dialog .btn-ghost { color: var(--text-muted, #777086); }
+.spa-reception-page .form-input, .spa-reception-page .form-select, .reception-dialog .form-input, .reception-dialog .form-select { border: 1px solid var(--border-strong, #dcd4e9); background: white; border-radius: 9px; min-height: 42px; color: var(--text-main, #29243a); font-size: 13px; box-shadow: none; }
 .spa-reception-page .form-group, .reception-dialog .form-group { margin: 0; min-width: 0; }
-.reception-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 5%; background: white; border-bottom: 1px solid var(--reception-line); gap: 20px; }
+.reception-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 5%; background: white; border-bottom: 1px solid var(--border-subtle, #eee9f4); gap: 20px; }
 .reception-brand, .reception-user, .reception-top-actions { display: flex; align-items: center; gap: 14px; }
-.reception-brand > span { background: #FBE9EE; color: #D45D79; width: 45px; height: 45px; display: grid; place-items: center; border-radius: 14px; }
+.reception-brand > span { background: var(--color-accent-50, #f5f1ff); color: var(--color-accent-600, #7457e8); width: 45px; height: 45px; display: grid; place-items: center; border-radius: 14px; }
 .reception-brand strong { display: block; font-size: 19px; letter-spacing: -.5px; }
 .reception-brand em { font-weight: 400; font-style: normal; color: #A97C35; font-size: 15px; margin-left: 7px; }
-.reception-brand small { font-size: 9px; letter-spacing: 1.6px; color: #8F7D85; }
+.reception-brand small { font-size: 9px; letter-spacing: 1.6px; color: var(--text-muted, #777086); }
 .reception-user > span { text-align: right; font-size: 12px; }
-.reception-user small { display: block; color: #7C7076; }
-.reception-user a { padding: 7px 11px; border-radius: 8px; background: #FAF7F8; font-size: 12px; }
+.reception-user small { display: block; color: var(--text-muted, #777086); }
+.reception-user a { padding: 7px 11px; border-radius: 8px; background: var(--bg-surface-subtle, #f6f3fb); font-size: 12px; }
 .reception-main { width: 92%; margin: auto; padding: 18px 0 15px; }
 .reception-title-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
 .reception-eyebrow { font-size: 10px; color: #A97C35; letter-spacing: 2px; font-weight: 700; }

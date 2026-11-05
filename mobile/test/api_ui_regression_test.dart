@@ -496,6 +496,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Home screen feeds paginate by 6 products when requested', (
+    tester,
+  ) async {
+    final manyProducts = List.generate(
+      15,
+      (i) => product(i + 1, 'Product item ${i + 1}'),
+    );
+    final provider = ProductProvider(
+      loadOnCreate: false,
+      apiClient: StubApiClient((path, query, body) {
+        if (path == ApiConstants.recommendedForYou) return success(manyProducts);
+        return page([]);
+      }),
+    );
+    await provider.fetchRecommendedProducts();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: provider),
+          ChangeNotifierProvider(
+            create: (_) => CartProvider(loadOnCreate: false),
+          ),
+        ],
+        child: const MaterialApp(home: HomeScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppProductCard), findsNWidgets(6));
+    expect(find.text('Xem thêm 6 sản phẩm'), findsOneWidget);
+
+    await tester.tap(find.text('Xem thêm 6 sản phẩm'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(AppProductCard), findsNWidgets(12));
+    expect(find.text('Xem thêm 6 sản phẩm'), findsOneWidget);
+
+    await tester.tap(find.text('Xem thêm 6 sản phẩm'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(AppProductCard), findsNWidgets(15));
+    expect(find.text('Đã hiển thị tất cả sản phẩm'), findsOneWidget);
+  });
+
   testWidgets('Guest profile never displays loyalty balances', (tester) async {
     await tester.pumpWidget(
       MultiProvider(

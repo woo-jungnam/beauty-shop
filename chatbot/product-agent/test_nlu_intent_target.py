@@ -13,6 +13,7 @@ def test_cases():
         ("Có loại kem chống nắng nào bôi lên mát da thấm nhanh không?", "PRODUCT", False, PrimaryIntent.TU_VAN_SAN_PHAM.value, Intent.PRODUCT_SEARCH),
         ("Tìm serum cấp ẩm phục hồi da dầu mụn", "PRODUCT", False, PrimaryIntent.TU_VAN_SAN_PHAM.value, Intent.PRODUCT_SEARCH),
         ("Bảng giá triệt lông nách bên mình sao ạ?", "SERVICE", False, PrimaryIntent.GIA_NGAN_SACH.value, Intent.PRICE_QUERY),
+        ("Đặt lịch peel da chiều mai", "SERVICE", False, PrimaryIntent.DAT_LICH.value, Intent.BOOKING),
         ("xin chào shop", "PRODUCT", False, PrimaryIntent.CHAO_HOI.value, Intent.GENERAL_CHAT),
         ("1+1", "PRODUCT", False, PrimaryIntent.NGOAI_PHAM_VI.value, Intent.OUT_OF_DOMAIN),
         ("1 + 1 = ?", "PRODUCT", False, PrimaryIntent.NGOAI_PHAM_VI.value, Intent.OUT_OF_DOMAIN),
@@ -49,6 +50,24 @@ def test_cases():
         assert target_not_null, f"Target bị null trong câu '{q}'"
         assert target_match, f"Target không khớp: thực tế {res.target_type}, kỳ vọng {exp_target}"
         assert clarify_match, f"Clarify không khớp: thực tế {res.needs_clarification}, kỳ vọng {exp_clarify}"
+
+    # Kiểm tra đồng bộ hóa Entities 2 chiều từ Flat/Constraints
+    sync_test_data = {
+        "raw_query": "tìm serum b5 la roche-posay cho da dầu dưới 500k trị thâm mụn",
+        "category": "serum",
+        "brand": "La Roche-Posay",
+        "skin_type": "oily",
+        "concerns": ["mụn", "thâm"],
+        "ingredients": ["b5"],
+        "max_price": 500000,
+    }
+    sync_res = UnderstandingResult.model_validate(sync_test_data)
+    assert sync_res.entities.get("product_category") == "serum"
+    assert sync_res.entities.get("brands") == ["La Roche-Posay"]
+    assert sync_res.entities.get("skin_type") == "oily"
+    assert sync_res.entities.get("target_concerns") == ["mụn", "thâm"]
+    assert sync_res.entities.get("ingredients_mentioned") == ["b5"]
+    assert sync_res.entities.get("price_mentioned") == 500000.0
 
     print("Tất cả các ca kiểm thử unit logic đều THÀNH CÔNG VƯỢT TRỘI!")
 

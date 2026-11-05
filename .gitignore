@@ -72,6 +72,11 @@ target-image-search-validation/
 *.pfx
 *.jks
 *.keystore
+key.properties
+env.json
+*.env.json
+!env.example.json
+!mobile/env.example.json
 .npmrc
 .netrc
 credentials*.json

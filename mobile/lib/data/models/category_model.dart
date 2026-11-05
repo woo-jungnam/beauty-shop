@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 class CategoryItem {
   final int id;
   final String name;
@@ -25,11 +27,13 @@ class CategoryItem {
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     final rawChildren = json['children'] as List<dynamic>? ?? [];
-    final img = json['imageUrl']?.toString() ??
-        json['image_url']?.toString() ??
-        json['iconUrl']?.toString() ??
-        json['icon_url']?.toString() ??
-        json['image']?.toString();
+    final img = ImageUtils.resolveUrl(
+      json['imageUrl']?.toString() ??
+          json['image_url']?.toString() ??
+          json['iconUrl']?.toString() ??
+          json['icon_url']?.toString() ??
+          json['image']?.toString(),
+    );
     return CategoryItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
       name: json['name']?.toString() ?? '',

@@ -12,6 +12,12 @@ import {
   Trash2,
   PackagePlus,
   Warehouse,
+  Search,
+  FileSpreadsheet,
+  Info,
+  Coins,
+  Lock,
+  CheckCircle2,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -29,6 +35,7 @@ import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { AlertBanner } from '../shared/ui/AlertBanner';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 
 const TRANSACTION_TYPE_MAP = {
   RECEIPT: { label: 'Nhập kho', variant: 'success' },
@@ -68,6 +75,74 @@ const getDaysUntilExpiration = (expDate) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
+const renderExpirationBadge = (expDate) => {
+  if (!expDate) {
+    return <span style={{ color: 'var(--text-muted, #777086)', fontSize: '12px' }}>Không có HSD</span>;
+  }
+  const daysLeft = getDaysUntilExpiration(expDate);
+  if (daysLeft == null) {
+    return <span style={{ fontSize: '12px' }}>{formatDate(expDate)}</span>;
+  }
+  if (daysLeft < 0) {
+    return (
+      <div style={{ textAlign: 'center' }}>
+        <span
+          style={{
+            background: '#FEE2E2',
+            color: '#B91C1C',
+            border: '1px solid #FCA5A5',
+            borderRadius: '4px',
+            padding: '2px 6px',
+            fontSize: '11px',
+            fontWeight: 700,
+            display: 'inline-block'
+          }}
+          title={`Đã hết hạn vào ngày ${formatDate(expDate)}`}
+        >
+          Hết hạn ({Math.abs(daysLeft)}d trước)
+        </span>
+        <div style={{ fontSize: '10.5px', color: '#B91C1C', marginTop: '2px' }}>
+          {formatDate(expDate)}
+        </div>
+      </div>
+    );
+  }
+  if (daysLeft <= 30) {
+    return (
+      <div style={{ textAlign: 'center' }}>
+        <span
+          style={{
+            background: '#FEF3C7',
+            color: '#B45309',
+            border: '1px solid #FDE68A',
+            borderRadius: '4px',
+            padding: '2px 6px',
+            fontSize: '11px',
+            fontWeight: 700,
+            display: 'inline-block'
+          }}
+          title={`Hết hạn vào ngày ${formatDate(expDate)}`}
+        >
+          Cận hạn (còn {daysLeft}d)
+        </span>
+        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+          HSD: {formatDate(expDate)}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)' }}>
+        {formatDate(expDate)}
+      </div>
+      <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+        Còn {daysLeft} ngày
+      </div>
+    </div>
+  );
+};
+
 export const InventoryPage = () => {
   const [activeTab, setActiveTab] = useState('warehouses');
   const [inventoryNotice, setInventoryNotice] = useState('');
@@ -91,6 +166,8 @@ export const InventoryPage = () => {
   const [warehouses, setWarehouses] = useState([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
   const [warehouseStocks, setWarehouseStocks] = useState([]);
+  const [stockSearchQuery, setStockSearchQuery] = useState('');
+  const [showProcurementGuide, setShowProcurementGuide] = useState(false);
 
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
@@ -484,25 +561,32 @@ export const InventoryPage = () => {
   const ledgerColumns = [
     {
       header: 'Thời điểm',
-      accessor: (row) => formatDateTime(row.occurredAt),
-      width: '130px',
+      accessor: (row) => (
+        <div style={{ fontSize: '12px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{formatDateTime(row.occurredAt)}</div>
+          {row.createdBy && <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>Bởi: {row.createdBy}</div>}
+        </div>
+      ),
+      width: '135px',
     },
     {
       header: 'Biến thể SKU / Sản phẩm',
       accessor: (row) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{row.productName || (row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId || row.variantId}`)}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Mã SKU: {row.sku || '-'}
-            {row.variantName ? ` · ${row.variantName}` : ''}
-            {row.batchCode ? ` · Lô: ${row.batchCode}` : ''}
+        <div style={{ minWidth: '220px' }}>
+          <div style={{ fontWeight: 650, color: 'var(--text-main)', fontSize: '13px' }}>
+            {row.productName || (row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId || row.variantId}`)}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+            {row.sku && <span>SKU: <code style={{ fontFamily: 'var(--font-mono)' }}>{row.sku}</code></span>}
+            {row.variantName && <span>· {row.variantName}</span>}
+            {row.batchCode && <span>· Lô: <strong>{row.batchCode}</strong></span>}
           </div>
         </div>
       ),
     },
     {
       header: 'Kho bãi',
-      accessor: (row) => row.warehouseName || `Kho #${row.warehouseId}`,
+      accessor: (row) => <span style={{ fontWeight: 600, fontSize: '12.5px' }}>{row.warehouseName || `Kho #${row.warehouseId}`}</span>,
       width: '130px',
     },
     {
@@ -521,33 +605,38 @@ export const InventoryPage = () => {
         return (
           <span
             style={{
-              fontWeight: 700,
+              fontWeight: 750,
+              fontSize: '13px',
               fontVariantNumeric: 'tabular-nums',
-              color: qty > 0 ? 'var(--color-success-700)' : qty < 0 ? 'var(--color-danger-700)' : 'var(--text-muted)',
+              color: qty > 0 ? 'var(--color-success-700, #16766b)' : qty < 0 ? 'var(--color-danger-700, #b53d59)' : 'var(--text-muted)',
             }}
           >
-            {qty > 0 ? `+${qty}` : qty}
+            {qty > 0 ? `+${formatNumber(qty)}` : formatNumber(qty)}
           </span>
         );
       },
       align: 'right',
-      width: '90px',
-    },
-    {
-      header: 'Tồn sau',
-      accessor: (row) => (
-        <span style={{ fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-          {row.quantityBefore != null && row.quantityAfter != null
-            ? `${row.quantityBefore} → ${row.quantityAfter}`
-            : (row.quantityAfter ?? '-')}
-        </span>
-      ),
-      align: 'right',
       width: '100px',
     },
     {
+      header: 'Số dư (Trước → Sau)',
+      accessor: (row) => (
+        <span style={{ fontSize: '12px', fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: 'var(--text-main)' }}>
+          {row.quantityBefore != null && row.quantityAfter != null
+            ? `${formatNumber(row.quantityBefore)} → ${formatNumber(row.quantityAfter)}`
+            : (row.quantityAfter != null ? formatNumber(row.quantityAfter) : '—')}
+        </span>
+      ),
+      align: 'center',
+      width: '125px',
+    },
+    {
       header: 'Đơn giá vốn',
-      accessor: (row) => formatCurrency(row.unitCost),
+      accessor: (row) => (
+        <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: '12.5px', fontWeight: 600 }}>
+          {formatCurrency(row.unitCost)}
+        </span>
+      ),
       align: 'right',
       width: '110px',
     },
@@ -557,8 +646,10 @@ export const InventoryPage = () => {
         const refLabel = REFERENCE_TYPE_MAP[row.referenceType] || row.referenceType;
         return (
           <div style={{ fontSize: '12px' }}>
-            <div>{refLabel ? `${refLabel}: ${row.referenceId || ''}` : '-'}</div>
-            {row.note && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.note}</div>}
+            <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+              {refLabel ? `${refLabel}${row.referenceId ? ` #${row.referenceId}` : ''}` : '—'}
+            </div>
+            {row.note && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{row.note}</div>}
           </div>
         );
       },
@@ -578,28 +669,42 @@ export const InventoryPage = () => {
   const alertColumns = [
     {
       header: 'Mã lô',
-      accessor: 'stockId',
-      width: '80px',
+      accessor: (row) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
+          #{row.stockId}
+        </span>
+      ),
+      width: '70px',
+      align: 'center',
     },
     {
       header: 'Kho bãi',
-      accessor: 'warehouseName',
+      accessor: (row) => (
+        <span style={{ fontWeight: 600, fontSize: '12.5px' }}>{row.warehouseName || `Kho #${row.warehouseId}`}</span>
+      ),
+      width: '130px',
     },
     {
       header: 'Sản phẩm & Phân loại',
       accessor: (row) => {
         const img = row.productThumbnailUrl ? resolveMediaUrl(row.productThumbnailUrl) : null;
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {img && (
-              <img src={img} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} onError={e => { e.currentTarget.style.display = 'none'; }} />
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: '220px' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 6, overflow: 'hidden', backgroundColor: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border-subtle)' }}>
+              {img ? (
+                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              ) : (
+                <Boxes size={16} color="var(--text-muted)" />
+              )}
+            </div>
             <div>
-              <div style={{ fontWeight: 600 }}>{row.productName || (row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId}`)}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 6 }}>
+              <div style={{ fontWeight: 650, color: 'var(--text-main)', fontSize: '13px' }}>
+                {row.productName || (row.sku ? `SKU: ${row.sku}` : `Biến thể #${row.productVariantId}`)}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 6, marginTop: 2 }}>
                 {row.variantName && <span>{row.variantName}</span>}
-                {row.sku && <span>· SKU: <code>{row.sku}</code></span>}
-                {row.batchCode && <span>· Lô: {row.batchCode}</span>}
+                {row.sku && <span>· SKU: <code style={{ fontFamily: 'var(--font-mono)' }}>{row.sku}</code></span>}
+                {row.batchCode && <span>· Lô: <strong>{row.batchCode}</strong></span>}
               </div>
             </div>
           </div>
@@ -607,39 +712,43 @@ export const InventoryPage = () => {
       },
     },
     {
-      header: 'Tồn thực tế',
-      accessor: (row) => formatNumber(row.quantity),
+      header: 'Tồn kho phân bổ',
+      accessor: (row) => {
+        const available = Math.max(0, (row.quantity ?? 0) - (row.reservedQuantity ?? 0));
+        const isOut = available <= 0;
+        return (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '5px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Khả dụng:</span>
+              <strong style={{ fontSize: '13.5px', color: isOut ? 'var(--color-danger-700, #b53d59)' : 'var(--color-success-700, #16766b)', fontVariantNumeric: 'tabular-nums' }}>
+                {formatNumber(available)}
+              </strong>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
+              Tổng tồn: {formatNumber(row.quantity ?? 0)}
+              {row.reservedQuantity > 0 && <span style={{ color: '#D97706', fontWeight: 600 }}> · Giữ: {row.reservedQuantity}</span>}
+            </div>
+          </div>
+        );
+      },
       align: 'right',
-    },
-    {
-      header: 'Khả dụng bán',
-      accessor: (row) => (
-        <strong style={{ color: 'var(--color-primary-700)' }}>
-          {formatNumber(Math.max(0, (row.quantity ?? 0) - (row.reservedQuantity ?? 0)))}
-        </strong>
-      ),
-      align: 'right',
+      width: '150px',
     },
     {
       header: 'Mức tối thiểu',
-      accessor: (row) => formatNumber(row.minQuantity ?? 0),
+      accessor: (row) => (
+        <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-muted)' }}>
+          {formatNumber(row.minQuantity ?? 0)}
+        </span>
+      ),
       align: 'right',
+      width: '100px',
     },
     {
       header: 'Hạn dùng (FEFO)',
-      accessor: (row) => {
-        const daysLeft = getDaysUntilExpiration(row.expirationDate);
-        return (
-          <span style={{ color: daysLeft != null && daysLeft <= 7 ? 'var(--color-danger-700)' : 'inherit', fontWeight: 600 }}>
-            {formatDate(row.expirationDate) || 'Không có'}
-            {daysLeft != null && (
-              <span style={{ fontSize: '11px', display: 'block' }}>
-                {daysLeft < 0 ? '(Đã hết hạn)' : `(Còn ${daysLeft} ngày)`}
-              </span>
-            )}
-          </span>
-        );
-      },
+      accessor: (row) => renderExpirationBadge(row.expirationDate),
+      width: '140px',
+      align: 'center',
     },
     {
       header: 'Thao tác',
@@ -649,29 +758,34 @@ export const InventoryPage = () => {
           size="sm"
           onClick={() => handleOpenAdjustModal(row)}
           icon={ArrowUpRight}
-          title="Kiểm kê / Kiểm định số lượng tồn kho"
+          title="Kiểm kê / Điều chỉnh tồn kho"
         >
           Kiểm kê
         </Button>
       ),
       align: 'right',
-      width: '110px',
+      width: '95px',
     },
   ];
 
   const warehouseStockColumns = [
     {
       header: 'Mã lô',
-      accessor: 'id',
-      width: '60px',
+      accessor: (row) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
+          #{row.id}
+        </span>
+      ),
+      width: '65px',
+      align: 'center',
     },
     {
-      header: 'Sản phẩm & Biến thể',
+      header: 'Sản phẩm & Biến thể SKU',
       accessor: (row) => {
         const img = row.productThumbnailUrl ? resolveMediaUrl(row.productThumbnailUrl) : null;
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 4, overflow: 'hidden', backgroundColor: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: '240px' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 6, overflow: 'hidden', backgroundColor: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border-subtle)' }}>
               {img ? (
                 <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
               ) : (
@@ -679,73 +793,140 @@ export const InventoryPage = () => {
               )}
             </div>
             <div>
-              <div style={{ fontWeight: 600 }}>{row.productName || `Biến thể #${row.productVariantId}`}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 6, marginTop: 2 }}>
-                {row.variantName && <span>{row.variantName}</span>}
-                {row.sku && <span>· SKU: <code>{row.sku}</code></span>}
+              <div style={{ fontWeight: 650, color: 'var(--text-main)', fontSize: '13px', lineHeight: 1.35 }}>
+                {row.productName || `Biến thể #${row.productVariantId}`}
               </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                {row.variantName && <span>{row.variantName}</span>}
+                {row.sku && <span>· SKU: <code style={{ fontFamily: 'var(--font-mono)' }}>{row.sku}</code></span>}
+              </div>
+              {row.isBlocked && (
+                <div style={{ marginTop: 3 }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: '#FEE2E2',
+                      color: '#B91C1C',
+                      border: '1px solid #FECACA',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontSize: '10.5px',
+                      fontWeight: 700
+                    }}
+                    title={row.blockReason || 'Lô đang bị khóa luân chuyển'}
+                  >
+                    <Lock size={10} /> ĐÃ KHÓA: {row.blockReason || 'Ngừng luân chuyển'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
       },
     },
     {
-      header: 'Mã lô SX',
-      accessor: (row) => row.batchCode ? <code style={{ fontWeight: 600 }}>{row.batchCode}</code> : 'Mặc định',
-      width: '110px',
+      header: 'Lô SX & Vị trí',
+      accessor: (row) => (
+        <div>
+          <code style={{
+            fontWeight: 700,
+            fontSize: '12px',
+            fontFamily: 'var(--font-mono)',
+            background: 'var(--bg-surface-subtle, #f6f3fb)',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            border: '1px solid var(--border-subtle, #eee9f4)',
+            color: 'var(--text-main)'
+          }}>
+            {row.batchCode ? row.batchCode : 'Mặc định'}
+          </code>
+          {row.location ? (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 3 }}>
+              Vị trí: <strong>{row.location}</strong>
+            </div>
+          ) : null}
+        </div>
+      ),
+      width: '120px',
     },
     {
-      header: 'Tồn bán được',
-      accessor: (row) => <strong style={{ color: 'var(--color-success-700)', fontSize: 13 }}>{formatNumber(row.quantity)}</strong>,
+      header: 'Tồn kho phân bổ',
+      accessor: (row) => {
+        const available = Math.max(0, (row.quantity || 0) - (row.reservedQuantity || 0));
+        const isOut = available <= 0;
+        const isBelowMin = row.minQuantity && available <= row.minQuantity;
+
+        return (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '5px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Khả dụng:</span>
+              <strong style={{
+                fontSize: '13.5px',
+                color: isOut ? 'var(--color-danger-700, #b53d59)' : 'var(--color-success-700, #16766b)',
+                fontVariantNumeric: 'tabular-nums'
+              }}>
+                {formatNumber(available)}
+              </strong>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
+              Tổng tồn: {formatNumber(row.quantity || 0)}
+              {row.reservedQuantity > 0 && (
+                <span style={{ color: '#D97706', fontWeight: 600 }}> · Giữ: {row.reservedQuantity}</span>
+              )}
+            </div>
+            {isBelowMin && (
+              <div style={{ fontSize: '10.5px', color: '#B45309', fontWeight: 600, marginTop: '2px' }}>
+                Chạm mức min ({row.minQuantity})
+              </div>
+            )}
+          </div>
+        );
+      },
+      align: 'right',
+      width: '160px',
+    },
+    {
+      header: 'Cách ly (Hoàn)',
+      accessor: (row) =>
+        row.quarantinedQuantity > 0 ? (
+          <Badge variant="warning">{formatNumber(row.quarantinedQuantity)} SP</Badge>
+        ) : (
+          <span style={{ color: 'var(--text-muted)' }}>—</span>
+        ),
       align: 'right',
       width: '100px',
     },
     {
-      header: 'Đang giữ cho đơn',
-      accessor: (row) => formatNumber(row.reservedQuantity || 0),
-      align: 'right',
-      width: '110px',
-    },
-    {
-      header: 'Hàng cách ly (Hoàn)',
-      accessor: (row) =>
-        row.quarantinedQuantity > 0 ? (
-          <Badge variant="warning">{formatNumber(row.quarantinedQuantity)}</Badge>
-        ) : (
-          <span style={{ color: 'var(--text-muted)' }}>0</span>
-        ),
-      align: 'right',
-      width: '110px',
-    },
-    {
-      header: 'Đơn giá vốn',
-      accessor: (row) => formatCurrency(row.costPrice),
-      align: 'right',
-      width: '110px',
-    },
-    {
-      header: 'Hạn dùng & Vị trí',
+      header: 'Đơn giá & Tổng vốn',
       accessor: (row) => {
-        const daysLeft = getDaysUntilExpiration(row.expirationDate);
+        const unitCost = row.costPrice || 0;
+        const totalCost = Number(unitCost) * (row.quantity || 0);
         return (
-          <div>
-            <div style={{ color: daysLeft != null && daysLeft <= 30 ? 'var(--color-danger-700)' : 'inherit', fontWeight: 600 }}>
-              {formatDate(row.expirationDate) || 'Không có'}
-              {daysLeft != null && (
-                <span style={{ fontSize: '11px', display: 'block', fontWeight: 400 }}>
-                  {daysLeft < 0 ? '(Đã hết hạn)' : `(Còn ${daysLeft} ngày)`}
-                </span>
-              )}
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontWeight: 650, fontSize: '12.5px', fontVariantNumeric: 'tabular-nums' }}>
+              {formatCurrency(unitCost)}
             </div>
-            {row.location && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>Vị trí: {row.location}</div>}
+            <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '1px' }}>
+              Tổng: {formatCurrency(totalCost)}
+            </div>
           </div>
         );
       },
+      align: 'right',
+      width: '140px',
+    },
+    {
+      header: 'Hạn dùng (FEFO)',
+      accessor: (row) => renderExpirationBadge(row.expirationDate),
+      width: '140px',
+      align: 'center',
     },
     {
       header: 'Thao tác',
       accessor: (row) => (
-        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
           {row.quarantinedQuantity > 0 && (
             <Button
               variant="warning"
@@ -753,8 +934,9 @@ export const InventoryPage = () => {
               onClick={() => handleOpenInspect(row)}
               icon={ClipboardCheck}
               title="Xử lý hàng hoàn trả cách ly"
+              style={{ fontSize: '11px', padding: '4px 8px' }}
             >
-              Xử lý hoàn
+              Xử lý
             </Button>
           )}
           <Button
@@ -762,14 +944,16 @@ export const InventoryPage = () => {
             size="sm"
             onClick={() => handleOpenAdjustModal(row)}
             icon={ArrowUpRight}
-            title="Điều chỉnh số lượng sau kiểm kê"
+            title="Kiểm kê điều chỉnh số tồn thực tế"
+            style={{ padding: '6px' }}
           />
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleOpenTransferModal(row)}
             icon={ArrowDownLeft}
-            title="Chuyển sang kho khác"
+            title="Điều chuyển hàng sang kho khác"
+            style={{ padding: '6px' }}
           />
           <Button
             variant="outline"
@@ -777,49 +961,95 @@ export const InventoryPage = () => {
             onClick={() => handleDeleteStock(row.id)}
             icon={Trash2}
             title="Xóa lô tồn kho này"
+            style={{ padding: '6px' }}
           />
         </div>
       ),
       align: 'right',
-      width: '160px',
+      width: '130px',
     },
   ];
 
+  const filteredWarehouseStocks = warehouseStocks.filter((stock) => {
+    if (!stockSearchQuery.trim()) return true;
+    const q = stockSearchQuery.trim().toLowerCase();
+    const productName = (stock.productName || '').toLowerCase();
+    const sku = (stock.sku || '').toLowerCase();
+    const variantName = (stock.variantName || '').toLowerCase();
+    const batchCode = (stock.batchCode || '').toLowerCase();
+    const location = (stock.location || '').toLowerCase();
+    return productName.includes(q) || sku.includes(q) || variantName.includes(q) || batchCode.includes(q) || location.includes(q);
+  });
+
+  const totalUnits = warehouseStocks.reduce((sum, s) => sum + (s.quantity || 0), 0);
+  const totalAvailable = warehouseStocks.reduce((sum, s) => sum + Math.max(0, (s.quantity || 0) - (s.reservedQuantity || 0)), 0);
+  const totalReserved = warehouseStocks.reduce((sum, s) => sum + (s.reservedQuantity || 0), 0);
+  const totalQuarantine = warehouseStocks.reduce((sum, s) => sum + (s.quarantinedQuantity || 0), 0);
+  const totalCostValue = warehouseStocks.reduce((sum, s) => sum + (Number(s.costPrice || 0) * (s.quantity || 0)), 0);
+  const expiringLotsCount = warehouseStocks.filter((s) => {
+    const days = getDaysUntilExpiration(s.expirationDate);
+    return days != null && days <= 30;
+  }).length;
+
   return (
     <div className="content-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quản lý Kho bãi & Sổ cái Tồn kho FEFO</h1>
-          <p className="page-subtitle">
-            Theo dõi luân chuyển tồn kho, kiểm soát hạn sử dụng mỹ phẩm và điều phối hàng hóa giữa các kho
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {activeTab === 'warehouses' && (
-            <>
-              <Button variant="outline" size="sm" onClick={() => setCreateWhModalOpen(true)} icon={Warehouse}>
-                Tạo kho mới
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleOpenInboundModal} icon={PackagePlus}>
-                Nhập kho hàng hóa
-              </Button>
-            </>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (activeTab === 'ledger') fetchLedger(ledgerPage);
-              else if (activeTab === 'alerts') fetchAlerts();
-              else if (activeTab === 'warehouses') fetchWarehouseStocks(selectedWarehouseId);
-            }}
-            loading={loading}
-            icon={RefreshCw}
-          >
-            Làm mới
-          </Button>
-        </div>
-      </div>
+      <AdminSectionNav
+        rootTitle="Quản lý Kho bãi & Tồn kho"
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        subtitle="Theo dõi luân chuyển tồn kho, kiểm soát hạn sử dụng mỹ phẩm và điều phối hàng hóa giữa các kho"
+        items={[
+          {
+            id: 'warehouses',
+            label: 'Kho bãi & Lô hàng',
+            count: warehouses.length,
+            icon: Building2,
+            description: 'Danh sách vị trí kho, chi nhánh và số lượng tồn thực tế'
+          },
+          {
+            id: 'alerts',
+            label: 'Cảnh báo tồn kho & Cận hạn',
+            count: lowStockList.length + expiringList.length,
+            icon: AlertTriangle,
+            description: 'Sản phẩm sắp hết hàng hoặc lô hàng sắp hết hạn sử dụng'
+          },
+          {
+            id: 'ledger',
+            label: 'Sổ cái biến động kho',
+            count: ledgerTotalElements,
+            icon: Boxes,
+            description: 'Nhật ký đối soát xuất, nhập, điều chuyển và bán hàng'
+          }
+        ]}
+        actions={
+          <>
+            {activeTab === 'warehouses' && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setCreateWhModalOpen(true)} icon={Warehouse}>
+                  Tạo kho mới
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleOpenInboundModal} icon={PackagePlus}>
+                  Nhập kho hàng hóa
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (activeTab === 'ledger') fetchLedger(ledgerPage);
+                else if (activeTab === 'alerts') fetchAlerts();
+                else if (activeTab === 'warehouses') fetchWarehouseStocks(selectedWarehouseId);
+              }}
+              loading={loading}
+              icon={RefreshCw}
+            >
+              Làm mới
+            </Button>
+          </>
+        }
+      />
+
       {inventoryNotice && (
         <AlertBanner
           type="success"
@@ -830,32 +1060,39 @@ export const InventoryPage = () => {
       )}
 
       <InventoryRecallPanel />
-      <div className="tabs-header">
-        <button
-          className={`tab-btn ${activeTab === 'warehouses' ? 'active' : ''}`}
-          onClick={() => setActiveTab('warehouses')}
-        >
-          <Building2 size={15} />
-          Kho bãi & Quản lý lô hàng ({warehouses.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
-          onClick={() => setActiveTab('alerts')}
-        >
-          <AlertTriangle size={15} />
-          Cảnh báo tồn kho & Cận hạn ({lowStockList.length + expiringList.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ledger')}
-        >
-          <Boxes size={15} />
-          Sổ cái biến động kho (Lịch sử xuất nhập) ({ledgerTotalElements})
-        </button>
-      </div>
 
       {activeTab === 'warehouses' && (
         <div>
+          <div className="card" style={{ marginBottom: '16px', padding: '14px 18px', backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileSpreadsheet size={20} color="#0284C7" />
+                <div>
+                  <strong style={{ fontSize: '13.5px', color: '#0369A1' }}>Quy trình cập nhật tồn kho & Nhập hàng theo file Excel</strong>
+                  <div style={{ fontSize: '12px', color: '#0C4A6E', marginTop: '2px' }}>
+                    Nhập hàng số lượng lớn theo file được thực hiện qua luồng: <strong>Mua hàng (PO) → Duyệt đơn → Phiếu nhập kho</strong> để tự động chuẩn hóa hạn dùng FEFO & đơn giá vốn.
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button size="sm" variant="outline" onClick={() => setShowProcurementGuide(!showProcurementGuide)}>
+                  <Info size={14} /> {showProcurementGuide ? 'Ẩn hướng dẫn' : 'Xem chi tiết'}
+                </Button>
+                <a href="#/admin/procurement" style={{ textDecoration: 'none' }}>
+                  <Button size="sm" variant="primary">
+                    Đến trang Mua hàng (PO)
+                  </Button>
+                </a>
+              </div>
+            </div>
+            {showProcurementGuide && (
+              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #BAE6FD', fontSize: '12.5px', color: '#0C4A6E', lineHeight: '1.6' }}>
+                <div>• <strong>Cách 1 (Nhập theo file Excel):</strong> Vào mục <em>Quản lý Mua hàng (PO)</em> → Chọn <em>Nhập file Excel</em> theo mẫu chuẩn → Hệ thống tự đối chiếu mã SKU, giá vốn và ngày hết hạn → Quản lý bấm <em>Duyệt PO</em> → Nhân viên kho bấm <em>Lập phiếu nhập</em> để ghi nhận số lượng vào kho tương ứng.</div>
+                <div>• <strong>Cách 2 (Cập nhật trực tiếp từng món):</strong> Bấm nút <strong>Kiểm kê</strong> tại từng lô hàng bên dưới để điều chỉnh số lượng thực tế sau khi kiểm đếm, hoặc bấm <strong>Nhập kho hàng hóa</strong> phía trên để nhập bổ sung nhanh cho một sản phẩm.</div>
+              </div>
+            )}
+          </div>
+
           <div className="admin-warehouse-toolbar">
             <div className="admin-warehouse-picker">
               <label htmlFor="admin-warehouse-select" className="form-label">Chọn kho làm việc</label>
@@ -883,18 +1120,111 @@ export const InventoryPage = () => {
             )}
           </div>
 
+          {/* Quick Inventory KPI Overview */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+            <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 2px 8px -2px rgba(33, 26, 53, 0.05)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'var(--color-accent-50, #f5f1ff)', color: 'var(--color-accent-600, #7457e8)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Boxes size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 650 }}>Tồn khả dụng bán</div>
+                <div style={{ fontSize: '20px', fontWeight: 750, color: 'var(--color-success-700, #16766b)', fontVariantNumeric: 'tabular-nums' }}>
+                  {formatNumber(totalAvailable)} <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)' }}>SP</span>
+                </div>
+                <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                  Tổng tồn: {formatNumber(totalUnits)} {totalReserved > 0 && `(Giữ chỗ: ${formatNumber(totalReserved)})`}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 2px 8px -2px rgba(33, 26, 53, 0.05)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F0FDF4', color: '#16A34A', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Coins size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 650 }}>Tổng vốn lưu kho</div>
+                <div style={{ fontSize: '18px', fontWeight: 750, color: 'var(--text-main)', fontVariantNumeric: 'tabular-nums' }}>
+                  {formatCurrency(totalCostValue)}
+                </div>
+                <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                  {warehouseStocks.length} lô đang quản lý
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 2px 8px -2px rgba(33, 26, 53, 0.05)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: expiringLotsCount > 0 ? '#FEF3C7' : '#F3F4F6', color: expiringLotsCount > 0 ? '#D97706' : '#6B7280', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Clock size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 650 }}>Cận hạn & Hết hạn (FEFO)</div>
+                <div style={{ fontSize: '20px', fontWeight: 750, color: expiringLotsCount > 0 ? '#B45309' : 'var(--text-main)', fontVariantNumeric: 'tabular-nums' }}>
+                  {expiringLotsCount} <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)' }}>lô</span>
+                </div>
+                <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                  {expiringLotsCount > 0 ? 'Lô cần ưu tiên xuất trước' : 'Tất cả lô đều an toàn'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#FFFFFF', border: '1px solid var(--border-subtle, #eee9f4)', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 2px 8px -2px rgba(33, 26, 53, 0.05)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: totalQuarantine > 0 ? '#FFF0F4' : '#F3F4F6', color: totalQuarantine > 0 ? '#D35476' : '#6B7280', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <ClipboardCheck size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 650 }}>Hàng cách ly (Hoàn trả)</div>
+                <div style={{ fontSize: '20px', fontWeight: 750, color: totalQuarantine > 0 ? '#B53D59' : 'var(--text-main)', fontVariantNumeric: 'tabular-nums' }}>
+                  {formatNumber(totalQuarantine)} <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)' }}>SP</span>
+                </div>
+                <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                  {totalQuarantine > 0 ? 'Chờ kiểm định & xử lý' : 'Không có hàng cách ly'}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">Danh sách các lô tồn kho trong kho đang chọn</span>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Tổng cộng {warehouseStocks.length} lô hàng
-              </span>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <span className="card-title">Danh sách các lô tồn kho trong kho đang chọn</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                  Hiển thị {filteredWarehouseStocks.length} / {warehouseStocks.length} lô hàng
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '280px' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    placeholder="Tìm theo tên SP, SKU, lô SX, vị trí..."
+                    value={stockSearchQuery}
+                    onChange={(e) => setStockSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px 7px 32px',
+                      fontSize: '12.5px',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid var(--border-color, #E5E7EB)',
+                      outline: 'none'
+                    }}
+                  />
+                  {stockSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setStockSearchQuery('')}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)' }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             <DataTable
               columns={warehouseStockColumns}
-              data={warehouseStocks}
+              data={filteredWarehouseStocks}
               loading={loading}
-              emptyMessage="Kho này hiện chưa có dữ liệu tồn kho. Bấm 'Nhập kho hàng hóa' để thêm."
+              emptyMessage={stockSearchQuery ? 'Không tìm thấy lô hàng nào khớp với từ khóa tìm kiếm.' : "Kho này hiện chưa có dữ liệu tồn kho. Bấm 'Nhập kho hàng hóa' để thêm."}
             />
           </div>
         </div>

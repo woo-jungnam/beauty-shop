@@ -71,6 +71,16 @@ export const ENDPOINTS = {
     DELETE: (id) => `/api/v1/admin/vouchers/${id}`,
   },
 
+  FLASH_SALES: {
+    PUBLIC_CURRENT: '/api/v1/flash-sales/current',
+    PUBLIC_CAMPAIGN_ITEMS: (id) => `/api/v1/flash-sales/${id}/items`,
+    ADMIN_LIST: '/api/v1/admin/flash-sales',
+    ADMIN_DETAIL: (id) => `/api/v1/admin/flash-sales/${id}`,
+    ADMIN_CREATE: '/api/v1/admin/flash-sales',
+    ADMIN_UPDATE: (id) => `/api/v1/admin/flash-sales/${id}`,
+    ADMIN_DELETE: (id) => `/api/v1/admin/flash-sales/${id}`,
+  },
+
   CATALOG: {
     PUBLIC_PRODUCTS: '/api/v1/products',
     PUBLIC_PRODUCT_DETAIL: (id) => `/api/v1/products/${id}`,

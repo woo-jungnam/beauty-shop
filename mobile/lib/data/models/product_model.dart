@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 class ProductItem {
   final int id;
   final String name;
@@ -93,8 +95,9 @@ class ProductItem {
       name: json['name']?.toString() ?? '',
       slug: json['slug']?.toString() ?? '',
       shortDescription: json['shortDescription']?.toString(),
-      thumbnailUrl:
-          json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
+      thumbnailUrl: ImageUtils.resolveUrl(
+        json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
+      ),
       basePrice: baseP > 0 ? baseP : (saleP ?? 0.0),
       salePrice: saleP != null && saleP >= 0 && saleP < baseP ? saleP : null,
       status: json['status']?.toString() ?? 'ACTIVE',
@@ -164,7 +167,7 @@ class ProductVariant {
       originalPrice: (json['originalPrice'] as num?)?.toDouble(),
       discountPrice: (json['discountPrice'] as num?)?.toDouble(),
       stockQuantity: (json['stockQuantity'] as num?)?.toInt() ?? 0,
-      thumbnailUrl: json['thumbnailUrl']?.toString(),
+      thumbnailUrl: ImageUtils.resolveUrl(json['thumbnailUrl']?.toString()),
       isDefault: json['isDefault'] == true,
       isActive: json['isActive'] != false,
     );
@@ -300,11 +303,12 @@ class ProductDetail {
 
     final imagesRaw = json['images'] as List<dynamic>? ?? [];
     final imagesList = imagesRaw
-        .map((img) => (img['imageUrl'] ?? img['url'] ?? '').toString())
+        .map((img) => ImageUtils.resolveUrl((img['imageUrl'] ?? img['url'] ?? '').toString()))
+        .whereType<String>()
         .where((s) => s.isNotEmpty)
         .toList();
 
-    final thumb = json['thumbnailUrl']?.toString();
+    final thumb = ImageUtils.resolveUrl(json['thumbnailUrl']?.toString());
     if (imagesList.isEmpty && thumb != null && thumb.isNotEmpty) {
       imagesList.add(thumb);
     }

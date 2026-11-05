@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/image_utils.dart';
 
 class AppBannerCarousel extends StatefulWidget {
   final List<String> banners;
@@ -74,18 +75,36 @@ class _AppBannerCarouselState extends State<AppBannerCarousel> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: CachedNetworkImage(
-                      imageUrl: list[index],
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) =>
-                          Container(color: AppColors.primaryLight),
-                      errorWidget: (_, __, ___) => Container(
-                        color: AppColors.primary,
-                        child: const Center(
-                          child: Icon(Icons.spa, color: Colors.white, size: 40),
-                        ),
-                      ),
-                    ),
+                    child: () {
+                      final bannerUrl = ImageUtils.resolveUrl(list[index]);
+                      return bannerUrl != null && bannerUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: bannerUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) =>
+                                  Container(color: AppColors.primaryLight),
+                              errorWidget: (_, __, ___) => Container(
+                                color: AppColors.primary,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.spa,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: AppColors.primary,
+                              child: const Center(
+                                child: Icon(
+                                  Icons.spa,
+                                  color: Colors.white,
+                                  size: 40,
+                                ),
+                              ),
+                            );
+                    }(),
                   ),
                 ),
               );

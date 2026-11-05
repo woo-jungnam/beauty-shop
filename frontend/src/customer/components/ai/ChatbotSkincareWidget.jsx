@@ -541,219 +541,276 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                 key={msg.id}
                 style={{
                   display: 'flex',
-                  justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                  gap: '8px'
+                  flexDirection: 'column',
+                  alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                  gap: '6px',
+                  width: '100%'
                 }}
               >
-                {msg.sender === 'bot' && (
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--c-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <Bot size={14} color="var(--c-gold)" />
-                  </div>
-                )}
-
-                <div
-                  className={`chatbot-bubble ${msg.sender === 'user' ? 'chatbot-bubble-user' : 'chatbot-bubble-bot'}`}
-                  style={{
-                    maxWidth: msg.sender === 'user' ? '80%' : '88%',
-                    padding: '11px 14px',
-                    borderRadius: msg.sender === 'user' ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
-                    fontSize: '13px',
-                    lineHeight: 1.6,
-                    backgroundColor: msg.sender === 'user' ? 'var(--c-primary)' : '#FFFFFF',
-                    color: msg.sender === 'user' ? '#FFFFFF' : 'var(--c-text-main)',
-                    border: msg.sender === 'user' ? 'none' : '1px solid var(--c-border)',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {msg.sender === 'bot' ? (
-                    <div
-                      className="chatbot-content"
-                      dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.text) }}
-                    />
-                  ) : (
-                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                      {msg.text}
-                    </div>
-                  )}
-
-                  {msg.actions && msg.actions.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                  maxWidth: '100%',
+                  justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                  width: '100%'
+                }}>
+                  {msg.sender === 'bot' && (
                     <div style={{
-                      marginTop: '10px',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--c-primary)',
                       display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '6px',
-                      animation: 'chatbotFadeIn 0.35s ease-out forwards',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: '2px'
                     }}>
-                      {msg.actions.map((act, actIdx) => (
-                        <button
-                          key={actIdx}
-                          onClick={() => {
-                            if (act.actionType === 'ADD_TO_CART') {
-                              addItem({
-                                id: act.payload.product_id,
-                                name: act.payload.product_name,
-                                price: act.payload.price,
-                                image: act.payload.image_url,
-                              }, null, act.payload.quantity || 1);
-                            } else if (act.actionType === 'BOOKING_PROPOSAL') {
-                              setIsOpen(false);
-                              const route = `booking?serviceId=${encodeURIComponent(act.payload.service_id)}`;
-                              if (typeof onNavigate === 'function') onNavigate(route);
-                              else window.location.hash = `/${route}`;
-                            } else if (act.actionType === 'VIEW_ORDER') {
-                              setIsOpen(false);
-                              const route = `account/orders?code=${encodeURIComponent(act.payload.order_number || '')}`;
-                              if (typeof onNavigate === 'function') onNavigate(route);
-                              else window.location.hash = `/${route}`;
-                            }
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            padding: '6px 12px',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            borderRadius: '9999px',
-                            backgroundColor: act.actionType === 'BOOKING_PROPOSAL' ? 'var(--c-primary)' : 'var(--c-gold)',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            cursor: 'pointer',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                          }}
-                        >
-                          {act.actionType === 'BOOKING_PROPOSAL' && <CalendarCheck size={12} />}
-                          {act.actionType === 'ADD_TO_CART' && <ShoppingBag size={12} />}
-                          {act.label}
-                        </button>
-                      ))}
+                      <Bot size={15} color="#FFFFFF" />
                     </div>
                   )}
 
-                  {(() => {
-                    const recItems = (msg.products && msg.products.length > 0) ? msg.products : (msg.product ? [msg.product] : []);
-                    if (recItems.length === 0) return null;
-                    return (
+                  <div
+                    className={`chatbot-bubble ${msg.sender === 'user' ? 'chatbot-bubble-user' : 'chatbot-bubble-bot'}`}
+                    style={{
+                      maxWidth: msg.sender === 'user' ? '82%' : '88%',
+                      padding: '11px 14px',
+                      borderRadius: msg.sender === 'user' ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
+                      fontSize: '13px',
+                      lineHeight: 1.6,
+                      backgroundColor: msg.sender === 'user' ? 'var(--c-primary)' : '#FFFFFF',
+                      color: msg.sender === 'user' ? '#FFFFFF' : 'var(--c-text-main)',
+                      border: msg.sender === 'user' ? 'none' : '1px solid var(--c-border)',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {msg.sender === 'bot' ? (
                       <div
-                        style={{
-                          marginTop: '12px',
-                          paddingTop: '10px',
-                          borderTop: '1px dashed var(--c-border)',
-                          animation: 'chatbotFadeIn 0.35s ease-out forwards',
-                        }}
-                      >
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-primary)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.4px' }}>
-                          Gợi ý phù hợp cho bạn ({recItems.length}):
-                        </div>
-                        {recItems.map((item, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              marginBottom: idx === recItems.length - 1 ? 0 : '8px',
-                              padding: '10px 12px',
-                              backgroundColor: 'var(--c-gold-light)',
-                              borderRadius: '10px',
-                              border: '1px solid var(--c-gold-border)',
-                            }}
-                          >
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              {item.image ? (
-                                <img
-                                  src={resolveMediaUrl(item.image)}
-                                  alt={item.name}
-                                  style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }}
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                />
-                              ) : null}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: '10px', color: 'var(--c-text-gold)', fontWeight: 700, textTransform: 'uppercase' }}>
-                                  {item.targetType === 'SERVICE' ? 'LIỆU TRÌNH SPA PHÙ HỢP' : 'SẢN PHẨM KHUYÊN DÙNG'}
-                                </div>
-                                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-primary)', margin: '2px 0 2px 0', lineHeight: 1.3 }}>
-                                  {item.name}
-                                </div>
-                                {item.price > 0 && (
-                                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-primary)' }}>
-                                    {formatCurrency(item.price)}
+                        className="chatbot-content"
+                        dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.text) }}
+                      />
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                        {msg.text}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Phuong an 1: Horizontal Card Carousel */}
+                {msg.sender === 'bot' && (() => {
+                  const recItems = (msg.products && msg.products.length > 0) ? msg.products : (msg.product ? [msg.product] : []);
+                  if (recItems.length === 0) return null;
+
+                  return (
+                    <div style={{
+                      width: '100%',
+                      paddingLeft: '36px',
+                      marginTop: '4px',
+                      animation: 'chatbotFadeIn 0.35s ease-out forwards'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '6px',
+                        paddingRight: '6px'
+                      }}>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 750,
+                          color: 'var(--c-text-muted)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.4px'
+                        }}>
+                          Gợi ý phù hợp ({recItems.length})
+                        </span>
+                        {recItems.length > 1 && (
+                          <span style={{ fontSize: '10px', color: 'var(--c-text-muted)' }}>
+                            Trượt ngang để xem tiếp
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="chatbot-cards-carousel">
+                        {recItems.map((item, idx) => {
+                          const isService = item.targetType === 'SERVICE';
+                          const img = item.image ? resolveMediaUrl(item.image) : null;
+
+                          return (
+                            <div key={idx} className="chatbot-card-item">
+                              <div style={{
+                                width: '100%',
+                                height: '95px',
+                                background: 'var(--c-canvas-subtle)',
+                                overflow: 'hidden',
+                                position: 'relative',
+                                display: 'grid',
+                                placeItems: 'center'
+                              }}>
+                                {img ? (
+                                  <img
+                                    src={img}
+                                    alt={item.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <div style={{ color: 'var(--c-text-muted)', fontSize: '10px', fontWeight: 600 }}>
+                                    {isService ? 'DỊCH VỤ SPA' : 'SẢN PHẨM'}
                                   </div>
+                                )}
+                                <span style={{
+                                  position: 'absolute',
+                                  top: '6px',
+                                  left: '6px',
+                                  fontSize: '9px',
+                                  fontWeight: 700,
+                                  background: isService ? '#F3EFFA' : '#FCEAF0',
+                                  color: isService ? '#7457e8' : 'var(--c-primary)',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  letterSpacing: '0.4px',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  {isService ? 'Liệu trình' : 'Sản phẩm'}
+                                </span>
+                              </div>
+
+                              <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                                <div>
+                                  <div
+                                    title={item.name}
+                                    style={{
+                                      fontSize: '12px',
+                                      fontWeight: 650,
+                                      color: 'var(--c-text-main)',
+                                      lineHeight: 1.35,
+                                      maxHeight: '32px',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      marginBottom: '4px'
+                                    }}
+                                  >
+                                    {item.name}
+                                  </div>
+
+                                  {item.price > 0 && (
+                                    <div style={{
+                                      fontSize: '12.5px',
+                                      fontWeight: 750,
+                                      color: 'var(--c-primary)',
+                                      fontVariantNumeric: 'tabular-nums',
+                                      marginBottom: '6px'
+                                    }}>
+                                      {formatCurrency(item.price)}
+                                    </div>
+                                  )}
+
+                                  {item.reason && (
+                                    <div style={{
+                                      fontSize: '10.5px',
+                                      color: 'var(--c-text-muted)',
+                                      lineHeight: 1.35,
+                                      marginBottom: '8px',
+                                      maxHeight: '28px',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical'
+                                    }} title={item.reason}>
+                                      {item.reason}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {isService ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsOpen(false);
+                                      const route = `booking?serviceId=${encodeURIComponent(item.id)}`;
+                                      if (typeof onNavigate === 'function') onNavigate(route);
+                                      else window.location.hash = `/${route}`;
+                                    }}
+                                    className="chatbot-card-btn chatbot-card-btn-primary"
+                                  >
+                                    <CalendarCheck size={12} /> Đặt lịch hẹn
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      addItem({
+                                        id: item.id,
+                                        name: item.name,
+                                        price: item.price,
+                                        image: item.image,
+                                      }, null, 1);
+                                      alert(`Đã thêm "${item.name}" vào giỏ hàng`);
+                                    }}
+                                    className="chatbot-card-btn chatbot-card-btn-outline"
+                                  >
+                                    <ShoppingBag size={12} /> Thêm vào giỏ
+                                  </button>
                                 )}
                               </div>
                             </div>
-
-                            {item.reason && (
-                              <div style={{ fontSize: '11px', color: 'var(--c-text-muted)', marginTop: '4px', fontStyle: 'italic', lineHeight: 1.4 }}>
-                                "{item.reason}"
-                              </div>
-                            )}
-
-                            {item.targetType === 'SERVICE' ? (
-                              <button
-                                onClick={() => {
-                                  setIsOpen(false);
-                                  const route = `booking?serviceId=${encodeURIComponent(item.id)}`;
-                                  if (typeof onNavigate === 'function') onNavigate(route);
-                                  else window.location.hash = `/${route}`;
-                                }}
-                                style={{
-                                  width: '100%',
-                                  marginTop: '8px',
-                                  padding: '6px',
-                                  borderRadius: 'var(--radius-pill)',
-                                  backgroundColor: 'var(--c-primary)',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
-                                }}
-                              >
-                                <CalendarCheck size={12} /> Đặt Lịch Liệu Trình Này
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  addItem(item, null, 1);
-                                }}
-                                style={{
-                                  width: '100%',
-                                  marginTop: '8px',
-                                  padding: '6px',
-                                  borderRadius: 'var(--radius-pill)',
-                                  backgroundColor: 'var(--c-gold)',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
-                                }}
-                              >
-                                <ShoppingBag size={12} /> Thêm Vào Giỏ Ngay
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
-                    );
-                  })()}
-                </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Action Pills */}
+                {msg.sender === 'bot' && msg.actions && msg.actions.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                    paddingLeft: '36px',
+                    marginTop: '2px',
+                    animation: 'chatbotFadeIn 0.35s ease-out forwards',
+                  }}>
+                    {msg.actions.map((act, actIdx) => (
+                      <button
+                        key={actIdx}
+                        onClick={() => {
+                          if (act.actionType === 'ADD_TO_CART') {
+                            addItem({
+                              id: act.payload.product_id,
+                              name: act.payload.product_name,
+                              price: act.payload.price,
+                              image: act.payload.image_url,
+                            }, null, act.payload.quantity || 1);
+                          } else if (act.actionType === 'BOOKING_PROPOSAL') {
+                            setIsOpen(false);
+                            const route = `booking?serviceId=${encodeURIComponent(act.payload.service_id)}`;
+                            if (typeof onNavigate === 'function') onNavigate(route);
+                            else window.location.hash = `/${route}`;
+                          } else if (act.actionType === 'VIEW_ORDER') {
+                            setIsOpen(false);
+                            const route = `account/orders?code=${encodeURIComponent(act.payload.order_number || '')}`;
+                            if (typeof onNavigate === 'function') onNavigate(route);
+                            else window.location.hash = `/${route}`;
+                          }
+                        }}
+                        className={`chatbot-action-chip ${act.actionType === 'BOOKING_PROPOSAL' ? 'is-booking' : ''}`}
+                      >
+                        {act.actionType === 'BOOKING_PROPOSAL' && <CalendarCheck size={12} />}
+                        {act.actionType === 'ADD_TO_CART' && <ShoppingBag size={12} />}
+                        {act.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
 

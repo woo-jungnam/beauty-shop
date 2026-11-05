@@ -57,9 +57,21 @@ export function OrderWorkspace({ onNavigate, initialOrderId }) {
             })}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 8 }}>
             <div>Tổng thanh toán: <strong style={{ color: 'var(--c-deal-red, #E11D48)', fontFamily: 'monospace', fontSize: 15 }}>{money(order.totalAmount)}</strong></div>
-            <button className="btn-luxury-outline" style={{ padding: '6px 14px', fontSize: 12 }} onClick={() => setSelected(order.id)}>Chi tiết & thao tác</button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {order.paymentMethod === 'BANK' && order.paymentStatus === 'PENDING' && order.status !== 'CANCELLED' && (!order.paymentDeadline || Date.parse(order.paymentDeadline) > Date.now()) && (
+                <button
+                  type="button"
+                  className="btn-luxury-primary"
+                  style={{ padding: '6px 12px', fontSize: 12, backgroundColor: '#D97706', borderColor: '#B45309' }}
+                  onClick={() => onNavigate(`order-success?id=${order.id}&method=BANK`)}
+                >
+                  Thanh toán ngay
+                </button>
+              )}
+              <button className="btn-luxury-outline" style={{ padding: '6px 14px', fontSize: 12 }} onClick={() => setSelected(order.id)}>Chi tiết & thao tác</button>
+            </div>
           </div>
         </article>
         );

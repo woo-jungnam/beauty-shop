@@ -1,5 +1,7 @@
 import '../../core/utils/idempotency_key.dart';
 
+import '../../core/utils/image_utils.dart';
+
 class PaymentInstruction {
   final String? method;
   final String? instructionMessage;
@@ -32,7 +34,7 @@ class PaymentInstruction {
       bankAccountNumber: json['bankAccountNumber']?.toString(),
       bankBin: json['bankBin']?.toString(),
       transferSyntax: json['transferSyntax']?.toString(),
-      qrCodeUrl: json['qrCodeUrl']?.toString(),
+      qrCodeUrl: ImageUtils.resolveUrl(json['qrCodeUrl']?.toString()),
       deepLinkUrl: json['deepLinkUrl']?.toString(),
     );
   }
@@ -69,10 +71,11 @@ class OrderItem {
           json['name']?.toString() ??
           'Sản phẩm',
       variantName: json['variantName']?.toString() ?? 'Tiêu chuẩn',
-      thumbnailUrl:
-          json['imageUrl']?.toString() ??
-          json['thumbnailUrl']?.toString() ??
-          json['image']?.toString(),
+      thumbnailUrl: ImageUtils.resolveUrl(
+        json['imageUrl']?.toString() ??
+            json['thumbnailUrl']?.toString() ??
+            json['image']?.toString(),
+      ),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
     );

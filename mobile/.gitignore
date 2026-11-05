@@ -1,0 +1,29 @@
+# Flutter/Dart/Pub related
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# IDE files
+*.iml
+.idea/
+.vscode/
+
+# Environment files and credentials
+.env
+.env.*
+env.json
+*.env.json
+!env.example.json
+key.properties
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+
+# Symbol & Obfuscation
+app.*.symbols
+app.*.map.json

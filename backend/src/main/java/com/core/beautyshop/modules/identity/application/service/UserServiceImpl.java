@@ -95,16 +95,26 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByUsernameForUpdate(username)
                 .orElseThrow(() -> new UnauthorizedException("Phiên làm việc không hợp lệ (người dùng không tồn tại). Vui lòng đăng nhập lại!"));
 
-        if (request.getFullName() != null) user.setFullName(request.getFullName());
+        if (request.getFullName() != null) user.setFullName(request.getFullName().trim());
         if (request.getPhone() != null) {
-            if (!request.getPhone().isBlank()
-                    && userRepository.existsByPhoneAndNotDeletedExcluding(request.getPhone(), user.getId())) {
-                throw new BusinessException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+            String cleanPhone = request.getPhone().trim();
+            if (cleanPhone.isEmpty()) {
+                user.setPhone(null);
+            } else {
+                if (userRepository.existsByPhoneAndNotDeletedExcluding(cleanPhone, user.getId())) {
+                    throw new BusinessException("Số điện thoại đã được sử dụng bởi tài khoản khác");
+                }
+                user.setPhone(cleanPhone);
             }
-            user.setPhone(request.getPhone());
         }
-        if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
-        if (request.getBio() != null) user.setBio(request.getBio());
+        if (request.getAvatarUrl() != null) {
+            String cleanAvatar = request.getAvatarUrl().trim();
+            user.setAvatarUrl(cleanAvatar.isEmpty() ? null : cleanAvatar);
+        }
+        if (request.getBio() != null) {
+            String cleanBio = request.getBio().trim();
+            user.setBio(cleanBio.isEmpty() ? null : cleanBio);
+        }
         if (request.getGender() != null) user.setGender(request.getGender());
         if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
 

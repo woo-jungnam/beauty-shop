@@ -1,5 +1,5 @@
 import { AddressBook } from '../components/account/AccountTools';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   CreditCard,
@@ -88,6 +88,50 @@ export const CheckoutPage = ({ onNavigate }) => {
     note: '',
     paymentMethod: 'BANK', // 'BANK' (VietQR / SePay) or 'COD' (Tiền mặt)
   });
+
+  const [saveToAddressBook, setSaveToAddressBook] = useState(true);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [availableVouchers, setAvailableVouchers] = useState([]);
+  const [loadingVouchers, setLoadingVouchers] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchDefaultAddress = async () => {
+      try {
+        const res = await apiClient.get('/api/v1/users/addresses');
+        const list = res?.data || res || [];
+        const addresses = Array.isArray(list) ? list : (list.content || []);
+        if (addresses.length > 0) {
+          const def = addresses.find(a => a.isDefault) || addresses[0];
+          setFormData(current => ({
+            ...current,
+            fullName: current.fullName || def.recipientName || '',
+            phone: current.phone || def.phone || '',
+            city: current.city || def.city || '',
+            district: current.district || def.district || '',
+            ward: current.ward || def.ward || '',
+            address: current.address || def.address || '',
+          }));
+        }
+      } catch (e) {
+        console.warn('Could not load user addresses', e);
+      }
+    };
+    fetchDefaultAddress();
+  }, [isAuthenticated]);
+
+  const fetchAvailableVouchers = async () => {
+    setLoadingVouchers(true);
+    try {
+      const res = await apiClient.get('/api/v1/promotions/available');
+      const list = res?.data || res || [];
+      setAvailableVouchers(Array.isArray(list) ? list : []);
+    } catch (e) {
+      console.warn('Could not fetch available vouchers', e);
+    } finally {
+      setLoadingVouchers(false);
+    }
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -185,6 +229,23 @@ export const CheckoutPage = ({ onNavigate }) => {
 
       sessionStorage.setItem('last_created_order', JSON.stringify(orderData));
       if (!user) { try { const key = `beautyshop_guest_orders:${sessionId}`; const previous = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify([{ id: orderData.id, orderNumber: orderData.orderNumber }, ...previous.filter(row => row.id !== orderData.id)].slice(0, 100))); } catch {} }
+
+      if (isAuthenticated && saveToAddressBook && formData.address && formData.city && formData.ward) {
+        try {
+          await apiClient.post('/api/v1/users/addresses', {
+            recipientName: formData.fullName.trim(),
+            phone: formData.phone.trim(),
+            address: formData.address.trim(),
+            ward: formData.ward.trim(),
+            district: formData.district?.trim() || '',
+            city: formData.city.trim(),
+            isDefault: false
+          });
+          window.dispatchEvent(new Event('auth:address-updated'));
+        } catch (addrErr) {
+          console.warn('Auto-save address notice:', addrErr);
+        }
+      }
 
       clearCart();
 
@@ -376,6 +437,20 @@ export const CheckoutPage = ({ onNavigate }) => {
                   style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', outline: 'none' }}
                 />
               </div>
+
+              {isAuthenticated && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--c-primary)', cursor: 'pointer', fontWeight: 500 }}>
+                    <input
+                      type="checkbox"
+                      checked={saveToAddressBook}
+                      onChange={(e) => setSaveToAddressBook(e.target.checked)}
+                      style={{ accentColor: 'var(--c-gold)' }}
+                    />
+                    Lưu thông tin giao hàng này vào Sổ địa chỉ để dùng cho các đơn sau
+                  </label>
+                </div>
+              )}
 
               <div style={{ marginTop: '14px' }}>
                 <label htmlFor="checkout-note" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>GHI CHÚ GIAO HÀNG</label>
@@ -641,6 +716,28 @@ export const CheckoutPage = ({ onNavigate }) => {
                       <span>{voucherSuccess}</span>
                     </div>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => { setShowVoucherModal(true); fetchAvailableVouchers(); }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--c-primary, #721B29)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      marginTop: '4px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: 0,
+                      textAlign: 'left',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    <Sparkles size={13} color="var(--c-gold)" /> Xem danh sách mã giảm giá khả dụng
+                  </button>
                 </div>
               )}
             </div>
@@ -709,6 +806,127 @@ export const CheckoutPage = ({ onNavigate }) => {
           </div>
         </div>
       </form>
+
+      {showVoucherModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.55)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 'var(--radius-md, 8px)',
+            maxWidth: '520px',
+            width: '100%',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--c-border, #E5E7EB)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Tag size={18} color="var(--c-gold, #C5A880)" />
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--c-primary, #721B29)' }}>Mã giảm giá khả dụng</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowVoucherModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text-muted, #6B7280)', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '16px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {loadingVouchers && <p style={{ fontSize: '13px', color: 'var(--c-text-muted)', textAlign: 'center', margin: '20px 0' }}>Đang tìm kiếm mã ưu đãi...</p>}
+              {!loadingVouchers && availableVouchers.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--c-text-muted)' }}>
+                  <p style={{ margin: 0, fontSize: '13.5px' }}>Hiện tại chưa có mã giảm giá nào đang mở.</p>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '12px' }}>Bạn vẫn được hưởng chiết khấu tự động theo hạng thành viên (nếu có).</p>
+                </div>
+              )}
+              {!loadingVouchers && availableVouchers.map(v => {
+                const isApplicable = subtotal >= Number(v.minOrderAmount || 0);
+                const discountLabel = v.discountType === 'PERCENTAGE'
+                  ? `Giảm ${v.discountValue}% (tối đa ${formatCurrency(v.maxDiscountAmount || 0)})`
+                  : `Giảm ${formatCurrency(v.discountValue)}`;
+                return (
+                  <div key={v.id} style={{
+                    border: '1px solid var(--c-border, #E5E7EB)',
+                    borderRadius: '6px',
+                    padding: '12px 14px',
+                    backgroundColor: isApplicable ? '#FAFAFA' : '#F9FAFB',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '12px',
+                    opacity: isApplicable ? 1 : 0.65
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          color: 'var(--c-primary, #721B29)',
+                          background: '#FCE7F3',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          letterSpacing: '0.5px'
+                        }}>
+                          {v.code}
+                        </span>
+                        <strong style={{ fontSize: '13px', color: '#1F2937' }}>{v.name}</strong>
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
+                        {discountLabel}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--c-text-muted, #6B7280)', marginTop: '2px' }}>
+                        Đơn tối thiểu: {formatCurrency(v.minOrderAmount || 0)}
+                        {v.endsAt && ` · HSD: ${new Date(v.endsAt).toLocaleDateString('vi-VN')}`}
+                      </div>
+                      {!isApplicable && (
+                        <div style={{ fontSize: '11px', color: '#DC2626', marginTop: '2px' }}>
+                          Chưa đủ giá trị đơn hàng tối thiểu
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!isApplicable || isApplyingVoucher}
+                      onClick={async () => {
+                        setShowVoucherModal(false);
+                        setInputVoucher(v.code);
+                        setIsApplyingVoucher(true);
+                        setVoucherError('');
+                        setVoucherSuccess('');
+                        try {
+                          const res = await applyVoucher(v.code, subtotal);
+                          setInputVoucher('');
+                          setVoucherSuccess(res?.message || `Áp dụng mã ${v.code} thành công!`);
+                        } catch (err) {
+                          setVoucherError(err.message || 'Không thể áp dụng mã giảm giá này.');
+                        } finally {
+                          setIsApplyingVoucher(false);
+                        }
+                      }}
+                      className={isApplicable ? 'btn-luxury-primary' : 'btn-luxury-outline'}
+                      style={{ fontSize: '12px', padding: '6px 14px', flexShrink: 0 }}
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

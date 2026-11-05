@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
+import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 import 'package:beautyshop_mobile/data/models/order_model.dart';
 import 'package:beautyshop_mobile/providers/order_provider.dart';
 import 'package:beautyshop_mobile/presentation/screens/checkout/vietqr_payment_screen.dart';
@@ -265,13 +266,24 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         width: 34,
                         height: 34,
                         color: const Color(0xFFF3F4F6),
-                        child: item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
-                            ? Image.network(
-                                item.thumbnailUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined, size: 14, color: Color(0xFF9CA3AF)),
-                              )
-                            : const Icon(Icons.image_outlined, size: 14, color: Color(0xFF9CA3AF)),
+                        child: () {
+                          final imgUrl = ImageUtils.resolveUrl(item.thumbnailUrl);
+                          return imgUrl != null && imgUrl.isNotEmpty
+                              ? Image.network(
+                                  imgUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.image_outlined,
+                                    size: 14,
+                                    color: Color(0xFF9CA3AF),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.image_outlined,
+                                  size: 14,
+                                  color: Color(0xFF9CA3AF),
+                                );
+                        }(),
                       ),
                     ),
                     const SizedBox(width: 8),

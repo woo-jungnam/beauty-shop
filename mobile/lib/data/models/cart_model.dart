@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 class CartItem {
   final int id;
   final int productId;
@@ -39,10 +41,11 @@ class CartItem {
           json['variantName']?.toString() ??
           json['sku']?.toString() ??
           'Tiêu chuẩn',
-      thumbnailUrl:
-          json['imageUrl']?.toString() ??
-          json['thumbnailUrl']?.toString() ??
-          json['image']?.toString(),
+      thumbnailUrl: ImageUtils.resolveUrl(
+        json['imageUrl']?.toString() ??
+            json['thumbnailUrl']?.toString() ??
+            json['image']?.toString(),
+      ),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       originalPrice:
           (json['originalPrice'] as num?)?.toDouble() ??

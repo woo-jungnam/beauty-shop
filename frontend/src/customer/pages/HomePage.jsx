@@ -92,7 +92,11 @@ export const HomePage = ({ onNavigate }) => {
 
   const [clearanceProducts, setClearanceProducts] = useState([]);
   const [curatedFlashProducts, setCuratedFlashProducts] = useState([]);
-  const [flashFilterType, setFlashFilterType] = useState('ALL'); // 'ALL' | 'CURATED' | 'CLEARANCE'
+  const [campaignFlashProducts, setCampaignFlashProducts] = useState([]);
+  const [flashOverview, setFlashOverview] = useState(null);
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
+  const [flashFilterType, setFlashFilterType] = useState('ALL'); // 'ALL' | 'CAMPAIGN' | 'CURATED' | 'CLEARANCE'
+  const [flashCountdown, setFlashCountdown] = useState({ hours: '00', minutes: '00', seconds: '00' });
   const [clearanceLoading, setClearanceLoading] = useState(true);
   const [clearanceError, setClearanceError] = useState('');
   const [clearanceAttempt, setClearanceAttempt] = useState(0);
@@ -111,19 +115,35 @@ export const HomePage = ({ onNavigate }) => {
   const [currentFlashTab, setCurrentFlashTab] = useState(0);
   const [isFlashHovered, setIsFlashHovered] = useState(false);
 
+  useEffect(() => {
+    if (!flashOverview?.endsAt) return;
+    const target = new Date(flashOverview.endsAt).getTime();
+    const updateCountdown = () => {
+      const diff = Math.max(0, target - Date.now());
+      const hours = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
+      const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
+      const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
+      setFlashCountdown({ hours, minutes, seconds });
+    };
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [flashOverview?.endsAt]);
+
   const allFlashProducts = useMemo(() => {
+    if (flashFilterType === 'CAMPAIGN') return campaignFlashProducts;
     if (flashFilterType === 'CLEARANCE') return clearanceProducts;
     if (flashFilterType === 'CURATED') return curatedFlashProducts;
     const seen = new Set();
     const merged = [];
-    for (const p of [...curatedFlashProducts, ...clearanceProducts]) {
+    for (const p of [...campaignFlashProducts, ...curatedFlashProducts, ...clearanceProducts]) {
       if (p?.id && !seen.has(p.id)) {
         seen.add(p.id);
         merged.push(p);
       }
     }
     return merged;
-  }, [clearanceProducts, curatedFlashProducts, flashFilterType]);
+  }, [campaignFlashProducts, clearanceProducts, curatedFlashProducts, flashFilterType]);
 
   const totalFlashTabs = useMemo(() => {
     return Math.max(1, Math.ceil(allFlashProducts.length / FLASH_PAGE_SIZE));
@@ -214,8 +234,9 @@ export const HomePage = ({ onNavigate }) => {
     Promise.allSettled([
       apiClient.get('/api/v1/products/expiring-soon?limit=12&thresholdDays=90', { signal: controller.signal }),
       apiClient.get('/api/v1/products/search?onSale=true&size=12', { signal: controller.signal }),
+      apiClient.get('/api/v1/flash-sales/current', { signal: controller.signal }),
     ])
-      .then(([expiringRes, onSaleRes]) => {
+      .then(([expiringRes, onSaleRes, flashRes]) => {
         if (controller.signal.aborted) return;
         const expiringData = expiringRes.status === 'fulfilled' ? (expiringRes.value?.data ?? expiringRes.value) : [];
         const expiringList = Array.isArray(expiringData) ? expiringData : expiringData?.content || [];
@@ -224,11 +245,50 @@ export const HomePage = ({ onNavigate }) => {
         const onSaleData = onSaleRes.status === 'fulfilled' ? (onSaleRes.value?.data ?? onSaleRes.value) : [];
         const onSaleList = Array.isArray(onSaleData) ? onSaleData : onSaleData?.content || [];
         setCuratedFlashProducts(onSaleList);
+
+        if (flashRes.status === 'fulfilled') {
+          const fData = flashRes.value?.data ?? flashRes.value;
+          if (fData) {
+            setFlashOverview(fData);
+            if (fData.currentSlotId) setSelectedSlotId(fData.currentSlotId);
+            if (Array.isArray(fData.items) && fData.items.length > 0) {
+              const mapped = fData.items.map((it) => ({
+                id: it.productId,
+                name: it.productName,
+                slug: `product-${it.productId}`,
+                thumbnailUrl: it.thumbnailUrl,
+                minPrice: it.flashPrice,
+                price: it.flashPrice,
+                originalPrice: it.originalPrice,
+                discountPrice: it.flashPrice,
+                isFeatured: true,
+                onSale: true,
+                status: 'ACTIVE',
+                totalStock: it.remainingQuota,
+                totalSold: it.quantitySold,
+                flashQuota: it.quantityQuota,
+                flashSold: it.quantitySold,
+                flashPercent: it.soldPercent,
+                variants: [{
+                  id: it.productVariantId,
+                  sku: it.sku,
+                  variantName: it.variantName,
+                  price: it.originalPrice,
+                  discountPrice: it.flashPrice,
+                  stockQuantity: it.remainingQuota,
+                  isActive: true,
+                }],
+              }));
+              setCampaignFlashProducts(mapped);
+            }
+          }
+        }
       })
       .catch(() => {
         if (!controller.signal.aborted) {
           setClearanceProducts([]);
           setCuratedFlashProducts([]);
+          setCampaignFlashProducts([]);
           setClearanceError('Chưa tải được sản phẩm Flash Sale. Vui lòng thử lại.');
         }
       })
@@ -959,16 +1019,47 @@ export const HomePage = ({ onNavigate }) => {
             borderBottom: '1px solid var(--c-border-subtle)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <h2 style={{
-                margin: 0,
-                color: '#DC2626',
-                fontSize: '20px',
-                fontWeight: 800,
-                fontFamily: 'var(--font-sans)',
-                letterSpacing: '-0.01em'
-              }}>
-                FLASH SALE & XẢ KHO • GIÁ SỐC ONLINE
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <h2 style={{
+                  margin: 0,
+                  color: '#DC2626',
+                  fontSize: '20px',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-sans)',
+                  letterSpacing: '-0.01em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <Zap size={20} color="#DC2626" />
+                  FLASH SALE GIỜ VÀNG • GIÁ SỐC ONLINE
+                </h2>
+
+                {/* Real-time Countdown Timer */}
+                {flashOverview?.endsAt && (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: '#FEE2E2',
+                    border: '1px solid #FECACA',
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    color: '#991B1B'
+                  }}>
+                    <Clock size={13} color="#DC2626" />
+                    <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>Kết thúc trong:</span>
+                    <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.hours}</span>
+                    <span>:</span>
+                    <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.minutes}</span>
+                    <span>:</span>
+                    <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.seconds}</span>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FEE2E2', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
@@ -986,6 +1077,24 @@ export const HomePage = ({ onNavigate }) => {
                 >
                   Tất cả ({allFlashProducts.length})
                 </button>
+                {campaignFlashProducts.length > 0 && (
+                  <button
+                    type="button"
+                    style={{
+                      border: 0,
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      backgroundColor: flashFilterType === 'CAMPAIGN' ? '#DC2626' : 'transparent',
+                      color: flashFilterType === 'CAMPAIGN' ? '#FFFFFF' : '#991B1B',
+                    }}
+                    onClick={() => { setFlashFilterType('CAMPAIGN'); setCurrentFlashTab(0); }}
+                  >
+                    Khung giờ vàng ({campaignFlashProducts.length})
+                  </button>
+                )}
                 {curatedFlashProducts.length > 0 && (
                   <button
                     type="button"
@@ -1070,6 +1179,88 @@ export const HomePage = ({ onNavigate }) => {
               )}
             </div>
           </div>
+
+          {/* Time Slot navigation pills */}
+          {flashOverview?.slots && flashOverview.slots.length > 1 && (
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', marginBottom: '8px' }}>
+              {flashOverview.slots.map((s) => {
+                const isSelected = s.campaignId === (selectedSlotId || flashOverview.currentSlotId);
+                const formatSlotTime = (iso) => {
+                  try {
+                    const d = new Date(iso);
+                    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                  } catch { return ''; }
+                };
+                return (
+                  <button
+                    key={s.campaignId}
+                    type="button"
+                    onClick={async () => {
+                      setSelectedSlotId(s.campaignId);
+                      setFlashFilterType('CAMPAIGN');
+                      setCurrentFlashTab(0);
+                      try {
+                        const res = await apiClient.get(ENDPOINTS.FLASH_SALES.PUBLIC_CAMPAIGN_ITEMS(s.campaignId));
+                        const items = res?.data ?? res ?? [];
+                        if (Array.isArray(items)) {
+                          const mapped = items.map((it) => ({
+                            id: it.productId,
+                            name: it.productName,
+                            slug: `product-${it.productId}`,
+                            thumbnailUrl: it.thumbnailUrl,
+                            minPrice: it.flashPrice,
+                            price: it.flashPrice,
+                            originalPrice: it.originalPrice,
+                            discountPrice: it.flashPrice,
+                            isFeatured: true,
+                            onSale: true,
+                            status: 'ACTIVE',
+                            totalStock: it.remainingQuota,
+                            totalSold: it.quantitySold,
+                            flashQuota: it.quantityQuota,
+                            flashSold: it.quantitySold,
+                            flashPercent: it.soldPercent,
+                            variants: [{
+                              id: it.productVariantId,
+                              sku: it.sku,
+                              variantName: it.variantName,
+                              price: it.originalPrice,
+                              discountPrice: it.flashPrice,
+                              stockQuantity: it.remainingQuota,
+                              isActive: true,
+                            }],
+                          }));
+                          setCampaignFlashProducts(mapped);
+                        }
+                      } catch (err) {
+                        console.warn('Could not load slot items', err);
+                      }
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      border: isSelected ? '1.5px solid #DC2626' : '1px solid #E5E7EB',
+                      backgroundColor: isSelected ? '#FEF2F2' : '#FFFFFF',
+                      color: isSelected ? '#DC2626' : '#374151',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      minWidth: '100px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <strong style={{ fontSize: '13px', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatSlotTime(s.startsAt)} - {formatSlotTime(s.endsAt)}
+                    </strong>
+                    <span style={{ fontSize: '11px', marginTop: '2px', fontWeight: 600, color: s.isCurrent ? '#059669' : '#6B7280' }}>
+                      {s.statusLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {clearanceLoading ? (
             <div className="horizontal-carousel-wrapper">

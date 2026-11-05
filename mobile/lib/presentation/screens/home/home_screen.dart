@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/cart_actions.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../providers/product_provider.dart';
 import '../../../data/models/product_model.dart';
 import '../../widgets/app_top_bar.dart';
@@ -24,10 +25,59 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
+  late final ScrollController _scrollController;
+  final Map<int, int> _visibleCountByTab = {0: 6, 1: 6, 2: 6};
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 3, vsync: this)..addListener(_onTabChanged);
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoadingMore) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (currentScroll >= maxScroll - 200) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    final tabIndex = _tabs.index;
+    final provider = context.read<ProductProvider>();
+    final feed = switch (tabIndex) {
+      0 => provider.recommendedProducts,
+      1 => provider.bestSellingProducts,
+      _ => provider.products,
+    };
+    final currentVisible = _visibleCountByTab[tabIndex] ?? 6;
+
+    if (currentVisible < feed.length) {
+      setState(() => _isLoadingMore = true);
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      setState(() {
+        _visibleCountByTab[tabIndex] = currentVisible + 6;
+        _isLoadingMore = false;
+      });
+      return;
+    }
+
+    if (tabIndex == 2 && provider.hasMoreCatalog) {
+      setState(() => _isLoadingMore = true);
+      final loaded = await provider.loadMoreCatalogProducts(size: 6);
+      if (!mounted) return;
+      setState(() {
+        if (loaded) {
+          _visibleCountByTab[tabIndex] = currentVisible + 6;
+        }
+        _isLoadingMore = false;
+      });
+    }
   }
 
   void _onTabChanged() {
@@ -36,6 +86,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
     super.dispose();
@@ -79,14 +131,17 @@ class _HomeScreenState extends State<HomeScreen>
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.getBorder(context)),
             ),
-            child: url != null && url.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.contain,
-                    errorWidget: (_, _, _) =>
-                        const Icon(Icons.storefront_outlined),
-                  )
-                : const Icon(Icons.spa_outlined),
+            child: () {
+              final imgUrl = ImageUtils.resolveUrl(url);
+              return imgUrl != null && imgUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: imgUrl,
+                      fit: BoxFit.contain,
+                      errorWidget: (_, _, _) =>
+                          const Icon(Icons.storefront_outlined),
+                    )
+                  : const Icon(Icons.spa_outlined);
+            }(),
           ),
           const SizedBox(height: 6),
           Text(
@@ -154,8 +209,12 @@ class _HomeScreenState extends State<HomeScreen>
         label: const Text('Tư vấn AI'),
       ),
       body: RefreshIndicator(
-        onRefresh: provider.loadInitialData,
+        onRefresh: () async {
+          _visibleCountByTab.clear();
+          await provider.loadInitialData();
+        },
         child: ListView(
+          controller: _scrollController,
           padding: const EdgeInsets.only(bottom: 96),
           children: [
             if (provider.isLoading) const LinearProgressIndicator(),
@@ -231,14 +290,14 @@ class _HomeScreenState extends State<HomeScreen>
               const CatalogState(message: 'Hiện chưa có sản phẩm ưu đãi')
             else if (provider.flashSaleProducts.isNotEmpty)
               SizedBox(
-                height: 245,
+                height: 265,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   itemCount: provider.flashSaleProducts.take(6).length,
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (_, index) => SizedBox(
-                    width: 145,
+                    width: 152,
                     child: _card(provider.flashSaleProducts[index]),
                   ),
                 ),
@@ -279,20 +338,79 @@ class _HomeScreenState extends State<HomeScreen>
             else if (!provider.isLoading && feed.isEmpty)
               const CatalogState(message: 'Chưa có sản phẩm trong mục này')
             else
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: feed.take(12).length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 0.65,
-                  ),
-                  itemBuilder: (_, index) => _card(feed[index]),
-                ),
+              Builder(
+                builder: (context) {
+                  final currentVisible = _visibleCountByTab[_tabs.index] ?? 6;
+                  final visibleProducts = feed.take(currentVisible).toList();
+                  final hasMore = currentVisible < feed.length ||
+                      (_tabs.index == 2 && provider.hasMoreCatalog);
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: visibleProducts.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 0.60,
+                          ),
+                          itemBuilder: (_, index) =>
+                              _card(visibleProducts[index]),
+                        ),
+                        if (_isLoadingMore)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (hasMore)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: OutlinedButton.icon(
+                              onPressed: _loadMore,
+                              icon: const Icon(Icons.expand_more, size: 18),
+                              label: const Text('Xem thêm 6 sản phẩm'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: const BorderSide(
+                                  color: AppColors.primarySoft,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (feed.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: Text(
+                                'Đã hiển thị tất cả sản phẩm',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textLight,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               ),
           ],
         ),

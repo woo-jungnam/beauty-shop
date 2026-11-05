@@ -86,6 +86,7 @@ class Intent(str, Enum):
     OUT_OF_DOMAIN = "OUT_OF_DOMAIN"
     UNKNOWN = "UNKNOWN"
     CONSULTATION = "CONSULTATION"
+    BOOKING = "BOOKING"
 
 
 UserIntent = Intent
@@ -106,7 +107,7 @@ PRIMARY_TO_LEGACY_INTENT = {
     PrimaryIntent.VAN_DE_DA.value: Intent.CONSULTATION,
     PrimaryIntent.HO_TRO_DON_HANG.value: Intent.ORDER_STATUS,
     PrimaryIntent.DICH_VU_LAM_DEP.value: Intent.PRODUCT_SEARCH,
-    PrimaryIntent.DAT_LICH.value: Intent.PRODUCT_SEARCH,
+    PrimaryIntent.DAT_LICH.value: Intent.BOOKING,
     PrimaryIntent.CHAO_HOI.value: Intent.GENERAL_CHAT,
     PrimaryIntent.NGOAI_PHAM_VI.value: Intent.OUT_OF_DOMAIN,
     PrimaryIntent.KHONG_XAC_DINH.value: Intent.UNKNOWN,
@@ -115,7 +116,7 @@ PRIMARY_TO_LEGACY_INTENT = {
     "DETAIL": Intent.PRODUCT_DETAIL,
     "COMPARE": Intent.COMPARISON,
     "ROUTINE": Intent.ROUTINE_RECOMMENDATION,
-    "BOOKING": Intent.PRODUCT_SEARCH,
+    "BOOKING": Intent.BOOKING,
     "ORDER": Intent.ORDER_STATUS,
     "CHAT": Intent.GENERAL_CHAT,
     "OUT_OF_DOMAIN": Intent.OUT_OF_DOMAIN,
@@ -135,20 +136,7 @@ LEGACY_TO_PRIMARY_INTENT = {
     Intent.OUT_OF_DOMAIN: PrimaryIntent.NGOAI_PHAM_VI.value,
     Intent.UNKNOWN: PrimaryIntent.KHONG_XAC_DINH.value,
     Intent.CONSULTATION: PrimaryIntent.VAN_DE_DA.value,
-}
-
-LEGACY_TO_PRIMARY_INTENT = {
-    Intent.PRODUCT_SEARCH: PrimaryIntent.TU_VAN_SAN_PHAM.value,
-    Intent.PRODUCT_DETAIL: PrimaryIntent.THONG_TIN_SAN_PHAM.value,
-    Intent.PRICE_QUERY: PrimaryIntent.GIA_NGAN_SACH.value,
-    Intent.AVAILABILITY_QUERY: PrimaryIntent.THONG_TIN_SAN_PHAM.value,
-    Intent.COMPARISON: PrimaryIntent.SO_SANH_SAN_PHAM.value,
-    Intent.ROUTINE_RECOMMENDATION: PrimaryIntent.XAY_DUNG_CHU_TRINH.value,
-    Intent.GENERAL_INFORMATION: PrimaryIntent.HOI_DAP_SAN_PHAM.value,
-    Intent.GENERAL_CHAT: PrimaryIntent.CHAO_HOI.value,
-    Intent.ORDER_STATUS: PrimaryIntent.HO_TRO_DON_HANG.value,
-    Intent.OUT_OF_DOMAIN: PrimaryIntent.NGOAI_PHAM_VI.value,
-    Intent.UNKNOWN: PrimaryIntent.KHONG_XAC_DINH.value,
+    Intent.BOOKING: PrimaryIntent.DAT_LICH.value,
 }
 
 
@@ -634,23 +622,47 @@ class UnderstandingResult(BaseModel):
             }
 
         entitiesDict = data.get("entities")
-        if isinstance(entitiesDict, dict):
-            if entitiesDict.get("product_category") and not data.get("category"):
-                data["category"] = entitiesDict["product_category"]
-            if entitiesDict.get("form_factor") and not data.get("form_factor"):
-                data["form_factor"] = entitiesDict["form_factor"]
-            brands = entitiesDict.get("brands") or []
-            if brands and not data.get("brand"):
-                data["brand"] = brands[0]
-        else:
-            entDict: dict[str, Any] = {}
-            if data.get("category"):
-                entDict["product_category"] = data["category"]
-            if data.get("brand"):
-                entDict["brands"] = [data["brand"]]
-            if data.get("form_factor"):
-                entDict["form_factor"] = data["form_factor"]
-            data["entities"] = entDict
+        if not isinstance(entitiesDict, dict):
+            entitiesDict = {}
+            data["entities"] = entitiesDict
+
+        if entitiesDict.get("product_category") and not data.get("category"):
+            data["category"] = entitiesDict["product_category"]
+        elif data.get("category") and not entitiesDict.get("product_category"):
+            entitiesDict["product_category"] = data["category"]
+
+        if entitiesDict.get("form_factor") and not data.get("form_factor"):
+            data["form_factor"] = entitiesDict["form_factor"]
+        elif data.get("form_factor") and not entitiesDict.get("form_factor"):
+            entitiesDict["form_factor"] = data["form_factor"]
+
+        brands = entitiesDict.get("brands") or []
+        if brands and not data.get("brand"):
+            data["brand"] = brands[0]
+        elif data.get("brand") and not brands:
+            entitiesDict["brands"] = [data["brand"]]
+
+        cDict = data.get("constraints") or {}
+        pDict = data.get("preferences") or {}
+
+        s_type = cDict.get("skin_type") or data.get("skin_type")
+        if s_type and not entitiesDict.get("skin_type"):
+            entitiesDict["skin_type"] = s_type
+
+        concerns = pDict.get("concerns") or data.get("concerns")
+        if concerns and not entitiesDict.get("target_concerns"):
+            entitiesDict["target_concerns"] = concerns if isinstance(concerns, list) else [str(concerns)]
+
+        ingrs = pDict.get("ingredients") or data.get("ingredients")
+        if ingrs and not entitiesDict.get("ingredients_mentioned"):
+            entitiesDict["ingredients_mentioned"] = ingrs if isinstance(ingrs, list) else [str(ingrs)]
+
+        m_price = cDict.get("max_price") or data.get("max_price")
+        if m_price is not None and not entitiesDict.get("price_mentioned"):
+            try:
+                entitiesDict["price_mentioned"] = float(m_price)
+            except (ValueError, TypeError):
+                pass
 
         formFactorVal = data.get("form_factor")
         if formFactorVal and isinstance(data.get("constraints"), dict) and "form_factor" not in data["constraints"]:

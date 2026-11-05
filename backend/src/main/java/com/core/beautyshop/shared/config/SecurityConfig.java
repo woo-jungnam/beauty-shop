@@ -109,7 +109,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/cart/**",
                                 "/api/v1/orders/checkout",
-                                "/api/v1/promotions/**"
+                                "/api/v1/promotions/**",
+                                "/api/v1/flash-sales/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/v1/admin/orders/**",
@@ -124,6 +125,7 @@ public class SecurityConfig {
                                 "/api/v1/admin/banners/**",
                                 "/api/v1/admin/reviews/**",
                                 "/api/v1/admin/vouchers/**",
+                                "/api/v1/admin/flash-sales/**",
                                 "/api/v1/admin/staff/**",
                                 "/api/v1/admin/spa/**",
                                 "/api/v1/admin/dashboard/**"

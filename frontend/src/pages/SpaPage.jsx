@@ -39,6 +39,7 @@ import { TreatmentAppointmentDialog } from '../features/treatments/TreatmentAppo
 import { useAuth } from '../app/providers/AuthProvider';
 import { SpaRefundDialog } from '../features/spa/SpaRefundDialog';
 import { TicketDetails } from '../features/spa/TicketDetails';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 
 const slugify = (value) =>
   value
@@ -932,115 +933,113 @@ export const SpaPage = () => {
   return (
     <div className={`content-container ${activeTab === 'services' ? 'spa-management-catalog' : ''}`}>
       {settlementTicket && <SpaRefundDialog ticketId={settlementTicket.id} onClose={() => setSettlementTicket(null)} onUpdated={fetchTickets} />}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quản trị Spa, Gói Liệu trình & Ca trực Chuyên viên</h1>
-          <p className="page-subtitle">
-            Điều phối lịch hẹn khách hàng, danh mục dịch vụ spa, xếp ca làm việc chuyên viên và vé liệu trình
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {activeTab === 'categories' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateCategory} icon={Plus}>
-              Thêm danh mục Spa
-            </Button>
-          )}
-          {activeTab === 'facilities' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateFacility} icon={Plus}>
-              Thêm phòng / thiết bị
-            </Button>
-          )}
-          {activeTab === 'preparation' && (
-            <Button variant="primary" size="sm" onClick={handleOpenCreateTemplate} icon={Plus}>
-              Tạo mẫu khảo sát mới
-            </Button>
-          )}
-          {activeTab === 'staff' && (
-            <Button variant="primary" size="sm" onClick={() => setCreateStaffModalOpen(true)} icon={Plus}>
-              Thêm chuyên viên mới
-            </Button>
-          )}
-          {activeTab !== 'services' && activeTab !== 'policy' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (activeTab === 'categories') fetchCategories();
-              else if (activeTab === 'facilities') fetchFacilities();
-              else if (activeTab === 'preparation') fetchFormTemplates();
-              else if (activeTab === 'staff') { fetchStaff(); fetchSpaCatalog(); }
-              else if (activeTab === 'appointments') fetchAppointments(aptPage);
-              else if (activeTab === 'tickets') fetchTickets();
-            }}
-            loading={loading}
-            icon={RefreshCw}
-          >
-            Làm mới
-          </Button>
-          )}
-        </div>
-      </div>
+
+      <AdminSectionNav
+        rootTitle="Quản trị Spa & Clinic"
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        subtitle="Điều phối lịch hẹn khách hàng, danh mục dịch vụ spa, xếp ca làm việc chuyên viên và vé liệu trình"
+        items={[
+          {
+            id: 'categories',
+            label: 'Danh mục dịch vụ',
+            count: spaCategories.length,
+            icon: FolderTree,
+            description: 'Phân loại các gói chăm sóc da & liệu trình'
+          },
+          {
+            id: 'facilities',
+            label: 'Phòng & Thiết bị',
+            count: facilities.length,
+            icon: Building,
+            description: 'Cơ sở vật chất, phòng trị liệu và máy móc chuyên sâu'
+          },
+          {
+            id: 'preparation',
+            label: 'Biểu mẫu an toàn',
+            count: formTemplates.length,
+            icon: FileText,
+            description: 'Mẫu khảo sát tiền sử da liễu & dị ứng trước liệu trình'
+          },
+          {
+            id: 'services',
+            label: 'Dịch vụ & Gói Liệu trình',
+            icon: Sparkles,
+            description: 'Menu bảng giá dịch vụ và các combo gói chăm sóc'
+          },
+          {
+            id: 'staff',
+            label: 'Chuyên viên & Kỹ năng',
+            count: staffList.length,
+            icon: UserCheck,
+            description: 'Hồ sơ kỹ thuật viên, phân ca trực và chứng chỉ kỹ năng'
+          },
+          {
+            id: 'policy',
+            label: 'Chính sách & Giờ làm việc',
+            icon: Clock,
+            description: 'Giờ mở cửa tuần, ngày nghỉ lễ ngoại lệ và chính sách cọc'
+          },
+          {
+            id: 'appointments',
+            label: 'Lịch hẹn Spa',
+            count: aptTotalElements,
+            icon: CalendarCheck,
+            description: 'Theo dõi tiếp đón, xếp phòng và thực hiện liệu trình'
+          },
+          {
+            id: 'tickets',
+            label: 'Vé dịch vụ & Thẻ Spa',
+            count: tickets.length,
+            icon: Ticket,
+            description: 'Ví thẻ liệu trình điện tử và số buổi còn lại của khách'
+          }
+        ]}
+        actions={
+          <>
+            {activeTab === 'categories' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateCategory} icon={Plus}>
+                Thêm danh mục Spa
+              </Button>
+            )}
+            {activeTab === 'facilities' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateFacility} icon={Plus}>
+                Thêm phòng / thiết bị
+              </Button>
+            )}
+            {activeTab === 'preparation' && (
+              <Button variant="primary" size="sm" onClick={handleOpenCreateTemplate} icon={Plus}>
+                Tạo mẫu khảo sát mới
+              </Button>
+            )}
+            {activeTab === 'staff' && (
+              <Button variant="primary" size="sm" onClick={() => setCreateStaffModalOpen(true)} icon={Plus}>
+                Thêm chuyên viên mới
+              </Button>
+            )}
+            {activeTab !== 'services' && activeTab !== 'policy' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (activeTab === 'categories') fetchCategories();
+                  else if (activeTab === 'facilities') fetchFacilities();
+                  else if (activeTab === 'preparation') fetchFormTemplates();
+                  else if (activeTab === 'staff') { fetchStaff(); fetchSpaCatalog(); }
+                  else if (activeTab === 'appointments') fetchAppointments(aptPage);
+                  else if (activeTab === 'tickets') fetchTickets();
+                }}
+                loading={loading}
+                icon={RefreshCw}
+              >
+                Làm mới
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {policyFeedback && !policyModalOpen && <div className={`spa-catalog-notice ${policyFeedback.tone}`} role={policyFeedback.tone === 'error' ? 'alert' : 'status'}>{policyFeedback.message}<button type="button" aria-label="Đóng thông báo" onClick={() => setPolicyFeedback(null)}>×</button></div>}
-
-      <div className="tabs-header">
-        <button
-          className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
-          onClick={() => setActiveTab('categories')}
-        >
-          <FolderTree size={15} />
-          Danh mục dịch vụ ({spaCategories.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'facilities' ? 'active' : ''}`}
-          onClick={() => setActiveTab('facilities')}
-        >
-          <Building size={15} />
-          Phòng & Thiết bị ({facilities.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'preparation' ? 'active' : ''}`}
-          onClick={() => setActiveTab('preparation')}
-        >
-          <FileText size={15} />
-          Biểu mẫu khảo sát & An toàn ({formTemplates.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
-          onClick={() => setActiveTab('services')}
-        >
-          <Sparkles size={15} />
-          Dịch vụ & Gói Liệu trình
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
-          onClick={() => setActiveTab('staff')}
-        >
-          <UserCheck size={15} />
-          Chuyên viên & Kỹ năng ({staffList.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'policy' ? 'active' : ''}`}
-          onClick={() => setActiveTab('policy')}
-        >
-          <Clock size={15} />
-          Chính sách & Giờ hoạt động
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'appointments' ? 'active' : ''}`}
-          onClick={() => setActiveTab('appointments')}
-        >
-          <CalendarCheck size={15} />
-          Lịch hẹn Spa ({aptTotalElements ?? '—'})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'tickets' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tickets')}
-        >
-          <Ticket size={15} />
-          Vé dịch vụ & Gói khách hàng ({tickets.length})
-        </button>
-      </div>
 
       {activeTab === 'categories' && (
         <div className="card">

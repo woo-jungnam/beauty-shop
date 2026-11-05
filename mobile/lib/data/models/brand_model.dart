@@ -1,3 +1,5 @@
+import '../../core/utils/image_utils.dart';
+
 class BrandItem {
   final int id;
   final String name;
@@ -22,11 +24,15 @@ class BrandItem {
       id: (json['id'] as num?)?.toInt() ?? 0,
       name: json['name']?.toString() ?? '',
       slug: json['slug']?.toString() ?? '',
-      logoUrl: json['logoUrl']?.toString() ??
-          json['logo_url']?.toString() ??
-          json['logo']?.toString() ??
-          json['imageUrl']?.toString(),
-      bannerUrl: json['bannerUrl']?.toString() ?? json['banner_url']?.toString(),
+      logoUrl: ImageUtils.resolveUrl(
+        json['logoUrl']?.toString() ??
+            json['logo_url']?.toString() ??
+            json['logo']?.toString() ??
+            json['imageUrl']?.toString(),
+      ),
+      bannerUrl: ImageUtils.resolveUrl(
+        json['bannerUrl']?.toString() ?? json['banner_url']?.toString(),
+      ),
       description: json['description']?.toString(),
       isFeatured: json['isFeatured'] == true || json['is_official'] == true,
     );

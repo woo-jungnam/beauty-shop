@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/image_utils.dart';
 import '../../data/models/product_model.dart';
 
 class AppProductCard extends StatelessWidget {
@@ -50,31 +51,33 @@ class AppProductCard extends StatelessWidget {
                   ),
                   child: AspectRatio(
                     aspectRatio: 1.0,
-                    child:
-                        product.thumbnailUrl != null &&
-                            product.thumbnailUrl!.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: product.thumbnailUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) =>
-                                Container(color: AppColors.canvas),
-                            errorWidget: (_, __, ___) => Container(
+                    child: () {
+                      final imgUrl =
+                          ImageUtils.resolveUrl(product.thumbnailUrl);
+                      return imgUrl != null && imgUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imgUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) =>
+                                  Container(color: AppColors.canvas),
+                              errorWidget: (_, __, ___) => Container(
+                                color: AppColors.canvas,
+                                child: const Icon(
+                                  Icons.spa_outlined,
+                                  color: AppColors.textLight,
+                                  size: 36,
+                                ),
+                              ),
+                            )
+                          : Container(
                               color: AppColors.canvas,
                               child: const Icon(
                                 Icons.spa_outlined,
                                 color: AppColors.textLight,
                                 size: 36,
                               ),
-                            ),
-                          )
-                        : Container(
-                            color: AppColors.canvas,
-                            child: const Icon(
-                              Icons.spa_outlined,
-                              color: AppColors.textLight,
-                              size: 36,
-                            ),
-                          ),
+                            );
+                    }(),
                   ),
                 ),
                 Positioned(
@@ -139,7 +142,7 @@ class AppProductCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(6, 4, 6, 5),
+                padding: const EdgeInsets.fromLTRB(6, 2, 6, 3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -177,9 +180,10 @@ class AppProductCard extends StatelessWidget {
                         if (product.clearanceVariant != null)
                           Text(
                             'HSD ${product.earliestExpirationDate?.toIso8601String().split('T').first ?? 'chưa rõ'} · còn ${product.clearanceStock ?? 0}',
-                            maxLines: 2,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 9,
+                              fontSize: 8.5,
                               color: AppColors.textMuted,
                             ),
                           ),
