@@ -78,6 +78,42 @@ test('USER books a session using its purchased ticket and treatment item', async
   expect(pageErrors).toEqual([]);
 });
 
+test('USER sees paid long-term packages and treatment courses together after reconciliation', async ({ page }) => {
+  const { state, pageErrors } = await fixture(page, 'USER');
+  let reconciled = false;
+  const reads = [];
+  await page.route('**/api/v1/spa/tickets/my-tickets/reconcile', async route => {
+    expect(route.request().method()).toBe('POST');
+    reconciled = true;
+    await route.fulfill({ json: { data: null } });
+  });
+  await page.route('**/api/v1/spa/my-treatments', async route => {
+    reads.push(reconciled);
+    await route.fulfill({ json: { data: reconciled ? [state.course] : [] } });
+  });
+  await page.route('**/api/v1/spa/tickets/my-tickets', async route => {
+    reads.push(reconciled);
+    await route.fulfill({ json: { data: [
+      { id: 92, orderId: 801, packageId: 72, packageName: 'Gói chăm sóc dài hạn 12 buổi', nameSnapshot: true,
+        benefitType: 'SERVICE_PACKAGE', status: 'ACTIVE', remainingSessions: 10, totalSessions: 12, reservedSessions: 1,
+        expiryDate: '2028-01-01T00:00:00Z', services: [{ serviceId: 2, serviceName: 'Chăm sóc da', total: 12, used: 1, reserved: 1, available: 10 }] },
+      { id: 91, treatmentCourseId: 41, benefitType: 'TREATMENT_COURSE', packageName: plan.name, status: 'ACTIVE' },
+    ] } });
+  });
+  await page.goto('/#/treatments?tab=courses');
+  await expect(page.locator('[data-treatment-course-id="41"]')).toContainText(plan.name);
+  const ticket = page.locator('[data-service-ticket-id="92"]');
+  await expect(ticket).toContainText('Gói chăm sóc dài hạn 12 buổi');
+  await expect(ticket).toContainText('10 lượt khả dụng / 12 tổng lượt');
+  await expect(page.locator('[data-service-ticket-id="91"]')).toHaveCount(0);
+  await expect(page.getByText('Chưa có hồ sơ điều trị phù hợp')).toHaveCount(0);
+  expect(reads.length).toBeGreaterThanOrEqual(2);
+  expect(reads.every(Boolean)).toBe(true);
+  await ticket.getByRole('button', { name: 'Mở đặt lịch sử dụng vé' }).click();
+  await expect(page).toHaveURL(/booking\?ticketId=92&serviceId=2/);
+  expect(pageErrors).toEqual([]);
+});
+
 test('STAFF can open the assigned operational course and perform intake', async ({ page }) => {
   const { state, pageErrors } = await fixture(page, 'STAFF');
   await page.goto('/#/staff/treatments');

@@ -22,6 +22,12 @@ import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from Order o where o.userId = :userId and o.isDeleted = false "
+            + "and o.servicePackageId is not null and o.paymentStatus = com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID "
+            + "and o.paidAt is not null and o.paidAmount >= o.totalAmount order by o.id")
+    List<Order> findPaidSpaPackageOrdersForUpdate(@Param("userId") Long userId);
+
     @Query("select count(o) > 0 from Order o join o.items i, ProductVariant v where o.id = :orderId and o.userId = :userId and o.status = com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED and v.id = i.productVariantId and v.product.id = :productId")
     boolean existsDeliveredProductPurchase(Long orderId, Long userId, Long productId);
 

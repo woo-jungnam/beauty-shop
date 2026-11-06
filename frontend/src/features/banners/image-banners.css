@@ -1,0 +1,33 @@
+.customer-app .image-banner-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.customer-app .image-banner-grid--single { grid-template-columns: minmax(0, 1fr); }
+.customer-app .image-banner-carousel { position: relative; width: 100%; aspect-ratio: 32 / 15; min-width: 0; min-height: 0; overflow: hidden; }
+.customer-app .image-banner-art { position: relative; display: block; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: #f6f6f6; }
+.customer-app .image-banner-carousel > .image-banner-art { position: absolute; inset: 0; }
+.customer-app .image-banner-art img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.customer-app .image-banner-art:focus-visible { outline: 3px solid var(--c-primary, #8c2a47); outline-offset: -3px; }
+.customer-app .image-banner-sides { display: grid; grid-auto-rows: minmax(0, 1fr); gap: 12px; min-height: 0; }
+.customer-app .image-banner-sides--only { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.customer-app .image-banner-sides--only .image-banner-art { aspect-ratio: 32 / 15; }
+.customer-app .image-banner-sides--only .image-banner-art:only-child { grid-column: 1 / -1; }
+.customer-app .image-banner-prev, .customer-app .image-banner-next {
+  position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center;
+  width: 34px; height: 40px; border: 0; border-radius: 4px; background: rgb(255 255 255 / 85%); color: #333; cursor: pointer;
+}
+.customer-app .image-banner-prev { left: 8px; }
+.customer-app .image-banner-next { right: 8px; }
+.customer-app .image-banner-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+.customer-app .image-banner-dots button { position: relative; width: 24px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.customer-app .image-banner-dots button::after { content: ''; display: block; height: 3px; border-radius: 2px; background: #999; box-shadow: 0 0 1px white; }
+.customer-app .image-banner-dots button[aria-pressed='true']::after { background: #f37021; }
+@media (max-width: 767px) {
+  .customer-app .image-banner-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .customer-app .image-banner-sides { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .customer-app .image-banner-sides .image-banner-art { aspect-ratio: 32 / 15; }
+  .customer-app .image-banner-prev, .customer-app .image-banner-next { width: 28px; height: 32px; }
+  .customer-app .image-banner-dots { bottom: 2px; }
+}

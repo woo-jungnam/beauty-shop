@@ -24,6 +24,11 @@ public class SpaPackagePaidEventListener {
     }
 
     @EventListener
+    public void reconcile(OrderEvents.SpaPackageFulfillmentRequestedEvent event) {
+        paidSpaTicketIssuer.issue(new SpaPackagePaidEvent(event.orderId(), event.userId(), event.packageId()));
+    }
+
+    @EventListener
     public void handle(SpaPackagePaidEvent event) {
         paidSpaTicketIssuer.issue(event);
     }

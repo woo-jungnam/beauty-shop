@@ -4,6 +4,7 @@ import { Modal } from '../../../shared/ui/Modal';
 import { getGuestSessionId, useCustomerCart } from '../../stores/customerCartStore';
 import { Pagination, listRows, unwrap } from './AccountTools';
 import { resolveMediaUrl } from '../../../shared/utils/formatters';
+import { ServiceBookingOrders } from '../../../features/spa/ServiceBookingOrders';
 
 export const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value || 0));
 const statuses = { PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PROCESSING: 'Đang xử lý', SHIPPED: 'Đang giao', DELIVERED: 'Đã giao', CANCELLED: 'Đã hủy', RETURNED: 'Đã trả hàng', COMPLETED: 'Hoàn tất', DELIVERY_FAILED: 'Giao không thành công', RETURN_TO_SENDER: 'Hàng chuyển về shop', REQUESTED: 'Chờ xét duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối', RECEIVED: 'Đã nhận hàng trả', REFUNDED: 'Đã hoàn tiền', REFUND_PENDING: 'Chờ hoàn tiền', PAID: 'Đã thanh toán' };
@@ -20,6 +21,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId }) {
   return (
     <div className="account-stack">
       <h3>Đơn hàng của tôi</h3>
+      <ServiceBookingOrders onNavigate={onNavigate} refreshKey={data} />
       {error && <p role="alert">{error}</p>}
       <button onClick={load} disabled={loading}>Cập nhật đơn hàng</button>
       {listRows(data).map(order => {
@@ -43,6 +45,9 @@ export function OrderWorkspace({ onNavigate, initialOrderId }) {
           </p>
 
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '4px 0' }}>
+            {(order.spaVisitItems || []).map((item, index) => <div key={`service-${item.appointmentItemId || index}`} style={{ padding: '6px 10px', border: '1px solid #E5E7EB', borderRadius: 6 }}>
+              <strong>{item.serviceName}</strong> · {money(item.unitPrice)}
+            </div>)}
             {(order.items || []).map((item, idx) => {
               const img = item.imageUrl ? resolveMediaUrl(item.imageUrl) : null;
               return (

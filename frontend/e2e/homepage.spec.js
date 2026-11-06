@@ -17,6 +17,13 @@ async function waitForAppReady(page) {
 // 1. HOMEPAGE — General Render & Structure
 // ===========================================================
 test.describe('1. Trang Chủ (HomePage)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/banners', route => route.fulfill({ json: { data: [
+      { id: 1, title: 'Banner ưu đãi', imageUrl: '/banner-home-1.svg', targetUrl: 'products', position: 'HERO_SLIDE', isActive: true },
+      { id: 2, title: 'Banner chăm sóc da', imageUrl: '/banner-home-2.svg', targetUrl: 'booking', position: 'HERO_SLIDE', isActive: true },
+    ] } }));
+    await page.route('**/banner-home-*.svg', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="500"><rect width="1600" height="500" fill="#d7efe7"/></svg>' }));
+  });
 
   test('1.1 Homepage tải thành công và title đúng', async ({ page }) => {
     await page.goto(BASE);
@@ -31,34 +38,29 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     await page.goto(BASE);
     await waitForAppReady(page);
     await expect(page.locator('.hero-slider-container')).toBeVisible({ timeout: 8000 });
-    // Hero should have at least one h1
-    const heroH1 = page.locator('.hero-slider-container h1');
-    await expect(heroH1).toBeVisible();
-    const heroText = await heroH1.textContent();
-    console.log('Hero H1:', heroText?.substring(0, 60));
-    expect(heroText?.length).toBeGreaterThan(5);
+    const image = page.locator('.image-banner-carousel img');
+    await expect(image).toBeVisible();
+    await expect(page.locator('.hero-slider-container h1')).toHaveCount(0);
+    expect(await image.getAttribute('alt')).toBeTruthy();
   });
 
   test('1.3 Hero carousel có navigation bullets', async ({ page }) => {
     await page.goto(BASE);
     await waitForAppReady(page);
-    const bullets = page.locator('.hero-bullet-btn');
+    const bullets = page.locator('.image-banner-dots button');
     await expect(bullets.first()).toBeVisible({ timeout: 5000 });
     const count = await bullets.count();
     console.log('Hero bullet count:', count);
     expect(count).toBeGreaterThanOrEqual(2);
   });
 
-  test('1.4 Hero carousel tự động chuyển slide', async ({ page }) => {
+  test('1.4 Hero carousel chuyển ảnh bằng điều hướng', async ({ page }) => {
     await page.goto(BASE);
     await waitForAppReady(page);
-    const h1Before = await page.locator('.hero-slider-container h1').textContent();
-    await page.waitForTimeout(6000);
-    const h1After = await page.locator('.hero-slider-container h1').textContent();
-    console.log('Slide before:', h1Before?.substring(0, 40));
-    console.log('Slide after:', h1After?.substring(0, 40));
-    // Slides should have changed (or text could be same if only 1 slide)
-    expect(h1After?.length).toBeGreaterThan(0);
+    const image = page.locator('.image-banner-carousel img');
+    const before = await image.getAttribute('src');
+    await page.getByRole('button', { name: 'Banner ti\u1ebfp theo', exact: true }).click();
+    await expect(image).not.toHaveAttribute('src', before);
   });
 
   test('1.5 Value proposition cards hiển thị', async ({ page }) => {

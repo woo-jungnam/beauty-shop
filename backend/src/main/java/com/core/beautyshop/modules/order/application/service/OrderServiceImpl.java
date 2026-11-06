@@ -482,12 +482,28 @@ public class OrderServiceImpl implements OrderService {
         if (order.getPaymentStatus() == PaymentStatus.PAID) {
             return orderMapper.toOrderResponse(order);
         }
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.RETURNED
+                || order.getStatus() == OrderStatus.RETURN_TO_SENDER || order.getRefundedAmount().signum() > 0) {
+            throw new BusinessException("Không thể xác nhận thu tiền cho đơn đã hủy hoặc hoàn trả");
+        }
+        BigDecimal remaining = order.getTotalAmount().subtract(order.getPaidAmount()).max(BigDecimal.ZERO);
+        String ref = reference != null && !reference.isBlank() ? reference.trim() : "MANUAL-" + order.getId();
+        if (remaining.signum() > 0) {
+            paymentFacade.recordManualCollection(order.getOrderNumber(), remaining, ref, SecurityUtils.getCurrentUserId());
+        }
         order.setPaymentStatus(PaymentStatus.PAID);
-        order.setPaidAmount(order.getTotalAmount());
-        order.setPaidAt(Instant.now());
-        String ref = reference != null && !reference.isBlank() ? reference.trim() : "MANUAL-TEST-" + System.currentTimeMillis();
+        order.setPaidAmount(order.getPaidAmount().max(order.getTotalAmount()));
+        if (order.getPaidAt() == null) order.setPaidAt(Instant.now());
         createStatusHistory(order, order.getStatus(), "Quản trị viên xác nhận thanh toán thành công (Ref: " + ref + ")");
         Order saved = orderRepository.save(order);
+        eventPublisher.publishEvent(OrderEvents.OrderPaidEvent.builder()
+                .orderId(saved.getId()).orderNumber(saved.getOrderNumber()).userId(saved.getUserId())
+                .sessionId(saved.getGuestSessionId()).servicePackageId(saved.getServicePackageId())
+                .totalAmount(saved.getTotalAmount())
+                .items(saved.getItems() == null ? List.of() : saved.getItems().stream()
+                        .map(item -> OrderEvents.OrderItemSummary.builder().variantId(item.getProductVariantId())
+                                .quantity(item.getQuantity()).build()).toList())
+                .build());
         return orderMapper.toOrderResponse(saved);
     }
 

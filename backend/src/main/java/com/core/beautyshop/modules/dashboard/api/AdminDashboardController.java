@@ -19,7 +19,7 @@ import java.util.List;
 public class AdminDashboardController {
     private final AdminDashboardService service;
 
-    @Operation(summary = "Lấy tổng quan điều hành", description = "ADMIN hoặc STAFF. Khoảng Instant [from,to): mặc định 30 ngày trước đến hiện tại, to phải sau from. Tổng đơn theo createdAt; đơn đã trả/AOV theo paidAt; tiền vào theo ledger và hoàn theo confirmedAt. revenue là tiền vào gộp, không phải lợi nhuận hoặc doanh thu đã thực hiện; CASH/BANK/COD tách riêng. Khách hoạt động và tồn kho là số dư hiện tại.")
+    @Operation(summary = "Lấy tổng quan điều hành", description = "ADMIN hoặc STAFF. Khoảng Instant [from,to): mặc định 30 ngày trước đến hiện tại, to phải sau from. Tổng đơn theo createdAt; đơn đã trả/AOV theo paidAt; tiền vào theo ledger và hoàn theo confirmedAt. revenue là tiền vào gộp, không phải lợi nhuận hoặc doanh thu đã thực hiện; CASH/BANK/COD/MANUAL tách riêng. productRevenue/spaRevenue theo từng khoản thu trong kỳ, gồm trả trước và cọc Spa; khoản chưa nhận diện được tách khỏi hai nhóm. Khách hoạt động và tồn kho là số dư hiện tại.")
     @GetMapping
     public ApiResponse<AdminDashboardService.Overview> overview(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to) {
         return ApiResponse.success(service.overview(from, to));
@@ -31,7 +31,7 @@ public class AdminDashboardController {
         return ApiResponse.success(service.revenue(from, to, period));
     }
 
-    @Operation(summary = "Lấy 10 sản phẩm bán chạy", description = "Đơn DELIVERED, lọc createdAt trong khoảng Instant [from,to), mặc định 30 ngày; sắp theo unitsSold rồi grossSales. Không phải xếp hạng doanh thu Spa.")
+    @Operation(summary = "Lấy 10 sản phẩm bán chạy", description = "Đơn DELIVERED, lọc deliveredAt trong khoảng Instant [from,to), mặc định 30 ngày; sắp theo unitsSold rồi grossSales. Không phải xếp hạng doanh thu Spa.")
     @GetMapping("/top-products")
     public ApiResponse<List<AdminDashboardService.TopProduct>> topProducts(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to) {
         return ApiResponse.success(service.topProducts(from, to));

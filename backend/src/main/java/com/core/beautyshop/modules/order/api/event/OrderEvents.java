@@ -11,6 +11,8 @@ import java.util.List;
 
 public class OrderEvents {
 
+    public record SpaPackageFulfillmentRequestedEvent(Long orderId, Long userId, Long packageId) {}
+
     public record OrderFinancialAdjustmentEvent(Long orderId, Long userId, BigDecimal netEligibleAmount) {}
 
     @Data

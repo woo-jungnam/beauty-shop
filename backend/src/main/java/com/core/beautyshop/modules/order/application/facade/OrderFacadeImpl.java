@@ -45,6 +45,19 @@ import java.util.UUID;
 @Component
 public class OrderFacadeImpl implements OrderFacade {
     @Override
+    @Transactional
+    public void reconcilePaidSpaPackagesForUser(Long userId) {
+        if (userId == null) throw new BusinessException("Người mua gói Spa là bắt buộc");
+        // Serialize with payment/refund updates. Replaying fulfillment never records another payment.
+        for (Order order : orderRepository.findPaidSpaPackageOrdersForUpdate(userId)) {
+            if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.RETURNED
+                    || order.getStatus() == OrderStatus.RETURN_TO_SENDER || order.getRefundedAmount().signum() > 0) continue;
+            eventPublisher.publishEvent(new OrderEvents.SpaPackageFulfillmentRequestedEvent(
+                    order.getId(), userId, order.getServicePackageId()));
+        }
+    }
+
+    @Override
     public SpaRefundBalance lockSpaRefundBalance(Long orderId) {
         return orderRefunds.lockSpaBalance(orderId);
     }

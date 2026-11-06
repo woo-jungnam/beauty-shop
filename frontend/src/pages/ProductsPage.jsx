@@ -30,6 +30,7 @@ import { Input } from '../shared/ui/Input';
 import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
+import { bannerHref } from '../features/banners/bannerLinks';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { ConfirmModal } from '../shared/ui/ConfirmModal';
@@ -1019,6 +1020,10 @@ export const ProductsPage = () => {
 
   const handleSubmitBanner = async (e) => {
     e.preventDefault();
+    if (!bannerHref(bannerForm.targetUrl)) {
+      alert('Vui lòng nhập trang đích nội bộ hoặc liên kết http/https hợp lệ.');
+      return;
+    }
     if (bannerUploading) {
       alert('Ảnh đang được tải lên máy chủ, vui lòng đợi trong giây lát...');
       return;
@@ -1029,10 +1034,11 @@ export const ProductsPage = () => {
     }
     setBannerSubmitting(true);
     try {
+      const payload = { ...bannerForm, title: bannerForm.title.trim(), imageUrl: bannerForm.imageUrl.trim(), targetUrl: bannerForm.targetUrl.trim(), badge: '', description: '', ctaText: '' };
       if (editingBanner) {
-        await apiClient.put(ENDPOINTS.CATALOG.BANNER_DETAIL(editingBanner.id), bannerForm);
+        await apiClient.put(ENDPOINTS.CATALOG.BANNER_DETAIL(editingBanner.id), payload);
       } else {
-        await apiClient.post(ENDPOINTS.CATALOG.BANNERS, bannerForm);
+        await apiClient.post(ENDPOINTS.CATALOG.BANNERS, payload);
       }
       setBannerModalOpen(false);
       fetchBanners();
@@ -1421,16 +1427,10 @@ export const ProductsPage = () => {
       width: '100px'
     },
     {
-      header: 'Tiêu đề & Badge',
+      header: 'Tên banner',
       accessor: (row) => (
         <div>
-          {row.badge && (
-            <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--color-primary-600)', backgroundColor: 'var(--color-primary-50)', padding: '1px 6px', borderRadius: '3px', marginRight: '6px' }}>
-              {row.badge}
-            </span>
-          )}
           <strong style={{ fontSize: '13px' }}>{row.title}</strong>
-          {row.description && <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{row.description}</div>}
         </div>
       )
     },
@@ -2961,19 +2961,14 @@ export const ProductsPage = () => {
       >
         <form onSubmit={handleSubmitBanner}>
           <Input
-            label="Tiêu đề banner *"
+            label="Tên banner / mô tả ảnh *"
             value={bannerForm.title}
             onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })}
             required
             placeholder="VD: Mỹ Phẩm Chính Hãng 100%"
           />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Tên dùng để quản lý và hỗ trợ đọc ảnh. Trang chủ chỉ hiển thị ảnh, không phủ chữ hoặc nút lên banner.</p>
           <div className="grid-2" style={{ marginTop: '12px' }}>
-            <Input
-              label="Huy hiệu / Badge"
-              value={bannerForm.badge}
-              onChange={(e) => setBannerForm({ ...bannerForm, badge: e.target.value })}
-              placeholder="VD: BEAUTYSHOP DEALS GIỜ VÀNG"
-            />
             <Select
               label="Vị trí hiển thị *"
               value={bannerForm.position}
@@ -2989,13 +2984,14 @@ export const ProductsPage = () => {
             <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>
               Hình ảnh banner *
             </label>
-            <div className="media-upload-zone">
-              <div className="media-preview-box" style={{ width: '100px', height: '60px' }}>
+            <div className="media-upload-zone" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div className="media-preview-box" style={{ width: '100%', aspectRatio: '32 / 15', height: 'auto' }}>
                 {bannerForm.imageUrl ? (
                   <img
                     src={resolveMediaUrl(bannerForm.imageUrl)}
                     alt="Banner preview"
                     className="media-preview-img"
+                    style={{ objectFit: 'cover' }}
                     onError={(e) => { e.currentTarget.style.opacity = '0.3'; }}
                   />
                 ) : (
@@ -3049,18 +3045,14 @@ export const ProductsPage = () => {
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Input
-              label="Liên kết khi click (targetUrl)"
+              label="Trang đích khi nhấp vào ảnh *"
               value={bannerForm.targetUrl}
               onChange={(e) => setBannerForm({ ...bannerForm, targetUrl: e.target.value })}
-              placeholder="VD: products, booking, #flash-sale"
-            />
-            <Input
-              label="Chữ nút bấm (CTA)"
-              value={bannerForm.ctaText}
-              onChange={(e) => setBannerForm({ ...bannerForm, ctaText: e.target.value })}
-              placeholder="VD: Mua Sắm Ngay"
+              required
+              placeholder="products, booking, #/treatments hoặc https://..."
             />
           </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Nhấp vào toàn bộ ảnh sẽ mở trang này. Ảnh căn giữa và phủ kín khung. Nên dùng ảnh ngang tỉ lệ 32:15; banner chính khoảng 1600×750 px, banner phụ khoảng 800×375 px.</p>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Input
               label="Thứ tự hiển thị"
@@ -3079,16 +3071,6 @@ export const ProductsPage = () => {
                 Đang hoạt động (Hiển thị)
               </label>
             </div>
-          </div>
-          <div style={{ marginTop: '12px' }}>
-            <label className="form-label">Mô tả ngắn</label>
-            <textarea
-              className="form-textarea"
-              rows={2}
-              value={bannerForm.description}
-              onChange={(e) => setBannerForm({ ...bannerForm, description: e.target.value })}
-              placeholder="Nội dung tóm tắt trên banner..."
-            />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setBannerModalOpen(false)}>Hủy</Button>

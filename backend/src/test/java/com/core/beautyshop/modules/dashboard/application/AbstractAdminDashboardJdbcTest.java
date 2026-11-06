@@ -23,10 +23,10 @@ abstract class AbstractAdminDashboardJdbcTest {
     @BeforeEach
     void schema() {
         jdbc = connect();
-        for (String table : List.of("beauty_services", "payment_resolutions", "spa_financial_entries", "orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
-        jdbc.execute("CREATE TABLE orders (id BIGINT PRIMARY KEY, created_at TIMESTAMP, paid_at TIMESTAMP, total_amount DECIMAL(14,2), paid_amount DECIMAL(14,2), status VARCHAR(30), payment_status VARCHAR(30), is_deleted BOOLEAN, service_package_id BIGINT, appointment_id BIGINT)");
-        jdbc.execute("CREATE TABLE payment_transactions (id BIGINT PRIMARY KEY, created_at TIMESTAMP, amount DECIMAL(14,2), gateway VARCHAR(30), transfer_type VARCHAR(20), status VARCHAR(40))");
-        jdbc.execute("CREATE TABLE refund_confirmations (id BIGINT PRIMARY KEY, confirmed_at TIMESTAMP, amount DECIMAL(14,2))");
+        for (String table : List.of("products", "product_variants", "order_items", "beauty_services", "payment_resolutions", "spa_financial_entries", "orders", "payment_transactions", "refund_confirmations", "users", "roles", "user_roles", "warehouse_stocks", "staff_schedules", "appointments", "appointment_items")) jdbc.execute("DROP TABLE IF EXISTS " + table);
+        jdbc.execute("CREATE TABLE orders (id BIGINT PRIMARY KEY, created_at TIMESTAMP, paid_at TIMESTAMP, total_amount DECIMAL(14,2), paid_amount DECIMAL(14,2), status VARCHAR(30), payment_status VARCHAR(30), is_deleted BOOLEAN, service_package_id BIGINT, appointment_id BIGINT, order_number VARCHAR(50), delivered_at TIMESTAMP)");
+        jdbc.execute("CREATE TABLE payment_transactions (id BIGINT PRIMARY KEY, created_at TIMESTAMP, amount DECIMAL(14,2), gateway VARCHAR(30), transfer_type VARCHAR(20), status VARCHAR(40), order_number VARCHAR(50))");
+        jdbc.execute("CREATE TABLE refund_confirmations (id BIGINT PRIMARY KEY, confirmed_at TIMESTAMP, amount DECIMAL(14,2), order_id BIGINT)");
         jdbc.execute("CREATE TABLE users (id BIGINT PRIMARY KEY, status VARCHAR(30), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE roles (id BIGINT PRIMARY KEY, name VARCHAR(50), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE user_roles (user_id BIGINT, role_id BIGINT)");
@@ -37,6 +37,9 @@ abstract class AbstractAdminDashboardJdbcTest {
         jdbc.execute("CREATE TABLE beauty_services (id BIGINT PRIMARY KEY, name VARCHAR(255), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE payment_resolutions (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
         jdbc.execute("CREATE TABLE spa_financial_entries (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
+        jdbc.execute("CREATE TABLE products (id BIGINT PRIMARY KEY, name VARCHAR(255))");
+        jdbc.execute("CREATE TABLE product_variants (id BIGINT PRIMARY KEY, product_id BIGINT)");
+        jdbc.execute("CREATE TABLE order_items (id BIGINT PRIMARY KEY, order_id BIGINT, product_variant_id BIGINT, quantity INT, price DECIMAL(14,2), discount DECIMAL(14,2), is_deleted BOOLEAN)");
         service = new AdminDashboardService(jdbc);
     }
 
@@ -54,11 +57,13 @@ abstract class AbstractAdminDashboardJdbcTest {
         receipt(9, "2026-10-02 10:00:00", -500, "SEPAY", "in", "SUCCESS");
         receipt(11,"2026-10-02 10:00:00",50,"CASH","in","SUCCESS");
         receipt(10, "2026-10-04 00:00:00", 200, "SEPAY", "in", "SUCCESS");
-        jdbc.execute("INSERT INTO refund_confirmations VALUES (1,'2026-10-03 10:00:00',25),(2,'2026-10-04 00:00:00',50)");
+        jdbc.execute("INSERT INTO refund_confirmations VALUES (1,'2026-10-03 10:00:00',25,1),(2,'2026-10-04 00:00:00',50,1)");
         jdbc.execute("INSERT INTO users VALUES (1,'ACTIVE',false),(2,'ACTIVE',false),(3,'BLOCKED',false),(4,'ACTIVE',false),(5,'ACTIVE',true)");
         jdbc.execute("INSERT INTO roles VALUES (1,'ROLE_CUSTOMER',false),(2,'ROLE_ADMIN',false),(3,'ROLE_STAFF',false)");
         jdbc.execute("INSERT INTO user_roles VALUES (1,1),(1,2),(2,2),(3,1),(4,3),(5,1)");
         jdbc.execute("INSERT INTO warehouse_stocks VALUES (1,1,3,0,5,1,false),(2,1,8,0,5,1,false),(3,2,2,0,5,1,false),(4,2,3,0,5,1,false),(5,3,0,0,5,1,true)");
+        jdbc.execute("UPDATE orders SET order_number='ORD-1' WHERE id=1");
+        jdbc.execute("UPDATE payment_transactions SET order_number='ORD-1' WHERE id=1");
         var result = service.overview(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-04T00:00:00Z"));
         assertEquals(2, result.totalOrders());
         assertEquals(3, result.paidOrders());
@@ -75,7 +80,7 @@ abstract class AbstractAdminDashboardJdbcTest {
         assertEquals(1, result.pendingPaymentOrders());
         assertEquals(3, result.productPaidOrders());
         assertEquals(0, result.spaPaidOrders());
-        assertMoney("180", result.productRevenue());
+        assertMoney("100", result.productRevenue());
         assertMoney("0", result.spaRevenue());
         assertMoney("60", result.productAov());
         assertMoney("0", result.spaAov());
@@ -93,7 +98,7 @@ abstract class AbstractAdminDashboardJdbcTest {
         receipt(4, "2026-10-02 10:00:00", 10, "SEPAY", "in", "ORDER_NOT_FOUND");
         receipt(5, "2026-10-02 17:00:00", 300, "SEPAY", "in", "SUCCESS");
         receipt(6, "2026-10-01 10:00:00", 400, "SEPAY", "out", "IGNORED");
-        jdbc.execute("INSERT INTO refund_confirmations VALUES (1,'2026-10-01 18:00:00',7),(2,'2026-10-02 18:00:00',3)");
+        jdbc.execute("INSERT INTO refund_confirmations VALUES (1,'2026-10-01 18:00:00',7,1),(2,'2026-10-02 18:00:00',3,1)");
         Instant from = Instant.parse("2026-09-30T17:00:00Z"), to = Instant.parse("2026-10-02T17:00:00Z");
         var daily = service.revenue(from, to, "day");
         assertEquals(List.of("2026-10-01", "2026-10-02"), daily.stream().map(AdminDashboardService.RevenuePoint::period).toList());
@@ -172,8 +177,65 @@ abstract class AbstractAdminDashboardJdbcTest {
         assertMoney("500", list.get(1).estimatedRevenue());
     }
 
+    @Test void collectionsStayInReceiptPeriodIncludingLaterOverpaymentsAndPartialSpaPayments() {
+        jdbc.execute("INSERT INTO orders (id,order_number,total_amount,paid_amount,paid_at,is_deleted,service_package_id) VALUES (1,'P1',1000,1100,'2026-11-02 10:00:00',false,NULL),(2,'S1',2000,400,NULL,false,8)");
+        receipt(1, "2026-10-02 10:00:00", 300, "SEPAY", "in", "PARTIALLY_PAID");
+        receipt(2, "2026-11-02 10:00:00", 700, "SEPAY", "in", "SUCCESS");
+        receipt(3, "2026-12-02 10:00:00", 100, "SEPAY", "in", "SUCCESS");
+        receipt(4, "2026-10-03 10:00:00", 400, "CASH", "in", "SUCCESS");
+        receipt(5, "2026-10-03 10:00:00", 50, "SEPAY", "in", "DEPOSIT_REVIEW");
+        receipt(6, "2026-10-03 10:00:00", 20, "SEPAY", "in", "ORDER_NOT_FOUND");
+        receipt(7, "2026-10-03 10:00:00", 30, "MANUAL", "in", "SUCCESS");
+        jdbc.execute("UPDATE payment_transactions SET order_number='P1' WHERE id IN (1,2,3,7)");
+        jdbc.execute("UPDATE payment_transactions SET order_number='S1' WHERE id=4");
+        jdbc.execute("UPDATE payment_transactions SET order_number='SPADEP-7' WHERE id=5");
+        var october = service.overview(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-11-01T00:00:00Z"));
+        assertMoney("800", october.revenue());
+        assertMoney("330", october.productRevenue());
+        assertMoney("450", october.spaRevenue());
+        assertMoney("30", october.manualAmount());
+        assertMoney("370", october.bankAmount());
+        assertMoney("400", october.cashAmount());
+        assertEquals(0, october.paidOrders());
+        var november = service.overview(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-12-01T00:00:00Z"));
+        assertMoney("700", november.productRevenue());
+        assertEquals(1, november.paidOrders());
+        var december = service.overview(Instant.parse("2026-12-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"));
+        assertMoney("100", december.productRevenue());
+        if (supportsMySqlGrouping()) {
+            var points = service.revenue(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"), "month");
+            assertEquals(3, points.size());
+            assertMoney("330", points.getFirst().productRevenue());
+            assertMoney("450", points.getFirst().spaRevenue());
+            assertMoney("30", points.getFirst().manualAmount());
+            assertMoney("700", points.get(1).productRevenue());
+            assertMoney("100", points.getLast().productRevenue());
+        }
+    }
+
+    @Test void refundsAreClassifiedByOrderTypeIncludingDeletedSpaOrdersAndOrphans() {
+        jdbc.execute("INSERT INTO orders (id,is_deleted,appointment_id,service_package_id) VALUES (1,false,NULL,NULL),(2,false,12,NULL),(3,true,NULL,8)");
+        jdbc.execute("INSERT INTO refund_confirmations VALUES (1,'2026-10-02 10:00:00',100,1),(2,'2026-10-02 10:00:00',200,2),(3,'2026-10-02 10:00:00',300,3),(4,'2026-10-02 10:00:00',40,99)");
+        jdbc.execute("INSERT INTO spa_financial_entries VALUES (1,'REFUND',50,'2026-10-02 10:00:00')");
+        var report = service.overview(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-11-01T00:00:00Z"));
+        assertMoney("690", report.refundedAmount());
+        assertMoney("100", report.productRefunds());
+        assertMoney("550", report.spaRefunds());
+    }
+
+    @Test void topProductsUsesDeliveryTimeInsteadOfCreationTimeAndExcludesEndBoundary() {
+        jdbc.execute("INSERT INTO products VALUES (1,'Product')");
+        jdbc.execute("INSERT INTO product_variants VALUES (1,1)");
+        jdbc.execute("INSERT INTO orders (id,created_at,delivered_at,status,is_deleted) VALUES (1,'2026-09-01 00:00:00','2026-10-02 00:00:00','DELIVERED',false),(2,'2026-10-02 00:00:00','2026-11-02 00:00:00','DELIVERED',false),(3,'2026-10-02 00:00:00','2026-11-01 00:00:00','DELIVERED',false)");
+        jdbc.execute("INSERT INTO order_items VALUES (1,1,1,2,100,10,false),(2,2,1,9,100,10,false),(3,3,1,8,100,10,false)");
+        var list = service.topProducts(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-11-01T00:00:00Z"));
+        assertEquals(1, list.size());
+        assertEquals(2, list.getFirst().unitsSold());
+        assertMoney("180", list.getFirst().grossSales());
+    }
+
     void receipt(int id, String created, int amount, String gateway, String direction, String status) {
-        jdbc.update("INSERT INTO payment_transactions VALUES (?,CAST(? AS DATETIME),?,?,?,?)", id, created, amount, gateway, direction, status);
+        jdbc.update("INSERT INTO payment_transactions (id,created_at,amount,gateway,transfer_type,status) VALUES (?,CAST(? AS DATETIME),?,?,?,?)", id, created, amount, gateway, direction, status);
     }
     void assertMoney(String expected, BigDecimal actual) { assertEquals(0, new BigDecimal(expected).compareTo(actual)); }
 }

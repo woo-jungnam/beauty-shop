@@ -59,6 +59,7 @@ class OrderServiceImplTest {
     @Mock private OrderFactory orderFactory;
     @Mock private OrderMapper orderMapper;
     @Mock private PaymentFacade paymentFacade;
+    @Mock private com.core.beautyshop.modules.promotion.api.FlashSaleFacade flashSaleFacade;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private com.core.beautyshop.modules.promotion.api.PromotionFacade promotionFacade;
     @Mock private com.core.beautyshop.modules.spa.api.TreatmentOrderPolicy treatmentOrderPolicy;
@@ -178,6 +179,7 @@ class OrderServiceImplTest {
 
     @Test
     void manualMarkPaidUpdatesPaymentStatusToPaid() {
+        asCustomer(7L);
         Order order = Order.builder()
                 .orderNumber("ORD-TEST-PAY")
                 .status(OrderStatus.CONFIRMED)
@@ -198,6 +200,23 @@ class OrderServiceImplTest {
         assertEquals(new BigDecimal("250000"), order.getPaidAmount());
         org.junit.jupiter.api.Assertions.assertNotNull(order.getPaidAt());
         verify(orderRepository).save(order);
+        verify(paymentFacade).recordManualCollection("ORD-TEST-PAY", new BigDecimal("250000"), "TEST-REF-123", 7L);
+        orderService.manualMarkPaid(12L, "TEST-REF-123");
+        org.mockito.Mockito.verifyNoMoreInteractions(paymentFacade);
+    }
+
+    @Test void manualConfirmationCollectsOnlyOutstandingBalance() {
+        asCustomer(7L);
+        Order order = Order.builder().orderNumber("PARTIAL").status(OrderStatus.CONFIRMED)
+                .paymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PENDING)
+                .totalAmount(new BigDecimal("1000")).paidAmount(new BigDecimal("300"))
+                .statusHistories(new ArrayList<>()).build();
+        order.setId(13L);
+        when(orderRepository.findByIdForUpdate(13L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        orderService.manualMarkPaid(13L, "RECEIPT-13");
+        verify(paymentFacade).recordManualCollection("PARTIAL", new BigDecimal("700"), "RECEIPT-13", 7L);
+        assertEquals(new BigDecimal("1000"), order.getPaidAmount());
     }
 
     private void asCustomer(Long userId) {

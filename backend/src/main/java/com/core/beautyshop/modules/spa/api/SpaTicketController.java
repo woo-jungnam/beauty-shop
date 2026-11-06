@@ -23,6 +23,15 @@ import java.util.List;
 public class SpaTicketController {
 
     private final SpaTicketService spaTicketService;
+    private final com.core.beautyshop.modules.order.api.OrderFacade orders;
+
+    @PostMapping("/my-tickets/reconcile")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Đối soát quyền gói đã thanh toán của tôi", description = "Cấp quyền còn thiếu từ snapshot lúc mua; không thu tiền hoặc gia hạn lại vé. Chỉ xử lý đơn đã thanh toán đủ của tài khoản đăng nhập.")
+    public ResponseEntity<ApiResponse<Void>> reconcileMyTickets() {
+        orders.reconcilePaidSpaPackagesForUser(com.core.beautyshop.shared.security.utils.SecurityUtils.getCurrentUserId());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 
     @Operation(summary = "Xem tất cả vé liệu trình của tôi", description = "Yêu cầu đăng nhập; chỉ vé chưa xóa thuộc tài khoản hiện tại, gồm cả hết hạn/hoàn tất/thu hồi. Danh sách không phân trang.")
     @GetMapping("/my-tickets")

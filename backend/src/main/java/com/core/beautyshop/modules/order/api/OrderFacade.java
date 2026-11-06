@@ -12,6 +12,7 @@ import com.core.beautyshop.modules.order.api.dto.SpaRefundBalance;
 import com.core.beautyshop.modules.order.api.dto.SpaVisitInvoiceResult;
 
 public interface OrderFacade {
+    void reconcilePaidSpaPackagesForUser(Long userId);
     SpaRefundBalance lockSpaRefundBalance(Long orderId);
     void confirmSpaServiceRefund(Long orderId, BigDecimal amount, String reference, String reason);
     SpaVisitInvoiceResult applySpaVisitAdvance(Long appointmentId, BigDecimal amount, String reference);

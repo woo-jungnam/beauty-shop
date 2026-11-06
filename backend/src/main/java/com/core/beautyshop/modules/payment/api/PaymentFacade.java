@@ -11,6 +11,7 @@ public interface PaymentFacade {
     boolean recordCarrierRemittance(String orderNumber, BigDecimal amount, String reference, String reason, Long actor);
     void recordCodCollection(String orderNumber, BigDecimal amount);
     boolean recordCashCollection(String orderNumber, BigDecimal amount, String receiptKey, Long receivedBy);
+    boolean recordManualCollection(String orderNumber, BigDecimal amount, String reference, Long actor);
     PaymentInstruction processPayment(PaymentMethod method, PaymentOrderDto orderDto);
     BankReceipt lockBankReceipt(String reference);
     void assignBankReceipt(Long transactionId, String target, String status);

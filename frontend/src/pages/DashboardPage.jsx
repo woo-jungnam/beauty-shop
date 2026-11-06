@@ -517,7 +517,7 @@ const OrderStatus = ({ status }) => {
 function ReportDialog({ report, onClose, data, range, points, loading }) {
   const { overview, spa, products, services, orders } = data;
   const title = {
-    REVENUE: "Dòng tiền & Phân rã Doanh thu trong kỳ",
+    REVENUE: "Dòng tiền & Tiền thu theo nhóm trong kỳ",
     ORDERS: "Đơn hàng trong kỳ",
     PRODUCTS: "Hiệu suất sản phẩm mỹ phẩm",
     SERVICES: "Top Dịch vụ Spa thực hiện",
@@ -612,18 +612,18 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: "12.5px" }}>
                 <div style={{ borderLeft: "3px solid #8B5CF6", paddingLeft: 8 }}>
                   <div style={{ fontWeight: 600, color: "#4B5563" }}>Bán lẻ Mỹ phẩm:</div>
-                  <div>Doanh thu: <strong>{currency(overview?.productRevenue)}</strong> ({number(overview?.productPaidOrders)} đơn)</div>
+                  <div>Tiền thu: <strong>{currency(overview?.productRevenue)}</strong> ({number(overview?.productPaidOrders)} đơn thanh toán đủ)</div>
                   <div>AOV: <strong>{currency(overview?.productAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.productRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.productRefunds)}</strong></div>
                 </div>
                 <div style={{ borderLeft: "3px solid #EC4899", paddingLeft: 8 }}>
                   <div style={{ fontWeight: 600, color: "#4B5563" }}>Dịch vụ & Liệu trình Spa:</div>
-                  <div>Doanh thu: <strong>{currency(overview?.spaRevenue)}</strong> ({number(overview?.spaPaidOrders)} đơn/gói)</div>
+                  <div>Tiền thu: <strong>{currency(overview?.spaRevenue)}</strong> ({number(overview?.spaPaidOrders)} đơn/gói thanh toán đủ)</div>
                   <div>AOV: <strong>{currency(overview?.spaAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.spaRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.spaRefunds)}</strong></div>
                 </div>
               </div>
             </div>
             <p className="atelier-report-note">
-              Tiền vào được ghi nhận từ sổ giao dịch (tiền mặt, chuyển khoản và COD). Doanh thu sản phẩm và Spa được phân rã theo loại đơn hàng thanh toán thành công trong kỳ.
+              Tiền vào tính theo từng giao dịch trong kỳ, gồm trả trước và tiền cọc, chưa trừ hoàn tiền. Tiền thu Mỹ phẩm/Spa phân loại theo đơn hoặc mã cọc; khoản chưa nhận diện được tách riêng. Số đơn và AOV theo thời điểm thanh toán đủ.
             </p>
             {report.point && (
               <div className="atelier-report-selection">
@@ -642,6 +642,8 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
               {stat("Chuyển khoản", currency(overview?.bankAmount))}
               {stat("Tiền mặt", currency(overview?.cashAmount))}
               {stat("COD", currency(overview?.codAmount))}
+              {stat("Xác nhận thủ công", currency(overview?.manualAmount))}
+              {stat("Tiền vào chưa phân loại", currency(overview ? Number(overview.revenue) - Number(overview.productRevenue) - Number(overview.spaRevenue) : null))}
             </div>
             <DataTable
               columns={[
@@ -652,12 +654,12 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
                   align: "right",
                 },
                 {
-                  header: "Doanh thu SP",
+                  header: "Tiền thu Mỹ phẩm",
                   accessor: (row) => currency(row.productRevenue),
                   align: "right",
                 },
                 {
-                  header: "Doanh thu Spa",
+                  header: "Tiền thu Spa",
                   accessor: (row) => currency(row.spaRevenue),
                   align: "right",
                 },
@@ -967,8 +969,8 @@ export const DashboardPage = () => {
       [
         "Kỳ",
         "Tổng tiền vào (VND)",
-        "Doanh thu Mỹ phẩm (VND)",
-        "Doanh thu Spa (VND)",
+        "Tiền thu Mỹ phẩm (VND)",
+        "Tiền thu Spa (VND)",
         "Tiền hoàn (VND)",
         "Đơn thanh toán",
         "Giao dịch tiền vào",
@@ -1236,7 +1238,7 @@ export const DashboardPage = () => {
                 <Package size={17} />
               </span>
               <div>
-                <strong style={{ fontSize: "14px", color: "#1F2937", display: "block" }}>Doanh thu Bán lẻ Mỹ phẩm</strong>
+                <strong style={{ fontSize: "14px", color: "#1F2937", display: "block" }}>Tiền thu Bán lẻ Mỹ phẩm</strong>
                 <span style={{ fontSize: "11px", color: "#6B7280" }}>Đơn hàng đóng gói & giao vận</span>
               </div>
             </div>
@@ -1278,7 +1280,7 @@ export const DashboardPage = () => {
                 <Flower2 size={17} />
               </span>
               <div>
-                <strong style={{ fontSize: "14px", color: "#1F2937", display: "block" }}>Doanh thu Dịch vụ & Liệu trình Spa</strong>
+                <strong style={{ fontSize: "14px", color: "#1F2937", display: "block" }}>Tiền thu Dịch vụ & Liệu trình Spa</strong>
                 <span style={{ fontSize: "11px", color: "#6B7280" }}>Vé gói liệu trình & hóa đơn tại quầy</span>
               </div>
             </div>
@@ -1314,6 +1316,11 @@ export const DashboardPage = () => {
         </div>
       </div>
 
+      <p className="atelier-panel-description">
+        Tiền thu tính theo từng giao dịch trong kỳ, gồm trả trước và tiền cọc; chưa trừ hoàn tiền.
+        Khoản chưa nhận diện đơn được tách riêng trong chi tiết dòng tiền.
+        Số đơn và AOV tính theo thời điểm thanh toán đủ.
+      </p>
       <div className="atelier-main-grid">
         <section
           className="atelier-panel atelier-revenue-panel atelier-reveal"
@@ -1325,7 +1332,7 @@ export const DashboardPage = () => {
                 <span className="atelier-color-dot" />
                 THE BIG PICTURE
               </div>
-              <h2>Chuyển động dòng tiền & Doanh thu</h2>
+              <h2>Chuyển động dòng tiền</h2>
             </div>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <div
@@ -1388,9 +1395,9 @@ export const DashboardPage = () => {
             <span>
               <span className="atelier-color-dot" />
               {revenueMetricKey === "productRevenue"
-                ? "Doanh thu Mỹ phẩm trong kỳ"
+                ? "Tiền thu Mỹ phẩm trong kỳ"
                 : revenueMetricKey === "spaRevenue"
-                  ? "Doanh thu Dịch vụ Spa trong kỳ"
+                  ? "Tiền thu Dịch vụ Spa trong kỳ"
                   : "Tổng tiền vào trong kỳ"}
             </span>
             <button
@@ -1865,8 +1872,8 @@ export const DashboardPage = () => {
           </div>
         )}
       </section>
-      <ProfitabilityPanel />
-      <SpaPerformancePanel />
+      <ProfitabilityPanel key={`profit-${range.from}-${range.to}-${refresh}`} dashboardRange={range} dashboardRefresh={refresh} />
+      <SpaPerformancePanel key={`spa-${range.from}-${range.to}-${refresh}`} dashboardRange={range} dashboardRefresh={refresh} />
       <div className="atelier-dashboard-footnote">
         <span>
           <span className={`atelier-sync-dot ${loading ? "is-loading" : ""}`} />

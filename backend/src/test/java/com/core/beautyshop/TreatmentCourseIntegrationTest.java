@@ -27,9 +27,84 @@ class TreatmentCourseIntegrationTest extends SpaWorkflowTestSupport {
     @Autowired PaidSpaTicketIssuer issuer;
     @Autowired SpaPurchaseSnapshotRepository snapshots;
     @Autowired com.core.beautyshop.modules.order.domain.RefundConfirmationRepository refundRows;
+    @Autowired com.core.beautyshop.modules.order.application.service.OrderService orderService;
+    @Autowired com.core.beautyshop.modules.order.api.OrderFacade orderFacade;
+    @Autowired SpaTicketService packagePurchases;
     @PersistenceContext EntityManager entityManager;
 
     record CourseFixture(Fixture base, TemplateView template, CourseView course, User responsible, User unrelated) {}
+
+    @Test void ordinaryLongTermPackagesAreIssuedOnManualPaymentAndRecoveredFromEarlierPayments() {
+        Fixture f = fixture();
+        Long packageId = tx(() -> {
+            var pack = tickets.findById(f.ticketId()).orElseThrow().getServicePackage();
+            pack.setValidityDays(180);
+            pack.getItems().add(ServicePackageItem.builder().servicePackage(pack)
+                    .service(services.getReferenceById(f.serviceId())).quantity(12).build());
+            return pack.getId();
+        });
+        var request = new PurchasePackageRequest(); request.setPackageId(packageId);
+        request.setIdempotencyKey(UUID.randomUUID().toString());
+        var first = as(f.customer(), () -> packagePurchases.purchasePackage(request));
+        as(f.admin(), () -> orderService.manualMarkPaid(first.getOrderId(), "MANUAL-" + UUID.randomUUID()));
+        assertTrue(tickets.existsByOrderId(first.getOrderId()));
+        request.setIdempotencyKey(UUID.randomUUID().toString());
+        var earlier = as(f.customer(), () -> packagePurchases.purchasePackage(request));
+        tx(() -> {
+            var order = orders.findById(earlier.getOrderId()).orElseThrow();
+            order.setPaidAt(Instant.now().minusSeconds(86400)); order.setPaidAmount(order.getTotalAmount());
+            order.setPaymentStatus(PaymentStatus.PAID); order.setStatus(OrderStatus.PROCESSING);
+            return null;
+        });
+        orderFacade.reconcilePaidSpaPackagesForUser(f.customer().getId());
+        orderFacade.reconcilePaidSpaPackagesForUser(f.customer().getId());
+        var owned = as(f.customer(), () -> packagePurchases.getMyTickets());
+        for (Long id : List.of(first.getOrderId(), earlier.getOrderId())) {
+            var matching = owned.stream().filter(t -> t.getOrderId().equals(id)).toList();
+            assertEquals(1, matching.size());
+            assertEquals(12, matching.getFirst().getRemainingSessions());
+            assertEquals("SERVICE_PACKAGE", matching.getFirst().getBenefitType());
+            assertNull(matching.getFirst().getTreatmentCourseId());
+        }
+    }
+
+    @Test void manualPaymentCreatesTreatmentAndTicketAutomatically() {
+        CourseFixture f = courseFixture();
+        var purchase = as(f.base().customer(), () -> treatments.purchase(new PurchaseCommand(
+                f.template().id(), f.template().versionId(), true, UUID.randomUUID().toString(), null)));
+        as(f.base().admin(), () -> orderService.manualMarkPaid(purchase.getOrderId(), "MANUAL-" + UUID.randomUUID()));
+        var course = as(f.base().customer(), () -> treatments.myCourses()).stream()
+                .filter(c -> c.orderId().equals(purchase.getOrderId())).findFirst().orElseThrow();
+        assertNotNull(course.ticketId());
+        assertEquals(2, course.sessions().size());
+        assertEquals("PENDING_INTAKE", course.status());
+        assertTrue(tickets.existsByOrderId(purchase.getOrderId()));
+    }
+
+    @Test void reconciliationRepairsPreviouslyPaidPurchaseWithoutDuplicatingOrExtendingRights() {
+        CourseFixture f = courseFixture();
+        var purchase = as(f.base().customer(), () -> treatments.purchase(new PurchaseCommand(
+                f.template().id(), f.template().versionId(), true, UUID.randomUUID().toString(), null)));
+        Instant paidAt = Instant.now().minusSeconds(86400);
+        tx(() -> {
+            var order = orders.findById(purchase.getOrderId()).orElseThrow();
+            order.setPaidAt(paidAt); order.setPaidAmount(order.getTotalAmount());
+            order.setPaymentStatus(PaymentStatus.PAID); order.setStatus(OrderStatus.PROCESSING);
+            return null;
+        });
+        assertFalse(tickets.existsByOrderId(purchase.getOrderId()));
+        orderFacade.reconcilePaidSpaPackagesForUser(f.base().otherCustomer().getId());
+        assertFalse(tickets.existsByOrderId(purchase.getOrderId()));
+        orderFacade.reconcilePaidSpaPackagesForUser(f.base().customer().getId());
+        var first = tickets.findByOrderId(purchase.getOrderId()).orElseThrow();
+        orderFacade.reconcilePaidSpaPackagesForUser(f.base().customer().getId());
+        var replay = tickets.findByOrderId(purchase.getOrderId()).orElseThrow();
+        assertEquals(first.getId(), replay.getId());
+        assertEquals(first.getExpiryDate(), replay.getExpiryDate());
+        assertEquals(paidAt.plusSeconds(30 * 86400L).getEpochSecond(), replay.getExpiryDate().getEpochSecond());
+        assertEquals(1, as(f.base().customer(), () -> treatments.myCourses()).stream()
+                .filter(c -> c.orderId().equals(purchase.getOrderId())).count());
+    }
 
     Plan plan(long parent, long service, BigDecimal price, int sessions) {
         List<PlanSession> result = new ArrayList<>();

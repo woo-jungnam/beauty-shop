@@ -21,12 +21,14 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "banners", key = "'active:' + (#position != null ? #position : 'all')")
+    @Cacheable(value = "banners", key = "'image-active:v1:' + (#position != null ? #position : 'all')")
     public List<BannerResponse> getActiveBanners(String position) {
         List<Banner> list = (position != null && !position.isBlank())
                 ? bannerRepository.findByPositionAndIsDeletedFalseAndIsActiveTrueOrderBySortOrderAscIdAsc(position)
                 : bannerRepository.findByIsDeletedFalseAndIsActiveTrueOrderBySortOrderAscIdAsc();
-        return list.stream().map(BannerResponse::fromEntity).toList();
+        // Immutable Stream.toList() lists lose their root type in the Redis JSON serializer.
+        return list.stream().map(BannerResponse::fromEntity)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
     }
 
     @Override

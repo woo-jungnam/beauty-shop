@@ -1,4 +1,5 @@
 import { CommerceOperationsPanel } from '../features/commerce/AdminCommercePanels';
+import { ServiceBookingOrders } from '../features/spa/ServiceBookingOrders';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
@@ -261,7 +262,7 @@ export const OrdersPage = () => {
       header: 'Mã đơn / ID',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 700 }}>{row.orderCode || `#${row.id}`}</div>
+          <div style={{ fontWeight: 700 }}>{row.orderCode || row.orderNumber || `#${row.id}`}</div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {row.id}</div>
         </div>
       ),
@@ -431,6 +432,7 @@ export const OrdersPage = () => {
         </Button>
       </div>
 
+      {isAdmin && orderTypeTab !== 'PRODUCT' && <ServiceBookingOrders admin refreshKey={orders} />}
       <CommerceOperationsPanel orders={orders} onChanged={() => fetchOrders(page)} />
       <div
         className="card"

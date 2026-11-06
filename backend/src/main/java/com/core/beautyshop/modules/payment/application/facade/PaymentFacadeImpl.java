@@ -94,6 +94,26 @@ public class PaymentFacadeImpl implements PaymentFacade {
 
     @Override
     @Transactional
+    public boolean recordManualCollection(String orderNumber, BigDecimal amount, String reference, Long actor) {
+        if (orderNumber == null || amount == null || amount.signum() <= 0
+                || amount.stripTrailingZeros().scale() > 0 || actor == null
+                || reference == null || reference.isBlank() || reference.length() > 100) {
+            throw new BusinessException("Số tiền nguyên VND, chứng từ và người xác nhận là bắt buộc");
+        }
+        if (transactions.findByReferenceCode(reference).isPresent()) {
+            // Never count a bank receipt again through manual confirmation.
+            throw new BusinessException("Chứng từ đã tồn tại; hãy đối soát giao dịch thay vì thu thêm");
+        }
+        transactions.saveAndFlush(PaymentTransaction.builder()
+                .orderNumber(orderNumber).referenceCode(reference).gateway("MANUAL")
+                .transferType("in").amount(amount).status(TransactionStatus.SUCCESS)
+                .rawPayload("{\"source\":\"MANUAL_CONFIRMATION\",\"receivedBy\":" + actor + "}")
+                .content("Thanh toán được quản trị viên xác nhận thủ công").build());
+        return true;
+    }
+
+    @Override
+    @Transactional
     public void recordCodCollection(String orderNumber, BigDecimal amount) {
         if (amount == null || amount.signum() < 0) throw new BusinessException("Invalid COD amount");
         if (amount.signum() == 0) return;
