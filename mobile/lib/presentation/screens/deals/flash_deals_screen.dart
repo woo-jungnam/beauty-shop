@@ -33,7 +33,7 @@ class FlashDealsScreen extends StatelessWidget {
                   crossAxisCount: 2,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
-                  childAspectRatio: 0.60,
+                  childAspectRatio: 0.55,
                 ),
                 itemBuilder: (context, index) {
                   final product = deals[index];

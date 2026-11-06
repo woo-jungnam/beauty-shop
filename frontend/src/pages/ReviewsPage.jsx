@@ -15,6 +15,7 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 
 export const ReviewsPage = () => {
   const [reviews, setReviews] = useState([]);
@@ -28,6 +29,43 @@ export const ReviewsPage = () => {
   const [selectedReview, setSelectedReview] = useState(null);
   const [replyContent, setReplyContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const fetchReviews = async (p = 0) => {
     setLoading(true);
@@ -83,14 +121,17 @@ export const ReviewsPage = () => {
     }
   };
 
-  const handleDeleteReview = async (id) => {
-    if (!window.confirm(`Xóa nhận xét #${id}?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.REVIEWS.DELETE(id));
-      fetchReviews(page);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa nhận xét');
-    }
+  const handleDeleteReview = (review) => {
+    askConfirm({
+      title: 'Xác nhận xóa nhận xét',
+      message: `Bạn có chắc muốn xóa nhận xét #${review.id}?`,
+      detail: 'Nhận xét này sẽ được ẩn khỏi trang chi tiết sản phẩm. Điểm đánh giá sao trung bình của sản phẩm sẽ được tự động tính toán lại.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.REVIEWS.DELETE(review.id));
+        fetchReviews(page);
+      },
+    });
   };
 
   const columns = [
@@ -198,7 +239,7 @@ export const ReviewsPage = () => {
           <Button
             variant="danger"
             size="sm"
-            onClick={() => handleDeleteReview(row.id)}
+            onClick={() => handleDeleteReview(row)}
             icon={Trash2}
             title="Xóa nhận xét"
           />
@@ -300,6 +341,17 @@ export const ReviewsPage = () => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

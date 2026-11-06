@@ -27,13 +27,14 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public List<RoleResponse> getAllRoles() {
         return roleRepository.findAll().stream()
+                .filter(r -> !Boolean.TRUE.equals(r.getIsDeleted()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     public RoleResponse getRoleById(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findById(id).filter(r -> !Boolean.TRUE.equals(r.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò với id: " + id));
         return mapToResponse(role);
     }
@@ -41,7 +42,14 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional
     public RoleResponse createRole(CreateRoleRequest request) {
-        if (roleRepository.findByRoleName(request.getRoleName()).isPresent()) {
+        java.util.Optional<Role> existing = roleRepository.findByRoleName(request.getRoleName());
+        if (existing.isPresent()) {
+            Role r = existing.get();
+            if (Boolean.TRUE.equals(r.getIsDeleted())) {
+                r.setIsDeleted(false);
+                r.setDescription(request.getDescription());
+                return mapToResponse(roleRepository.save(r));
+            }
             throw new BusinessException("Tên vai trò đã tồn tại");
         }
         Role role = Role.builder()
@@ -79,7 +87,7 @@ public class RoleServiceImpl implements RoleService {
     @Transactional
     public void deleteRole(Long id) {
         administrationGuard.lockAdministration();
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findById(id).filter(r -> !Boolean.TRUE.equals(r.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vai trò với id: " + id));
         if (administrationGuard.isSystemRole(role.getName())) throw new BusinessException("Không được phép xóa vai trò hệ thống mặc định");
         for (var user : userRepository.findByRoleIdForUpdate(id)) {
@@ -88,7 +96,8 @@ public class RoleServiceImpl implements RoleService {
             authService.forceLogoutUser(user.getId());
         }
         userRepository.flush();
-        roleRepository.delete(role);
+        role.setIsDeleted(true);
+        roleRepository.save(role);
     }
 
     private RoleResponse mapToResponse(Role role) {

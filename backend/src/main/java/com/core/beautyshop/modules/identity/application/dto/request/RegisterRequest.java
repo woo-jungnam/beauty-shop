@@ -36,11 +36,11 @@ public class RegisterRequest {
 
     @NotBlank(message = "Họ và tên không được để trống")
     @Schema(description = "Họ và tên đầy đủ của khách hàng", example = "Nguyễn Văn An", requiredMode = Schema.RequiredMode.REQUIRED)
-    @Size(max = 100)
+    @Size(max = 100, message = "Họ và tên không được vượt quá 100 ký tự")
     private String fullName;
 
     @Schema(description = "Số điện thoại liên hệ", example = "0912345678")
-    @Size(max = 20)
+    @Size(max = 20, message = "Số điện thoại không được vượt quá 20 ký tự")
     @jakarta.validation.constraints.Pattern(regexp = "^$|^0[35789]\\d{8}$", message = "Số điện thoại di động Việt Nam không hợp lệ")
     private String phone;
 
@@ -52,10 +52,10 @@ public class RegisterRequest {
     private LocalDate dateOfBirth;
 
     @Schema(description = "Tiểu sử / Giới thiệu bản thân", example = "Khách hàng yêu thích các sản phẩm chăm sóc da hữu cơ.")
-    @Size(max = 500)
+    @Size(max = 500, message = "Tiểu sử không được vượt quá 500 ký tự")
     private String bio;
 
     @Schema(description = "URL ảnh đại diện avatar", example = "https://cdn.beautyshop.com/avatars/user-1.png")
-    @Size(max = 500)
+    @Size(max = 500, message = "URL ảnh đại diện không được vượt quá 500 ký tự")
     private String avatarUrl;
 }

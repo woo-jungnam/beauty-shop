@@ -24,7 +24,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với tên đăng nhập hoặc email: " + usernameOrEmail));
 
         if (Boolean.TRUE.equals(user.getIsDeleted()) || user.getStatus() != AccountStatus.ACTIVE) {
-            throw new DisabledException("Account is " + user.getStatus());
+            throw new DisabledException("Tài khoản hiện đang bị khóa hoặc ngưng hoạt động");
         }
         return UserDetailsImpl.build(user);
     }

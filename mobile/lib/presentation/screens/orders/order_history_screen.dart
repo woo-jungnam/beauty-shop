@@ -44,9 +44,29 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<OrderProvider>().fetchOrders();
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        final status = _tabIndexToStatus(_tabController.index);
+        context.read<OrderProvider>().fetchOrders(status: status);
+      }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final initialStatus = _tabIndexToStatus(widget.initialTabIndex);
+      context.read<OrderProvider>().fetchOrders(status: initialStatus);
+    });
+  }
+
+  String? _tabIndexToStatus(int tabIndex) {
+    switch (tabIndex) {
+      case 2:
+        return 'SHIPPED';
+      case 3:
+        return 'DELIVERED';
+      case 4:
+        return 'CANCELLED';
+      default:
+        return null;
+    }
   }
 
   @override

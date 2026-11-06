@@ -18,6 +18,7 @@ public interface OrderService {
     OrderResponse getAdminOrderById(Long id);
 
     Page<OrderResponse> getMyOrders(Pageable pageable);
+    Page<OrderResponse> getMyOrders(com.core.beautyshop.modules.order.domain.enums.OrderStatus status, Pageable pageable);
 
     Page<OrderResponse> getOrdersByUser(Long userId, Pageable pageable);
 

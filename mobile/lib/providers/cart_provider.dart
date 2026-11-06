@@ -58,8 +58,10 @@ class CartProvider extends ChangeNotifier {
         : _defaultShippingFee!;
   }
 
+  double get membershipDiscount => _cart.estimatedMembershipDiscount;
+
   double get finalTotal {
-    final total = selectedSubtotal + shippingFee - voucherDiscount;
+    final total = selectedSubtotal + shippingFee - voucherDiscount - membershipDiscount;
     return total > 0 ? total : 0.0;
   }
 

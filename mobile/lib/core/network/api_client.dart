@@ -252,6 +252,15 @@ class ApiClient {
         message = data['message'] as String? ?? message;
         errorCode = data['errorCode'] as String?;
         errors = data['errors'];
+        if (errors is List && errors.isNotEmpty) {
+          final errorList = errors
+              .map((err) => err is Map ? err['message']?.toString() : err.toString())
+              .where((msg) => msg != null && msg.isNotEmpty)
+              .toList();
+          if (errorList.isNotEmpty) {
+            message = errorList.join('; ');
+          }
+        }
       }
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {

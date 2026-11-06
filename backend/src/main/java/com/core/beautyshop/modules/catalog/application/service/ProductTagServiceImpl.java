@@ -23,14 +23,14 @@ public class ProductTagServiceImpl implements ProductTagService {
 
     @Override
     public List<TagResponse> getAllTags() {
-        return tagRepository.findAll().stream()
+        return tagRepository.findAllByIsDeletedFalse().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     public TagResponse getTagById(Long id) {
-        ProductTag tag = tagRepository.findById(id)
+        ProductTag tag = tagRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ với id: " + id));
         return mapToResponse(tag);
     }
@@ -39,8 +39,15 @@ public class ProductTagServiceImpl implements ProductTagService {
     @Transactional
     public TagResponse createTag(TagRequest request) {
         String slug = generateSlug(request.getName());
-        
-        if (tagRepository.existsBySlug(slug)) {
+
+        java.util.Optional<ProductTag> existing = tagRepository.findBySlug(slug);
+        if (existing.isPresent()) {
+            ProductTag found = existing.get();
+            if (Boolean.TRUE.equals(found.getIsDeleted())) {
+                found.setIsDeleted(false);
+                found.setName(request.getName());
+                return mapToResponse(tagRepository.save(found));
+            }
             throw new BusinessException("Slug thẻ đã tồn tại: " + slug);
         }
 
@@ -56,11 +63,11 @@ public class ProductTagServiceImpl implements ProductTagService {
     @Transactional
     @CacheEvict(value = "product_detail", allEntries = true)
     public TagResponse updateTag(Long id, TagRequest request) {
-        ProductTag tag = tagRepository.findById(id)
+        ProductTag tag = tagRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ với id: " + id));
         String slug = generateSlug(request.getName());
         tagRepository.findBySlug(slug)
-                .filter(found -> !found.getId().equals(id))
+                .filter(found -> !found.getId().equals(id) && !Boolean.TRUE.equals(found.getIsDeleted()))
                 .ifPresent(found -> {
                     throw new BusinessException("Slug thẻ đã tồn tại: " + slug);
                 });
@@ -73,10 +80,10 @@ public class ProductTagServiceImpl implements ProductTagService {
     @Transactional
     @CacheEvict(value = "product_detail", allEntries = true)
     public void deleteTag(Long id) {
-        if (!tagRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Không tìm thấy thẻ với id: " + id);
-        }
-        tagRepository.deleteById(id);
+        ProductTag tag = tagRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ với id: " + id));
+        tag.setIsDeleted(true);
+        tagRepository.save(tag);
     }
 
     private String generateSlug(String input) {

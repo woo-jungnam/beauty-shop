@@ -85,14 +85,14 @@ class OrderServiceImplTest {
         asCustomer(7L);
         Order visible = Order.builder().orderNumber("ORD-PAID").items(new ArrayList<>()).statusHistories(new ArrayList<>()).build();
         OrderResponse response = new OrderResponse();
-        when(orderRepository.findVisibleCustomerHistoryByUserId(eq(7L), any())).thenReturn(new PageImpl<>(List.of(visible)));
+        when(orderRepository.findVisibleCustomerHistoryByUserIdAndStatus(eq(7L), isNull(), any())).thenReturn(new PageImpl<>(List.of(visible)));
         when(orderMapper.toOrderResponse(visible)).thenReturn(response);
 
         Page<OrderResponse> page = orderService.getMyOrders(PageRequest.of(0, 20));
 
         assertEquals(1, page.getTotalElements());
         assertEquals(response, page.getContent().getFirst());
-        verify(orderRepository).findVisibleCustomerHistoryByUserId(eq(7L), any());
+        verify(orderRepository).findVisibleCustomerHistoryByUserIdAndStatus(eq(7L), isNull(), any());
     }
 
     @Test

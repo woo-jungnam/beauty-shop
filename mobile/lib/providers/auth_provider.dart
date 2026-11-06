@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
+import '../core/network/api_response.dart';
 import '../core/storage/storage_service.dart';
 import '../data/models/auth_models.dart';
 
@@ -17,6 +18,11 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => StorageService.isLoggedIn && _currentUser != null;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   AuthProvider() {
     StorageService.authCleared.addListener(_onAuthCleared);
@@ -99,7 +105,11 @@ class AuthProvider extends ChangeNotifier {
         _errorMessage = response.message ?? 'Đăng nhập không thành công';
       }
     } catch (e) {
-      _errorMessage = 'Tên đăng nhập hoặc mật khẩu không chính xác';
+      if (e is ApiException) {
+        _errorMessage = e.message;
+      } else {
+        _errorMessage = 'Tên đăng nhập hoặc mật khẩu không chính xác';
+      }
     }
 
     _isLoading = false;
@@ -156,7 +166,11 @@ class AuthProvider extends ChangeNotifier {
         _errorMessage = response.message ?? 'Đăng ký không thành công';
       }
     } catch (e) {
-      _errorMessage = 'Không thể đăng ký. Tên đăng nhập hoặc email đã tồn tại';
+      if (e is ApiException) {
+        _errorMessage = e.message;
+      } else {
+        _errorMessage = 'Không thể đăng ký. Vui lòng thử lại';
+      }
     }
 
     _isLoading = false;

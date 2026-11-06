@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import jakarta.persistence.LockModeType;
 
@@ -23,6 +24,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     @Query("select count(o) > 0 from Order o join o.items i, ProductVariant v where o.id = :orderId and o.userId = :userId and o.status = com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED and v.id = i.productVariantId and v.product.id = :productId")
     boolean existsDeliveredProductPurchase(Long orderId, Long userId, Long productId);
+
+    @Query("select o.id from Order o join o.items i, ProductVariant v where o.userId = :userId and o.status = com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED and v.id = i.productVariantId and v.product.id = :productId order by o.createdAt desc")
+    List<Long> findDeliveredOrderIdsForProductPurchase(@Param("userId") Long userId, @Param("productId") Long productId);
 
     @EntityGraph(attributePaths = {"items"})
     Optional<Order> findByOrderNumber(String orderNumber);
@@ -64,6 +68,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     @Query("select o from Order o where o.userId = :userId and o.isDeleted = false order by o.createdAt desc")
     Page<Order> findVisibleCustomerHistoryByUserId(Long userId, Pageable pageable);
+
+    @Query("select o from Order o where o.userId = :userId and (:status is null or o.status = :status) and o.isDeleted = false order by o.createdAt desc")
+    Page<Order> findVisibleCustomerHistoryByUserIdAndStatus(@Param("userId") Long userId, @Param("status") OrderStatus status, Pageable pageable);
 
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
 

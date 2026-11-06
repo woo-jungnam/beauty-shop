@@ -122,6 +122,15 @@ apiClient.interceptors.response.use(
     }
 
     let message = error.response?.data?.message;
+    const errors = error.response?.data?.errors;
+    if (Array.isArray(errors) && errors.length > 0) {
+      const fieldMessages = errors
+        .map((e) => (typeof e === 'string' ? e : e?.message))
+        .filter(Boolean);
+      if (fieldMessages.length > 0) {
+        message = fieldMessages.join('; ');
+      }
+    }
 
     if (!message) {
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {

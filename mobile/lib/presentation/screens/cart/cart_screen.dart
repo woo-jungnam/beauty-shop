@@ -233,7 +233,16 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                             if (cart.voucherDiscount > 0)
                               Text(
-                                'Tiết kiệm: ${AppFormatters.formatCurrency(cart.voucherDiscount)}',
+                                'Voucher: -${AppFormatters.formatCurrency(cart.voucherDiscount)}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            if (cart.membershipDiscount > 0)
+                              Text(
+                                'Ưu đãi thành viên: -${AppFormatters.formatCurrency(cart.membershipDiscount)}',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.success,

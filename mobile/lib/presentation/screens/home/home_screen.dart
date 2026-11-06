@@ -290,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen>
               const CatalogState(message: 'Hiện chưa có sản phẩm ưu đãi')
             else if (provider.flashSaleProducts.isNotEmpty)
               SizedBox(
-                height: 265,
+                height: 285,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),

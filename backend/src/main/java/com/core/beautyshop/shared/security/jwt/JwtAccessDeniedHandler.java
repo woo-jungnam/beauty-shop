@@ -1,6 +1,7 @@
 package com.core.beautyshop.shared.security.jwt;
 
 import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.shared.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.ServletException;
@@ -36,6 +37,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
         ApiResponse<Void> apiResponse = ApiResponse.error(
                 HttpServletResponse.SC_FORBIDDEN,
+                ErrorCode.ACCESS_DENIED.getCode(),
                 "Bạn không có quyền truy cập vào tài nguyên này!",
                 accessDeniedException.getMessage()
         );

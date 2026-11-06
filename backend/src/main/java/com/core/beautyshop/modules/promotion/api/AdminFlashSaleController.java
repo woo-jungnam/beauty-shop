@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "Chiến dịch Flash Sale (Admin)", description = "Quản lý chiến dịch Flash Sale theo khung giờ, hạn mức suất bán và SKU tham gia")
 @RestController
 @RequestMapping("/api/v1/admin/flash-sales")
@@ -33,6 +35,12 @@ public class AdminFlashSaleController {
     @GetMapping("/{id}")
     public ApiResponse<CampaignDetailView> getById(@PathVariable Long id) {
         return ApiResponse.success(flashSaleService.getById(id));
+    }
+
+    @Operation(summary = "Lấy danh sách biến thể SKU và các lô hàng kho để chọn vào Flash Sale")
+    @GetMapping("/candidate-items")
+    public ApiResponse<List<FlashSaleCandidateItem>> getCandidateItems() {
+        return ApiResponse.success(flashSaleService.getCandidateItems());
     }
 
     @Operation(summary = "Tạo chiến dịch Flash Sale mới")

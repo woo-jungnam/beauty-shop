@@ -24,4 +24,18 @@ class ProductTagServiceImplTest {
 
         assertEquals("dac-tri-mun", response.getSlug());
     }
+
+    @Test
+    void deleteTagPerformsSoftDelete() {
+        ProductTagRepository repository = mock(ProductTagRepository.class);
+        ProductTag tag = ProductTag.builder().name("Dưỡng ẩm").slug("duong-am").build();
+        tag.setId(10L);
+        when(repository.findByIdAndIsDeletedFalse(10L)).thenReturn(java.util.Optional.of(tag));
+        when(repository.save(any(ProductTag.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductTagServiceImpl service = new ProductTagServiceImpl(repository);
+        service.deleteTag(10L);
+
+        assertEquals(true, tag.getIsDeleted());
+    }
 }

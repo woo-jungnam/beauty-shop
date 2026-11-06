@@ -40,8 +40,9 @@ public class AdminOrderController {
            @RequestParam(required = false) PaymentStatus paymentStatus,
            @Parameter(description = "createdAt từ thời điểm này, gồm mốc; ISO-8601 Instant", example = "2026-10-01T00:00:00Z") @RequestParam(required = false) Instant from,
            @Parameter(description = "createdAt trước thời điểm này, không gồm mốc; ISO-8601 Instant", example = "2026-10-02T00:00:00Z") @RequestParam(required = false) Instant to,
+           @Parameter(description = "Loại đơn hàng: PRODUCT, SPA, SPA_PACKAGE, SPA_VISIT") @RequestParam(required = false) String orderType,
            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        Page<OrderResponse> page = orderService.searchAdminOrders(new AdminOrderFilter(keyword, status, paymentStatus, from, to), pageable);
+        Page<OrderResponse> page = orderService.searchAdminOrders(new AdminOrderFilter(keyword, status, paymentStatus, from, to, orderType), pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 

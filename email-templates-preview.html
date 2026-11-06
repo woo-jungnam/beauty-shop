@@ -1,0 +1,568 @@
+<title>Email Bill Showcase</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181b24;
+    --surface-hover: #212634;
+    --border: #2a2f3d;
+    --text: #f0f2f5;
+    --text-muted: #8b949e;
+    --accent: #ec4899;
+    --accent-glow: rgba(236, 72, 153, 0.15);
+    --badge-bg: #272133;
+    --badge-text: #f472b6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-hover: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent: #db2777;
+      --accent-glow: rgba(219, 39, 119, 0.1);
+      --badge-bg: #fce7f3;
+      --badge-text: #be185d;
+      color-scheme: light;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface-hover: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --accent: #db2777;
+    --accent-glow: rgba(219, 39, 119, 0.1);
+    --badge-bg: #fce7f3;
+    --badge-text: #be185d;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 24px;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 14px;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  /* Style Selector Tabs */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .tab-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tab-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px var(--accent-glow);
+  }
+
+  /* Layout view split */
+  .preview-wrapper {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (min-width: 900px) {
+    .preview-wrapper {
+      grid-template-columns: 320px 1fr;
+    }
+  }
+
+  /* Info sidebar */
+  .style-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--badge-bg);
+    color: var(--badge-text);
+    margin-bottom: 12px;
+  }
+
+  .style-card h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .style-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .feature-list {
+    list-style: none;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .feature-list li {
+    display: flex;
+    gap: 8px;
+    color: var(--text);
+  }
+
+  .feature-list li::before {
+    content: "✓";
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  /* Email preview container */
+  .preview-box {
+    background: #e5e7eb;
+    border-radius: 16px;
+    padding: 24px 12px;
+    display: flex;
+    justify-content: center;
+    border: 1px solid var(--border);
+    min-height: 600px;
+  }
+
+  .email-frame {
+    width: 100%;
+    max-width: 580px;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  /* Hide tabs that aren't active */
+  .template-content {
+    display: none;
+  }
+  .template-content.active {
+    display: block;
+  }
+</style>
+
+<div class="container">
+  <div class="header">
+    <h1>4 Mẫu Email Bill Thịnh Hành Cho E-Commerce &amp; Spa</h1>
+    <p>Tổng hợp các phong cách thiết kế email xác nhận đơn hàng đang được ưa chuộng nhất 2025–2026.</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(0)">
+      <span>✨ 1. Glossier Minimalist</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab(1)">
+      <span>🌿 2. Boutique Editorial</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab(2)">
+      <span>🚚 3. Dynamic Tracking</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab(3)">
+      <span>🖤 4. Luxury Dark Mode</span>
+    </button>
+  </div>
+
+  <div class="preview-wrapper">
+    <!-- Sidebar Info -->
+    <div class="style-card">
+      <div id="info-0" class="template-info">
+        <span class="badge">Phổ biến nhất E-Commerce</span>
+        <h3>Clean &amp; Minimalist</h3>
+        <p>Học tập từ Glossier, Apple, Zara. Tập trung tuyệt đối vào sản phẩm, typography sắc nét, nhiều khoảng trắng, mang lại cảm giác hiện đại và cao cấp.</p>
+        <ul class="feature-list">
+          <li>Header tối giản với logo centered</li>
+          <li>Layout hình ảnh sản phẩm vuông 1:1</li>
+          <li>Đường kẻ mảnh hairline (#eee)</li>
+          <li>CTA tra cứu đơn nổi bật</li>
+        </ul>
+      </div>
+
+      <div id="info-1" class="template-info" style="display:none;">
+        <span class="badge">Chuẩn Spa &amp; Mỹ Phẩm Thuần Chay</span>
+        <h3>Boutique Editorial</h3>
+        <p>Phong cách Aesop, Le Labo, Rare Beauty. Tông màu be/ấm, font chữ trang nhã có serif nhẹ, nhấn mạnh trải nghiệm và lời cảm ơn cá nhân hóa.</p>
+        <ul class="feature-list">
+          <li>Màu nền ấm dịu (#FBF9F5, #F5EFEB)</li>
+          <li>Typography mang hơi hướng tạp chí</li>
+          <li>Tips chăm sóc da kèm theo sản phẩm</li>
+          <li>Khu vực đặt lịch Spa tái khám</li>
+        </ul>
+      </div>
+
+      <div id="info-2" class="template-info" style="display:none;">
+        <span class="badge">Tối ưu Tỷ lệ giữ chân</span>
+        <h3>Dynamic Tracking &amp; Gamified</h3>
+        <p>Phong cách Shopee, Tiki, Nike. Trực quan hóa tiến trình giao hàng qua thanh trạng thái, tích hợp điểm tích lũy và voucher cho đơn tiếp theo.</p>
+        <ul class="feature-list">
+          <li>Thanh tiến trình 4 bước (Order &gt; Pack &gt; Ship &gt; Receive)</li>
+          <li>Mã vạch / QR tra cứu nhanh bưu kiện</li>
+          <li>Box tích điểm loyalty "Bạn nhận được +50 điểm"</li>
+          <li>Gợi ý sản phẩm mua kèm cá nhân hóa</li>
+        </ul>
+      </div>
+
+      <div id="info-3" class="template-info" style="display:none;">
+        <span class="badge">Thương Hiệu Sang Trọng / VIP</span>
+        <h3>Luxury Dark Mode</h3>
+        <p>Phong cách Chanel, Dior Beauty, Spa 5 sao. Tông đen than chủ đạo phối viền vàng kim (champagne gold), tạo cảm giác độc quyền cho khách VIP.</p>
+        <ul class="feature-list">
+          <li>Nền đen than #111 phối viền vàng #D4AF37</li>
+          <li>Badge thành viên hạng Gold/Diamond</li>
+          <li>Thiết kế hóa đơn dạng certificate</li>
+          <li>Hotline Concierge / CSKH riêng</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Preview Area -->
+    <div class="preview-box">
+      <!-- 1. GLOSSIER MINIMALIST -->
+      <div id="tmpl-0" class="template-content active email-frame">
+        <div style="padding: 32px 28px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+          <h2 style="font-size: 20px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #111;">BeautyShop</h2>
+        </div>
+        <div style="padding: 32px 28px;">
+          <div style="font-size: 12px; font-weight: 700; color: #db2777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Đã tiếp nhận đơn hàng</div>
+          <h1 style="font-size: 22px; font-weight: 700; color: #111; margin-bottom: 8px;">Cảm ơn bạn, Phương Thảo!</h1>
+          <p style="font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 24px;">Chúng tôi đã nhận được đơn hàng <strong>#BS-98214</strong> và đang chuẩn bị đóng gói để gửi tới bạn.</p>
+
+          <div style="border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 16px 0; margin-bottom: 24px; display: flex; justify-content: space-between; font-size: 13px; color: #555;">
+            <div><strong>Ngày đặt:</strong> 06/11/2026</div>
+            <div><strong>Thanh toán:</strong> VNPay (Đã thanh toán)</div>
+          </div>
+
+          <!-- Product rows -->
+          <div style="margin-bottom: 24px;">
+            <div style="display: flex; gap: 14px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid #f5f5f5;">
+              <div style="width: 56px; height: 56px; background: #fdf2f8; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🧴</div>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 600; color: #111;">Kem Chống Nắng La Roche-Posay Anthelios</div>
+                <div style="font-size: 12px; color: #888;">Dung tích: 50ml · SL: 1</div>
+              </div>
+              <div style="font-size: 14px; font-weight: 600; color: #111;">425.000 ₫</div>
+            </div>
+
+            <div style="display: flex; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid #f5f5f5;">
+              <div style="width: 56px; height: 56px; background: #fdf2f8; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✨</div>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 600; color: #111;">Serum Phục Hồi B5 La Roche-Posay Hyalu</div>
+                <div style="font-size: 12px; color: #888;">Dung tích: 30ml · SL: 1</div>
+              </div>
+              <div style="font-size: 14px; font-weight: 600; color: #111;">850.000 ₫</div>
+            </div>
+          </div>
+
+          <!-- Totals -->
+          <div style="background: #fafafa; border-radius: 10px; padding: 16px; margin-bottom: 24px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #666;">
+              <span>Tạm tính</span>
+              <span>1.275.000 ₫</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #666;">
+              <span>Phí vận chuyển</span>
+              <span>25.000 ₫</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; color: #16a34a;">
+              <span>Voucher giảm giá (BEAUTY50)</span>
+              <span>-50.000 ₫</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px dashed #ddd; font-size: 16px; font-weight: 700; color: #111;">
+              <span>Tổng cộng</span>
+              <span style="color: #db2777;">1.250.000 ₫</span>
+            </div>
+          </div>
+
+          <!-- Shipping address -->
+          <div style="font-size: 13px; color: #555; margin-bottom: 28px; line-height: 1.6;">
+            <strong style="color: #111;">Địa chỉ giao hàng:</strong><br/>
+            Nguyễn Phương Thảo · 0912 345 678<br/>
+            Tòa Landmark 81, 720A Điện Biên Phủ, P.22, Q. Bình Thạnh, TP. Hồ Chí Minh
+          </div>
+
+          <!-- CTA -->
+          <div style="text-align: center;">
+            <a href="#" style="display: inline-block; background: #111; color: #fff; padding: 14px 28px; border-radius: 6px; font-size: 14px; font-weight: 600; text-decoration: none;">Theo dõi đơn hàng →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. BOUTIQUE EDITORIAL -->
+      <div id="tmpl-1" class="template-content email-frame" style="background: #fbf9f5; color: #2c2825; border: 1px solid #ebdccb;">
+        <div style="padding: 36px 30px; text-align: center; border-bottom: 1px solid #ede3d7;">
+          <div style="font-family: Georgia, serif; font-size: 26px; font-style: italic; color: #6e473b; margin-bottom: 4px;">BeautyShop Maison &amp; Spa</div>
+          <div style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #a08475;">Chăm sóc sắc đẹp trị liệu</div>
+        </div>
+        <div style="padding: 32px 30px;">
+          <p style="font-family: Georgia, serif; font-size: 20px; font-style: italic; color: #3b2a22; margin-bottom: 12px;">Kính gửi chị Lan Anh,</p>
+          <p style="font-size: 13.5px; line-height: 1.7; color: #5c4f48; margin-bottom: 24px;">Cảm ơn chị đã lựa chọn dịch vụ và sản phẩm dưỡng sinh tại viện trị liệu BeautyShop. Hóa đơn chi tiết dịch vụ của chị đã được ghi nhận hoàn tất.</p>
+
+          <!-- Appointment card -->
+          <div style="background: #ffffff; border: 1px solid #ede3d7; border-radius: 8px; padding: 18px; margin-bottom: 24px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #a08475; font-weight: 700; margin-bottom: 8px;">Dịch Vụ Spa Đã Đặt</div>
+            <div style="font-size: 15px; font-weight: 600; color: #3b2a22;">Gói Trị Liệu Trẻ Hóa Da Tảo Biển Bio-Peel</div>
+            <div style="font-size: 13px; color: #7d6e65; margin-top: 4px;">Thời gian: 14:30 · Thứ Bảy, 08/11/2026 · KTV: Minh Châu</div>
+            <div style="margin-top: 10px; font-size: 14px; font-weight: 700; color: #6e473b;">950.000 ₫</div>
+          </div>
+
+          <!-- Product card -->
+          <div style="background: #ffffff; border: 1px solid #ede3d7; border-radius: 8px; padding: 18px; margin-bottom: 24px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #a08475; font-weight: 700; margin-bottom: 8px;">Sản Phẩm Skincare Home-Care</div>
+            <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
+              <span>Kem Dưỡng Tái Tạo Tế Bào Ceramide 50g</span>
+              <span style="font-weight: 600;">680.000 ₫</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+              <span>Xịt Khoáng Hoa Cúc Làm Dịu Da 150ml</span>
+              <span style="font-weight: 600;">320.000 ₫</span>
+            </div>
+          </div>
+
+          <!-- Total -->
+          <div style="border-top: 2px solid #ede3d7; padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 24px;">
+            <span style="font-family: Georgia, serif; font-size: 16px; font-style: italic; color: #3b2a22;">Tổng hóa đơn</span>
+            <span style="font-size: 20px; font-weight: 700; color: #6e473b;">1.950.000 ₫</span>
+          </div>
+
+          <!-- Skin Tips -->
+          <div style="background: #f4ede3; border-left: 3px solid #6e473b; padding: 12px 16px; font-size: 12.5px; color: #5c4f48; line-height: 1.6; margin-bottom: 28px;">
+            <strong>Lời khuyên sau buổi liệu trình:</strong> Tránh tiếp xúc ánh nắng trực tiếp trong 24 giờ đầu, sử dụng kem chống nắng SPF50+ và xịt khoáng bổ sung độ ẩm 2 tiếng/lần.
+          </div>
+
+          <div style="text-align: center;">
+            <a href="#" style="display: inline-block; background: #6e473b; color: #ffffff; padding: 12px 24px; border-radius: 4px; font-size: 13px; font-weight: 600; text-decoration: none; letter-spacing: 0.5px;">Xem lịch hẹn &amp; Hướng dẫn chăm sóc</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. DYNAMIC TRACKING -->
+      <div id="tmpl-2" class="template-content email-frame">
+        <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 24px 20px; color: #fff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div style="font-weight: 800; font-size: 18px; letter-spacing: 1px;">BeautyShop Express</div>
+            <div style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;">Giao hàng nhanh 2H</div>
+          </div>
+          <div style="font-size: 13px; opacity: 0.9;">Đơn hàng #VN-2026-8819</div>
+          <div style="font-size: 20px; font-weight: 700; margin-top: 4px;">Đang trên đường vận chuyển 🚀</div>
+        </div>
+
+        <div style="padding: 24px 20px;">
+          <!-- Progress Stepper -->
+          <div style="display: flex; justify-content: space-between; margin-bottom: 24px; position: relative;">
+            <div style="text-align: center; flex: 1;">
+              <div style="width: 28px; height: 28px; background: #2563eb; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 12px; font-weight: 700;">✓</div>
+              <div style="font-size: 11px; font-weight: 600; color: #111;">Đặt hàng</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="width: 28px; height: 28px; background: #2563eb; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 12px; font-weight: 700;">✓</div>
+              <div style="font-size: 11px; font-weight: 600; color: #111;">Đóng gói</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="width: 28px; height: 28px; background: #2563eb; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 12px; font-weight: 700; box-shadow: 0 0 0 4px #dbeafe;">🚚</div>
+              <div style="font-size: 11px; font-weight: 700; color: #2563eb;">Đang giao</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="width: 28px; height: 28px; background: #e5e7eb; color: #9ca3af; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 12px; font-weight: 700;">4</div>
+              <div style="font-size: 11px; color: #9ca3af;">Đã nhận</div>
+            </div>
+          </div>
+
+          <!-- Carrier Box -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: #64748b;">Đơn vị vận chuyển:</span>
+              <strong>SPX Express</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span style="color: #64748b;">Mã vận đơn:</span>
+              <strong style="color: #2563eb;">SPXVN0482910384</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #64748b;">Dự kiến giao:</span>
+              <strong style="color: #16a34a;">Hôm nay, trước 18:00</strong>
+            </div>
+          </div>
+
+          <!-- Loyalty points reward -->
+          <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+            <div style="font-size: 22px;">🎁</div>
+            <div style="font-size: 12.5px; color: #92400e;">
+              <strong>Bạn đã nhận được +65 BeautyPoints!</strong> Điểm sẽ được cộng sau khi đơn giao thành công.
+            </div>
+          </div>
+
+          <!-- Items short list -->
+          <div style="font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+              <span>Nước Tẩy Trang Micellar Bioderma Hồng 500ml (x2)</span>
+              <strong>760.000 ₫</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Bông Tẩy Trang Cao Cấp Silcot Nhật Bản (x3)</span>
+              <strong>135.000 ₫</strong>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: #111; margin-bottom: 24px;">
+            <span>Tổng thanh toán COD:</span>
+            <span style="color: #2563eb;">895.000 ₫</span>
+          </div>
+
+          <div style="text-align: center;">
+            <a href="#" style="display: block; background: #2563eb; color: #fff; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 700; text-decoration: none;">Định vị Shipper trực tiếp</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. LUXURY DARK MODE -->
+      <div id="tmpl-3" class="template-content email-frame" style="background: #141416; color: #e5e5e5; border: 1px solid #2a2a2e;">
+        <div style="padding: 36px 30px; text-align: center; border-bottom: 1px solid #27272a;">
+          <div style="font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #d4af37; margin-bottom: 6px;">VIP PRIVILEGE CLUB</div>
+          <h2 style="font-size: 22px; font-weight: 300; letter-spacing: 4px; text-transform: uppercase; color: #ffffff;">BEAUTYSHOP HAUTE</h2>
+        </div>
+
+        <div style="padding: 32px 30px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div>
+              <div style="font-size: 12px; color: #a1a1aa;">HỘI VIÊN PLATINUM</div>
+              <div style="font-size: 16px; font-weight: 600; color: #ffffff;">Mr. Hoàng Nam</div>
+            </div>
+            <div style="border: 1px solid #d4af37; padding: 4px 12px; border-radius: 4px; font-size: 11px; color: #d4af37; letter-spacing: 1px;">E-INVOICE #00489</div>
+          </div>
+
+          <p style="font-size: 13.5px; color: #a1a1aa; line-height: 1.7; margin-bottom: 24px;">Cảm ơn Quý khách đã tin tưởng trải nghiệm dòng sản phẩm chăm sóc cao cấp. Hóa đơn điện tử của đơn hàng:</p>
+
+          <!-- Luxury Item -->
+          <div style="border: 1px solid #27272a; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: #1c1c1f;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 14px; font-weight: 600; color: #ffffff;">Serum Trẻ Hóa Tế Bào Gốc Swiss Cellular</div>
+                <div style="font-size: 12px; color: #71717a;">Made in Switzerland · 50ml</div>
+              </div>
+              <div style="font-size: 15px; font-weight: 700; color: #d4af37;">4.850.000 ₫</div>
+            </div>
+            <div style="font-size: 12px; color: #a1a1aa;">Ưu đãi hội viên: Miễn phí gói quà Luxury Box &amp; Thiệp thủ công</div>
+          </div>
+
+          <!-- Total luxury -->
+          <div style="background: #1c1c1f; border-radius: 8px; padding: 16px; margin-bottom: 24px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #71717a;">
+              <span>Giá niêm yết</span>
+              <span>4.850.000 ₫</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #d4af37;">
+              <span>Đặc quyền Platinum (-10%)</span>
+              <span>-485.000 ₫</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #27272a; font-size: 16px; font-weight: 700; color: #ffffff;">
+              <span>Tổng thanh toán</span>
+              <span style="color: #d4af37;">4.365.000 ₫</span>
+            </div>
+          </div>
+
+          <!-- Concierge note -->
+          <div style="text-align: center; font-size: 12px; color: #71717a; margin-bottom: 24px;">
+            Chuyên viên tư vấn riêng: <strong>Ms. Ngọc Hân (Hotline VIP: 0988 888 888)</strong>
+          </div>
+
+          <div style="text-align: center;">
+            <a href="#" style="display: inline-block; background: #d4af37; color: #000; padding: 12px 28px; border-radius: 4px; font-size: 13px; font-weight: 700; text-decoration: none; letter-spacing: 1px;">QUẢN LÝ ĐẶC QUYỀN VIP</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function switchTab(index) {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const templates = document.querySelectorAll('.template-content');
+    const infos = document.querySelectorAll('.template-info');
+
+    tabs.forEach((tab, i) => {
+      tab.classList.toggle('active', i === index);
+    });
+
+    templates.forEach((tmpl, i) => {
+      tmpl.classList.toggle('active', i === index);
+    });
+
+    infos.forEach((info, i) => {
+      info.style.display = i === index ? 'block' : 'none';
+    });
+  }
+</script>

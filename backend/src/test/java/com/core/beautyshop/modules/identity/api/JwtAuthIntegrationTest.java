@@ -253,4 +253,48 @@ public class JwtAuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(new RefreshTokenRequest(userRefreshToken))))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    public void testLoginWithWrongPassword_ReturnsInvalidCredentials() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("user", "wrongpass123");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.errorCode").value("AUTH_003"))
+                .andExpect(jsonPath("$.message").value("Tên đăng nhập hoặc mật khẩu không chính xác"));
+    }
+
+    @Test
+    public void testRegisterDuplicateUsername_ReturnsConflict() throws Exception {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setUsername("user");
+        registerRequest.setEmail("unique_email_123@beautyshop.com");
+        registerRequest.setPassword("password123");
+        registerRequest.setFullName("Duplicate Username User");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("AUTH_006"))
+                .andExpect(jsonPath("$.message").value("Tên đăng nhập đã được sử dụng"));
+    }
+
+    @Test
+    public void testRegisterDuplicateEmail_ReturnsConflict() throws Exception {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setUsername("unique_user_456");
+        registerRequest.setEmail("user@beautyshop.com");
+        registerRequest.setPassword("password123");
+        registerRequest.setFullName("Duplicate Email User");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("AUTH_006"))
+                .andExpect(jsonPath("$.message").value("Email đã được sử dụng"));
+    }
 }

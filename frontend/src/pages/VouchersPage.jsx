@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   TicketPercent,
   Plus,
@@ -19,16 +19,77 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { FlashSaleCampaignManager } from './flash-sale/FlashSaleCampaignManager';
 
 export const VouchersPage = () => {
-  const [activeSection, setActiveSection] = useState('vouchers');
+  const getInitialTab = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : 'vouchers';
+  };
+  const [activeSection, setActiveSectionState] = useState(getInitialTab);
+
+  const setActiveSection = useCallback((section) => {
+    setActiveSectionState(section);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = section === 'vouchers' ? base : `${base}?tab=${section}`;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setActiveSectionState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setActiveSectionState('vouchers');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   const [vouchers, setVouchers] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState(null);
@@ -139,14 +200,17 @@ export const VouchersPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa mã khuyến mãi này không?')) return;
-    try {
-      await apiClient.delete(ENDPOINTS.VOUCHERS.DELETE(id));
-      fetchVouchers(page);
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa voucher');
-    }
+  const handleDelete = (voucher) => {
+    askConfirm({
+      title: 'Xác nhận xóa voucher',
+      message: `Bạn có chắc muốn xóa mã khuyến mãi "${voucher.code || voucher.id}"?`,
+      detail: 'Mã khuyến mãi sẽ được ngừng kích hoạt và ẩn khỏi hệ thống. Lịch sử các đơn hàng đã áp dụng voucher này không bị ảnh hưởng.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.VOUCHERS.DELETE(voucher.id));
+        fetchVouchers(page);
+      },
+    });
   };
 
   const columns = [
@@ -236,7 +300,7 @@ export const VouchersPage = () => {
           <Button
             variant="danger"
             size="sm"
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(row)}
             icon={Trash2}
           >
             Xóa
@@ -454,6 +518,17 @@ export const VouchersPage = () => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

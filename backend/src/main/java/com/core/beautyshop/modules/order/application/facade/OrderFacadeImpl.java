@@ -364,6 +364,14 @@ public class OrderFacadeImpl implements OrderFacade {
                 && orderRepository.existsDeliveredProductPurchase(orderId, userId, productId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Long> findEligibleDeliveredOrderId(Long userId, Long productId) {
+        if (userId == null || productId == null) return Optional.empty();
+        List<Long> ids = orderRepository.findDeliveredOrderIdsForProductPurchase(userId, productId);
+        return ids.isEmpty() ? Optional.empty() : Optional.of(ids.get(0));
+    }
+
     private SpaPackageOrderResult toSpaPackageOrderResult(Order order) {
         PaymentInstruction instruction = paymentFacade.processPayment(
                 PaymentMethod.BANK,
@@ -415,6 +423,37 @@ public class OrderFacadeImpl implements OrderFacade {
                         o.getCustomerName(),
                         String.valueOf(o.getUpdatedAt() != null ? o.getUpdatedAt() : o.getCreatedAt())
                 ));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OrderEmailDetailDto> findOrderEmailDetail(Long orderId) {
+        if (orderId == null) return Optional.empty();
+        return orderRepository.findById(orderId)
+                .filter(o -> !Boolean.TRUE.equals(o.getIsDeleted()))
+                .map(o -> {
+                    var items = o.getItems() == null ? List.<OrderEmailItemDto>of() :
+                            o.getItems().stream().map(i -> new OrderEmailItemDto(
+                                    i.getProductName(), i.getVariantName(),
+                                      i.getQuantity(), i.getPrice(), i.getDiscount(), i.getSku(), i.getImageUrl()
+                            )).toList();
+                    return new OrderEmailDetailDto(
+                            o.getOrderNumber(), o.getCustomerName(), o.getCustomerPhone(),
+                              o.isSpaOrder() ? null : java.util.stream.Stream.of(o.getShippingAddress(), o.getWard(), o.getDistrict(), o.getCity())
+                                      .filter(java.util.Objects::nonNull).map(String::trim).filter(s -> !s.isEmpty())
+                                      .collect(java.util.stream.Collectors.joining(", ")),
+                            o.getPaymentMethod() != null ? o.getPaymentMethod().name() : null,
+                            items, o.getSubTotal(), o.getShippingFee(),
+                              o.getDiscountAmount(), o.getTotalAmount(), o.getCreatedAt(),
+                              o.getStatus() == null ? null : o.getStatus().name(),
+                              o.getPaymentStatus() == null ? null : o.getPaymentStatus().name(),
+                              o.getPaidAmount(), o.getRefundedAmount(), o.getPaidAt(), o.getServicePackageId(),
+                              o.getSpaBenefitType(), o.getAppointmentId(),
+                              o.getSpaVisitItems() == null ? List.of() : o.getSpaVisitItems().stream()
+                                      .map(i -> new OrderEmailServiceDto(i.getServiceName(), i.getQuantity() == null ? 1 : i.getQuantity(), i.getUnitPrice())).toList(),
+                              o.getCarrierName(), o.getTrackingCode(), o.getNotes()
+                    );
+                });
     }
 
     private String sha256(String value) {

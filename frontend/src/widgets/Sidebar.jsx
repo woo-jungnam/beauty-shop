@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowUpRight,
   ChevronLeft,
@@ -12,6 +12,7 @@ import { getAdminSections, getInitials } from "../app/adminNavigation";
 
 export const Sidebar = ({
   activeTab,
+  activeSubTab = null,
   onSelectTab,
   collapsed,
   onToggleCollapse,
@@ -26,6 +27,27 @@ export const Sidebar = ({
   }, [onCloseMobile]);
   const sections = getAdminSections(user?.roles, user?.permissions);
   const name = user?.fullName || user?.username || "BeautyShop";
+
+  const [expandedItems, setExpandedItems] = useState(() => {
+    const initial = {};
+    if (activeTab) initial[activeTab] = true;
+    return initial;
+  });
+
+  useEffect(() => {
+    if (activeTab) {
+      setExpandedItems((prev) => ({ ...prev, [activeTab]: true }));
+    }
+  }, [activeTab]);
+
+  const toggleExpand = (id, event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setExpandedItems((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -121,22 +143,95 @@ export const Sidebar = ({
           {sections.map((section) => (
             <div className="sidebar-section" key={section.label}>
               <p className="sidebar-section-label">{section.label}</p>
-              {section.items.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  className={`sidebar-link ${activeTab === id ? "is-active" : ""}`}
-                  onClick={() => onSelectTab(id)}
-                  aria-label={label}
-                  aria-current={activeTab === id ? "page" : undefined}
-                  title={collapsed ? label : undefined}
-                >
-                  <span className="nav-icon">
-                    <Icon size={18} strokeWidth={1.7} />
-                  </span>
-                  <span className="nav-label">{label}</span>
-                  <ChevronRight size={13} className="nav-chevron" />
-                </button>
-              ))}
+              {section.items.map(({ id, label, icon: Icon, subItems }) => {
+                const hasSub = Array.isArray(subItems) && subItems.length > 0;
+                const isExpanded = !!expandedItems[id];
+                const isParentActive = activeTab === id;
+
+                if (collapsed || !hasSub) {
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`sidebar-link ${isParentActive && !activeSubTab ? "is-active" : ""}`}
+                      onClick={() => onSelectTab(id)}
+                      aria-label={label}
+                      aria-current={isParentActive && !activeSubTab ? "page" : undefined}
+                      title={collapsed ? label : undefined}
+                    >
+                      <span className="nav-icon">
+                        <Icon size={18} strokeWidth={1.7} />
+                      </span>
+                      <span className="nav-label">{label}</span>
+                      <ChevronRight size={13} className="nav-chevron" />
+                    </button>
+                  );
+                }
+
+                return (
+                  <div
+                    key={id}
+                    className={`sidebar-split-item ${isParentActive ? "is-parent-active" : ""}`}
+                  >
+                    <div
+                      className={`sidebar-split-row ${isParentActive && !activeSubTab ? "is-active" : ""}`}
+                    >
+                      <button
+                        type="button"
+                        className="sidebar-split-main"
+                        onClick={() => onSelectTab(id)}
+                        aria-label={label}
+                        aria-current={isParentActive && !activeSubTab ? "page" : undefined}
+                        title={`Vào không gian ${label}`}
+                      >
+                        <span className="nav-icon">
+                          <Icon size={18} strokeWidth={1.7} />
+                        </span>
+                        <span className="nav-label">{label}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`sidebar-split-arrow ${isExpanded ? "is-expanded" : ""}`}
+                        onClick={(e) => toggleExpand(id, e)}
+                        aria-label={
+                          isExpanded
+                            ? `Thu gọn menu con ${label}`
+                            : `Mở rộng menu con ${label}`
+                        }
+                        title={isExpanded ? "Thu gọn menu con" : "Mở rộng menu con"}
+                      >
+                        <ChevronRight size={13} className="nav-chevron-split" />
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div
+                        className="sidebar-sub-nav"
+                        role="group"
+                        aria-label={`Chức năng con của ${label}`}
+                      >
+                        {subItems.map((sub) => {
+                          const isSubActive =
+                            isParentActive && activeSubTab === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              className={`sidebar-sub-link ${isSubActive ? "is-active" : ""}`}
+                              onClick={() => onSelectTab(id, sub.id)}
+                              aria-label={sub.label}
+                              aria-current={isSubActive ? "page" : undefined}
+                            >
+                              <span className="sub-bullet" aria-hidden="true" />
+                              <span className="sub-label">{sub.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </nav>

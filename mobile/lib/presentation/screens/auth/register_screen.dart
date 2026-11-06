@@ -20,6 +20,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthProvider>().clearError();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
@@ -54,6 +64,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: AppTypography.bodySmall,
             ),
             const SizedBox(height: 20),
+
+            if (auth.errorMessage != null)
+              Container(
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.dealRedLight,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.dealRedBorder),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppColors.dealRed,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        auth.errorMessage!,
+                        style: const TextStyle(
+                          color: AppColors.dealRed,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             _buildInputField(
               'Họ và tên *',
@@ -99,12 +139,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onPressed: auth.isLoading
                     ? null
                     : () async {
+                        final fullName = _fullNameController.text.trim();
+                        final email = _emailController.text.trim();
+                        final phone = _phoneController.text.trim();
+                        final username = _usernameController.text.trim();
+                        final password = _passwordController.text;
+
+                        if (fullName.isEmpty || email.isEmpty || phone.isEmpty || username.isEmpty || password.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Vui lòng điền đầy đủ tất cả các trường có dấu *')),
+                          );
+                          return;
+                        }
+                        if (password.length < 6) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Mật khẩu phải có ít nhất 6 ký tự')),
+                          );
+                          return;
+                        }
+
                         final success = await auth.register(
-                          fullName: _fullNameController.text.trim(),
-                          email: _emailController.text.trim(),
-                          phone: _phoneController.text.trim(),
-                          username: _usernameController.text.trim(),
-                          password: _passwordController.text,
+                          fullName: fullName,
+                          email: email,
+                          phone: phone,
+                          username: username,
+                          password: password,
                         );
                         if (success && mounted) {
                           Navigator.pop(context);

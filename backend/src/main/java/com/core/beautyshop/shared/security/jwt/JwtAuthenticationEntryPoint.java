@@ -1,6 +1,7 @@
 package com.core.beautyshop.shared.security.jwt;
 
 import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.shared.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.ServletException;
@@ -36,6 +37,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         ApiResponse<Void> apiResponse = ApiResponse.error(
                 HttpServletResponse.SC_UNAUTHORIZED,
+                ErrorCode.UNAUTHORIZED.getCode(),
                 "Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!",
                 authException.getMessage()
         );

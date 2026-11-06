@@ -29,6 +29,22 @@ public interface OrderFacade {
     boolean existsById(Long orderId);
     boolean isPaidOrderForUser(Long orderId, Long userId);
     boolean isDeliveredProductPurchase(Long orderId, Long userId, Long productId);
+    Optional<Long> findEligibleDeliveredOrderId(Long userId, Long productId);
     record OrderRecipientDto(Long userId, String email, String name, String updatedAt) {}
     Optional<OrderRecipientDto> findOrderRecipient(Long orderId);
+
+    /** Chi tiết đơn hàng phục vụ gửi email bill */
+    record OrderEmailItemDto(String productName, String variantName, int quantity, BigDecimal price, BigDecimal discount,
+                            String sku, String imageUrl) {}
+    record OrderEmailDetailDto(String orderNumber, String customerName, String customerPhone,
+                               String shippingAddress, String paymentMethod,
+                               List<OrderEmailItemDto> items,
+                               BigDecimal subTotal, BigDecimal shippingFee,
+                               BigDecimal discountAmount, BigDecimal totalAmount,
+                               Instant createdAt, String status, String paymentStatus, BigDecimal paidAmount,
+                               BigDecimal refundedAmount, Instant paidAt, Long servicePackageId,
+                               String spaBenefitType, Long appointmentId, List<OrderEmailServiceDto> services,
+                               String carrierName, String trackingCode, String notes) {}
+    record OrderEmailServiceDto(String serviceName, int quantity, BigDecimal amount) {}
+    Optional<OrderEmailDetailDto> findOrderEmailDetail(Long orderId);
 }

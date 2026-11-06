@@ -11,6 +11,10 @@ public interface ProductTagRepository extends JpaRepository<ProductTag, Long> {
 
     Optional<ProductTag> findBySlug(String slug);
 
+    Optional<ProductTag> findByIdAndIsDeletedFalse(Long id);
+
+    List<ProductTag> findAllByIsDeletedFalse();
+
     List<ProductTag> findByNameContainingIgnoreCase(String name);
 
     boolean existsBySlug(String slug);

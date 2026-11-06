@@ -32,6 +32,7 @@ import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { ProductFeaturesModal } from './ProductFeaturesModal';
 import { lines, ingredientCatalog } from './productFeatures.js';
@@ -49,8 +50,69 @@ const PRODUCT_STATUSES = {
 const slugify = (value) => value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 export const ProductsPage = () => {
-  const [activeTab, setActiveTab] = useState('products');
+  const getInitialTab = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : 'products';
+  };
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+
+  const setActiveTab = useCallback((tab) => {
+    setActiveTabState(tab);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = tab === 'products' ? base : `${base}?tab=${tab}`;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setActiveTabState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setActiveTabState('products');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
+
   const [loading, setLoading] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -508,14 +570,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm #${id}?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.CATALOG.PRODUCT_DETAIL(id));
-      fetchProducts();
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa sản phẩm');
-    }
+  const handleDeleteProduct = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa sản phẩm',
+      message: `Bạn có chắc muốn xóa sản phẩm #${id}?`,
+      detail: 'Sản phẩm sẽ được ẩn khỏi cửa hàng và không còn nhận đơn mới. Dữ liệu lịch sử đơn hàng và doanh thu vẫn được lưu giữ an toàn.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.CATALOG.PRODUCT_DETAIL(id));
+        fetchProducts();
+      },
+    });
   };
 
   const handleOpenVariants = async (product) => {
@@ -593,14 +658,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteVariant = async (variantId) => {
-    if (!window.confirm('Xóa biến thể SKU này?')) return;
-    try {
-      await apiClient.delete(ENDPOINTS.CATALOG.VARIANT_DETAIL(selectedProductForVariants.id, variantId));
-      setVariantList(variantList.filter((v) => v.id !== variantId));
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa biến thể');
-    }
+  const handleDeleteVariant = (variantId) => {
+    askConfirm({
+      title: 'Xác nhận xóa biến thể SKU',
+      message: 'Bạn có chắc muốn xóa biến thể SKU này?',
+      detail: 'Biến thể SKU sẽ bị vô hiệu hóa và ẩn khỏi danh sách bán. Các giao dịch tồn kho trước đó vẫn được bảo toàn.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.CATALOG.VARIANT_DETAIL(selectedProductForVariants.id, variantId));
+        setVariantList((prev) => prev.filter((v) => v.id !== variantId));
+      },
+    });
   };
 
   const handleOpenCreateCategory = () => {
@@ -656,14 +724,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteCategory = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa danh mục này?')) return;
-    try {
-      await apiClient.delete(`${ENDPOINTS.CATALOG.CATEGORIES}/${id}`);
-      fetchCatalogs();
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa danh mục');
-    }
+  const handleDeleteCategory = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa danh mục',
+      message: 'Bạn có chắc chắn muốn xóa danh mục này?',
+      detail: 'Danh mục sẽ được ẩn khỏi thanh điều hướng và bộ lọc. Nếu có danh mục con đang hoạt động, hệ thống sẽ tự động ngăn chặn xóa.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(`${ENDPOINTS.CATALOG.CATEGORIES}/${id}`);
+        fetchCatalogs();
+      },
+    });
   };
 
   const handleOpenCreateBrand = () => {
@@ -713,14 +784,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteBrand = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn xóa thương hiệu này?')) return;
-    try {
-      await apiClient.delete(`${ENDPOINTS.CATALOG.BRANDS}/${id}`);
-      fetchCatalogs();
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa thương hiệu');
-    }
+  const handleDeleteBrand = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa thương hiệu',
+      message: 'Bạn có chắc muốn xóa thương hiệu này?',
+      detail: 'Thương hiệu sẽ được ẩn khỏi bộ lọc và danh sách catalog của khách hàng.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(`${ENDPOINTS.CATALOG.BRANDS}/${id}`);
+        fetchCatalogs();
+      },
+    });
   };
 
   const handleOpenCreateIngredient = () => {
@@ -778,14 +852,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteIngredient = async (id) => {
-    if (!window.confirm('Xóa hoạt chất mỹ phẩm này?')) return;
-    try {
-      await apiClient.delete(`${ENDPOINTS.CATALOG.INGREDIENTS}/${id}`);
-      fetchIngredients();
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa hoạt chất');
-    }
+  const handleDeleteIngredient = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa hoạt chất',
+      message: 'Bạn có chắc muốn xóa hoạt chất này?',
+      detail: 'Hoạt chất sẽ được ẩn khỏi thư viện phân tích thành phần mỹ phẩm.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(`${ENDPOINTS.CATALOG.INGREDIENTS}/${id}`);
+        fetchIngredients();
+      },
+    });
   };
 
   const handleOpenCreateAttr = () => {
@@ -827,14 +904,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteAttr = async (id) => {
-    if (!window.confirm('Xóa định nghĩa này sẽ xóa toàn bộ giá trị thuộc tính liên quan trên các sản phẩm/SKU. Tiếp tục?')) return;
-    try {
-      await apiClient.delete(ENDPOINTS.ATTRIBUTES.DETAIL(id));
-      fetchAttributes();
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa thuộc tính');
-    }
+  const handleDeleteAttr = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa định nghĩa thuộc tính',
+      message: 'Bạn có chắc muốn xóa định nghĩa thuộc tính này?',
+      detail: 'Định nghĩa thuộc tính sẽ được đưa vào lưu trữ ẩn và không còn hiển thị khi gán thông số cho sản phẩm.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.ATTRIBUTES.DETAIL(id));
+        fetchAttributes();
+      },
+    });
   };
 
   const handleOpenCreateTag = () => {
@@ -868,14 +948,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteTag = async (id) => {
-    if (!window.confirm('Xóa thẻ nhãn sản phẩm này?')) return;
-    try {
-      await apiClient.delete(ENDPOINTS.CATALOG.TAG_DETAIL(id));
-      fetchTags();
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa thẻ');
-    }
+  const handleDeleteTag = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa thẻ nhãn',
+      message: 'Bạn có chắc muốn xóa thẻ nhãn sản phẩm này?',
+      detail: 'Thẻ nhãn sẽ được ẩn khỏi hệ thống gợi ý và tìm kiếm nhanh.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.CATALOG.TAG_DETAIL(id));
+        fetchTags();
+      },
+    });
   };
 
   const handleOpenCreateBanner = () => {
@@ -960,14 +1043,17 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteBanner = async (id) => {
-    if (!window.confirm(`Xóa banner #${id}?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.CATALOG.BANNER_DETAIL(id));
-      fetchBanners();
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa banner');
-    }
+  const handleDeleteBanner = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa banner',
+      message: `Bạn có chắc muốn xóa banner #${id}?`,
+      detail: 'Banner quảng bá sẽ được gỡ khỏi vị trí hiển thị và đưa vào lưu trữ ẩn.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.CATALOG.BANNER_DETAIL(id));
+        fetchBanners();
+      },
+    });
   };
 
   const handleOpenImages = async (product) => {
@@ -1014,17 +1100,20 @@ export const ProductsPage = () => {
     }
   };
 
-  const handleDeleteImage = async (imageId) => {
-    if (!window.confirm('Xóa ảnh này khỏi bộ sưu tập?')) return;
-    try {
-      await apiClient.delete(ENDPOINTS.CATALOG.IMAGE_DETAIL(selectedProductForImages.id, imageId));
-      const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(selectedProductForImages.id));
-      const pDetail = res.data || res;
-      setImageList(pDetail.images || []);
-      fetchProducts();
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa ảnh');
-    }
+  const handleDeleteImage = (imageId) => {
+    askConfirm({
+      title: 'Cảnh báo xóa vĩnh viễn hình ảnh',
+      message: 'Bạn có chắc muốn xóa ảnh này khỏi bộ sưu tập sản phẩm?',
+      detail: 'CẢNH BÁO: Hình ảnh này sẽ bị xóa hoàn toàn khỏi bộ sưu tập và KHÔNG THỂ HOÀN TÁC!',
+      isPermanent: true,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.CATALOG.IMAGE_DETAIL(selectedProductForImages.id, imageId));
+        const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(selectedProductForImages.id));
+        const pDetail = res.data || res;
+        setImageList(pDetail.images || []);
+        fetchProducts();
+      },
+    });
   };
 
   const handleOpenDerma = async (product) => {
@@ -3009,6 +3098,17 @@ export const ProductsPage = () => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

@@ -419,6 +419,175 @@
   opacity: 0.85;
   transform: none;
 }
+
+/* Dual-Action Split Button (Pattern 1: Inline Split Accordion) */
+.admin-shell .sidebar-split-item {
+  margin-bottom: 4px;
+}
+.admin-shell .sidebar-split-row {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: stretch;
+  border-radius: 10px;
+  color: #c9bfd8;
+  position: relative;
+  transition: background 0.25s, color 0.25s, transform 0.3s var(--admin-ease);
+}
+.admin-shell .sidebar-split-row:hover {
+  background: #b4a0d014;
+  color: #fff;
+  transform: translateX(2px);
+}
+.admin-shell .sidebar-split-row:hover .nav-icon {
+  color: #e8d5f7;
+  transform: translateY(-1px);
+}
+.admin-shell .sidebar-split-row.is-active {
+  color: #fff;
+  font-weight: 500;
+  background: linear-gradient(110deg, #7857b6, #6d4da4);
+  box-shadow: 0 4px 16px #0e071b29, inset 0 1px #c1a1ee22;
+}
+.admin-shell .sidebar-split-row.is-active::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 5px 5px 0;
+  background: #dcc0ee;
+}
+.admin-shell .sidebar-split-row.is-active .nav-icon {
+  color: #f6eaff;
+}
+
+.admin-shell .sidebar-split-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 10px 10px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.admin-shell .sidebar-split-main .nav-icon {
+  display: grid;
+  place-items: center;
+  color: #a695bc;
+  flex-shrink: 0;
+  transition: color 0.25s, transform 0.3s;
+}
+.admin-shell .sidebar-split-main .nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-shell .sidebar-split-arrow {
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a695bc;
+  cursor: pointer;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  transition: background 0.2s, color 0.2s;
+}
+.admin-shell .sidebar-split-arrow:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.admin-shell .sidebar-split-row.is-active .sidebar-split-arrow {
+  border-left-color: rgba(255, 255, 255, 0.18);
+  color: #f6eaff;
+}
+.admin-shell .nav-chevron-split {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.admin-shell .sidebar-split-arrow.is-expanded .nav-chevron-split {
+  transform: rotate(90deg);
+}
+
+/* Sub-tree Navigation */
+.admin-shell .sidebar-sub-nav {
+  margin: 3px 0 8px 18px;
+  padding-left: 14px;
+  border-left: 1.5px dashed rgba(180, 160, 208, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: sidebarSubFade 0.2s ease-out;
+}
+@keyframes sidebarSubFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.admin-shell .sidebar-sub-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #a79ab9;
+  font-size: 10.5px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
+}
+.admin-shell .sidebar-sub-link:hover {
+  background: rgba(180, 160, 208, 0.1);
+  color: #fff;
+  transform: translateX(3px);
+}
+.admin-shell .sidebar-sub-link .sub-bullet {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8b74a3;
+  flex-shrink: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+.admin-shell .sidebar-sub-link:hover .sub-bullet {
+  background: #dcc0ee;
+  transform: scale(1.3);
+}
+.admin-shell .sidebar-sub-link.is-active {
+  background: rgba(120, 87, 182, 0.35);
+  color: #fff;
+  font-weight: 600;
+  border-left: 2px solid #dba3c9;
+}
+.admin-shell .sidebar-sub-link.is-active .sub-bullet {
+  background: #dba3c9;
+  transform: scale(1.5);
+}
+.admin-shell .sidebar-sub-link .sub-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-shell.sidebar-is-collapsed .sidebar-split-arrow,
+.admin-shell.sidebar-is-collapsed .sidebar-sub-nav {
+  display: none !important;
+}
+
 .admin-shell .sidebar-bottom {
   position: relative;
   padding: 16px 17px 17px;

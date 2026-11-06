@@ -23,6 +23,35 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class OrderFacadeImplTest {
 
+    @Test
+    void emailDetailIncludesAddressSnapshotsAndPaymentEvidence() {
+        var paidAt = java.time.Instant.parse("2026-11-06T03:15:00Z");
+        Order order = Order.builder().orderNumber("EMAIL-21").customerName("Nguyễn An").customerPhone("0901234567")
+                .shippingAddress("12 Nguyễn Huệ").ward("Bến Nghé").district("Quận 1").city("TP. Hồ Chí Minh")
+                .paymentMethod(com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK)
+                .paymentStatus(PaymentStatus.PAID).paidAt(paidAt).paidAmount(new BigDecimal("180000"))
+                .items(java.util.List.of(com.core.beautyshop.modules.order.domain.OrderItem.builder()
+                        .productName("Serum").sku("SERUM-30").imageUrl("/uploads/serum.jpg").quantity(2)
+                        .price(new BigDecimal("100000")).discount(new BigDecimal("10000")).build())).build();
+        when(orderRepository.findById(21L)).thenReturn(Optional.of(order));
+        var facade = new OrderFacadeImpl(orderRepository, eventPublisher, paymentFacade, refunds, expirationService, visits, orderRefunds);
+        var result = facade.findOrderEmailDetail(21L).orElseThrow();
+        assertEquals("12 Nguyễn Huệ, Bến Nghé, Quận 1, TP. Hồ Chí Minh", result.shippingAddress());
+        assertEquals(paidAt, result.paidAt());
+        assertEquals("PAID", result.paymentStatus());
+        assertEquals(new BigDecimal("180000"), result.paidAmount());
+        assertEquals("SERUM-30", result.items().getFirst().sku());
+        assertEquals("/uploads/serum.jpg", result.items().getFirst().imageUrl());
+        order.setAppointmentId(12L);
+        order.setShippingAddress("SPA_SERVICE");
+        order.setSpaVisitItems(java.util.List.of(com.core.beautyshop.modules.order.domain.SpaVisitInvoiceItem.builder()
+                .serviceName("Chăm sóc da").quantity(2).unitPrice(new BigDecimal("90000")).build()));
+        var spa = facade.findOrderEmailDetail(21L).orElseThrow();
+        assertNull(spa.shippingAddress());
+        assertEquals(2, spa.services().getFirst().quantity());
+        assertEquals("Chăm sóc da", spa.services().getFirst().serviceName());
+    }
+
     @Mock
     private OrderRepository orderRepository;
 

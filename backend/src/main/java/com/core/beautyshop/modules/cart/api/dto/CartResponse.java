@@ -32,6 +32,24 @@ public class CartResponse {
     @Schema(description = "Tổng quantity×giá SKU hiện tại (VND), chưa ship/voucher và chưa giữ tồn; dòng không có giá không cộng", example = "850000")
     private BigDecimal totalPrice;
 
+    @Schema(description = "Hạng thành viên hiện tại của người dùng, null nếu khách vãng lai", example = "GOLD")
+    private String membershipTier;
+
+    @Schema(description = "Tỷ lệ chiết khấu theo hạng thành viên (%)", example = "5")
+    private Integer membershipDiscountPercentage;
+
+    @Schema(description = "Số tiền chiết khấu thành viên ước tính (VND)", example = "42500")
+    private BigDecimal estimatedMembershipDiscount;
+
+    @Schema(description = "Ngưỡng miễn phí vận chuyển (VND)", example = "249000")
+    private BigDecimal freeShippingThreshold;
+
+    @Schema(description = "Phí vận chuyển mặc định (VND)", example = "25000")
+    private BigDecimal defaultShippingFee;
+
+    @Schema(description = "Phí vận chuyển ước tính cho giỏ hàng hiện tại (VND)", example = "0")
+    private BigDecimal estimatedShippingFee;
+
     public static CartResponse of(Cart entity, List<CartItemResponse> itemResponses) {
         if (entity == null) return null;
 

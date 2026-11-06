@@ -27,6 +27,7 @@ import { Select } from '../shared/ui/Select';
 import { Modal } from '../shared/ui/Modal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { CrmWorkPanel } from './CrmWorkPanel';
 import {
   formatCurrency,
@@ -51,6 +52,43 @@ export const CrmPage = () => {
 
   const [notePage, setNotePage] = useState(0);
   const [notePages, setNotePages] = useState(1);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -144,14 +182,17 @@ export const CrmPage = () => {
     }
   };
 
-  const deleteNote = async (noteId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa ghi chú chăm sóc này?')) return;
-    try {
-      await apiClient.delete(ENDPOINTS.CRM.DELETE_NOTE(noteId));
-      await fetchNotes(selected.id, notePage);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa ghi chú');
-    }
+  const deleteNote = (noteId) => {
+    askConfirm({
+      title: 'Xác nhận xóa ghi chú chăm sóc',
+      message: 'Bạn có chắc chắn muốn xóa ghi chú chăm sóc này?',
+      detail: 'Ghi chú sẽ được đánh dấu xóa mềm khỏi hồ sơ chăm sóc của khách hàng.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.CRM.DELETE_NOTE(noteId));
+        await fetchNotes(selected.id, notePage);
+      },
+    });
   };
 
   const vipCount = customers.filter((c) =>
@@ -657,6 +698,17 @@ export const CrmPage = () => {
           </div>
         )}
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

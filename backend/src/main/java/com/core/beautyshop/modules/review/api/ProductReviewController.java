@@ -25,6 +25,14 @@ public class ProductReviewController {
     public ApiResponse<PageResponse<ProductReviewService.ReviewView>> list(@Parameter(description = "ID sản phẩm cần xem đánh giá", required = true) @RequestParam Long productId, @ParameterObject Pageable pageable) {
         return ApiResponse.success(PageResponse.of(service.publicReviews(productId, pageable)));
     }
+
+    @Operation(summary = "Kiểm tra điều kiện đánh giá sản phẩm của người dùng", description = "Yêu cầu đăng nhập. Kiểm tra xem người dùng đã mua và nhận sản phẩm này chưa.")
+    @GetMapping("/eligibility")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<ProductReviewService.ReviewEligibilityResponse> checkEligibility(@Parameter(description = "ID sản phẩm", required = true) @RequestParam Long productId) {
+        return ApiResponse.success(service.checkEligibility(productId));
+    }
+
     @Operation(summary = "Gửi đánh giá từ đơn hàng đã giao", description = "Yêu cầu đăng nhập. Đơn DELIVERED phải thuộc người gửi và chứa sản phẩm; mỗi sản phẩm/đơn/người dùng chỉ có một đánh giá. Tạo trạng thái PENDING để kiểm duyệt, chưa hiển thị công khai.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã nhận đánh giá chờ kiểm duyệt", useReturnTypeSchema = true)
     @PostMapping

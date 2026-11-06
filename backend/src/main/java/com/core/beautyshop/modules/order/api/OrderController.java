@@ -6,6 +6,7 @@ import com.core.beautyshop.modules.order.application.dto.request.CheckoutRequest
 import com.core.beautyshop.modules.order.application.dto.request.UpdateOrderStatusRequest;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
 import com.core.beautyshop.modules.order.application.service.OrderService;
+import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -82,8 +83,9 @@ public class OrderController {
     @GetMapping("/my-orders")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<PageResponse<OrderResponse>>> getMyOrders(
+            @Parameter(description = "Lọc theo trạng thái đơn hàng") @RequestParam(required = false) OrderStatus status,
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-        Page<OrderResponse> page = orderService.getMyOrders(pageable);
+        Page<OrderResponse> page = orderService.getMyOrders(status, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 

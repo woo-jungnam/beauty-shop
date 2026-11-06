@@ -29,6 +29,9 @@ let memoryState = {
   cartError: '',
   freeShippingThreshold: DEFAULT_FALLBACK_THRESHOLD,
   defaultShippingFee: DEFAULT_FALLBACK_SHIPPING_FEE,
+  membershipTier: null,
+  membershipDiscountPercentage: 0,
+  estimatedMembershipDiscount: 0,
 };
 
 let listeners = new Set();
@@ -128,6 +131,15 @@ export const cartActions = {
       if (res?.success !== false && isValidCart(cartData)) {
         memoryState.items = cartData.items.map(mapBackendItem);
         memoryState.cartId = cartData.id || null;
+        memoryState.membershipTier = cartData.membershipTier || null;
+        memoryState.membershipDiscountPercentage = Number(cartData.membershipDiscountPercentage || 0);
+        memoryState.estimatedMembershipDiscount = Number(cartData.estimatedMembershipDiscount || 0);
+        if (cartData.freeShippingThreshold != null) {
+          memoryState.freeShippingThreshold = Number(cartData.freeShippingThreshold);
+        }
+        if (cartData.defaultShippingFee != null) {
+          memoryState.defaultShippingFee = Number(cartData.defaultShippingFee);
+        }
         memoryState.cartError = '';
         saveCart();
         return true;
@@ -387,10 +399,16 @@ export const useCustomerCart = () => {
     }
   }
 
+  const membershipDiscount = memoryState.estimatedMembershipDiscount || (
+    memoryState.membershipDiscountPercentage > 0 && subtotal > 0
+      ? Math.round(subtotal * (memoryState.membershipDiscountPercentage / 100))
+      : 0
+  );
+
   const isFreeShipping = subtotal >= memoryState.freeShippingThreshold;
   const shippingFee = (subtotal === 0 || isFreeShipping) ? 0 : memoryState.defaultShippingFee;
   const remainingForFreeShipping = Math.max(0, memoryState.freeShippingThreshold - subtotal);
-  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+  const totalAmount = Math.max(0, subtotal - discountAmount - membershipDiscount + shippingFee);
 
   return {
     items,
@@ -398,6 +416,9 @@ export const useCustomerCart = () => {
     subtotal,
     voucher: memoryState.voucher,
     discountAmount,
+    membershipDiscount,
+    membershipTier: memoryState.membershipTier,
+    membershipDiscountPercentage: memoryState.membershipDiscountPercentage,
     shippingFee,
     isFreeShipping,
     freeShippingThreshold: memoryState.freeShippingThreshold,

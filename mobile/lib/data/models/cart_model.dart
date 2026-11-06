@@ -63,6 +63,9 @@ class CartResponse {
   final double shippingFee;
   final double discountAmount;
   final double totalAmount;
+  final String? membershipTier;
+  final int? membershipDiscountPercentage;
+  final double estimatedMembershipDiscount;
 
   CartResponse({
     required this.items,
@@ -70,6 +73,9 @@ class CartResponse {
     this.shippingFee = 0.0,
     this.discountAmount = 0.0,
     required this.totalAmount,
+    this.membershipTier,
+    this.membershipDiscountPercentage,
+    this.estimatedMembershipDiscount = 0.0,
   });
 
   factory CartResponse.fromJson(Map<String, dynamic> json) {
@@ -83,11 +89,19 @@ class CartResponse {
       calculatedSubtotal += item.totalPrice;
     }
 
-    final sub = (json['subtotal'] as num?)?.toDouble() ?? calculatedSubtotal;
-    final shipping = (json['shippingFee'] as num?)?.toDouble() ?? 0.0;
+    final sub = (json['subtotal'] as num?)?.toDouble() ??
+        (json['totalPrice'] as num?)?.toDouble() ??
+        calculatedSubtotal;
+    final shipping = (json['shippingFee'] as num?)?.toDouble() ??
+        (json['estimatedShippingFee'] as num?)?.toDouble() ??
+        0.0;
     final disc = (json['discountAmount'] as num?)?.toDouble() ?? 0.0;
-    final tot =
-        (json['totalAmount'] as num?)?.toDouble() ?? (sub + shipping - disc);
+    final memTier = json['membershipTier']?.toString();
+    final memPercent = (json['membershipDiscountPercentage'] as num?)?.toInt();
+    final memDisc = (json['estimatedMembershipDiscount'] as num?)?.toDouble() ?? 0.0;
+    final tot = (json['totalAmount'] as num?)?.toDouble() ??
+        (json['totalPrice'] as num?)?.toDouble() ??
+        (sub + shipping - disc - memDisc);
 
     return CartResponse(
       items: parsedItems,
@@ -95,6 +109,9 @@ class CartResponse {
       shippingFee: shipping,
       discountAmount: disc,
       totalAmount: tot,
+      membershipTier: memTier,
+      membershipDiscountPercentage: memPercent,
+      estimatedMembershipDiscount: memDisc,
     );
   }
 

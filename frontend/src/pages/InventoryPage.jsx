@@ -1,5 +1,5 @@
 import { InventoryRecallPanel } from '../features/commerce/AdminCommercePanels';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Boxes,
   AlertTriangle,
@@ -34,6 +34,7 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { AlertBanner } from '../shared/ui/AlertBanner';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 
@@ -144,11 +145,71 @@ const renderExpirationBadge = (expDate) => {
 };
 
 export const InventoryPage = () => {
-  const [activeTab, setActiveTab] = useState('warehouses');
+  const getInitialTab = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : 'warehouses';
+  };
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+
+  const setActiveTab = useCallback((tab) => {
+    setActiveTabState(tab);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = tab === 'warehouses' ? base : `${base}?tab=${tab}`;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setActiveTabState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setActiveTabState('warehouses');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   const [inventoryNotice, setInventoryNotice] = useState('');
   const inboundKey = useRef(crypto.randomUUID());
   const transferKey = useRef(crypto.randomUUID());
   const [loading, setLoading] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const [transactions, setTransactions] = useState([]);
   const [ledgerPage, setLedgerPage] = useState(0);
@@ -376,15 +437,18 @@ export const InventoryPage = () => {
     }
   };
 
-  const handleDeleteWarehouse = async (id) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa kho bãi #${id}? (Kho phải hết sạch tồn kho mới được xóa)`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.INVENTORY.WAREHOUSE_DETAIL(id));
-      setSelectedWarehouseId(null);
-      fetchWarehouses();
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa kho bãi');
-    }
+  const handleDeleteWarehouse = (id) => {
+    askConfirm({
+      title: 'Xác nhận xóa kho bãi',
+      message: `Bạn có chắc chắn muốn xóa kho bãi #${id}?`,
+      detail: 'Kho bãi phải được xuất sạch toàn bộ tồn kho, không còn hàng giữ chỗ cho đơn hoặc hàng cách ly mới được phép xóa. Kho sẽ được đưa vào lưu trữ ẩn.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.INVENTORY.WAREHOUSE_DETAIL(id));
+        setSelectedWarehouseId(null);
+        fetchWarehouses();
+      },
+    });
   };
 
   const fetchCatalogVariants = async () => {
@@ -463,14 +527,17 @@ export const InventoryPage = () => {
     }
   };
 
-  const handleDeleteStock = async (stockId) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa lô tồn kho #${stockId}? Số tồn còn lại sẽ được ghi nhận xuất hủy.`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.INVENTORY.STOCK_DELETE(stockId));
-      fetchWarehouseStocks(selectedWarehouseId);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa lô tồn kho');
-    }
+  const handleDeleteStock = (stockId) => {
+    askConfirm({
+      title: 'Xác nhận xuất hủy và xóa lô tồn kho',
+      message: `Bạn có chắc muốn xóa lô tồn kho #${stockId}?`,
+      detail: 'Số lượng tồn khả dụng còn lại sẽ được hệ thống tự động ghi nhận xuất hủy (DISPOSAL) vào sổ cái kho để đảm bảo minh bạch tài chính.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.INVENTORY.STOCK_DELETE(stockId));
+        fetchWarehouseStocks(selectedWarehouseId);
+      },
+    });
   };
 
   const handleOpenAdjustModal = (stock) => {
@@ -1779,6 +1846,17 @@ export const InventoryPage = () => {
           </div>
         )}
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

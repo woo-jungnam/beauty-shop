@@ -88,7 +88,7 @@ const readPreference = (key, fallback) => {
   }
 };
 
-const AdminShell = ({ tabName, navigationItems }) => {
+const AdminShell = ({ tabName, activeSubTab, navigationItems }) => {
   const [collapsed, setCollapsed] = useState(
     () =>
       readPreference("beautyshop_admin_sidebar", "expanded") === "collapsed",
@@ -124,10 +124,12 @@ const AdminShell = ({ tabName, navigationItems }) => {
     return () => media.removeEventListener("change", handleResize);
   }, []);
 
-  const navigate = (tab) => {
+  const navigate = (tab, subTab = null) => {
     if (!navigationItems.some((item) => item.id === tab)) return;
     setMobileOpen(false);
-    window.location.hash = `/admin/${tab}`;
+    window.location.hash = subTab
+      ? `/admin/${tab}?tab=${encodeURIComponent(subTab)}`
+      : `/admin/${tab}`;
   };
   const toggleCollapse = () => {
     const next = !collapsed;
@@ -168,6 +170,7 @@ const AdminShell = ({ tabName, navigationItems }) => {
       <div className="admin-ambient" aria-hidden="true" />
       <Sidebar
         activeTab={tabName}
+        activeSubTab={activeSubTab}
         onSelectTab={navigate}
         collapsed={collapsed}
         onToggleCollapse={toggleCollapse}
@@ -316,13 +319,22 @@ export const App = () => {
   }
 
   let rawTab = currentHash.replace(/^admin\/?/, "").replace(/^staff\/?/, "");
-  let tabName = rawTab === "reception" || currentHash === "staff"
+  const [cleanTab, searchPart] = rawTab.split("?");
+  let tabName = cleanTab === "reception" || currentHash === "staff"
     ? "spa-reception"
-    : rawTab || allowedTabs[0] || "dashboard";
+    : cleanTab || allowedTabs[0] || "dashboard";
 
   if (!allowedTabs.includes(tabName)) {
     tabName = allowedTabs[0] || "dashboard";
   }
 
-  return <AdminShell tabName={tabName} navigationItems={navigationItems} />;
+  const activeSubTab = new URLSearchParams(searchPart || "").get("tab") || null;
+
+  return (
+    <AdminShell
+      tabName={tabName}
+      activeSubTab={activeSubTab}
+      navigationItems={navigationItems}
+    />
+  );
 };

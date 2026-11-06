@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +39,8 @@ public class CartServiceImpl implements CartService {
     private final InventoryFacade inventoryFacade;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final Optional<com.core.beautyshop.modules.promotion.api.FlashSaleFacade> flashSaleFacade;
+    private final Optional<com.core.beautyshop.modules.identity.api.IdentityFacade> identityFacade;
+    private final Optional<com.core.beautyshop.shared.config.SystemConfigService> systemConfigService;
 
     @Override
     @Transactional(readOnly = true)
@@ -241,30 +245,76 @@ public class CartServiceImpl implements CartService {
     private CartResponse mapToCartResponse(Cart cart) {
         if (cart == null) return null;
         List<CartItem> cartItems = cartItemRepository.findAllByCartIdOrderByIdAsc(cart.getId());
-        if (cartItems.isEmpty()) {
-            return CartResponse.of(cart, List.of());
+        List<CartItemResponse> itemResponses = List.of();
+        BigDecimal total = BigDecimal.ZERO;
+
+        if (!cartItems.isEmpty()) {
+            List<Long> variantIds = cartItems.stream()
+                    .map(CartItem::getProductVariantId)
+                    .collect(Collectors.toList());
+
+            Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
+
+            itemResponses = cartItems.stream()
+                    .map(item -> {
+                        ProductVariantSummaryDto variant = variantMap.get(item.getProductVariantId());
+                        java.math.BigDecimal flashPrice = null;
+                        if (variant != null && flashSaleFacade.isPresent()) {
+                            flashPrice = flashSaleFacade.get().resolveActiveFlashSale(variant.getId())
+                                    .map(com.core.beautyshop.modules.promotion.api.FlashSaleFacade.FlashSalePriceResolution::flashPrice)
+                                    .orElse(null);
+                        }
+                        return CartItemResponse.of(item, variant, flashPrice);
+                    })
+                    .collect(Collectors.toList());
+
+            total = itemResponses.stream()
+                    .filter(item -> item.getPrice() != null && item.getQuantity() != null)
+                    .map(item -> item.getPrice().multiply(new BigDecimal(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
-        List<Long> variantIds = cartItems.stream()
-                .map(CartItem::getProductVariantId)
-                .collect(Collectors.toList());
+        String membershipTier = null;
+        Integer discountPercentage = 0;
+        BigDecimal membershipDiscount = BigDecimal.ZERO;
 
-        Map<Long, ProductVariantSummaryDto> variantMap = catalogFacade.getVariantSummariesByIds(variantIds);
+        if (cart.getUserId() != null && identityFacade.isPresent()) {
+            var userSummary = identityFacade.get().getUserSummaryById(cart.getUserId());
+            if (userSummary != null) {
+                membershipTier = userSummary.getMembershipTier();
+                discountPercentage = userSummary.getMembershipDiscountPercentage() != null ? userSummary.getMembershipDiscountPercentage() : 0;
+                if (discountPercentage > 0 && total.signum() > 0) {
+                    BigDecimal percent = BigDecimal.valueOf(discountPercentage).divide(BigDecimal.valueOf(100));
+                    membershipDiscount = total.multiply(percent).setScale(0, RoundingMode.HALF_UP);
+                }
+            }
+        }
 
-        List<CartItemResponse> itemResponses = cartItems.stream()
-                .map(item -> {
-                    ProductVariantSummaryDto variant = variantMap.get(item.getProductVariantId());
-                    java.math.BigDecimal flashPrice = null;
-                    if (variant != null && flashSaleFacade.isPresent()) {
-                        flashPrice = flashSaleFacade.get().resolveActiveFlashSale(variant.getId())
-                                .map(com.core.beautyshop.modules.promotion.api.FlashSaleFacade.FlashSalePriceResolution::flashPrice)
-                                .orElse(null);
-                    }
-                    return CartItemResponse.of(item, variant, flashPrice);
-                })
-                .collect(Collectors.toList());
+        BigDecimal threshold = BigDecimal.valueOf(249000);
+        BigDecimal defaultFee = BigDecimal.valueOf(25000);
+        BigDecimal estimatedShipping = BigDecimal.ZERO;
 
-        return CartResponse.of(cart, itemResponses);
+        if (systemConfigService.isPresent()) {
+            threshold = systemConfigService.get().getShippingFreeThreshold();
+            defaultFee = systemConfigService.get().getDefaultShippingFee();
+            estimatedShipping = systemConfigService.get().calculateShippingFee(total);
+        } else if (total.signum() > 0 && total.compareTo(threshold) < 0) {
+            estimatedShipping = defaultFee;
+        }
+
+        return CartResponse.builder()
+                .id(cart.getId())
+                .sessionId(cart.getSessionId())
+                .userId(cart.getUserId())
+                .items(itemResponses)
+                .totalPrice(total)
+                .membershipTier(membershipTier)
+                .membershipDiscountPercentage(discountPercentage)
+                .estimatedMembershipDiscount(membershipDiscount)
+                .freeShippingThreshold(threshold)
+                .defaultShippingFee(defaultFee)
+                .estimatedShippingFee(estimatedShipping)
+                .build();
     }
 
     @Override

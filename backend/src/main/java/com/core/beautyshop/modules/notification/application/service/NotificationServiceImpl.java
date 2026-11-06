@@ -1,12 +1,11 @@
 package com.core.beautyshop.modules.notification.application.service;
 
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
-import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
 import com.core.beautyshop.modules.notification.application.dto.EmailMessageDto;
 import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.modules.notification.domain.NotificationReceiptRepository;
-import lombok.RequiredArgsConstructor;
+import com.core.beautyshop.modules.order.api.OrderFacade.OrderEmailDetailDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +33,9 @@ public class NotificationServiceImpl implements NotificationService {
     private final OrderFacade orderFacade;
     private final CustomerNotificationFacade customerNotifications;
 
+    @Autowired(required = false)
+    private com.core.beautyshop.modules.spa.api.SpaOrderEmailFacade spaOrderEmails;
+
     public NotificationServiceImpl(IdentityFacade identityFacade,
                                    NotificationReceiptRepository receiptRepository,
                                    Optional<JavaMailSender> mailSender) {
@@ -58,6 +60,15 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Value("${app.mail.from:no-reply@beautyshop.vn}")
     private String mailFrom;
+
+    @Value("${app.mail.support-email:}")
+    private String supportEmail;
+
+    @Value("${app.mail.support-phone:}")
+    private String supportPhone;
+
+    @Value("${app.mail.media-base-url:}")
+    private String mediaBaseUrl;
 
     @Override
     public void sendEmail(EmailMessageDto emailMessageDto) {
@@ -127,8 +138,17 @@ public class NotificationServiceImpl implements NotificationService {
             }
         }
         if (email == null || email.isBlank()) return;
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("body", body);
+        var detailOpt = orderFacade.findOrderEmailDetail(orderId);
+        detailOpt.ifPresent(d -> params.put("orderDetail", d));
+        if (detailOpt.isPresent() && detailOpt.get().servicePackageId() != null && spaOrderEmails != null) {
+            spaOrderEmails.findPurchasedPackage(orderId).ifPresent(detail -> params.put("spaPackage", detail));
+        }
+
         sendEmail(EmailMessageDto.builder().recipientEmail(email).recipientName(name).subject(title)
-                .templateCode("ORDER_EVENT").parameters(Map.of("body", body)).build());
+                .templateCode("ORDER_EVENT").parameters(params).build());
     }
     private String statusLabel(String status) {
         return switch (status) {
@@ -149,39 +169,19 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private String buildEmailHtml(EmailMessageDto dto) {
-        if ("SPA_APPOINTMENT_REMINDER".equals(dto.getTemplateCode()) || "SPA_STAFF_FOLLOW_UP".equals(dto.getTemplateCode()) || "ORDER_EVENT".equals(dto.getTemplateCode())) {
-            String recipient = HtmlUtils.htmlEscape(dto.getRecipientName() == null ? "Quý khách" : dto.getRecipientName());
-            String subject = HtmlUtils.htmlEscape(dto.getSubject() == null ? "BeautyShop Spa" : dto.getSubject());
-            String body = HtmlUtils.htmlEscape(String.valueOf(dto.getParameters().getOrDefault("body", "")))
-                    .replace("\n", "<br/>");
+        String recipient = HtmlUtils.htmlEscape(dto.getRecipientName() == null ? "Quý khách" : dto.getRecipientName());
+        String subject = HtmlUtils.htmlEscape(dto.getSubject() == null ? "BeautyShop" : dto.getSubject());
+        String body = HtmlUtils.htmlEscape(String.valueOf((dto.getParameters() == null ? "" : dto.getParameters().getOrDefault("body", ""))))
+                .replace("\n", "<br/>");
+
+        // SPA templates — keep simple
+        if ("SPA_APPOINTMENT_REMINDER".equals(dto.getTemplateCode()) || "SPA_STAFF_FOLLOW_UP".equals(dto.getTemplateCode())) {
             return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body><h2>" + subject
                     + "</h2><p>Xin chào " + recipient + ",</p><p>" + body + "</p></body></html>";
         }
-        String name = HtmlUtils.htmlEscape(dto.getRecipientName() != null ? dto.getRecipientName() : "Quý khách");
-        String orderNumber = dto.getParameters() != null && dto.getParameters().get("orderNumber") != null
-                ? String.valueOf(dto.getParameters().get("orderNumber")) : "";
-        String amount = dto.getParameters() != null && dto.getParameters().get("totalAmount") != null
-                ? String.valueOf(dto.getParameters().get("totalAmount")) + " VNĐ" : "";
 
-        return """
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="UTF-8"></head>
-            <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-                <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h2 style="color: #d81b60; text-align: center;">BeautyShop - Thông Báo Đơn Hàng</h2>
-                    <p>Xin chào <strong>%s</strong>,</p>
-                    <p>Cảm ơn bạn đã mua sắm tại <strong>BeautyShop</strong>. Đơn hàng của bạn đã được ghi nhận trên hệ thống:</p>
-                    <div style="background: #fce4ec; padding: 15px; border-radius: 6px; margin: 20px 0;">
-                        <p style="margin: 5px 0;"><strong>Mã đơn hàng:</strong> %s</p>
-                        <p style="margin: 5px 0;"><strong>Tổng thanh toán:</strong> %s</p>
-                    </div>
-                    <p>Chúng tôi sẽ nhanh chóng chuẩn bị và giao hàng tới bạn trong thời gian sớm nhất.</p>
-                    <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
-                    <p style="font-size: 12px; color: #888888; text-align: center;">Đây là email tự động từ hệ thống BeautyShop. Vui lòng không phản hồi email này.</p>
-                </div>
-            </body>
-            </html>
-            """.formatted(name, orderNumber, amount);
+        Object detailObj = dto.getParameters() == null ? null : dto.getParameters().get("orderDetail");
+        OrderEmailDetailDto detail = detailObj instanceof OrderEmailDetailDto d ? d : null;
+        return OrderEmailRenderer.render(dto, detail, supportEmail, supportPhone, mediaBaseUrl);
     }
 }

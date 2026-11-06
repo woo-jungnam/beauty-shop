@@ -1,5 +1,5 @@
 import { CommerceOperationsPanel } from '../features/commerce/AdminCommercePanels';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
   Filter,
@@ -27,6 +27,7 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { useAuth } from '../app/providers/AuthProvider';
 
 export const OrdersPage = () => {
@@ -39,13 +40,39 @@ export const OrdersPage = () => {
 
   const [keyword, setKeyword] = useState('');
   const [orderTypeTab, setOrderTypeTab] = useState('ALL');
-  const [status, setStatus] = useState('');
+  const getInitialStatus = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : '';
+  };
+  const [status, setStatusState] = useState(getInitialStatus);
+
+  const setStatus = useCallback((nextStatus) => {
+    setStatusState(nextStatus);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = nextStatus ? `${base}?tab=${nextStatus}` : base;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setStatusState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setStatusState('');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const detailRequest = useRef(0);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
 
@@ -58,6 +85,44 @@ export const OrdersPage = () => {
   const [refundReason, setRefundReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, confirmText, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      confirmText,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const fetchOrders = async (pageNum = 0) => {
     setLoading(true);
@@ -70,6 +135,7 @@ export const OrdersPage = () => {
       if (paymentStatus) params.append('paymentStatus', paymentStatus);
       if (fromDate) params.append('from', `${fromDate}T00:00:00Z`);
       if (toDate) params.append('to', `${toDate}T23:59:59Z`);
+      if (orderTypeTab && orderTypeTab !== 'ALL') params.append('orderType', orderTypeTab);
 
       const res = await apiClient.get(`${ENDPOINTS.ORDERS.LIST}?${params.toString()}`);
       const pageData = res.data || res;
@@ -86,7 +152,7 @@ export const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders(0);
-  }, [status, paymentStatus, fromDate, toDate]);
+  }, [status, paymentStatus, fromDate, toDate, orderTypeTab]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -94,16 +160,20 @@ export const OrdersPage = () => {
   };
 
   const handleOpenDetail = async (order) => {
+    const request = ++detailRequest.current;
     setSelectedOrder(order);
     setDetailModalOpen(true);
+    setDetailLoading(true);
+    setDetailError('');
     try {
-      const res = await apiClient.get(ENDPOINTS.ORDERS.DETAIL(order.id));
+      const res = await apiClient.get(ENDPOINTS.ORDERS.ADMIN_DETAIL(order.id));
       const fullOrder = res.data || res;
-      if (fullOrder && fullOrder.id) {
-        setSelectedOrder(fullOrder);
-      }
+      if (!fullOrder?.id || !Array.isArray(fullOrder.items)) throw new Error('Dữ liệu chi tiết đơn hàng không đầy đủ.');
+      if (request === detailRequest.current) setSelectedOrder(fullOrder);
     } catch (e) {
-      console.error(e);
+      if (request === detailRequest.current) setDetailError(e.message || 'Không tải được chi tiết đơn hàng.');
+    } finally {
+      if (request === detailRequest.current) setDetailLoading(false);
     }
   };
 
@@ -169,27 +239,22 @@ export const OrdersPage = () => {
     }
   };
 
-  const handleConfirmPayment = async (order) => {
-    if (!window.confirm(`Xác nhận đánh dấu đơn hàng ${order.orderCode || '#' + order.id} đã thanh toán (PAID)?`)) return;
-    try {
-      await apiClient.post(ENDPOINTS.ORDERS.CONFIRM_PAYMENT(order.id));
-      if (selectedOrder && selectedOrder.id === order.id) {
-        setSelectedOrder((prev) => ({ ...prev, paymentStatus: 'PAID' }));
-      }
-      fetchOrders(page);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xác nhận thanh toán đơn hàng');
-    }
-  };
-
-  const displayedOrders = React.useMemo(() => {
-    if (orderTypeTab === 'ALL') return orders;
-    return orders.filter((o) => {
-      const type = getOrderType(o);
-      if (orderTypeTab === 'PRODUCT') return type === 'PRODUCT';
-      return type !== 'PRODUCT';
+  const handleConfirmPayment = (order) => {
+    askConfirm({
+      title: 'Xác nhận thanh toán đơn hàng',
+      message: `Đánh dấu đơn hàng ${order.orderCode || '#' + order.id} đã thanh toán (PAID)?`,
+      detail: 'Hệ thống sẽ cập nhật trạng thái thanh toán sang Đã thanh toán và kích hoạt quy trình chuẩn bị giao hàng hoặc cấp phát vé liệu trình tương ứng.',
+      isPermanent: false,
+      confirmText: 'Xác nhận PAID',
+      onConfirm: async () => {
+        await apiClient.post(ENDPOINTS.ORDERS.CONFIRM_PAYMENT(order.id));
+        if (selectedOrder && selectedOrder.id === order.id) {
+          setSelectedOrder((prev) => ({ ...prev, paymentStatus: 'PAID' }));
+        }
+        fetchOrders(page);
+      },
     });
-  }, [orders, orderTypeTab]);
+  };
 
   const columns = [
     {
@@ -464,7 +529,7 @@ export const OrdersPage = () => {
           onClick={() => setOrderTypeTab('ALL')}
           style={{ fontSize: '13px', padding: '6px 14px' }}
         >
-          Tất cả đơn ({orders.length})
+          Tất cả đơn
         </button>
         <button
           type="button"
@@ -472,7 +537,7 @@ export const OrdersPage = () => {
           onClick={() => setOrderTypeTab('PRODUCT')}
           style={{ fontSize: '13px', padding: '6px 14px' }}
         >
-          Đơn Mỹ phẩm (Vận chuyển) ({orders.filter(o => getOrderType(o) === 'PRODUCT').length})
+          Đơn Mỹ phẩm (Vận chuyển)
         </button>
         <button
           type="button"
@@ -480,13 +545,13 @@ export const OrdersPage = () => {
           onClick={() => setOrderTypeTab('SPA')}
           style={{ fontSize: '13px', padding: '6px 14px' }}
         >
-          Dịch vụ & Liệu trình Spa ({orders.filter(o => getOrderType(o) !== 'PRODUCT').length})
+          Dịch vụ & Liệu trình Spa
         </button>
       </div>
 
       <DataTable
         columns={columns}
-        data={displayedOrders}
+        data={orders}
         loading={loading}
         emptyMessage="Không tìm thấy đơn hàng nào phù hợp bộ lọc."
         page={page}
@@ -497,11 +562,13 @@ export const OrdersPage = () => {
 
       <Modal
         isOpen={detailModalOpen}
-        onClose={() => setDetailModalOpen(false)}
-        title={`Chi tiết đơn hàng: ${selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
+        onClose={() => { detailRequest.current++; setDetailModalOpen(false); }}
+        title={`Chi tiết đơn hàng: ${selectedOrder?.orderNumber || selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
         maxWidth="680px"
       >
-        {selectedOrder && (
+        {detailLoading && <p role="status">Đang tải chi tiết đơn hàng…</p>}
+        {detailError && <div role="alert"><p>{detailError}</p><Button onClick={() => handleOpenDetail(selectedOrder)}>Thử lại</Button></div>}
+        {selectedOrder && !detailLoading && !detailError && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="grid-2" style={{ gap: '12px' }}>
               <div style={{ padding: '12px', border: '1px solid var(--border-subtle)', background: 'var(--color-primary-50)' }}>
@@ -893,6 +960,18 @@ export const OrdersPage = () => {
           />
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        confirmText={confirmConfig.confirmText}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

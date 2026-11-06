@@ -10,6 +10,7 @@ import com.core.beautyshop.modules.identity.domain.RefreshTokenSessionRepository
 import com.core.beautyshop.modules.identity.domain.User;
 import com.core.beautyshop.modules.identity.domain.enums.AccountStatus;
 import com.core.beautyshop.shared.exception.BusinessException;
+import com.core.beautyshop.shared.exception.ErrorCode;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.identity.application.factory.UserFactory;
 import com.core.beautyshop.modules.identity.application.mapper.AuthMapper;
@@ -67,7 +68,7 @@ public class AuthServiceImpl implements AuthService {
 
         UserDetailsImpl authenticated = (UserDetailsImpl) authentication.getPrincipal();
         User user = userRepository.findByIdForUpdate(authenticated.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin người dùng"));
         entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         requireActiveUser(user);
         UserDetailsImpl userDetails = UserDetailsImpl.build(user);
@@ -90,21 +91,21 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (request.getUsername() == null || request.getUsername().contains("@") || request.getUsername().chars().anyMatch(Character::isWhitespace)) {
-            throw new BusinessException("Username must not contain @ or whitespace");
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED, "Tên đăng nhập không được chứa ký tự @ hoặc khoảng trắng");
         }
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new BusinessException("Lỗi: Tên đăng nhập đã được sử dụng!");
+            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "Tên đăng nhập đã được sử dụng");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("Lỗi: Email đã được sử dụng!");
+            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "Email đã được sử dụng");
         }
         if (request.getPhone() != null && !request.getPhone().isBlank()
                 && userRepository.existsByPhoneAndNotDeleted(request.getPhone())) {
-            throw new BusinessException("Lỗi: Số điện thoại đã được sử dụng!");
+            throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "Số điện thoại đã được sử dụng");
         }
         if (userRepository.existsByEmail(request.getUsername()) || userRepository.existsByUsername(request.getEmail())) {
-            throw new BusinessException("Tên đăng nhập và email phải thuộc cùng một tài khoản");
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED, "Tên đăng nhập và email không được trùng với tài khoản khác");
         }
 
         List<Role> roles = new ArrayList<>();
@@ -140,7 +141,7 @@ public class AuthServiceImpl implements AuthService {
             Long sessionUserId = refreshTokenSessionRepository.findUserIdByTokenHash(hashToken(refreshToken))
                     .orElseThrow(() -> new BusinessException("Refresh Token không hợp lệ hoặc đã bị thu hồi"));
             User user = userRepository.findByIdForUpdate(sessionUserId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin người dùng"));
             RefreshTokenSession currentSession = refreshTokenSessionRepository
                     .findByTokenHashForUpdate(hashToken(refreshToken))
                     .orElseThrow(() -> new BusinessException("Refresh Token không hợp lệ hoặc đã bị thu hồi"));

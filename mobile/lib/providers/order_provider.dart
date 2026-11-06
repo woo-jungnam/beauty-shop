@@ -40,8 +40,15 @@ class OrderProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> fetchOrders({bool append = false}) async {
+  String? _currentStatus;
+  String? get currentStatus => _currentStatus;
+
+  Future<void> fetchOrders({String? status, bool append = false}) async {
     if (_isLoading) return;
+    if (!append) {
+      _currentStatus = status;
+    }
+    final filterStatus = append ? _currentStatus : status;
     final requestedPage = append ? _page + 1 : 0;
     final ownerToken = StorageService.getAccessToken();
     _isLoading = true;
@@ -59,7 +66,11 @@ class OrderProvider extends ChangeNotifier {
             fromJsonT: (json) =>
                 OrderResponse.fromJson(json as Map<String, dynamic>),
           );
-          if (result.data != null) details.add(result.data!);
+          if (result.data != null) {
+            if (filterStatus == null || result.data!.status == filterStatus) {
+              details.add(result.data!);
+            }
+          }
         }
         if (ownerToken != StorageService.getAccessToken()) return;
         _orders = append ? [..._orders, ...details] : details;
@@ -67,9 +78,17 @@ class OrderProvider extends ChangeNotifier {
         _hasMore = ids.length > (requestedPage + 1) * 20;
         return;
       }
+      final queryParams = <String, dynamic>{
+        'page': requestedPage,
+        'size': 20,
+        'sort': 'id,desc',
+      };
+      if (filterStatus != null && filterStatus.isNotEmpty) {
+        queryParams['status'] = filterStatus;
+      }
       final response = await _apiClient.get<PageResponse<OrderResponse>>(
         ApiConstants.myOrders,
-        queryParameters: {'page': requestedPage, 'size': 20, 'sort': 'id,desc'},
+        queryParameters: queryParams,
         fromJsonT: (json) => PageResponse.fromJson(
           json as Map<String, dynamic>,
           (item) => OrderResponse.fromJson(item as Map<String, dynamic>),

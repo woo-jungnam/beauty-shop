@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Download,
   Plus,
@@ -28,6 +28,7 @@ import { ENDPOINTS } from '../shared/api/endpoints';
 import { Button } from '../shared/ui/Button';
 import { Input } from '../shared/ui/Input';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { formatCurrency, formatDateTime, formatNumber } from '../shared/utils/formatters';
@@ -62,7 +63,30 @@ const exportCsv = (name, rows) => {
 };
 
 export const OperationsPage = () => {
-  const [tab, setTab] = useState('payments');
+  const getInitialTab = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : 'payments';
+  };
+  const [tab, setTabState] = useState(getInitialTab);
+
+  const setTab = useCallback((nextTab) => {
+    setTabState(nextTab);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = nextTab === 'payments' ? base : `${base}?tab=${nextTab}`;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setTabState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setTabState('payments');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   const [rows, setRows] = useState([]);
   const [configs, setConfigs] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -73,6 +97,43 @@ export const OperationsPage = () => {
   const [newValue, setNewValue] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newIsPublic, setNewIsPublic] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const [chatbotStatus, setChatbotStatus] = useState(null);
   const [checkingChatbot, setCheckingChatbot] = useState(false);
@@ -96,22 +157,30 @@ export const OperationsPage = () => {
     }
   };
 
-  const handleSyncDatabase = async () => {
-    if (!window.confirm('Kích hoạt đồng bộ dữ liệu sản phẩm & dịch vụ từ MySQL vào kho vector Qdrant RAG?')) return;
-    setSyncingDatabase(true);
-    setSyncResult(null);
-    try {
-      const url = syncLimit.trim()
-        ? `${ENDPOINTS.CHATBOT.SYNC_DATABASE}?limit=${encodeURIComponent(syncLimit.trim())}`
-        : ENDPOINTS.CHATBOT.SYNC_DATABASE;
-      const res = await apiClient.post(url);
-      const data = res?.data || res;
-      setSyncResult(data);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi đồng bộ dữ liệu vào RAG');
-    } finally {
-      setSyncingDatabase(false);
-    }
+  const handleSyncDatabase = () => {
+    askConfirm({
+      title: 'Đồng bộ dữ liệu vào kho vector AI',
+      message: 'Kích hoạt đồng bộ dữ liệu sản phẩm & dịch vụ từ MySQL vào kho vector Qdrant RAG?',
+      detail: 'Quá trình này sẽ trích xuất thông tin sản phẩm/dịch vụ mới nhất, vector hóa và nạp vào Qdrant để nâng cao độ chính xác khi trợ lý AI tư vấn.',
+      isPermanent: false,
+      confirmText: 'Bắt đầu đồng bộ',
+      onConfirm: async () => {
+        setSyncingDatabase(true);
+        setSyncResult(null);
+        try {
+          const url = syncLimit.trim()
+            ? `${ENDPOINTS.CHATBOT.SYNC_DATABASE}?limit=${encodeURIComponent(syncLimit.trim())}`
+            : ENDPOINTS.CHATBOT.SYNC_DATABASE;
+          const res = await apiClient.post(url);
+          const data = res?.data || res;
+          setSyncResult(data);
+        } catch (err) {
+          alert(err.message || 'Lỗi khi đồng bộ dữ liệu vào RAG');
+        } finally {
+          setSyncingDatabase(false);
+        }
+      },
+    });
   };
 
   const handleTestNlu = async (e) => {
@@ -202,14 +271,17 @@ export const OperationsPage = () => {
     }
   };
 
-  const handleDeleteConfig = async (key) => {
-    if (!window.confirm(`Xóa cấu hình "${key}"?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.SYSTEM.DELETE_CONFIG(key));
-      load();
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa cấu hình');
-    }
+  const handleDeleteConfig = (key) => {
+    askConfirm({
+      title: 'Xác nhận xóa cấu hình hệ thống',
+      message: `Bạn có chắc muốn xóa cấu hình "${key}"?`,
+      detail: 'Khóa cấu hình sẽ được đưa vào lưu trữ ẩn (soft-delete). Hệ thống sẽ tự động chuyển về sử dụng giá trị mặc định được định nghĩa sẵn trong mã nguồn.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.SYSTEM.DELETE_CONFIG(key));
+        load();
+      },
+    });
   };
 
   const paymentColumns = [
@@ -821,6 +893,17 @@ export const OperationsPage = () => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

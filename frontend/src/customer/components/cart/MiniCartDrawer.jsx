@@ -12,18 +12,20 @@ export const MiniCartDrawer = ({ onNavigate }) => {
     items, 
     totalItems, 
     subtotal, 
-    discountAmount, 
-    voucher, 
-    shippingFee, 
-    isFreeShipping, 
-    remainingForFreeShipping, 
-    freeShippingThreshold, 
-    totalAmount, 
-    isCartOpen, 
-    setCartOpen, 
-    updateQuantity, 
-    removeItem, 
-    applyVoucher, 
+    discountAmount,
+    membershipDiscount,
+    membershipTier,
+    voucher,
+    shippingFee,
+    isFreeShipping,
+    remainingForFreeShipping,
+    freeShippingThreshold,
+    totalAmount,
+    isCartOpen,
+    setCartOpen,
+    updateQuantity,
+    removeItem,
+    applyVoucher,
     removeVoucher,
     cartError,
     clearCartError,
@@ -451,6 +453,12 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-safe-green)' }}>
                   <span>Giảm giá voucher</span>
                   <span style={{ fontFamily: 'var(--font-mono)' }}>-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
+              {membershipDiscount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-safe-green)' }}>
+                  <span>Ưu đãi thành viên {membershipTier ? `(${membershipTier})` : ''}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)' }}>-{formatCurrency(membershipDiscount)}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-text-muted)' }}>

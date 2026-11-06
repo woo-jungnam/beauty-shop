@@ -37,6 +37,14 @@ export const ADMIN_SECTIONS = [
         icon: ShoppingBag,
         role: "ROLE_STAFF",
         keywords: "order đơn hàng giao vận bán hàng",
+        subItems: [
+          { id: "PENDING", label: "Chờ xác nhận" },
+          { id: "CONFIRMED", label: "Đã xác nhận" },
+          { id: "PROCESSING", label: "Đang chuẩn bị hàng" },
+          { id: "SHIPPED", label: "Đang giao vận" },
+          { id: "DELIVERED", label: "Đã giao thành công" },
+          { id: "CANCELLED", label: "Đã hủy đơn" },
+        ],
       },
       {
         id: "products",
@@ -46,6 +54,15 @@ export const ADMIN_SECTIONS = [
         role: "ROLE_STAFF",
         keywords:
           "catalog sku mỹ phẩm danh mục thương hiệu thuộc tính attribute tag thẻ nhãn hoạt chất thành phần da liễu",
+        subItems: [
+          { id: "products", label: "Sản phẩm & Biến thể" },
+          { id: "categories", label: "Danh mục sản phẩm" },
+          { id: "brands", label: "Thương hiệu đối tác" },
+          { id: "ingredients", label: "Hoạt chất da liễu" },
+          { id: "attributes", label: "Đặc tính & Thuộc tính" },
+          { id: "tags", label: "Thẻ phân loại nhãn" },
+          { id: "banners", label: "Ảnh bìa & Banner" },
+        ],
       },
       {
         id: "inventory",
@@ -54,6 +71,11 @@ export const ADMIN_SECTIONS = [
         icon: Boxes,
         role: "ROLE_STAFF",
         keywords: "stock inventory kho kiểm kê tồn kho",
+        subItems: [
+          { id: "warehouses", label: "Kho bãi & Lô hàng" },
+          { id: "alerts", label: "Cảnh báo tồn & Cận hạn" },
+          { id: "ledger", label: "Sổ cái biến động kho" },
+        ],
       },
       {
         id: "procurement",
@@ -62,6 +84,10 @@ export const ADMIN_SECTIONS = [
         icon: ClipboardList,
         role: "ROLE_STAFF",
         keywords: "supplier procurement nhà cung cấp nhập hàng mua hàng po",
+        subItems: [
+          { id: "orders", label: "Đơn mua hàng (PO)" },
+          { id: "suppliers", label: "Nhà cung cấp" },
+        ],
       },
     ],
   },
@@ -85,6 +111,16 @@ export const ADMIN_SECTIONS = [
         role: "ROLE_STAFF",
         keywords:
           "spa appointment dịch vụ lịch hẹn nhân viên kỹ thuật viên buồng phòng giường máy móc bảo trì khảo sát an toàn vé liệu trình",
+        subItems: [
+          { id: "services", label: "Dịch vụ & Gói Liệu trình" },
+          { id: "categories", label: "Danh mục dịch vụ" },
+          { id: "facilities", label: "Phòng & Thiết bị" },
+          { id: "preparation", label: "Biểu mẫu an toàn" },
+          { id: "staff", label: "Chuyên viên & Kỹ năng" },
+          { id: "policy", label: "Chính sách & Giờ làm" },
+          { id: "tickets", label: "Vé liệu trình" },
+          { id: "maintenance", label: "Bảo trì thiết bị" },
+        ],
       },
       {
         id: "crm",
@@ -109,6 +145,10 @@ export const ADMIN_SECTIONS = [
         icon: TicketPercent,
         role: "ROLE_STAFF",
         keywords: "voucher promotion giảm giá ưu đãi khuyến mãi",
+        subItems: [
+          { id: "vouchers", label: "Mã giảm giá Voucher" },
+          { id: "flash-sales", label: "Chiến dịch Flash Sale" },
+        ],
       },
       {
         id: "reviews",
@@ -129,6 +169,10 @@ export const ADMIN_SECTIONS = [
         description: "Tài khoản nhân sự & phân quyền nghiệp vụ",
         icon: UsersRound,
         keywords: "user account tài khoản phân quyền bảo mật nhân viên",
+        subItems: [
+          { id: "users", label: "Danh sách tài khoản" },
+          { id: "roles", label: "Vai trò & Phân quyền RBAC" },
+        ],
       },
       {
         id: "operations",
@@ -137,6 +181,13 @@ export const ADMIN_SECTIONS = [
         icon: SlidersHorizontal,
         keywords:
           "system audit payment tài chính thanh toán cấu hình kiểm toán chatbot ai rag vector qdrant nlu thao tác",
+        subItems: [
+          { id: "payments", label: "Thanh toán & Đối soát" },
+          { id: "audit", label: "Nhật ký thao tác (Audit)" },
+          { id: "config", label: "Chỉ tiêu & Cấu hình" },
+          { id: "chatbot", label: "Trợ lý tư vấn AI" },
+          { id: "recommendations", label: "Gợi ý sản phẩm tương tự" },
+        ],
       },
     ],
   },

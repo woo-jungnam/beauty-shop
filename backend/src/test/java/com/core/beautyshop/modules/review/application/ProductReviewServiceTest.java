@@ -43,15 +43,31 @@ class ProductReviewServiceTest {
     }
 
     @Test
-    void starsWithoutAnOrderAreRejectedInsteadOfSilentlyDiscarded() {
+    void starsWithoutAnOrderAreRejectedWhenNoDeliveredPurchaseExists() {
         asCustomer(3L);
         when(catalog.productExistsById(7L)).thenReturn(true);
+        when(orders.findEligibleDeliveredOrderId(3L, 7L)).thenReturn(Optional.empty());
 
         assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
                 () -> service.create(new ProductReviewService.ReviewCommand(7L, null, 5, null, "Comment")));
 
         verify(reviews, never()).save(any());
-        verifyNoInteractions(orders);
+        verify(orders).findEligibleDeliveredOrderId(3L, 7L);
+    }
+
+    @Test
+    void starsWithoutOrderIdAutoResolvesDeliveredPurchase() {
+        asCustomer(3L);
+        when(catalog.productExistsById(7L)).thenReturn(true);
+        when(orders.findEligibleDeliveredOrderId(3L, 7L)).thenReturn(Optional.of(99L));
+        when(orders.isDeliveredProductPurchase(99L, 3L, 7L)).thenReturn(true);
+        when(reviews.save(any(ProductReview.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.create(new ProductReviewService.ReviewCommand(7L, null, 5, null, "Auto linked"));
+
+        assertEquals(99L, result.orderId());
+        assertEquals(5, result.rating());
+        assertTrue(result.isVerifiedPurchase());
     }
 
     @Test

@@ -8,6 +8,7 @@ import { Button } from '../shared/ui/Button';
 import { Input } from '../shared/ui/Input';
 import { Select } from '../shared/ui/Select';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
@@ -17,7 +18,30 @@ import { formatCurrency, formatDate, formatDateTime } from '../shared/utils/form
 const blankItem = () => ({ variantId: '', quantity: 1, unitCost: '', batchCode: '', expirationDate: '' });
 
 export const ProcurementPage = () => {
-  const [tab, setTab] = useState('orders');
+  const getInitialTab = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : 'orders';
+  };
+  const [tab, setTabState] = useState(getInitialTab);
+
+  const setTab = useCallback((nextTab) => {
+    setTabState(nextTab);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = nextTab === 'orders' ? base : `${base}?tab=${nextTab}`;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setTabState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setTabState('orders');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   const [suppliers, setSuppliers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [orderPage, setOrderPage] = useState(0);
@@ -28,6 +52,43 @@ export const ProcurementPage = () => {
   const [loadError, setLoadError] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
   const [catalogVariants, setCatalogVariants] = useState([]);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [orderOpen, setOrderOpen] = useState(false);
@@ -234,14 +295,17 @@ export const ProcurementPage = () => {
     setSupplierOpen(true);
   };
 
-  const handleDeleteSupplier = async (id) => {
-    if (!window.confirm(`Xóa nhà cung cấp #${id}?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.PROCUREMENT.DELETE_SUPPLIER(id));
-      load();
-    } catch (err) {
-      alert(err.message || 'Lỗi khi xóa nhà cung cấp');
-    }
+  const handleDeleteSupplier = (supplier) => {
+    askConfirm({
+      title: 'Xác nhận xóa nhà cung cấp',
+      message: `Bạn có chắc muốn xóa nhà cung cấp "${supplier.name || `#${supplier.id}`}"?`,
+      detail: 'Nhà cung cấp sẽ được đưa vào trạng thái lưu trữ ẩn và ngưng kích hoạt. Các phiếu mua hàng đã tạo trước đây vẫn giữ nguyên dữ liệu kiểm toán.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.PROCUREMENT.DELETE_SUPPLIER(supplier.id));
+        load();
+      },
+    });
   };
 
   const saveSupplier = async (e) => {
@@ -317,7 +381,7 @@ export const ProcurementPage = () => {
     { header: 'Mã số thuế', accessor: 'taxCode' }, { header: 'Trạng thái', accessor: (row) => <Badge variant={row.active ? 'success' : 'default'}>{row.active ? 'Đang hoạt động' : 'Tạm ngưng'}</Badge> },
     { header: 'Thao tác', align: 'right', accessor: (row) => <div className="table-actions">
       <Button size="sm" variant="outline" onClick={() => handleOpenEditSupplier(row)}>Sửa</Button>
-      <Button size="sm" variant="danger" icon={X} onClick={() => handleDeleteSupplier(row.id)} title="Xóa nhà cung cấp" />
+      <Button size="sm" variant="danger" icon={X} onClick={() => handleDeleteSupplier(row)} title="Xóa nhà cung cấp" />
     </div> },
   ];
   const orderColumns = [
@@ -496,5 +560,16 @@ export const ProcurementPage = () => {
         {importBusy && <p role="status">Đang đọc Excel / đối chiếu SKU…</p>}
       </form>
     </Modal>
+
+    <ConfirmModal
+      isOpen={confirmConfig.isOpen}
+      onClose={closeConfirm}
+      onConfirm={executeConfirm}
+      title={confirmConfig.title}
+      message={confirmConfig.message}
+      detail={confirmConfig.detail}
+      isPermanent={confirmConfig.isPermanent}
+      loading={confirmConfig.loading}
+    />
   </div>;
 };

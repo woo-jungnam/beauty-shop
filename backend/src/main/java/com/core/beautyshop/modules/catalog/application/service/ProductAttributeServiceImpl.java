@@ -58,7 +58,18 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     public AttributeDefinitionResponse createDefinition(AttributeDefinitionRequest request) {
         validateDefinition(request);
         String code = request.getName().trim().toLowerCase(Locale.ROOT).replace(" ", "_");
-        if (definitionRepository.findByAttributeCode(code).isPresent()) throw new BusinessException("Mã thuộc tính đã tồn tại");
+        java.util.Optional<ProductAttributeDefinition> existing = definitionRepository.findByAttributeCode(code);
+        if (existing.isPresent()) {
+            ProductAttributeDefinition found = existing.get();
+            if (Boolean.TRUE.equals(found.getIsDeleted())) {
+                found.setIsDeleted(false);
+                found.setAttributeName(request.getName().trim());
+                found.setDescription(request.getDescription());
+                found.setDataType(request.getDataType());
+                return mapToDefinitionResponse(definitionRepository.save(found));
+            }
+            throw new BusinessException("Mã thuộc tính đã tồn tại");
+        }
         ProductAttributeDefinition def = ProductAttributeDefinition.builder()
                 .attributeName(request.getName().trim())
                 .description(request.getDescription())
@@ -89,10 +100,10 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     @Override
     @Transactional
     public void deleteDefinition(Long id) {
-        if (!definitionRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Không tìm thấy định nghĩa thuộc tính");
-        }
-        definitionRepository.deleteById(id);
+        ProductAttributeDefinition def = definitionRepository.findById(id).filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy định nghĩa thuộc tính"));
+        def.setIsDeleted(true);
+        definitionRepository.save(def);
     }
 
     @Override

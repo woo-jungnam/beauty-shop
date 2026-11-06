@@ -187,17 +187,16 @@ class AppProductCard extends StatelessWidget {
                               color: AppColors.textMuted,
                             ),
                           ),
-                        Wrap(
-                          spacing: 3,
-                          crossAxisAlignment: WrapCrossAlignment.center,
+                        Row(
                           children: [
-                            if (product.totalReviews > 0)
+                            if (product.totalReviews > 0) ...[
                               const Icon(
                                 Icons.star,
                                 color: AppColors.star,
                                 size: 9.5,
                               ),
-                            const SizedBox(width: 2),
+                              const SizedBox(width: 2),
+                            ],
                             Text(
                               product.totalReviews > 0
                                   ? product.averageRating.toStringAsFixed(1)
@@ -208,16 +207,20 @@ class AppProductCard extends StatelessWidget {
                                 fontSize: 9,
                               ),
                             ),
-                            const SizedBox(width: 3),
-                            Text(
-                              product.totalSold > 0
-                                  ? 'Đã bán ${product.totalSold}'
-                                  : '',
-                              style: const TextStyle(
-                                color: AppColors.textLight,
-                                fontSize: 8.5,
+                            if (product.totalSold > 0) ...[
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: Text(
+                                  'Đã bán ${product.totalSold}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textLight,
+                                    fontSize: 8.5,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ],

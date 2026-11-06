@@ -273,8 +273,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public Page<OrderResponse> getMyOrders(Pageable pageable) {
+        return getMyOrders(null, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> getMyOrders(OrderStatus status, Pageable pageable) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        return orderRepository.findVisibleCustomerHistoryByUserId(currentUserId, pageable)
+        return orderRepository.findVisibleCustomerHistoryByUserIdAndStatus(currentUserId, status, pageable)
                 .map(orderMapper::toOrderResponse);
     }
 
@@ -314,6 +320,19 @@ public class OrderServiceImpl implements OrderService {
                 if (filter.paymentStatus() != null) predicates.add(cb.equal(root.get("paymentStatus"), filter.paymentStatus()));
                 if (filter.from() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), filter.from()));
                 if (filter.to() != null) predicates.add(cb.lessThan(root.get("createdAt"), filter.to()));
+                if (filter.orderType() != null && !filter.orderType().isBlank()) {
+                    String type = filter.orderType().trim().toUpperCase(Locale.ROOT);
+                    if ("PRODUCT".equals(type)) {
+                        predicates.add(cb.isNull(root.get("servicePackageId")));
+                        predicates.add(cb.isNull(root.get("appointmentId")));
+                    } else if ("SPA".equals(type)) {
+                        predicates.add(cb.or(cb.isNotNull(root.get("servicePackageId")), cb.isNotNull(root.get("appointmentId"))));
+                    } else if ("SPA_PACKAGE".equals(type)) {
+                        predicates.add(cb.isNotNull(root.get("servicePackageId")));
+                    } else if ("SPA_VISIT".equals(type)) {
+                        predicates.add(cb.isNotNull(root.get("appointmentId")));
+                    }
+                }
             }
             return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };

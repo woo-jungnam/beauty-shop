@@ -20,8 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,7 @@ public class FlashSaleService implements FlashSaleFacade {
     private final FlashSaleItemRepository itemRepository;
     private final FlashSaleOrderAllocationRepository allocationRepository;
     private final CatalogFacade catalogFacade;
+    private final JdbcTemplate jdbcTemplate;
 
     // =========================================================================
     // ADMIN API OPERATIONS
@@ -99,6 +103,131 @@ public class FlashSaleService implements FlashSaleFacade {
         campaign.setIsDeleted(true);
         campaign.setStatus(FlashSaleStatus.ENDED);
         campaignRepository.save(campaign);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FlashSaleCandidateItem> getCandidateItems() {
+        LocalDate today = com.core.beautyshop.shared.time.BusinessTime.today();
+        String sql = """
+            SELECT
+                p.id AS product_id,
+                p.name AS product_name,
+                p.thumbnail_url AS product_thumbnail_url,
+                pv.id AS variant_id,
+                pv.sku AS sku,
+                pv.variant_name AS variant_name,
+                pv.price AS original_price,
+                ws.id AS stock_id,
+                ws.warehouse_id AS warehouse_id,
+                w.name AS warehouse_name,
+                ws.batch_code AS batch_code,
+                ws.expiration_date AS expiration_date,
+                ws.quantity AS quantity,
+                ws.reserved_quantity AS reserved_quantity,
+                ws.cost_price AS cost_price
+            FROM product_variants pv
+            JOIN products p ON p.id = pv.product_id
+            LEFT JOIN warehouse_stocks ws ON ws.product_variant_id = pv.id
+                AND ws.is_deleted = false
+                AND ws.is_blocked = false
+            LEFT JOIN warehouses w ON w.id = ws.warehouse_id
+                AND w.is_deleted = false
+                AND w.is_active = true
+            WHERE pv.is_deleted = false
+              AND pv.is_active = true
+              AND p.is_deleted = false
+            ORDER BY p.name ASC, pv.sku ASC, ws.expiration_date ASC
+            """;
+
+        Map<Long, List<Map<String, Object>>> rowsByVariant = new LinkedHashMap<>();
+        Map<Long, Map<String, Object>> variantInfoMap = new LinkedHashMap<>();
+
+        jdbcTemplate.query(sql, rs -> {
+            Long variantId = rs.getLong("variant_id");
+            if (!variantInfoMap.containsKey(variantId)) {
+                Map<String, Object> vInfo = new HashMap<>();
+                vInfo.put("productId", rs.getLong("product_id"));
+                vInfo.put("productName", rs.getString("product_name"));
+                vInfo.put("productThumbnailUrl", rs.getString("product_thumbnail_url"));
+                vInfo.put("variantId", variantId);
+                vInfo.put("sku", rs.getString("sku"));
+                vInfo.put("variantName", rs.getString("variant_name"));
+                vInfo.put("originalPrice", rs.getBigDecimal("original_price"));
+                variantInfoMap.put(variantId, vInfo);
+                rowsByVariant.put(variantId, new ArrayList<>());
+            }
+
+            long stockId = rs.getLong("stock_id");
+            if (!rs.wasNull()) {
+                Map<String, Object> bInfo = new HashMap<>();
+                bInfo.put("stockId", stockId);
+                bInfo.put("warehouseId", rs.getLong("warehouse_id"));
+                bInfo.put("warehouseName", rs.getString("warehouse_name"));
+                bInfo.put("batchCode", rs.getString("batch_code"));
+                java.sql.Date expSql = rs.getDate("expiration_date");
+                LocalDate expDate = expSql != null ? expSql.toLocalDate() : null;
+                bInfo.put("expirationDate", expDate);
+                int qty = rs.getInt("quantity");
+                int reserved = rs.getInt("reserved_quantity");
+                bInfo.put("quantity", qty);
+                bInfo.put("reservedQuantity", reserved);
+                bInfo.put("availableQuantity", Math.max(0, qty - reserved));
+                bInfo.put("costPrice", rs.getBigDecimal("cost_price"));
+                rowsByVariant.get(variantId).add(bInfo);
+            }
+        });
+
+        List<FlashSaleCandidateItem> results = new ArrayList<>();
+        for (Map.Entry<Long, Map<String, Object>> entry : variantInfoMap.entrySet()) {
+            Long vId = entry.getKey();
+            Map<String, Object> vInfo = entry.getValue();
+            List<Map<String, Object>> bList = rowsByVariant.getOrDefault(vId, List.of());
+
+            List<StockBatchView> batchViews = new ArrayList<>();
+            int totalAvailable = 0;
+
+            for (Map<String, Object> b : bList) {
+                int avail = (int) b.get("availableQuantity");
+                totalAvailable += avail;
+                LocalDate exp = (LocalDate) b.get("expirationDate");
+                Integer daysRemaining = null;
+                boolean isExpiringSoon = false;
+                if (exp != null) {
+                    daysRemaining = (int) ChronoUnit.DAYS.between(today, exp);
+                    if (daysRemaining <= 90 && daysRemaining > 0) {
+                        isExpiringSoon = true;
+                    }
+                }
+
+                batchViews.add(new StockBatchView(
+                        (Long) b.get("stockId"),
+                        (Long) b.get("warehouseId"),
+                        (String) b.get("warehouseName"),
+                        (String) b.get("batchCode"),
+                        exp,
+                        daysRemaining,
+                        isExpiringSoon,
+                        (int) b.get("quantity"),
+                        (int) b.get("reservedQuantity"),
+                        avail,
+                        (BigDecimal) b.get("costPrice")
+                ));
+            }
+
+            results.add(new FlashSaleCandidateItem(
+                    (Long) vInfo.get("productId"),
+                    (String) vInfo.get("productName"),
+                    (String) vInfo.get("productThumbnailUrl"),
+                    vId,
+                    (String) vInfo.get("sku"),
+                    (String) vInfo.get("variantName"),
+                    (BigDecimal) vInfo.get("originalPrice"),
+                    totalAvailable,
+                    batchViews
+            ));
+        }
+
+        return results;
     }
 
     private void addItemsToCampaign(FlashSaleCampaign campaign, List<ItemCommand> items) {
@@ -420,5 +549,31 @@ public class FlashSaleService implements FlashSaleFacade {
             int remainingQuota,
             int soldPercent,
             int userLimit
+    ) {}
+
+    public record FlashSaleCandidateItem(
+            Long productId,
+            String productName,
+            String productThumbnailUrl,
+            Long productVariantId,
+            String sku,
+            String variantName,
+            BigDecimal originalPrice,
+            int totalAvailableStock,
+            List<StockBatchView> batches
+    ) {}
+
+    public record StockBatchView(
+            Long stockId,
+            Long warehouseId,
+            String warehouseName,
+            String batchCode,
+            LocalDate expirationDate,
+            Integer daysRemaining,
+            boolean isExpiringSoon,
+            int quantity,
+            int reservedQuantity,
+            int availableQuantity,
+            BigDecimal costPrice
     ) {}
 }

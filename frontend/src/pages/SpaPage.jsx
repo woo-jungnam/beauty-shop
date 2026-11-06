@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   CalendarCheck,
   UserCheck,
@@ -56,7 +56,30 @@ export const SpaPage = () => {
   const { isAdmin }=useAuth();
   const [workspaceId,setWorkspaceId]=useState(null);
   const [settlementTicket, setSettlementTicket] = useState(null);
-  const [activeTab, setActiveTab] = useState('services');
+  const getInitialTab = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : 'services';
+  };
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+
+  const setActiveTab = useCallback((tab) => {
+    setActiveTabState(tab);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = tab === 'services' ? base : `${base}?tab=${tab}`;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setActiveTabState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setActiveTabState('services');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   const [loading, setLoading] = useState(false);
 
   const [appointments, setAppointments] = useState([]);

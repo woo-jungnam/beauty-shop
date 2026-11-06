@@ -19,6 +19,16 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthProvider>().clearError();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
@@ -154,10 +164,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: auth.isLoading
                     ? null
                     : () async {
-                        final success = await auth.login(
-                          _usernameController.text.trim(),
-                          _passwordController.text,
-                        );
+                        final username = _usernameController.text.trim();
+                        final password = _passwordController.text;
+                        if (username.isEmpty || password.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Vui lòng điền đầy đủ tên đăng nhập và mật khẩu')),
+                          );
+                          return;
+                        }
+                        final success = await auth.login(username, password);
                         if (success && mounted) {
                           Navigator.pop(context);
                         }

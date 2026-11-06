@@ -42,30 +42,48 @@ public class ProcurementService {
             @ArraySchema(minItems = 1, maxItems = 500, schema = @Schema(type = "string", maxLength = 100)) List<?> skus) { }
 
     @Transactional(readOnly = true)
-    public Page<SupplierView> suppliers(Pageable pageable) { return suppliers.findAll(pageable).map(this::supplierView); }
+    public Page<SupplierView> suppliers(Pageable pageable) { return suppliers.findAllByIsDeletedFalse(pageable).map(this::supplierView); }
 
     @Transactional(readOnly = true)
     public SupplierView supplier(Long id) {
-        return suppliers.findById(id).map(this::supplierView)
+        return suppliers.findByIdAndIsDeletedFalse(id).map(this::supplierView)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
     }
 
     @Transactional
     public void deleteSupplier(Long id) {
-        Supplier s = suppliers.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
-        suppliers.delete(s);
+        Supplier s = suppliers.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
+        s.setIsDeleted(true);
+        s.setActive(false);
+        suppliers.save(s);
     }
 
     @Transactional
     public SupplierView saveSupplier(Long id, SupplierCommand command) {
         if (command.code() == null || command.code().isBlank() || command.name() == null || command.name().isBlank())
             throw new BusinessException("Mã và tên nhà cung cấp là bắt buộc");
-        Supplier supplier = id == null ? new Supplier() : suppliers.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
         String normalizedCode = command.code().trim().toUpperCase(Locale.ROOT);
-        boolean duplicatedCode = id == null
-                ? suppliers.existsByCodeIgnoreCase(normalizedCode)
-                : suppliers.existsByCodeIgnoreCaseAndIdNot(normalizedCode, id);
-        if (duplicatedCode) throw new BusinessException("Mã nhà cung cấp đã tồn tại");
+        Optional<Supplier> existingByCode = suppliers.findByCodeIgnoreCase(normalizedCode);
+        if (existingByCode.isPresent()) {
+            Supplier found = existingByCode.get();
+            if (id == null) {
+                if (Boolean.TRUE.equals(found.getIsDeleted())) {
+                    found.setIsDeleted(false);
+                    found.setName(command.name().trim());
+                    found.setContactName(command.contactName());
+                    found.setEmail(command.email());
+                    found.setPhone(command.phone());
+                    found.setAddress(command.address());
+                    found.setTaxCode(command.taxCode());
+                    found.setActive(command.active() == null || command.active());
+                    return supplierView(suppliers.save(found));
+                }
+                throw new BusinessException("Mã nhà cung cấp đã tồn tại");
+            } else if (!found.getId().equals(id) && !Boolean.TRUE.equals(found.getIsDeleted())) {
+                throw new BusinessException("Mã nhà cung cấp đã tồn tại");
+            }
+        }
+        Supplier supplier = id == null ? new Supplier() : suppliers.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp"));
         supplier.setCode(normalizedCode); supplier.setName(command.name().trim());
         supplier.setContactName(command.contactName()); supplier.setEmail(command.email()); supplier.setPhone(command.phone());
         supplier.setAddress(command.address()); supplier.setTaxCode(command.taxCode()); supplier.setActive(command.active() == null || command.active());

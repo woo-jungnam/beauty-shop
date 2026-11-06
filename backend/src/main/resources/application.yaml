@@ -143,6 +143,9 @@ app:
   mail:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:no-reply@beautyshop.vn}
+    support-email: ${MAIL_SUPPORT_EMAIL:}
+    support-phone: ${MAIL_SUPPORT_PHONE:}
+    media-base-url: ${MAIL_MEDIA_BASE_URL:}
   retention:
     days: ${RETENTION_DAYS:14}
     cron: ${RETENTION_CRON:0 0 3 * * SUN}

@@ -44,7 +44,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
   }
 
-  void _showAddReviewDialog(BuildContext context) {
+  Future<void> _showAddReviewDialog(BuildContext context) async {
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,28 +56,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return;
     }
 
-    final detail = context.read<ProductProvider>().selectedProductDetail;
-    final variantIds = detail != null
-        ? detail.variants.map((v) => v.id).toSet()
-        : <int>{};
-    final orders = context.read<OrderProvider>().orders;
-    final deliveredOrder = orders
-        .where(
-          (o) =>
-              o.status == 'DELIVERED' &&
-              o.items.any(
-                (i) =>
-                    (i.variantId != null && variantIds.contains(i.variantId)) ||
-                    i.productId == widget.productId,
-              ),
-        )
-        .firstOrNull;
-    final hasDelivered = deliveredOrder != null;
+    final productProvider = context.read<ProductProvider>();
+    final eligibility = await productProvider.checkReviewEligibility(widget.productId);
+    final hasDelivered = eligibility?['eligible'] == true;
+    final eligibleOrderId = (eligibility?['orderId'] as num?)?.toInt();
 
     int selectedRating = 5;
     final titleController = TextEditingController();
     final contentController = TextEditingController();
 
+    if (!context.mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -123,7 +111,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Đã xác nhận mua hàng (${deliveredOrder.orderCode})',
+                          eligibleOrderId != null
+                              ? 'Đã xác nhận mua hàng (#$eligibleOrderId)'
+                              : 'Đã xác nhận mua hàng',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -197,7 +187,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   onPressed: () async {
                     if (contentController.text.trim().isEmpty) return;
-                    final eligibleOrderId = deliveredOrder?.id;
 
                     final req = CreateReviewRequest(
                       productId: widget.productId,

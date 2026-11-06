@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
 
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +28,11 @@ public class ProductReviewService {
         Long userId = SecurityUtils.getCurrentUserId();
         catalogFacade.lockProductForRating(command.productId());
         if (!catalogFacade.productExistsById(command.productId())) throw new ResourceNotFoundException("Không tìm thấy sản phẩm");
-        boolean verifiedPurchase = command.orderId() != null;
+        Long eligibleOrderId = command.orderId();
+        if (eligibleOrderId == null && command.rating() != null) {
+            eligibleOrderId = orderFacade.findEligibleDeliveredOrderId(userId, command.productId()).orElse(null);
+        }
+        boolean verifiedPurchase = eligibleOrderId != null;
         if (!verifiedPurchase && command.rating() != null) {
             throw new BusinessException("Chỉ đơn hàng đã mua mới được phép chấm điểm sao");
         }
@@ -35,20 +40,32 @@ public class ProductReviewService {
             if (command.rating() == null || command.rating() < 1 || command.rating() > 5) {
                 throw new BusinessException("Đánh giá phải từ 1 đến 5 sao cho đơn hàng đã mua");
             }
-            if (!orderFacade.isDeliveredProductPurchase(command.orderId(), userId, command.productId())) {
+            if (!orderFacade.isDeliveredProductPurchase(eligibleOrderId, userId, command.productId())) {
                 throw new BusinessException("Chỉ đơn hàng đã giao thành công mới có thể đánh giá");
             }
-            if (repository.existsByProductIdAndUserIdAndOrderId(command.productId(), userId, command.orderId())) {
+            if (repository.existsByProductIdAndUserIdAndOrderId(command.productId(), userId, eligibleOrderId)) {
                 throw new BusinessException("Đơn hàng này đã được đánh giá trước đó");
             }
         }
         ProductReview review = ProductReview.builder().productId(command.productId()).userId(userId)
-                .orderId(verifiedPurchase ? command.orderId() : null)
+                .orderId(verifiedPurchase ? eligibleOrderId : null)
                 .rating(verifiedPurchase ? command.rating() : null)
                 .isVerifiedPurchase(verifiedPurchase)
                 .title(command.title()).content(command.content().trim())
                 .status(ReviewStatus.PENDING).build();
         return ReviewView.from(repository.save(review));
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewEligibilityResponse checkEligibility(Long productId) {
+        Long userId = SecurityUtils.getCurrentUserIdOptional().orElse(null);
+        if (userId == null || productId == null) {
+            return new ReviewEligibilityResponse(false, null);
+        }
+        Optional<Long> orderIdOpt = orderFacade.findEligibleDeliveredOrderId(userId, productId);
+        return orderIdOpt
+                .map(orderId -> new ReviewEligibilityResponse(true, orderId))
+                .orElseGet(() -> new ReviewEligibilityResponse(false, null));
     }
 
     @Transactional(readOnly = true)
@@ -147,4 +164,9 @@ public class ProductReviewService {
                     review.getRepliedAt(), review.getApprovedAt(), review.getCreatedAt());
         }
     }
+
+    @Schema(name = "ReviewEligibilityResponse", description = "Tư cách đánh giá sản phẩm của người dùng")
+    public record ReviewEligibilityResponse(
+            @Schema(description = "Có đủ điều kiện đánh giá sao không") boolean eligible,
+            @Schema(description = "Mã đơn hàng đủ điều kiện") Long orderId) {}
 }

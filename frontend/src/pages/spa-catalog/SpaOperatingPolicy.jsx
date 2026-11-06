@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../shared/api/client';
 import { Button } from '../../shared/ui/Button';
+import { ConfirmModal } from '../../shared/ui/ConfirmModal';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { formatCurrency, formatDate, getVietnamDateString } from '../../shared/utils/formatters';
 import './spa-policy.css';
@@ -48,6 +49,43 @@ export const SpaOperatingPolicy = () => {
   // UI state
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const loadData = async () => {
     setBusy(true);
@@ -183,26 +221,33 @@ export const SpaOperatingPolicy = () => {
   };
 
   // Action: Delete Exception
-  const handleDeleteException = async (dateStr) => {
+  const handleDeleteException = (dateStr) => {
     if (busy || !isAdmin) return;
-    if (!window.confirm(`Khôi phục ngày ${formatDate(dateStr)} về giờ hoạt động tiêu chuẩn trong tuần?`)) return;
-    setBusy(true);
-    setFeedback({ type: '', text: '' });
-    try {
-      await apiClient.delete(`/api/v1/admin/spa/calendar/exceptions/${dateStr}`);
-      await loadData();
-      setFeedback({
-        type: 'success',
-        text: `Đã xóa ngày ngoại lệ ${formatDate(dateStr)}, áp dụng lại giờ tuần chuẩn.`
-      });
-    } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: error?.response?.data?.message || error?.message || 'Không thể xóa ngày ngoại lệ.'
-      });
-    } finally {
-      setBusy(false);
-    }
+    askConfirm({
+      title: 'Khôi phục lịch hoạt động tiêu chuẩn',
+      message: `Khôi phục ngày ${formatDate(dateStr)} về giờ hoạt động tiêu chuẩn trong tuần?`,
+      detail: 'Cấu hình ngày ngoại lệ này sẽ được xóa và hệ thống sẽ áp dụng lại khung giờ mở cửa tiêu chuẩn của ngày trong tuần.',
+      isPermanent: false,
+      onConfirm: async () => {
+        setBusy(true);
+        setFeedback({ type: '', text: '' });
+        try {
+          await apiClient.delete(`/api/v1/admin/spa/calendar/exceptions/${dateStr}`);
+          await loadData();
+          setFeedback({
+            type: 'success',
+            text: `Đã xóa ngày ngoại lệ ${formatDate(dateStr)}, áp dụng lại giờ tuần chuẩn.`
+          });
+        } catch (error) {
+          setFeedback({
+            type: 'error',
+            text: error?.response?.data?.message || error?.message || 'Không thể xóa ngày ngoại lệ.'
+          });
+        } finally {
+          setBusy(false);
+        }
+      },
+    });
   };
 
   // Action: Save Financial Policy
@@ -811,6 +856,17 @@ export const SpaOperatingPolicy = () => {
           </fieldset>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

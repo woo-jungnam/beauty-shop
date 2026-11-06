@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Shield,
@@ -31,11 +31,35 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
+import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { StaffPermissionEditor } from './StaffPermissionEditor';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 
 export const UsersPage = () => {
-  const [activeTab, setActiveTab] = useState('users');
+  const getInitialTab = () => {
+    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+    return match ? match[1] : 'users';
+  };
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+
+  const setActiveTab = useCallback((tab) => {
+    setActiveTabState(tab);
+    const base = window.location.hash.split('?')[0];
+    window.location.hash = tab === 'users' ? base : `${base}?tab=${tab}`;
+  }, []);
+
+  useEffect(() => {
+    const handleHashSync = () => {
+      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
+      if (match && match[1]) {
+        setActiveTabState(match[1]);
+      } else if (!window.location.hash.includes('?tab=')) {
+        setActiveTabState('users');
+      }
+    };
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
   const [permissionUser, setPermissionUser] = useState(null);
 
   const [users, setUsers] = useState([]);
@@ -74,6 +98,43 @@ export const UsersPage = () => {
   const [roleDescription, setRoleDescription] = useState('');
   const [submittingRole, setSubmittingRole] = useState(false);
   const [roleErrorMessage, setRoleErrorMessage] = useState('');
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    detail: '',
+    isPermanent: false,
+    loading: false,
+    onConfirm: null,
+  });
+
+  const askConfirm = ({ title, message, detail, isPermanent = false, onConfirm }) => {
+    setConfirmConfig({
+      isOpen: true,
+      title,
+      message,
+      detail,
+      isPermanent,
+      loading: false,
+      onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false, loading: false }));
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmConfig.onConfirm) return;
+    setConfirmConfig((prev) => ({ ...prev, loading: true }));
+    try {
+      await confirmConfig.onConfirm();
+      closeConfirm();
+    } catch (err) {
+      alert(err.message || 'Thao tác không thành công');
+      setConfirmConfig((prev) => ({ ...prev, loading: false }));
+    }
+  };
 
   const fetchUsers = async (p = 0) => {
     setLoadingUsers(true);
@@ -147,33 +208,41 @@ export const UsersPage = () => {
     }
   };
 
-  const handleForceLogout = async (userId) => {
-    if (!window.confirm('Bạn có chắc muốn hủy bỏ tất cả phiên đăng nhập của người dùng này không?')) return;
-    try {
-      await apiClient.post(ENDPOINTS.USERS.FORCE_LOGOUT(userId));
-      alert('Đã thu hồi token và buộc đăng xuất tài khoản thành công.');
-    } catch (err) {
-      alert(err.message || 'Lỗi buộc đăng xuất');
-    }
+  const handleForceLogout = (userId) => {
+    askConfirm({
+      title: 'Buộc đăng xuất tài khoản',
+      message: 'Bạn có chắc muốn hủy bỏ tất cả phiên đăng nhập của người dùng này không?',
+      detail: 'Mọi access token và refresh token hiện có của người dùng sẽ bị thu hồi ngay lập tức.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.post(ENDPOINTS.USERS.FORCE_LOGOUT(userId));
+        alert('Đã thu hồi token và buộc đăng xuất tài khoản thành công.');
+      },
+    });
   };
 
-  const handleResetPassword = async (user) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn đặt lại mật khẩu tạm thời cho tài khoản "${user.username}"?\n\nToàn bộ phiên đăng nhập hiện tại của người dùng này sẽ bị thu hồi ngay lập tức.`)) {
-      return;
-    }
-    setResetSubmitting(true);
-    try {
-      const res = await apiClient.post(ENDPOINTS.USERS.RESET_PASSWORD(user.id));
-      const data = res.data || res;
-      setResetResult(data);
-      setCopiedPassword(false);
-      setResetModalOpen(true);
-      fetchUsers(page);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi đặt lại mật khẩu');
-    } finally {
-      setResetSubmitting(false);
-    }
+  const handleResetPassword = (user) => {
+    askConfirm({
+      title: 'Đặt lại mật khẩu tạm thời',
+      message: `Bạn có chắc chắn muốn đặt lại mật khẩu tạm thời cho tài khoản "${user.username}"?`,
+      detail: 'Toàn bộ phiên đăng nhập hiện tại của người dùng này sẽ bị thu hồi ngay lập tức và mật khẩu mới sẽ được tạo ngẫu nhiên.',
+      isPermanent: false,
+      onConfirm: async () => {
+        setResetSubmitting(true);
+        try {
+          const res = await apiClient.post(ENDPOINTS.USERS.RESET_PASSWORD(user.id));
+          const data = res.data || res;
+          setResetResult(data);
+          setCopiedPassword(false);
+          setResetModalOpen(true);
+          fetchUsers(page);
+        } catch (err) {
+          alert(err.message || 'Lỗi khi đặt lại mật khẩu');
+        } finally {
+          setResetSubmitting(false);
+        }
+      },
+    });
   };
 
   const handleCopyPassword = () => {
@@ -216,16 +285,19 @@ export const UsersPage = () => {
     setSessionsModalOpen(true);
   };
 
-  const handleRevokeSession = async (sessionId) => {
+  const handleRevokeSession = (sessionId) => {
     if (!selectedUser || !sessionId) return;
-    if (!window.confirm(`Thu hồi phiên #${sessionId}?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.USERS.REVOKE_SESSION(selectedUser.id, sessionId));
-      const res = await apiClient.get(ENDPOINTS.USERS.SESSIONS(selectedUser.id));
-      setSessions(res.data || res || []);
-    } catch (err) {
-      alert(err.message || 'Lỗi khi thu hồi phiên');
-    }
+    askConfirm({
+      title: 'Xác nhận thu hồi phiên đăng nhập',
+      message: `Thu hồi phiên #${sessionId} của ${selectedUser.username}?`,
+      detail: 'Phiên đăng nhập này sẽ bị chấm dứt hiệu lực ngay lập tức. Người dùng sẽ phải đăng nhập lại trên thiết bị đó.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.USERS.REVOKE_SESSION(selectedUser.id, sessionId));
+        const res = await apiClient.get(ENDPOINTS.USERS.SESSIONS(selectedUser.id));
+        setSessions(res.data || res || []);
+      },
+    });
   };
 
   const handleOpenStatusHistory = async (user) => {
@@ -288,18 +360,21 @@ export const UsersPage = () => {
     }
   };
 
-  const handleDeleteRole = async (role) => {
+  const handleDeleteRole = (role) => {
     if (['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER'].includes(role.roleName)) {
       alert('Đây là vai trò hệ thống mặc định (Core System Role), không được phép xóa.');
       return;
     }
-    if (!window.confirm(`Bạn có chắc muốn xóa vai trò "${role.roleName}" không?`)) return;
-    try {
-      await apiClient.delete(ENDPOINTS.ROLES.DETAIL(role.id));
-      fetchRoles();
-    } catch (err) {
-      alert(err.message || 'Lỗi xóa vai trò');
-    }
+    askConfirm({
+      title: 'Xác nhận xóa vai trò',
+      message: `Bạn có chắc muốn xóa vai trò "${role.roleName}"?`,
+      detail: 'Vai trò sẽ được đưa vào lưu trữ ẩn và tự động gỡ bỏ khỏi toàn bộ tài khoản người dùng đang được phân vai trò này. Các tài khoản liên quan sẽ bị buộc đăng xuất để cập nhật quyền.',
+      isPermanent: false,
+      onConfirm: async () => {
+        await apiClient.delete(ENDPOINTS.ROLES.DETAIL(role.id));
+        fetchRoles();
+      },
+    });
   };
 
   const userColumns = [
@@ -976,10 +1051,21 @@ export const UsersPage = () => {
               borderRadius: '4px',
             }}
           >
-            ⚠️ <strong>Lưu ý bảo mật:</strong> Hãy sao chép và gửi mật khẩu tạm này cho người dùng qua kênh liên lạc an toàn. Yêu cầu họ đổi lại mật khẩu cá nhân ngay sau khi đăng nhập thành công.
+            <strong>Lưu ý bảo mật:</strong> Hãy sao chép và gửi mật khẩu tạm này cho người dùng qua kênh liên lạc an toàn. Yêu cầu họ đổi lại mật khẩu cá nhân ngay sau khi đăng nhập thành công.
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={executeConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        detail={confirmConfig.detail}
+        isPermanent={confirmConfig.isPermanent}
+        loading={confirmConfig.loading}
+      />
     </div>
   );
 };

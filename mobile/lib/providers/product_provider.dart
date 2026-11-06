@@ -343,6 +343,19 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>?> checkReviewEligibility(int productId) async {
+    try {
+      final response = await _apiClient.get(
+        '${ApiConstants.reviews}/eligibility',
+        queryParameters: {'productId': productId},
+      );
+      if (response.isSuccess && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<bool> submitReview(CreateReviewRequest request) async {
     try {
       final response = await _apiClient.post(
