@@ -1,3 +1,4 @@
+import { PackageRequestQueue } from '../features/spa/PackageRequests';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   CalendarCheck,
@@ -906,7 +907,7 @@ export const SpaPage = () => {
 
   const ticketColumns = [
     { header: 'Mã vé', accessor: 'id', width: '70px' },
-    { header: 'Gói / Quyền lợi', accessor: (row) => <div>{row.packageName || `Gói #${row.packageId}`}<TicketDetails ticket={row} /></div> },
+    { header: 'Gói / Quyền lợi', accessor: (row) => <div>{row.packageName || `Gói #${row.packageId}`}<TicketDetails ticket={row} administrator={isAdmin} onUpdated={fetchTickets} /></div> },
     { header: 'Số buổi còn lại', accessor: (row) => <strong>{row.remainingSessions} / {row.totalSessions} buổi</strong> },
     { header: 'Hạn dùng', accessor: (row) => formatDate(row.expiryDate) },
     {
@@ -930,6 +931,7 @@ export const SpaPage = () => {
               setExtendModalOpen(true);
             }}
             icon={Clock}
+            disabled={row.benefitType === 'TREATMENT_COURSE' || row.status === 'REVOKED'}
             title="Gia hạn thời gian vé"
           >
             Gia hạn
@@ -942,6 +944,7 @@ export const SpaPage = () => {
               setCompensateModalOpen(true);
             }}
             icon={Gift}
+            disabled={row.benefitType === 'TREATMENT_COURSE' || row.status === 'REVOKED'}
             title="Bồi thường thêm buổi"
           >
             Bồi thường
@@ -1163,6 +1166,7 @@ export const SpaPage = () => {
         </div>
       )}
 
+      {activeTab === 'tickets' && isAdmin && <PackageRequestQueue onUpdated={fetchTickets} onSettle={id => setSettlementTicket({ id })} />}
       {activeTab === 'tickets' && (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '10px 14px', background: 'var(--color-primary-50)', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '13px', flexWrap: 'wrap', gap: '8px' }}>

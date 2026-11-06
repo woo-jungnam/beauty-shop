@@ -30,6 +30,7 @@ public class SystemConfigService {
             Map.entry("spa.booking.pending_ttl_minutes", "INTEGER"), Map.entry("spa.booking.cancel_cutoff_minutes", "INTEGER"),
             Map.entry("spa.booking.reschedule_cutoff_minutes", "INTEGER"), Map.entry("spa.booking.no_show_grace_minutes", "INTEGER"),
             Map.entry("spa.booking.no_show_quota_action", "STRING"), Map.entry("spa.ticket.expiry_check_mode", "STRING"),
+            Map.entry("spa.booking.max_reschedules", "INTEGER"), Map.entry("spa.booking.max_advance_days", "INTEGER"),
             Map.entry("spa.booking.policy_version", "STRING"));
     private static final Set<String> VALUE_TYPES = Set.of("STRING", "INTEGER", "DECIMAL", "BOOLEAN", "JSON");
     private final SystemConfigRepository repository;

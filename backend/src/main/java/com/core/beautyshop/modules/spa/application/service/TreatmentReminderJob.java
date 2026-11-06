@@ -42,7 +42,7 @@ public class TreatmentReminderJob {
         appointments.forEach(this::deliver);
 
         jdbc.query("""
-                SELECT c.id course_id,c.user_id,s.id session_id,s.min_gap_days,
+                SELECT c.id course_id,c.user_id,s.id session_id,s.min_gap_days,s.max_gap_days,
                    (SELECT MAX(p.completed_at) FROM treatment_sessions p
                       WHERE p.course_id=c.id AND p.retired=FALSE AND p.sequence_number<s.sequence_number AND p.status='COMPLETED') previous_completed
                 FROM treatment_courses c JOIN treatment_sessions s ON s.course_id=c.id
@@ -53,7 +53,9 @@ public class TreatmentReminderJob {
                 """, (rs, i) -> {
             var previous = rs.getTimestamp("previous_completed");
             Instant earliest = previous == null ? Instant.EPOCH : previous.toInstant().plusSeconds(rs.getInt("min_gap_days") * 86400L);
-            if (!earliest.isAfter(Instant.now()))
+            Integer maximum = rs.getObject("max_gap_days", Integer.class);
+            Instant latest = previous == null || maximum == null ? null : previous.toInstant().plusSeconds(maximum * 86400L);
+            if (!earliest.isAfter(Instant.now()) && (latest == null || !Instant.now().isAfter(latest)))
                 return new Reminder(rs.getLong("course_id"), rs.getLong("user_id"),
                         "DUE:" + rs.getLong("session_id") + ":" + today,
                         "Đến thời gian đặt buổi tiếp theo", "Một buổi trong lộ trình đã đủ điều kiện về thời gian. Mở hồ sơ để chọn lịch còn trống.");

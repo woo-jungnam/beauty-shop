@@ -1,3 +1,4 @@
+import { BookingPolicyNotice } from '../../features/spa/BookingPolicyNotice';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -912,6 +913,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   return (
     <div className="spa-booking-page">
       <div className="booking-container">
+        <BookingPolicyNotice />
         <div className="booking-breadcrumb">
           <button type="button" onClick={() => onNavigate("")}>
             <ArrowLeft size={15} /> Trang chủ

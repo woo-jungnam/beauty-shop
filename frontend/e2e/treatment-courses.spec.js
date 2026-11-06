@@ -9,6 +9,42 @@ const plan = { name: 'Lộ trình phục hồi 2 buổi', description: 'Theo dõ
 const template = { ...plan, id: 11, versionId: 31, versionNumber: 1, status: 'PUBLISHED', packageId: 71, allowedActions: ['PURCHASE'] };
 const newCourse = () => ({ id: 41, userId: 19, templateId: 11, versionId: 31, name: plan.name, status: 'PENDING_INTAKE', version: 1, orderId: 800, ticketId: 91, assignedStaffId: 5, expiryDate: '2027-01-16T10:00:00Z', paidAmount: 1200000, completedSessions: 0, totalSessions: 2, progressPercent: 0, plan: structuredClone(plan), sessions: plan.sessions.map((session, index) => ({ ...session, id: 51 + index, status: 'PLANNED', earliestBookingAt: null, latestBookingAt: null, blockedReason: index ? 'Hoàn tất buổi trước khi đặt buổi này.' : null, allowedActions: index ? [] : ['BOOK'], results: [], items: session.items.map(item => ({ ...item, id: 61 + index, ticketId: 91, status: 'PLANNED' })) })), changes: [], requests: [], audit: [], allowedActions: ['INTAKE', 'PROPOSE_CHANGE', 'REQUEST_CANCEL', 'REQUEST_EXTEND'] });
 
+test('USER submits an ordinary package extension for admin review', async ({ page }) => {
+  const { pageErrors } = await fixture(page, 'USER');
+  await page.route('**/api/v1/spa/tickets/my-tickets', route => route.fulfill({ json: { data: [{ id: 92, packageName: 'Gói 12 lượt', benefitType: 'SERVICE_PACKAGE', nameSnapshot: true, status: 'ACTIVE', remainingSessions: 12, totalSessions: 12, expiryDate: '2028-01-01T00:00:00Z', services: [] }] } }));
+  const requests = []; let command;
+  await page.route('**/api/v1/spa/tickets/92/requests', async route => {
+    if (route.request().method() === 'POST') { command = route.request().postDataJSON(); requests.push({ ...command, id: 1, status: 'PENDING_APPROVAL' }); }
+    await route.fulfill({ json: { data: route.request().method() === 'POST' ? requests[0] : requests } });
+  });
+  await page.goto('/#/treatments?tab=courses');
+  const ticket = page.locator('[data-service-ticket-id="92"]');
+  await ticket.getByRole('button', { name: 'Yêu cầu gia hạn / dừng gói' }).click();
+  await ticket.getByLabel('Số ngày').fill('14');
+  await ticket.getByLabel('Lý do', { exact: true }).fill('Cần thêm thời gian để dùng các lượt còn lại');
+  await ticket.getByRole('button', { name: 'Gửi yêu cầu', exact: true }).click();
+  await expect(ticket).toContainText('Chờ admin duyệt');
+  expect(command).toEqual({ type: 'EXTEND', extensionDays: 14, reason: 'Cần thêm thời gian để dùng các lượt còn lại' });
+  await expect(ticket.getByRole('button', { name: 'Duyệt yêu cầu' })).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('ADMIN editing an unlimited template preserves null validity', async ({ page }) => {
+  const { state, pageErrors } = await fixture(page, 'ADMIN');
+  Object.assign(state.template, { validityDays: null, status: 'DRAFT', allowedActions: ['EDIT', 'PUBLISH'] });
+  let saved;
+  await page.route('**/api/v1/admin/spa/treatment-templates/11', async route => { saved = route.request().postDataJSON(); await route.fulfill({ json: { data: state.template } }); });
+  await page.goto('/#/admin/treatments');
+  await page.getByRole('button', { name: 'Mẫu & phiên bản', exact: true }).click();
+  await page.locator('[data-treatment-template-id="11"]').getByRole('button', { name: /Chỉnh sửa|Sửa bản nháp/ }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel(/Hiệu lực từ khi thanh toán/)).toHaveValue('');
+  await dialog.getByRole('button', { name: 'Lưu bản nháp', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(saved.validityDays).toBeNull();
+  expect(pageErrors).toEqual([]);
+});
+
 async function fixture(page, role, options = {}) {
   const profile = { id: role === 'USER' ? 19 : 99, username: `treatment-${role.toLowerCase()}`, fullName: `Kiểm thử ${role}`, roles: [`ROLE_${role}`], permissions: role === 'STAFF' ? (options.permissions || ['SPA_EXECUTION']) : [] };
   await page.addInitScript(user => { localStorage.setItem('beautyshop_admin_token', 'test-token'); localStorage.setItem('beautyshop_admin_user', JSON.stringify(user)); }, profile);

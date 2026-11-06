@@ -17,6 +17,11 @@ import java.util.Optional;
 
 @Repository
 public interface UserServiceTicketRepository extends JpaRepository<UserServiceTicket, Long> {
+    @Query("select t from UserServiceTicket t where t.isDeleted=false and (:uid is null or t.userId=:uid) and "
+            + "(:state is null or (case when t.status=com.core.beautyshop.modules.spa.domain.enums.TicketStatus.ACTIVE and t.expiryDate is not null and t.expiryDate<=:now "
+            + "then com.core.beautyshop.modules.spa.domain.enums.TicketStatus.EXPIRED else t.status end)=:state)")
+    Page<UserServiceTicket> findEffective(@Param("uid") Long userId, @Param("state") TicketStatus state, @Param("now") Instant now, Pageable pageable);
+
     @Query(value = "select count(*) from user_service_tickets t join ticket_entitlements e on e.ticket_id = t.id "
             + "where e.service_id = :serviceId and e.total_sessions > e.used_sessions and t.is_deleted = false "
             + "and t.status not in ('REVOKED', 'EXPIRED') and t.order_id is not null "

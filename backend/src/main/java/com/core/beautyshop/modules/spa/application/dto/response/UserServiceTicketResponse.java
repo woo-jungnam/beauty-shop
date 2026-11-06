@@ -72,7 +72,7 @@ public class UserServiceTicketResponse {
                 .remainingByService(ticket.getEntitlements().entrySet().stream().collect(Collectors.toMap(
                         Map.Entry::getKey, entry -> Math.max(0, entry.getValue().available()))))
                 .expiryDate(ticket.getExpiryDate())
-                .status(ticket.getStatus())
+                .status(ticket.getStatus() == TicketStatus.ACTIVE && ticket.getExpiryDate() != null && !ticket.getExpiryDate().isAfter(Instant.now()) ? TicketStatus.EXPIRED : ticket.getStatus())
                 .createdAt(ticket.getCreatedAt())
                 .build();
     }

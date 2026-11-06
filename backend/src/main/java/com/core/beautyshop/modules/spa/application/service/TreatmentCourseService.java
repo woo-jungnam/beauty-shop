@@ -151,7 +151,7 @@ public class TreatmentCourseService {
             Plan plan = read(purchase.getPlanJson());
             Course c = new Course(); c.setUserId(ticket.getUserId()); c.setTemplateId(purchase.getTemplateId());
             c.setVersionId(purchase.getVersionId()); c.setOrderId(ticket.getOrderId()); c.setTicketId(ticket.getId());
-            c.setPlanJson(purchase.getPlanJson()); c.setPaidAmount(plan.price().setScale(0, RoundingMode.HALF_UP));
+            c.setPlanJson(purchase.getPlanJson()); c.setPaidAmount(snapshots.findById(ticket.getOrderId()).orElseThrow(() -> business("Missing paid purchase snapshot")).getPurchaseAmount());
             c.setExpiryDate(ticket.getExpiryDate());
             if (expired(c)) c.setStatus("EXPIRED");
             persist(c); ticket.setTreatmentCourseId(c.getId()); createSessions(c, plan); audit(c, "PURCHASE_PAID", "Purchased published plan version " + purchase.getVersionId());
@@ -297,6 +297,8 @@ public class TreatmentCourseService {
         boolean assignedIncident = "INCIDENT".equals(command.type()) && access.permission("SPA_EXECUTION") && isAssigned(c);
         if (!Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserId()) && !access.canManageReception() && !assignedIncident) throw denied();
         if (Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(c.getStatus())) throw business("This treatment is closed");
+        if ("PAUSE".equals(command.type()) && !Set.of("ACTIVE", "PENDING_INTAKE").contains(effectiveStatus(c))) throw business("Only active treatment can be paused");
+        if ("RESUME".equals(command.type()) && !Set.of("PAUSED", "PENDING_REVIEW").contains(c.getStatus())) throw business("Only paused treatment can be resumed");
         if ("EXTEND".equals(command.type()) && (command.extensionDays() == null || command.extensionDays() < 1 || command.extensionDays() > 3650))
             throw business("Extension days must be between 1 and 3650");
         if (first(WorkflowRequest.class, "select r from TreatmentWorkflowRequest r where r.courseId=:cid and r.status='PENDING_APPROVAL' and r.type=:type", "cid", id, "type", command.type()) != null)
@@ -304,6 +306,7 @@ public class TreatmentCourseService {
         WorkflowRequest r = new WorkflowRequest(); r.setCourseId(id); r.setType(command.type());
         r.setReason(text(command.reason(), "Request reason", 1000)); r.setExtensionDays(command.extensionDays()); r.setRequestedBy(SecurityUtils.getCurrentUserId()); persist(r);
         if ("INCIDENT".equals(command.type())) {
+            if (c.getPausedAt() == null && !expired(c)) c.setPausedAt(Instant.now());
             c.setStatus("PENDING_REVIEW");
             cancelFutureBookings(c, true);
         }
@@ -318,14 +321,29 @@ public class TreatmentCourseService {
         if (!approve) r.setStatus("REJECTED");
         else {
             switch (r.getType()) {
-                case "PAUSE", "INCIDENT" -> { requireOpen(c); cancelFutureBookings(c, "INCIDENT".equals(r.getType())); c.setStatus("INCIDENT".equals(r.getType()) ? "PENDING_REVIEW" : "PAUSED"); }
+                case "PAUSE", "INCIDENT" -> {
+                    requireOpen(c);
+                    if ("PAUSE".equals(r.getType()) && !Set.of("ACTIVE", "PENDING_INTAKE").contains(c.getStatus()))
+                        throw business("Yêu cầu tạm dừng đã không còn phù hợp trạng thái hiện tại");
+                    if (c.getPausedAt() == null) c.setPausedAt(Instant.now());
+                    cancelFutureBookings(c, "INCIDENT".equals(r.getType()));
+                    c.setStatus("INCIDENT".equals(r.getType()) ? "PENDING_REVIEW" : "PAUSED");
+                }
                 case "RESUME" -> {
                     if (!Set.of("PAUSED", "PENDING_REVIEW").contains(c.getStatus()) || expired(c)) throw business("A valid paused treatment is required");
+                    if (first(WorkflowRequest.class, "select r from TreatmentWorkflowRequest r where r.courseId=:cid and r.type='INCIDENT' and r.status='PENDING_APPROVAL'", "cid", c.getId()) != null)
+                        throw business("Cần xử lý báo cáo sự cố trước khi duyệt tiếp tục điều trị");
+                    if (c.getPausedAt() != null && c.getExpiryDate() != null) {
+                        c.setExpiryDate(c.getExpiryDate().plus(Duration.between(c.getPausedAt(), Instant.now())));
+                        tickets.findByIdForUpdate(c.getTicketId()).orElseThrow(() -> missing("Ticket")).setExpiryDate(c.getExpiryDate());
+                    }
+                    c.setPausedAt(null);
                     c.setStatus(c.getIntakeNotes() == null ? "PENDING_INTAKE" : "ACTIVE");
                 }
                 case "EXTEND" -> {
                     if (c.getExpiryDate() == null) throw business("This treatment already has unlimited validity");
-                    c.setExpiryDate((c.getExpiryDate().isAfter(Instant.now()) ? c.getExpiryDate() : Instant.now()).plus(r.getExtensionDays(), ChronoUnit.DAYS));
+                    Instant extensionBase = c.getPausedAt() == null ? Instant.now() : c.getPausedAt();
+                    c.setExpiryDate((c.getExpiryDate().isAfter(extensionBase) ? c.getExpiryDate() : extensionBase).plus(r.getExtensionDays(), ChronoUnit.DAYS));
                     UserServiceTicket ticket = tickets.findByIdForUpdate(c.getTicketId()).orElseThrow(() -> missing("Ticket")); ticket.setExpiryDate(c.getExpiryDate());
                     if (ticket.getStatus() == TicketStatus.EXPIRED) ticket.setStatus(TicketStatus.ACTIVE);
                     if ("EXPIRED".equals(c.getStatus())) c.setStatus(c.getIntakeNotes() == null ? "PENDING_INTAKE" : "ACTIVE");
@@ -400,6 +418,9 @@ public class TreatmentCourseService {
                 .filter(i -> existing == null || existing.getItems().stream().anyMatch(a -> Objects.equals(a.getId(), i.getAppointmentItemId()))).toList();
         if (remaining.isEmpty()) return List.of();
         List<String> result = new ArrayList<>();
+        var bookingPolicy = existing == null ? policies.current() : policies.forAppointment(existing);
+        if (bookingPolicy.maxAdvanceDays() != null && bookingPolicy.maxAdvanceDays() > 0
+                && date.isAfter(LocalDate.now(SpaTimeRules.ZONE).plusDays(bookingPolicy.maxAdvanceDays()))) return List.of();
         var hours = calendar.forDate(date);
         if (hours.closed()) return List.of();
         for (int minute=hours.opensAt().getHour()*60+hours.opensAt().getMinute(); minute<hours.closesAt().getHour()*60+hours.closesAt().getMinute(); minute+=30) {
@@ -420,6 +441,7 @@ public class TreatmentCourseService {
                     end = cursor.plusMinutes(duration);
                 }
                 catch (BusinessException outsideHours) { valid = false; break; }
+                if (!withinWindow(c, s, date.atTime(cursor).atZone(SpaTimeRules.ZONE).toInstant())) { valid = false; break; }
                 LocalTime start = cursor;
                 Long effectiveStaff = original != null && original.getStaff() != null ? original.getStaff().getId() : staffId;
                 boolean hasPerformer = staff.findQualifiedActiveStaff(service.getId()).stream()
@@ -457,7 +479,7 @@ public class TreatmentCourseService {
             if ("ACTIVE".equals(effectiveStatus(c))) {
                 Session next = sessions(c).stream().filter(s -> !Set.of("COMPLETED", "WAIVED").contains(s.getStatus())).findFirst().orElse(null);
                 if (next != null && !"SCHEDULED".equals(next.getStatus()) && !"IN_PROGRESS".equals(next.getStatus())) {
-                    unbooked++; Instant earliest = earliest(c, next); if (earliest == null || !earliest.isAfter(Instant.now())) due++;
+                    unbooked++; Instant earliest = earliest(c, next); if ((earliest == null || !earliest.isAfter(Instant.now())) && withinWindow(c, next, Instant.now())) due++;
                 }
             }
             unused = unused.add(refundable(c));
@@ -536,6 +558,18 @@ public class TreatmentCourseService {
             if (components.stream().noneMatch(i -> Boolean.TRUE.equals(i.required()))) throw business("Each session must contain a required service");
             sessions.add(new PlanSession(s.sequence(), s.title().trim(), min, s.maxGapDays(), s.required() == null || s.required(), components));
         }
+        if (p.validityDays() != null) {
+            long minimumMinutes = 0; boolean previousRequired = false;
+            for (PlanSession session : sessions) if (Boolean.TRUE.equals(session.required())) {
+                if (previousRequired) minimumMinutes += session.minGapDays() * 1440L;
+                for (PlanItem item : session.items()) if (Boolean.TRUE.equals(item.required())) {
+                    BeautyService svc = availableService(item.serviceId());
+                    minimumMinutes += svc.getDurationMinutes() + (svc.getPreparationTimeMinutes() == null ? 0 : svc.getPreparationTimeMinutes());
+                }
+                previousRequired = true;
+            }
+            if (minimumMinutes >= p.validityDays() * 1440L) throw business("Required sessions cannot be completed within the treatment validity");
+        }
         return new Plan(p.name().trim(), optionalText(p.description(), 10000), p.serviceId(), p.price(), p.validityDays(), p.terms().trim(), sessions);
     }
 
@@ -589,13 +623,13 @@ public class TreatmentCourseService {
 
     private void createSessions(Course c, Plan plan) {
         int count = plan.sessions().stream().mapToInt(s -> s.items().size()).sum();
-        BigDecimal per = plan.price().setScale(0, RoundingMode.HALF_UP).divide(BigDecimal.valueOf(count), 2, RoundingMode.DOWN);
+        BigDecimal per = c.getPaidAmount().divide(BigDecimal.valueOf(count), 2, RoundingMode.DOWN);
         BigDecimal assigned = BigDecimal.ZERO; int index = 0;
         for (PlanSession ps : plan.sessions()) {
             Session s = new Session(); s.setCourseId(c.getId()); s.setSequence(ps.sequence()); s.setTitle(ps.title()); s.setMinGapDays(ps.minGapDays()); s.setMaxGapDays(ps.maxGapDays()); s.setRequired(Boolean.TRUE.equals(ps.required())); persist(s);
             for (PlanItem pi : ps.items()) {
                 SessionItem item = new SessionItem(); item.setCourseId(c.getId()); item.setSessionId(s.getId()); item.setServiceId(pi.serviceId()); item.setServiceName(pi.serviceName()); item.setRequired(Boolean.TRUE.equals(pi.required()));
-                BigDecimal amount = ++index == count ? plan.price().setScale(0, RoundingMode.HALF_UP).subtract(assigned) : per;
+                BigDecimal amount = ++index == count ? c.getPaidAmount().subtract(assigned) : per;
                 item.setAllocatedAmount(amount); assigned = assigned.add(amount); persist(item, false);
             }
         }
@@ -606,7 +640,7 @@ public class TreatmentCourseService {
         List<Session> current = sessions(c);
         BigDecimal earned = c.getConsumedAmount().add(current.stream().filter(s -> items(s).stream().anyMatch(i -> "COMPLETED".equals(i.getStatus())))
                 .flatMap(s -> items(s).stream()).filter(i -> !financiallyConsumed(i)).map(SessionItem::getAllocatedAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
-        if (plan.price().compareTo(earned) < 0) throw business("A changed plan cannot refund already performed treatment");
+        if (projectedBasis(c, plan, null).compareTo(earned) < 0) throw business("A changed plan cannot refund already performed treatment");
         for (Session s : current) {
             List<SessionItem> existing = items(s);
             boolean performed = existing.stream().anyMatch(i -> "COMPLETED".equals(i.getStatus()));
@@ -645,7 +679,9 @@ public class TreatmentCourseService {
         }); ticket.setTotalSessions(total);
         if (ticket.getStatus() == TicketStatus.COMPLETED && ticket.getUsedSessions() < total) ticket.setStatus(TicketStatus.ACTIVE);
         BigDecimal preservedOutstanding = bySequence.values().stream().flatMap(s -> items(s).stream()).filter(i -> !financiallyConsumed(i)).map(SessionItem::getAllocatedAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal remainingValue = replacement.price().setScale(0, RoundingMode.HALF_UP).subtract(c.getConsumedAmount()).subtract(preservedOutstanding);
+        BigDecimal nextBasis = projectedBasis(c, replacement, change);
+        BigDecimal remainingValue = nextBasis.subtract(c.getConsumedAmount()).subtract(preservedOutstanding);
+        if (remainingValue.signum() < 0) throw business("The paid adjustment cannot cover committed treatment value");
         int newCount = replacement.sessions().stream().filter(s -> !bySequence.containsKey(s.sequence())).mapToInt(s -> s.items().size()).sum();
         BigDecimal per = newCount == 0 ? BigDecimal.ZERO : remainingValue.max(BigDecimal.ZERO).divide(BigDecimal.valueOf(newCount), 2, RoundingMode.DOWN);
         int newIndex = 0; BigDecimal allocated = BigDecimal.ZERO;
@@ -658,12 +694,17 @@ public class TreatmentCourseService {
         }
         if (!Objects.equals(replacement.validityDays(), read(c.getPlanJson()).validityDays())) {
             Instant paidAt = orders.findPaidAtForUser(c.getOrderId(), c.getUserId()).orElseThrow(() -> business("Missing original paid date"));
-            c.setExpiryDate(replacement.validityDays() == null ? null : paidAt.plus(replacement.validityDays(), ChronoUnit.DAYS)); ticket.setExpiryDate(c.getExpiryDate());
+            Integer oldDays = read(c.getPlanJson()).validityDays();
+            Instant nextExpiry = replacement.validityDays() == null ? null : oldDays != null && c.getExpiryDate() != null
+                    ? c.getExpiryDate().plus(replacement.validityDays() - oldDays, ChronoUnit.DAYS)
+                    : paidAt.plus(replacement.validityDays(), ChronoUnit.DAYS);
+            if (nextExpiry != null && !nextExpiry.isAfter(c.getPausedAt() == null ? Instant.now() : c.getPausedAt())) throw business("The revision would leave the treatment expired");
+            c.setExpiryDate(nextExpiry); ticket.setExpiryDate(nextExpiry);
         }
-        if (change.getPriceDifference().signum() > 0) c.setPaidAmount(c.getPaidAmount().add(change.getPriceDifference()));
+        if (change.getPriceDifference().signum() > 0) c.setPaidAmount(c.getPaidAmount().add(settlementAmount(change)));
         if (change.getPriceDifference().signum() < 0) {
             WorkflowRequest refund = new WorkflowRequest(); refund.setCourseId(c.getId()); refund.setType("PRICE_ADJUSTMENT"); refund.setReason(change.getReason()); refund.setRequestedBy(change.getProposedBy());
-            refund.setReviewedBy(change.getApprovedBy()); refund.setReviewedAt(Instant.now()); refund.setStatus("AWAITING_REFUND"); refund.setRefundAmount(change.getPriceDifference().negate()); persist(refund);
+            refund.setReviewedBy(change.getApprovedBy()); refund.setReviewedAt(Instant.now()); refund.setStatus("AWAITING_REFUND"); refund.setRefundAmount(financialBasis(c).subtract(nextBasis)); persist(refund);
         }
         c.setPlanJson(change.getPlanJson()); c.setPlanRevision(c.getPlanRevision() + 1); change.setStatus("APPLIED"); change.setAppliedAt(Instant.now());
         audit(c, "CHANGE_APPLIED", "Accepted plan revision " + c.getPlanRevision()); em.flush();
@@ -680,7 +721,7 @@ public class TreatmentCourseService {
         WorkflowRequest refund = new WorkflowRequest(); refund.setCourseId(course.getId()); refund.setType("UNAPPLIED_SETTLEMENT");
         refund.setReason("Paid adjustment was not applied before the treatment closed"); refund.setRequestedBy(course.getUserId());
         refund.setReviewedBy(SecurityUtils.getCurrentUserIdOptional().orElse(null)); refund.setReviewedAt(Instant.now());
-        refund.setRefundAmount(change.getPriceDifference()); refund.setStatus("AWAITING_REFUND"); persist(refund);
+        refund.setRefundAmount(settlementAmount(change)); refund.setStatus("AWAITING_REFUND"); persist(refund);
         change.setStatus("SETTLEMENT_REFUND_PENDING"); audit(course, "SETTLEMENT_REFUND_PENDING", "Unapplied paid adjustment requires refund");
     }
 
@@ -707,9 +748,25 @@ public class TreatmentCourseService {
                 + "com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus.CONFIRMED, "
                 + "com.core.beautyshop.modules.spa.domain.enums.AppointmentStatus.IN_PROGRESS)))", "cid", c.getId()).isEmpty();
     }
+    private BigDecimal settlementAmount(Change change) {
+        return snapshots.findById(change.getSettlementOrderId()).orElseThrow(() -> business("Missing adjustment purchase snapshot")).getPurchaseAmount();
+    }
+    private BigDecimal financialBasis(Course c) {
+        BigDecimal adjustments = list(WorkflowRequest.class, "select r from TreatmentWorkflowRequest r where r.courseId=:cid and r.type='PRICE_ADJUSTMENT' and r.status in ('AWAITING_REFUND','REFUNDED')", "cid", c.getId()).stream()
+                .map(WorkflowRequest::getRefundAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return c.getPaidAmount().subtract(adjustments).max(BigDecimal.ZERO);
+    }
+    private BigDecimal projectedBasis(Course c, Plan replacement, Change change) {
+        BigDecimal basis = financialBasis(c);
+        BigDecimal oldPrice = read(c.getPlanJson()).price().setScale(0, RoundingMode.HALF_UP);
+        BigDecimal newPrice = replacement.price().setScale(0, RoundingMode.HALF_UP);
+        if (newPrice.compareTo(oldPrice) < 0) return basis.multiply(newPrice).divide(oldPrice, 2, RoundingMode.HALF_UP);
+        if (newPrice.compareTo(oldPrice) > 0) return basis.add(change != null ? settlementAmount(change) : newPrice.subtract(oldPrice));
+        return basis;
+    }
     private BigDecimal refundable(Course c) {
         if ("REFUNDED".equals(c.getStatus())) return BigDecimal.ZERO;
-        return read(c.getPlanJson()).price().setScale(0, RoundingMode.HALF_UP).subtract(c.getConsumedAmount()).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        return financialBasis(c).subtract(c.getConsumedAmount()).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
     }
 
     void recordConsumption(Course c, SessionItem item, AppointmentItem appointmentItem) {
@@ -753,7 +810,7 @@ public class TreatmentCourseService {
                 .max(Comparator.comparingInt(Session::getSequence)).orElse(null);
         return previous == null || previous.getCompletedAt() == null || s.getMaxGapDays() == null ? null : previous.getCompletedAt().plus(s.getMaxGapDays(), ChronoUnit.DAYS);
     }
-    private boolean expired(Course c) { return c.getExpiryDate() != null && !c.getExpiryDate().isAfter(Instant.now()); }
+    private boolean expired(Course c) { return c.getExpiryDate() != null && !c.getExpiryDate().isAfter(c.getPausedAt() == null ? Instant.now() : c.getPausedAt()); }
     private String effectiveStatus(Course c) { return expired(c) && !Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(c.getStatus()) ? "EXPIRED" : c.getStatus(); }
     private Session session(Course c, Long id) { Session s = get(Session.class, id); if (!Objects.equals(s.getCourseId(), c.getId())) throw missing("Session"); return s; }
     private Change change(Course c, Long id) { Change x = get(Change.class, id); if (!Objects.equals(x.getCourseId(), c.getId())) throw missing("Change"); return x; }

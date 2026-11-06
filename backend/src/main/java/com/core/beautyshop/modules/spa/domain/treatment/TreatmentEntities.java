@@ -65,6 +65,7 @@ public final class TreatmentEntities {
         @Version @Column(name = "row_version", nullable = false) private long rowVersion;
         @Column(nullable = false, length = 30) private String status = "PENDING_INTAKE";
         @Column(name = "expiry_date") private Instant expiryDate;
+        @Column(name = "paused_at") private Instant pausedAt;
         @Column(name = "intake_notes", columnDefinition = "TEXT") private String intakeNotes;
         @Column(columnDefinition = "TEXT") private String summary;
         @Column(name = "paid_amount", nullable = false, precision = 12, scale = 2) private BigDecimal paidAmount;

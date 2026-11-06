@@ -141,6 +141,18 @@ class AppointmentOperationalRulesTest {
         }
         verify(appointments, never()).save(any());
     }
+    @Test void customerCannotExceedSnapshotRescheduleLimit() {
+        var principal = new UserDetailsImpl(50L,"customer","customer@example.test","password",List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")));
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal,null,principal.getAuthorities()));
+        var value=appointment(service(),null);
+        when(appointments.findByIdForUpdate(10L)).thenReturn(Optional.of(value));
+        when(policies.forAppointment(value)).thenReturn(new SpaBookingPolicyService.Policy("v2",30,120,120,15,"FORFEIT",3,90));
+        when(history.countByAppointmentIdAndActorUserIdAndAction(10L,50L,"RESCHEDULE")).thenReturn(3L);
+        var request=new RescheduleAppointmentRequest(); request.setAppointmentDate(tomorrow().plusDays(1)); request.setStartTime(LocalTime.of(14,0));
+        assertThrows(BusinessException.class, () -> booking.rescheduleAppointment(10L,request));
+        verify(appointments,never()).save(any());
+    }
+
     @Test void reschedulingKeepsOriginalDurationAndPriceAfterCatalogChanges() {
         var service = service(); var value = appointment(service, null);
         service.setDurationMinutes(90); service.setPreparationTimeMinutes(30); service.setBasePrice(BigDecimal.valueOf(500000));

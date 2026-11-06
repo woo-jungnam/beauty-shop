@@ -1,3 +1,4 @@
+import { BookingPolicyNotice } from '../spa/BookingPolicyNotice';
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { Button } from '../../shared/ui/Button';
@@ -36,8 +37,9 @@ export const TreatmentBookingDialog = ({ course, session, role, reschedule = fal
     } finally { lock.current = false; setBusy(false); }
   };
   return <Modal isOpen title={`${reschedule ? 'Đổi lịch' : 'Đặt lịch'} buổi ${session.sequence}: ${session.title}`} onClose={() => { if (!busy) onClose(); }} className="treatment-dialog" maxWidth="640px"><form className="treatment-form" onSubmit={submit}>
+    {!reschedule && <BookingPolicyNotice />}
     <p className="treatment-muted">Giờ Việt Nam (UTC+7). Hệ thống kiểm tra toàn bộ dịch vụ, nhân sự, tài nguyên, khoảng cách buổi và quyền lợi khi đặt.</p>
-    {session.earliestBookingAt && <p>Sớm nhất: {dateLabel(session.earliestBookingAt)}{session.latestBookingAt ? ` · Hạn khuyến nghị: ${dateLabel(session.latestBookingAt)}` : ''}</p>}
+    {(session.earliestBookingAt || session.latestBookingAt) && <p>{session.earliestBookingAt ? `Sớm nhất: ${dateLabel(session.earliestBookingAt)}` : ''}{session.latestBookingAt ? ` · Chậm nhất: ${dateLabel(session.latestBookingAt)}` : ''}. Mỗi dịch vụ trong buổi phải bắt đầu trong khoảng này.</p>}
     {error && <div role="alert" className="treatment-notice error">{error}<Button variant="outline" disabled={busy || uncertain} onClick={() => setRetry(value => value + 1)}>Tải lại giờ trống</Button></div>}
     <fieldset disabled={busy || uncertain}><label>Ngày hẹn<input required type="date" min={today()} value={date} onChange={event => setDate(event.target.value)} /></label>
       {loading ? <p role="status">Đang kiểm tra giờ trống…</p> : <div className="treatment-slots" role="group" aria-label="Giờ trống">{slots.map(value => <button type="button" key={value} aria-pressed={slot === value} onClick={() => setSlot(value)}>{value.slice(0, 5)}</button>)}{!slots.length && !error && <p>Ngày này chưa có giờ phù hợp. Vui lòng chọn ngày khác.</p>}</div>}

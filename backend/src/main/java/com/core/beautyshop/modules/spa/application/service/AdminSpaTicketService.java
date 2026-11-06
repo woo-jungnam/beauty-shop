@@ -28,11 +28,7 @@ public class AdminSpaTicketService {
 
     @Transactional(readOnly = true)
     public Page<UserServiceTicketResponse> find(Long userId, TicketStatus status, Pageable pageable) {
-        Page<UserServiceTicket> page = userId != null && status != null
-                ? repository.findByUserIdAndStatusAndIsDeletedFalse(userId, status, pageable)
-                : userId != null ? repository.findByUserIdAndIsDeletedFalse(userId, pageable)
-                : status != null ? repository.findByStatusAndIsDeletedFalse(status, pageable)
-                : repository.findByIsDeletedFalse(pageable);
+        Page<UserServiceTicket> page = repository.findEffective(userId, status, Instant.now(), pageable);
         return page.map(UserServiceTicketResponse::of);
     }
 
@@ -81,6 +77,7 @@ public class AdminSpaTicketService {
     public UserServiceTicketResponse compensate(Long id, Long serviceId, int sessions, String reason, String key) {
         if (serviceId == null || sessions <= 0 || sessions > 100) throw new BusinessException("Số buổi đền bù/cộng thêm không hợp lệ (phải từ 1 đến 100)");
         UserServiceTicket ticket = lock(id);
+        if (ticket.getServicePackage() != null && Boolean.TRUE.equals(ticket.getServicePackage().getTreatmentManaged())) throw new BusinessException("Use an approved treatment plan revision to add treatment sessions");
         String fingerprint = fingerprint("COMPENSATE:" + serviceId + ":" + sessions + ":" + reason);
         if (replayed(ticket, "COMPENSATE", reason, key, fingerprint)) return UserServiceTicketResponse.of(ticket);
         requirePaidTicket(ticket);

@@ -1,3 +1,4 @@
+import { BookingPolicyNotice } from '../../../features/spa/BookingPolicyNotice';
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../../../shared/api/client';
 import { Modal } from '../../../shared/ui/Modal';
@@ -8,7 +9,7 @@ export function AppointmentTools({ appointment, onSaved, autoOpen = false }) {
   const [opened, setOpened] = useState(autoOpen);
   const [reschedule, setReschedule] = useState(false);
   useEffect(() => { if (autoOpen) setOpened(true); }, [autoOpen]);
-  return <><button onClick={() => setOpened(true)} className="btn-luxury-outline">Chi tiết, phiếu chuẩn bị & hướng dẫn</button>{['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <button className="btn-luxury-outline" onClick={() => setReschedule(true)}>Đổi lịch</button>}{opened && <TreatmentAppointmentDialog appointmentId={appointment.id} role="customer" onClose={() => setOpened(false)} onSaved={onSaved} />}{reschedule && <RescheduleDialog appointment={appointment} onClose={() => setReschedule(false)} onSaved={onSaved} />}</>;
+  return <><BookingPolicyNotice snapshot={appointment.policySnapshot ?? null} /><button onClick={() => setOpened(true)} className="btn-luxury-outline">Chi tiết, phiếu chuẩn bị & hướng dẫn</button>{['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <button className="btn-luxury-outline" onClick={() => setReschedule(true)}>Đổi lịch</button>}{opened && <TreatmentAppointmentDialog appointmentId={appointment.id} role="customer" onClose={() => setOpened(false)} onSaved={onSaved} />}{reschedule && <RescheduleDialog appointment={appointment} onClose={() => setReschedule(false)} onSaved={onSaved} />}</>;
 }
 
 export function RescheduleDialog({ appointment, onClose, onSaved }) {

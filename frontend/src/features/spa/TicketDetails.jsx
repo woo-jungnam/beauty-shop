@@ -3,7 +3,8 @@ import { apiClient } from '../../shared/api/client';
 import { unwrap, errorMessage, money } from '../treatments/treatmentApi';
 import { movementLabel, ticketDestination } from './benefitModel';
 import './spa-benefits.css';
-export const TicketDetails = ({ ticket, onNavigate }) => {
+import { PackageRequests } from './PackageRequests';
+export const TicketDetails = ({ ticket, onNavigate, administrator = false, onUpdated }) => {
   const [open, setOpen] = useState(false), [history, setHistory] = useState([]), [refunds, setRefunds] = useState([]), [error, setError] = useState(''), [page, setPage] = useState(0), [more, setMore] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(timer); }, []);
@@ -15,6 +16,7 @@ export const TicketDetails = ({ ticket, onNavigate }) => {
   }, [open, ticket.id, page]);
   const usable = ticket.status === 'ACTIVE' && ticket.remainingSessions > 0 && (!ticket.expiryDate || Date.parse(ticket.expiryDate) > now);
   return <div className="spa-ticket-detail">
+    {ticket.benefitType !== 'TREATMENT_COURSE' && (onNavigate || administrator) && <PackageRequests ticket={ticket} admin={administrator} onUpdated={onUpdated} />}
     {!ticket.nameSnapshot && <small>Tên hiện tại; vé cũ chưa lưu tên lúc mua.</small>}
     <p>{ticket.benefitType === 'TREATMENT_COURSE' ? 'Quyền theo lộ trình chăm sóc' : 'Gói nhiều lượt thông thường'} · Đang giữ: {ticket.reservedSessions ?? 'Chưa xác định'} lượt</p>
     <ul>{(ticket.services || []).map(s => <li key={s.serviceId}><strong>{s.serviceName}</strong>: {s.available} {usable ? 'khả dụng' : 'chưa dùng (vé không khả dụng)'} / {s.total} tổng · {s.used} đã dùng hoặc mất lượt · {s.reserved} đang giữ</li>)}</ul>

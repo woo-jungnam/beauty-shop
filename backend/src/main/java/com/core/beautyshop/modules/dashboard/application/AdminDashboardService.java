@@ -19,13 +19,17 @@ public class AdminDashboardService {
     private static final String RECEIPTS = "transfer_type = 'in' AND amount > 0 AND status IN ('SUCCESS','PARTIALLY_PAID','CANCELLED_ORDER_RECEIVED','ORDER_NOT_FOUND','IGNORED','DEPOSIT_REVIEW')";
     // Classify receipts without joining one-to-many ledgers (which could duplicate amounts).
     private static final String RECEIPT_SOURCE = """
-            (SELECT pt.*, CASE
+            (SELECT pt.transfer_type, pt.amount, pt.status, pt.gateway, pt.created_at, CASE
                 WHEN EXISTS (SELECT 1 FROM orders o WHERE o.order_number = pt.order_number
                     AND (o.service_package_id IS NOT NULL OR o.appointment_id IS NOT NULL))
                     OR pt.order_number LIKE 'SPADEP-%' THEN 'SPA'
                 WHEN EXISTS (SELECT 1 FROM orders o WHERE o.order_number = pt.order_number) THEN 'PRODUCT'
                 ELSE 'OTHER' END source
-             FROM payment_transactions pt) receipts
+             FROM payment_transactions pt
+             UNION ALL
+             SELECT 'in', amount, 'SUCCESS', 'CASH', created_at, 'SPA'
+             FROM spa_financial_entries WHERE method='CASH' AND kind IN ('DEPOSIT','FEE')
+                AND payment_transaction_id IS NULL) receipts
             """;
     private final JdbcTemplate jdbc;
 

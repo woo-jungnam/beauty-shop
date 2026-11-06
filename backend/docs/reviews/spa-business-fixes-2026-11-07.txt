@@ -1,0 +1,65 @@
+HOÀN THIỆN NGHIỆP VỤ SPA — 07/11/2026
+
+Phạm vi: các lỗi và khoảng trống đã nêu trong spa-business-audit-2026-11-07.md.
+
+1. Tài chính lộ trình
+- Cấp hồ sơ và phân bổ giá trị từng dịch vụ theo snapshot tiền mua sau giảm giá.
+- Tăng giá lấy đúng tiền thanh toán chênh lệch sau giảm giá. Giảm giá phân bổ theo cơ sở giá trị ròng hiện hành, giữ nguyên phần đã thực hiện/cam kết.
+- Hoàn khi dừng trừ phần đã tiêu dùng và các khoản giảm giá đã duyệt hoàn; tránh hoàn lại cùng một phần tiền. Chứng từ hoàn vẫn được giới hạn bởi thực thu của các đơn nguồn.
+- Thanh toán điều chỉnh chưa áp dụng cũng báo hoàn theo tiền mua thực tế.
+
+2. Thời gian và quyền lợi
+- Chặn kế hoạch có chuỗi buổi bắt buộc chắc chắn không thể hoàn tất trong hạn, có tính thời lượng và chuẩn bị. Kiểm tra khi lưu, xuất bản, mua và điều chỉnh. Đây là điều kiện tối thiểu, không bảo đảm luôn còn lịch nhân viên/tài nguyên.
+- Kiểm tra cửa sổ điều trị tại giờ bắt đầu dự kiến của từng dịch vụ trong gợi ý, đặt và đổi lịch, kể cả đổi lịch từ màn hình tài khoản.
+- Sửa hiệu lực kế hoạch bằng chênh lệch số ngày, giữ phần gia hạn đã cấp riêng. Chặn phiên bản làm hồ sơ hết hiệu lực ngay khi áp dụng.
+- Chặn bù lượt điều trị qua chức năng vé thường; thêm buổi phải qua điều chỉnh kế hoạch có duyệt và khách chấp thuận.
+- Bảo lưu hạn từ lúc admin duyệt tạm dừng hoặc lúc ghi nhận sự cố; cộng đúng thời gian dừng khi admin duyệt tiếp tục. Gia hạn trong lúc bảo lưu không cộng lặp khoảng dừng.
+- Không duyệt tiếp tục khi còn báo cáo sự cố chưa xử lý; yêu cầu tạm dừng cũ không được ghi đè trạng thái chờ xử lý sự cố.
+- Bảo lưu hạn sử dụng không tự thay đổi khoảng cách điều trị chuyên môn. Nếu đã quá cửa sổ buổi, người phụ trách cần đề xuất điều chỉnh phù hợp và đi qua phê duyệt.
+
+3. Chính sách lịch mới, cấu hình được bởi admin
+Khóa cấu hình                              Mặc định
+spa.booking.policy_version                 spa-v2
+spa.booking.pending_ttl_minutes            30 phút
+spa.booking.cancel_cutoff_minutes          120 phút
+spa.booking.reschedule_cutoff_minutes      120 phút
+spa.booking.no_show_grace_minutes          15 phút
+spa.booking.no_show_quota_action           FORFEIT
+spa.booking.max_reschedules                3 lần khách tự đổi mỗi lịch
+spa.booking.max_advance_days               90 ngày
+spa.ticket.expiry_check_mode               SERVICE_START
+
+- Migration chỉ bổ sung khóa còn thiếu, không ghi đè cấu hình sẵn có.
+- Chính sách được chụp lúc đặt; lịch cũ giữ snapshot cũ. Giới hạn đổi lịch đếm lịch sử thao tác của khách, không tính thao tác của nhân viên thay khách.
+- Giá trị 0 của giới hạn số lần đổi hoặc số ngày đặt trước là tắt giới hạn đó.
+- Hạn nộp cọc có thể là 15 phút theo luồng tài chính hiện hành; giao diện nhắc khách theo hạn cụ thể hiển thị.
+- Thông báo chính sách ở màn hình đặt mới và snapshot ở lịch của khách. Server là nơi quyết định cuối cùng về quyền thao tác.
+
+4. Gói nhiều lượt thường
+- Chủ vé gửi yêu cầu gia hạn hoặc dừng/hoàn tiền kèm lý do; mỗi vé chỉ có một yêu cầu đang xử lý.
+- Chỉ admin duyệt. Duyệt gia hạn ghi ledger chống lặp và cập nhật vé.
+- Duyệt dừng chuyển sang chờ quyết toán; chưa tự thu hồi vé hoặc ghi đã hoàn tiền. Admin phải dùng báo giá hiện tại, xử lý lịch đang giữ lượt và xác nhận chứng từ hoàn qua luồng quyết toán sẵn có.
+- Hàng đợi yêu cầu nằm ở trang admin Spa / Vé; khách thấy trạng thái và phản hồi tại chi tiết vé trong Lộ trình của tôi / tài khoản.
+- Không cấp quyền cho khách tự thay đổi quota, hạn hoặc số tiền hoàn.
+
+5. Giao diện, nhắc lịch và báo cáo
+- Hiển thị mốc giới hạn bằng ngày và giờ Việt Nam, đổi nhãn thành “Chậm nhất”.
+- Giữ null khi sửa mẫu không giới hạn; form cho phép để trống hạn dùng.
+- Vé ACTIVE quá hạn trả EXPIRED ở response và trong bộ lọc admin mà không cần đợi job cập nhật trạng thái.
+- Nhắc buổi đủ điều kiện và số buổi đến hạn loại trường hợp đã quá khoảng cách tối đa.
+- Dashboard cộng tiền mặt DEPOSIT/FEE từ sổ lịch hẹn; không cộng lại BANK đã có giao dịch thanh toán hoặc APPLY của tiền cọc sang hóa đơn.
+
+6. Dữ liệu và triển khai
+- Migration V70 thêm mốc bắt đầu bảo lưu, bảng yêu cầu gói thường và các khóa cấu hình còn thiếu.
+- Kiểm tra chỉ đọc: không có hồ sơ lệch paid_amount so với snapshot mua cộng các thanh toán điều chỉnh đã áp dụng; không có hồ sơ đang PAUSED/PENDING_REVIEW trước triển khai cần chuyển đổi mốc bảo lưu cũ.
+- Không thay đổi chứng từ thanh toán/hoàn tiền lịch sử trong lần hoàn thiện này.
+
+7. Kiểm chứng
+- Backend: 83 lượt test đạt trên unit/H2; 1 trường hợp cú pháp nhóm ngày MySQL được bỏ qua trên H2. Bộ dashboard chạy riêng trên MySQL: 10/10 đạt, gồm nhóm ngày/tháng và chống cộng trùng thu tiền mặt.
+- SpaBusinessAuditIntegrationTest: 29/29 đạt, gồm 18 tình huống nền và 11 tình huống hồi quy/bổ sung.
+- Giao diện: 11/11 kịch bản Playwright và 4/4 test mô hình dữ liệu đạt; build production thành công.
+- Kiểm tra trình duyệt trang đang chạy: HTTP 200, không có pageerror.
+- Flyway V70 thành công; các khóa chính sách trong database có giá trị như bảng trên. Endpoint chính sách tuân theo xác thực hiện có của ứng dụng.
+- Đã build và cập nhật frontend/backend bằng Docker Compose; cả hai healthy, /actuator/health trả UP.
+
+Các ràng buộc là nghiệp vụ phần mềm, không thay thế quyết định chuyên môn về khoảng cách điều trị hoặc xử trí sự cố.

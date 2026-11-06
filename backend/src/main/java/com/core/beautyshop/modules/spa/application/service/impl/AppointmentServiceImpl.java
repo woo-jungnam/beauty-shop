@@ -107,6 +107,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         if (!canManageAppointments()) {
             validateDateTimeNotPast(request.getAppointmentDate(), request.getStartTime());
+            requireBookingHorizon(request.getAppointmentDate(), policies.current());
             long pendingCount = appointmentRepository.countByUserIdAndStatusAndIsDeletedFalse(bookingUserId, AppointmentStatus.PENDING);
             if (pendingCount >= 2) {
                 throw new BusinessException("Bạn đang có " + pendingCount + " lịch hẹn đang chờ xác nhận. Vui lòng hoàn tất hoặc hủy lịch cũ trước khi đặt thêm lịch mới.");
@@ -188,6 +189,9 @@ public class AppointmentServiceImpl implements AppointmentService {
             validateService(service);
             if (staff != null) validateStaff(staff, service, request.getAppointmentDate());
             LocalTime itemEndTime = serviceEnd(currentStartTime, service);
+            treatments.validateAndLockBooking(itemReq.getTreatmentSessionItemId(), bookingUserId,
+                    itemReq.getServiceId(), itemReq.getTicketId(), request.getAppointmentDate()
+                            .atTime(currentStartTime).atZone(SpaTimeRules.ZONE).toInstant());
 
             if (staff != null) {
                 requireWorkingShift(staff, request.getAppointmentDate(), currentStartTime, itemEndTime);
@@ -613,6 +617,11 @@ public class AppointmentServiceImpl implements AppointmentService {
         else if (!appointment.getUserId().equals(currentUserId) || !Instant.now().isBefore(scheduledStart(appointment)
                 .minusSeconds(policies.forAppointment(appointment).rescheduleCutoffMinutes() * 60L)))
             requireActionReason(request.getNotes());
+        var changePolicy = policies.forAppointment(appointment);
+        if (!canManageAppointments() && changePolicy.maxReschedules() != null && changePolicy.maxReschedules() > 0
+                && history.countByAppointmentIdAndActorUserIdAndAction(appointment.getId(), appointment.getUserId(), "RESCHEDULE") >= changePolicy.maxReschedules())
+            throw new BusinessException("The maximum number of customer reschedules has been reached; contact reception");
+        requireBookingHorizon(request.getAppointmentDate(), changePolicy);
         String originalInterval = appointment.getAppointmentDate() + " " + appointment.getStartTime() + "-" + appointment.getEndTime();
 
         validateDateTimeNotPast(request.getAppointmentDate(), request.getStartTime());
@@ -648,6 +657,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             validateService(item.getService());
             if (item.getStaff() != null) validateStaff(item.getStaff(), item.getService(), request.getAppointmentDate());
             LocalTime itemEndTime = currentStartTime.plusMinutes(reservedMinutes);
+            if (item.getTreatmentSessionItemId() != null) treatments.validateReschedule(item,
+                    request.getAppointmentDate().atTime(currentStartTime).atZone(SpaTimeRules.ZONE).toInstant());
             if (item.getTicket() != null) requireTicketExpiry(item.getTicket(), request.getAppointmentDate(), currentStartTime);
             item.setStartTime(currentStartTime);
             item.setEndTime(itemEndTime);
@@ -827,6 +838,13 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     private void validateDateTimeNotPast(LocalDate appointmentDate, LocalTime startTime) {
         SpaTimeRules.requireFuture(appointmentDate, startTime);
+
+    }
+
+    private void requireBookingHorizon(LocalDate date, SpaBookingPolicyService.Policy policy) {
+        if (policy != null && policy.maxAdvanceDays() != null && policy.maxAdvanceDays() > 0
+                && date != null && date.isAfter(LocalDate.now(SpaTimeRules.ZONE).plusDays(policy.maxAdvanceDays())))
+            throw new BusinessException("The requested date exceeds the booking horizon");
     }
 
     private void checkStoreSchedule(LocalDate date, LocalTime startTime, LocalTime endTime) {
@@ -852,6 +870,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (!Set.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED).contains(appointment.getStatus()) || appointment.getCheckedInAt() != null)
             throw new BusinessException("Lịch hẹn này không còn được đổi giờ");
         if (date == null || date.isBefore(LocalDate.now(SpaTimeRules.ZONE))) throw new BusinessException("Ngày hẹn không hợp lệ");
+        requireBookingHorizon(date, policies.forAppointment(appointment));
         var hours = calendar.forDate(date); if (hours.closed()) return List.of();
         var result = new ArrayList<String>();
         for (int minute = hours.opensAt().getHour() * 60 + hours.opensAt().getMinute(); minute < hours.closesAt().getHour() * 60 + hours.closesAt().getMinute(); minute += 30) {
@@ -865,7 +884,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 try {
                     validateService(item.getService());
                     if(item.getTicket()!=null) requireTicketExpiry(item.getTicket(),date,cursor);
-                    if(item.getTreatmentSessionItemId()!=null) treatments.validateReschedule(item,date.atTime(start).atZone(SpaTimeRules.ZONE).toInstant());
+                    if(item.getTreatmentSessionItemId()!=null) treatments.validateReschedule(item,date.atTime(cursor).atZone(SpaTimeRules.ZONE).toInstant());
                     List<Staff> candidates=item.getStaff()==null ? staffRepository.findQualifiedActiveStaff(item.getService().getId()) : List.of(item.getStaff());
                     boolean available=candidates.stream().anyMatch(person -> {
                         try { validateStaff(person,item.getService(),date); }

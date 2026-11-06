@@ -36,7 +36,7 @@ abstract class AbstractAdminDashboardJdbcTest {
         jdbc.execute("CREATE TABLE appointment_items (id BIGINT PRIMARY KEY, service_id BIGINT, appointment_id BIGINT, staff_id BIGINT, price DECIMAL(14,2), start_time TIME, end_time TIME, is_deleted BOOLEAN, execution_status VARCHAR(30) DEFAULT 'PLANNED', actual_started_at TIMESTAMP NULL, actual_completed_at TIMESTAMP NULL)");
         jdbc.execute("CREATE TABLE beauty_services (id BIGINT PRIMARY KEY, name VARCHAR(255), is_deleted BOOLEAN)");
         jdbc.execute("CREATE TABLE payment_resolutions (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
-        jdbc.execute("CREATE TABLE spa_financial_entries (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP)");
+        jdbc.execute("CREATE TABLE spa_financial_entries (id BIGINT PRIMARY KEY, kind VARCHAR(20), amount DECIMAL(14,2), created_at TIMESTAMP, method VARCHAR(20), payment_transaction_id BIGINT)");
         jdbc.execute("CREATE TABLE products (id BIGINT PRIMARY KEY, name VARCHAR(255))");
         jdbc.execute("CREATE TABLE product_variants (id BIGINT PRIMARY KEY, product_id BIGINT)");
         jdbc.execute("CREATE TABLE order_items (id BIGINT PRIMARY KEY, order_id BIGINT, product_variant_id BIGINT, quantity INT, price DECIMAL(14,2), discount DECIMAL(14,2), is_deleted BOOLEAN)");
@@ -213,10 +213,20 @@ abstract class AbstractAdminDashboardJdbcTest {
         }
     }
 
+    @Test void cashVisitReceiptsAreIncludedOnceWhileBankAndAppliedAdvancesAreExcluded() {
+        receipt(1,"2026-10-02 10:00:00",100,"BANK","in","SUCCESS");
+        jdbc.execute("INSERT INTO spa_financial_entries (id,kind,amount,created_at,method,payment_transaction_id) VALUES (1,'DEPOSIT',200,'2026-10-02 10:00:00','CASH',NULL),(2,'FEE',30,'2026-10-02 10:00:00','CASH',NULL),(3,'DEPOSIT',100,'2026-10-02 10:00:00','BANK',1),(4,'APPLY',200,'2026-10-02 10:00:00','CASH',NULL),(5,'DEPOSIT',50,'2026-11-01 00:00:00','CASH',NULL)");
+        var report = service.overview(Instant.parse("2026-10-01T00:00:00Z"),Instant.parse("2026-11-01T00:00:00Z"));
+        assertMoney("330",report.revenue());
+        assertMoney("230",report.cashAmount());
+        assertMoney("230",report.spaRevenue());
+        assertEquals(3,report.receiptCount());
+    }
+
     @Test void refundsAreClassifiedByOrderTypeIncludingDeletedSpaOrdersAndOrphans() {
         jdbc.execute("INSERT INTO orders (id,is_deleted,appointment_id,service_package_id) VALUES (1,false,NULL,NULL),(2,false,12,NULL),(3,true,NULL,8)");
         jdbc.execute("INSERT INTO refund_confirmations VALUES (1,'2026-10-02 10:00:00',100,1),(2,'2026-10-02 10:00:00',200,2),(3,'2026-10-02 10:00:00',300,3),(4,'2026-10-02 10:00:00',40,99)");
-        jdbc.execute("INSERT INTO spa_financial_entries VALUES (1,'REFUND',50,'2026-10-02 10:00:00')");
+        jdbc.execute("INSERT INTO spa_financial_entries (id,kind,amount,created_at) VALUES (1,'REFUND',50,'2026-10-02 10:00:00')");
         var report = service.overview(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-11-01T00:00:00Z"));
         assertMoney("690", report.refundedAmount());
         assertMoney("100", report.productRefunds());
