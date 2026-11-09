@@ -3,16 +3,20 @@ import com.core.beautyshop.modules.identity.application.service.CustomerAccountS
 import com.core.beautyshop.modules.identity.application.service.CustomerAccountService.*;
 import com.core.beautyshop.shared.config.CorsConfig;
 import com.core.beautyshop.shared.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController @RequiredArgsConstructor
+@Tag(name = "Khôi phục tài khoản", description = "Quên mật khẩu, đặt lại mật khẩu và đăng ký bản tin")
 public class AccountRecoveryController {
     private final CustomerAccountService accounts;
     private final CorsConfig corsConfig;
 
+    @Operation(summary = "Yêu cầu khôi phục mật khẩu qua email", description = "Gửi link đặt lại mật khẩu về email của người dùng nếu tài khoản tồn tại")
     @PostMapping("/api/v1/auth/forgot-password")
     public ApiResponse<Void> forgot(@Valid @RequestBody EmailCommand c, HttpServletRequest request) {
         String origin = resolveAllowedOrigin(request);
@@ -43,6 +47,9 @@ public class AccountRecoveryController {
         return null;
     }
 
+    @Operation(summary = "Đặt lại mật khẩu với mã xác thực", description = "Xác nhận mã token và thiết lập mật khẩu mới cho tài khoản")
     @PostMapping("/api/v1/auth/reset-password") public ApiResponse<Void> reset(@Valid @RequestBody PasswordReset c){accounts.resetPassword(c);return ApiResponse.success(null,"Đã đặt lại mật khẩu. Vui lòng đăng nhập lại");}
+
+    @Operation(summary = "Đăng ký nhận bản tin khuyến mãi", description = "Đăng ký email nhận thông tin khuyến mãi và tin tức từ cửa hàng")
     @PostMapping("/api/v1/newsletter/subscriptions") public ApiResponse<Void> newsletter(@Valid @RequestBody NewsletterCommand c){accounts.subscribe(c.email(),c.consent());return ApiResponse.success(null,"Đã đăng ký nhận bản tin");}
 }

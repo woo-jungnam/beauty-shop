@@ -142,7 +142,18 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
       {refundOpen && <SpaRefundDialog appointmentId={appointment.id} onClose={() => setRefundOpen(false)} onUpdated={refresh} />}
       {isAdmin && invoice && Number(invoice.paidAmount) > Number(invoice.refundedAmount) && <Button variant="outline" onClick={() => setRefundOpen(true)}>Hoàn tiền theo dịch vụ</Button>}
       <div className="checkout-customer"><span>ĐỐI SOÁT BUỔI CHĂM SÓC</span><strong>{appointment.customerName || 'Khách hàng'}</strong><small>{appointment.customerPhone} · SPA-{String(appointment.id).padStart(5, '0')}</small></div>
-      {(appointment.items || []).some(item => item.ticketId || item.isTicketUsed) && <div className="checkout-tickets"><h4>Vé liệu trình sử dụng trong buổi</h4>{(appointment.items || []).filter(item => item.ticketId || item.isTicketUsed).map(item => <div key={item.id}><span><strong>{item.serviceName}</strong><small>Vé #{item.ticketId}</small></span><span>{item.ticketUsageState === 'REDEEMED' ? 'Đã trừ lượt' : item.ticketUsageState === 'RELEASED' ? 'Đã hoàn lượt giữ' : item.ticketUsageState === 'FORFEITED' ? 'Đã ghi nhận mất lượt' : item.ticketUsageState === 'RESERVED' ? 'Đang giữ lượt' : 'Xem đối soát từ hệ thống'}</span></div>)}<p>Lượt vé được đối soát theo kết quả dịch vụ; chỉ dịch vụ ngoài vé đã thực hiện được tính vào hóa đơn.</p></div>}
+      {(appointment.items || []).some(item => item.ticketId || item.isTicketUsed) && <div className="checkout-tickets">
+        <h4>Vé liệu trình sử dụng trong buổi</h4>
+        {(appointment.items || []).filter(item => item.ticketId || item.isTicketUsed).map(item => <div key={item.id}>
+          <span>
+            <strong>{item.serviceName}</strong><small>Vé #{item.ticketId}</small>
+            {item.executionNotes?.includes('ĐỔI CHỈ ĐỊNH') && <span className="checkout-substitution-badge" style={{ display: 'block', fontSize: '0.8rem', color: '#0369a1', marginTop: '2px' }}>Chỉ định y khoa: Đổi dịch vụ theo kết quả khám da</span>}
+          </span>
+          <span>{item.ticketUsageState === 'REDEEMED' ? 'Đã trừ lượt' : item.ticketUsageState === 'RELEASED' ? 'Đã hoàn lượt giữ' : item.ticketUsageState === 'FORFEITED' ? 'Đã ghi nhận mất lượt' : item.ticketUsageState === 'RESERVED' ? 'Đang giữ lượt' : 'Xem đối soát từ hệ thống'}</span>
+        </div>)}
+        {appointment.notes?.includes('ĐỔI CHỈ ĐỊNH') && <div className="checkout-substitution-info" style={{ padding: '6px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', margin: '8px 0', fontSize: '0.85rem' }}><strong>Bù trừ dịch vụ gói:</strong> {appointment.notes.split('\n').filter(l => l.includes('ĐỔI CHỈ ĐỊNH')).join(' · ')}</div>}
+        <p>Lượt vé được đối soát theo kết quả dịch vụ; chỉ dịch vụ ngoài vé đã thực hiện được tính vào hóa đơn.</p>
+      </div>}
       {error && <p role="alert" className="checkout-feedback error">{error}</p>}
       {message && <p role="status" className="checkout-feedback success">{message}</p>}
       {loading ? <p>Đang tra cứu hóa đơn...</p> : !invoice ? (

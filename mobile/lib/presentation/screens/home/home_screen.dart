@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -26,14 +27,47 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   late final ScrollController _scrollController;
+  late final ScrollController _brandScrollController;
   final Map<int, int> _visibleCountByTab = {0: 6, 1: 6, 2: 6};
   bool _isLoadingMore = false;
+  Timer? _countdownTimer;
+  Timer? _brandMarqueeTimer;
+  Duration _timeLeft = const Duration(hours: 2, minutes: 45, seconds: 30);
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 3, vsync: this)..addListener(_onTabChanged);
     _scrollController = ScrollController()..addListener(_onScroll);
+    _brandScrollController = ScrollController();
+    _startCountdown();
+    _startBrandMarquee();
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_timeLeft.inSeconds > 0) {
+        setState(() => _timeLeft -= const Duration(seconds: 1));
+      } else {
+        _countdownTimer?.cancel();
+      }
+    });
+  }
+
+  void _startBrandMarquee() {
+    _brandMarqueeTimer?.cancel();
+    _brandMarqueeTimer = Timer.periodic(const Duration(milliseconds: 40), (timer) {
+      if (!_brandScrollController.hasClients || !mounted) return;
+      final max = _brandScrollController.position.maxScrollExtent;
+      final current = _brandScrollController.position.pixels;
+      if (current >= max) {
+        _brandScrollController.jumpTo(0);
+      } else {
+        _brandScrollController.jumpTo(current + 1);
+      }
+    });
   }
 
   void _onScroll() {
@@ -86,8 +120,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
+    _brandMarqueeTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _brandScrollController.dispose();
     _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
     super.dispose();
@@ -101,6 +138,118 @@ class _HomeScreenState extends State<HomeScreen>
               ProductCollectionScreen(title: title, filters: filters),
         ),
       );
+
+  Widget _buildFlashSaleHeader() {
+    final hours = _timeLeft.inHours.toString().padLeft(2, '0');
+    final minutes = (_timeLeft.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (_timeLeft.inSeconds % 60).toString().padLeft(2, '0');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      child: Row(
+        children: [
+          const Icon(Icons.flash_on, color: AppColors.dealRed, size: 20),
+          const SizedBox(width: 4),
+          const Text(
+            'GIỜ VÀNG SĂN SALE',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+              color: AppColors.dealRed,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const Spacer(),
+          _buildTimerBox(hours),
+          const Text(
+            ' : ',
+            style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.dealRed),
+          ),
+          _buildTimerBox(minutes),
+          const Text(
+            ' : ',
+            style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.dealRed),
+          ),
+          _buildTimerBox(seconds),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => widget.onNavigateTab?.call(3),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Xem tất cả', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimerBox(String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.dealRed,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        value,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 11,
+          fontFamily: 'monospace',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrustBadges() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.getSurface(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          _buildTrustItem(Icons.verified_outlined, '100% Chính Hãng'),
+          _buildTrustDivider(),
+          _buildTrustItem(Icons.local_shipping_outlined, 'Giao Nhanh Freeship'),
+          _buildTrustDivider(),
+          _buildTrustItem(Icons.spa_outlined, 'Tư Vấn Chuyên Sâu'),
+          _buildTrustDivider(),
+          _buildTrustItem(Icons.published_with_changes_outlined, 'Đổi Trả Minh Bạch'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustItem(IconData icon, String text) {
+    return Expanded(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 13, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustDivider() {
+    return Container(width: 1, height: 14, color: AppColors.borderSubtle);
+  }
 
   Widget _title(String text, {VoidCallback? onMore}) => Padding(
     padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
@@ -205,8 +354,29 @@ class _HomeScreenState extends State<HomeScreen>
           context,
           MaterialPageRoute(builder: (_) => const AiChatbotScreen()),
         ),
-        icon: const Icon(Icons.smart_toy_outlined),
-        label: const Text('Tư vấn AI'),
+        backgroundColor: AppColors.primary,
+        icon: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Icon(Icons.smart_toy_outlined, color: Colors.white, size: 20),
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF22C55E),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+        label: const Text(
+          'Tư vấn AI',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -225,6 +395,7 @@ class _HomeScreenState extends State<HomeScreen>
                     .map((banner) => banner.imageUrl)
                     .toList(),
               ),
+            _buildTrustBadges(),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -277,10 +448,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
             ],
-            _title(
-              'Xả kho cận hạn · 31–90 ngày',
-              onMore: () => widget.onNavigateTab?.call(3),
-            ),
+            _buildFlashSaleHeader(),
             if (provider.dealsError != null)
               CatalogState(
                 message: provider.dealsError!,
@@ -303,10 +471,11 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
             if (provider.brands.isNotEmpty) ...[
-              _title('Thương hiệu'),
+              _title('Thương hiệu đối tác'),
               SizedBox(
                 height: 105,
                 child: ListView.separated(
+                  controller: _brandScrollController,
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   itemCount: provider.brands.length,
@@ -338,79 +507,87 @@ class _HomeScreenState extends State<HomeScreen>
             else if (!provider.isLoading && feed.isEmpty)
               const CatalogState(message: 'Chưa có sản phẩm trong mục này')
             else
-              Builder(
-                builder: (context) {
-                  final currentVisible = _visibleCountByTab[_tabs.index] ?? 6;
-                  final visibleProducts = feed.take(currentVisible).toList();
-                  final hasMore = currentVisible < feed.length ||
-                      (_tabs.index == 2 && provider.hasMoreCatalog);
-                  return Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      children: [
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: visibleProducts.length,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 0.60,
-                          ),
-                          itemBuilder: (_, index) =>
-                              _card(visibleProducts[index]),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                switchInCurve: Curves.easeIn,
+                switchOutCurve: Curves.easeOut,
+                child: KeyedSubtree(
+                  key: ValueKey<int>(_tabs.index),
+                  child: Builder(
+                    builder: (context) {
+                      final currentVisible = _visibleCountByTab[_tabs.index] ?? 6;
+                      final visibleProducts = feed.take(currentVisible).toList();
+                      final hasMore = currentVisible < feed.length ||
+                          (_tabs.index == 2 && provider.hasMoreCatalog);
+                      return Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: visibleProducts.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 0.60,
+                              ),
+                              itemBuilder: (_, index) =>
+                                  _card(visibleProducts[index]),
+                            ),
+                            if (_isLoadingMore)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (hasMore)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                child: OutlinedButton.icon(
+                                  onPressed: _loadMore,
+                                  icon: const Icon(Icons.expand_more, size: 18),
+                                  label: const Text('Xem thêm 6 sản phẩm'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: const BorderSide(
+                                      color: AppColors.primarySoft,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (feed.isNotEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: Text(
+                                    'Đã hiển thị tất cả sản phẩm',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textLight,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        if (_isLoadingMore)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (hasMore)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: OutlinedButton.icon(
-                              onPressed: _loadMore,
-                              icon: const Icon(Icons.expand_more, size: 18),
-                              label: const Text('Xem thêm 6 sản phẩm'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                side: const BorderSide(
-                                  color: AppColors.primarySoft,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (feed.isNotEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: Text(
-                                'Đã hiển thị tất cả sản phẩm',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textLight,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                ),
               ),
           ],
         ),

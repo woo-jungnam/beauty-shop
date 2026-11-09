@@ -56,6 +56,18 @@ public class AdminStaffService {
         requireNoFutureAppointments(id, null);
         staff.setIsDeleted(true); staff.setIsActive(false);
     }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void rateStaff(Long staffId, int stars, String comment) {
+        if (stars < 1 || stars > 5) throw new BusinessException("Điểm đánh giá chuyên viên phải từ 1 đến 5 sao");
+        Staff staff = lockStaff(staffId);
+        int currentReviews = staff.getTotalReviews() == null ? 0 : staff.getTotalReviews();
+        double currentRating = staff.getRating() == null ? 0.0 : staff.getRating();
+        double newRating = ((currentRating * currentReviews) + stars) / (currentReviews + 1.0);
+        staff.setTotalReviews(currentReviews + 1);
+        staff.setRating(Math.round(newRating * 10.0) / 10.0);
+        staffRepository.save(staff);
+    }
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public StaffView assignSkill(Long staffId, SkillCommand command) {
         Staff staff = lockStaff(staffId);

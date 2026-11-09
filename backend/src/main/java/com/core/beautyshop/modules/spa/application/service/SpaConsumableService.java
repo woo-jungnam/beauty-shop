@@ -52,7 +52,10 @@ public class SpaConsumableService {
         return definitions(serviceId);
     }
     public void snapshot(Appointment appointment) {
-        for(AppointmentItem item:appointment.getItems()) for(Material row:definitions(item.getService().getId()))
+        for(AppointmentItem item:appointment.getItems()) snapshotItem(item);
+    }
+    public void snapshotItem(AppointmentItem item) {
+        for(Material row:definitions(item.getService().getId()))
             jdbc.update("INSERT INTO spa_appointment_material_plans(appointment_item_id,variant_id,quantity) VALUES (?,?,?)",item.getId(),row.variantId(),row.quantity());
     }
     @Transactional(readOnly=true)

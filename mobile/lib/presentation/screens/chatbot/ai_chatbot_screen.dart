@@ -1,3 +1,6 @@
+import '../spa/spa_screen.dart';
+import '../orders/order_detail_screen.dart';
+import '../orders/order_history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -310,6 +313,35 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
               ),
             ),
           ],
+
+          if (msg.actions != null && msg.actions!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 36),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: msg.actions!.map((act) => ActionChip(
+                  avatar: Icon(
+                    act.actionType == 'BOOKING_PROPOSAL'
+                        ? Icons.calendar_today
+                        : act.actionType == 'VIEW_ORDER'
+                            ? Icons.receipt_long
+                            : Icons.shopping_bag_outlined,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
+                  label: Text(
+                    act.label,
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                  backgroundColor: AppColors.primaryLight,
+                  side: const BorderSide(color: AppColors.border),
+                  onPressed: () => _handleChatAction(act),
+                )).toList(),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -390,5 +422,41 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
         ],
       ),
     );
+  }
+
+  void _handleChatAction(ChatAction act) {
+    if (act.actionType == 'ADD_TO_CART') {
+      final pId = (act.payload['product_id'] as num?)?.toInt() ?? 0;
+      final pName = '${act.payload['product_name'] ?? 'Sản phẩm'}';
+      final price = (act.payload['price'] as num?)?.toDouble() ?? 0;
+      final img = act.payload['image_url']?.toString();
+      addProductToCart(
+        context,
+        productId: pId,
+        variantId: 0,
+        variantName: 'Tiêu chuẩn',
+        productName: pName,
+        price: price,
+        thumbnailUrl: img,
+      );
+    } else if (act.actionType == 'BOOKING_PROPOSAL') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SpaScreen()),
+      );
+    } else if (act.actionType == 'VIEW_ORDER') {
+      final orderId = (act.payload['order_id'] as num?)?.toInt();
+      if (orderId != null && orderId > 0) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: orderId)),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
+        );
+      }
+    }
   }
 }

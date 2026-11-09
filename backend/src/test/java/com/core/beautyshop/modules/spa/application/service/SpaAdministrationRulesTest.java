@@ -55,7 +55,7 @@ class SpaAdministrationRulesTest {
     }
     @Test void userAndStatusFiltersAreAppliedTogether() {
         var pageable = PageRequest.of(0, 20);
-        when(tickets.findByUserIdAndStatusAndIsDeletedFalse(10L, TicketStatus.EXPIRED, pageable)).thenReturn(Page.empty(pageable));
+        when(tickets.findEffective(eq(10L), eq(TicketStatus.EXPIRED), any(), eq(pageable))).thenReturn(Page.empty(pageable));
         assertTrue(administration.find(10L, TicketStatus.EXPIRED, pageable).isEmpty());
         verify(tickets, never()).findByUserIdAndIsDeletedFalse(any(), any());
     }

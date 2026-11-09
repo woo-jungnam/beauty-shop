@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController @RequiredArgsConstructor @RequestMapping("/api/v1/admin/spa/services")
-@PreAuthorize("hasAnyRole('ADMIN', 'STAFF')") @Tag(name = "Yêu cầu tài nguyên dịch vụ Spa (Admin)")
+@PreAuthorize("hasAnyRole('ADMIN', 'STAFF')") @Tag(name = "Yêu cầu tài nguyên dịch vụ Spa (Admin)", description = "Quản lý định mức tài nguyên giường, phòng và máy móc cần thiết cho dịch vụ Spa")
 public class AdminServiceResourceController {
     private final ServiceResourceRequirementService service;
     @Operation(summary = "Xem yêu cầu tài nguyên hiện tại của dịch vụ", description = "Chỉ ADMIN; mỗi dòng gồm type và units. [] nghĩa không áp constraint resource tự động cho booking mới. Existing booking dùng snapshot đã lưu, không đọc lại cấu hình này.")

@@ -66,7 +66,11 @@ export const LoginPage = () => {
         });
         window.location.hash = '#/profile';
       } catch (err) {
-        setError(err.message || 'Đăng ký thất bại. Vui lòng thử lại với email/username khác.');
+        const errorMsg =
+          err.response?.data?.message ||
+          err.message ||
+          'Đăng ký thất bại. Vui lòng thử lại với email/username khác.';
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -95,7 +99,11 @@ export const LoginPage = () => {
         window.location.hash = '#/profile';
       }
     } catch (err) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

@@ -11,7 +11,7 @@ import static com.core.beautyshop.modules.spa.application.service.TreatmentContr
 @RestController @RequiredArgsConstructor
 @RequestMapping({"/api/v1/staff/spa/treatments", "/api/v1/admin/spa/treatments"})
 @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
-@io.swagger.v3.oas.annotations.tags.Tag(name = "Treatment operations", description = "Assigned clinical staff and administrators; financial approval remains administrator-only")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Vận hành lộ trình điều trị Spa", description = "Chuyên viên và quản trị viên vận hành lộ trình, phân công, tiếp nhận và ghi kết quả")
 public class OperationalTreatmentController {
     private final TreatmentCourseService treatments;
     @Operation(summary = "Xem hàng chờ tiếp nhận và hồ sơ thuộc phạm vi nhân viên")

@@ -34,6 +34,8 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
   bool _loadingSlots = false;
   String? _slotsError;
   int _slotsRevision = 0;
+  List<Map<String, dynamic>> _staffList = [];
+  int? _selectedStaffId;
   Map<String, dynamic>? _financialPolicy;
   bool _financialAccepted = false;
   int? _ticketId;
@@ -76,7 +78,22 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
         context.read<SpaProvider>().fetchMyTickets();
     });
     _loadFinancialPolicy();
+    _loadQualifiedStaff();
     if (!widget.service.isTreatmentCourse) _fetchAvailableSlots();
+  }
+
+  Future<void> _loadQualifiedStaff() async {
+    try {
+      final response = await _apiClient.get<List<Map<String, dynamic>>>(
+        '${ApiConstants.spaServices}/${widget.service.id}/staff',
+        fromJsonT: (json) => (json as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+      );
+      if (mounted && response.isSuccess && response.data != null) {
+        setState(() => _staffList = response.data!);
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchAvailableSlots() async {
@@ -92,7 +109,10 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
     try {
       final response = await _apiClient.get<List<String>>(
         '${ApiConstants.spaServices}/${widget.service.id}/available-slots',
-        queryParameters: {'date': dateStr},
+        queryParameters: {
+          'date': dateStr,
+          if (_selectedStaffId != null) 'staffId': _selectedStaffId,
+        },
         fromJsonT: (json) {
           final list = json as List<dynamic>? ?? [];
           return list
@@ -333,7 +353,55 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
             ),
             const SizedBox(height: 16),
 
-            _buildSectionTitle('3. Chọn giờ hẹn:'),
+            _buildSectionTitle('3. Chuyên viên thực hiện:'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Tự động sắp xếp'),
+                  selected: _selectedStaffId == null,
+                  onSelected: (_) {
+                    setState(() => _selectedStaffId = null);
+                    _fetchAvailableSlots();
+                  },
+                  selectedColor: AppColors.primaryLight,
+                  backgroundColor: AppColors.getSurface(context),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: _selectedStaffId == null ? FontWeight.w800 : FontWeight.w600,
+                    color: _selectedStaffId == null ? AppColors.primary : AppColors.getTextMain(context),
+                  ),
+                ),
+                ..._staffList.map((st) {
+                  final sId = (st['id'] as num?)?.toInt();
+                  final isChosen = _selectedStaffId == sId;
+                  final name = st['fullName'] ?? st['specialty'] ?? 'Chuyên viên #$sId';
+                  final rating = (st['rating'] as num?)?.toDouble();
+                  return ChoiceChip(
+                    avatar: rating != null && rating > 0
+                        ? const Icon(Icons.star, size: 14, color: Colors.amber)
+                        : null,
+                    label: Text(name),
+                    selected: isChosen,
+                    onSelected: (_) {
+                      setState(() => _selectedStaffId = sId);
+                      _fetchAvailableSlots();
+                    },
+                    selectedColor: AppColors.primaryLight,
+                    backgroundColor: AppColors.getSurface(context),
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isChosen ? FontWeight.w800 : FontWeight.w600,
+                      color: isChosen ? AppColors.primary : AppColors.getTextMain(context),
+                    ),
+                  );
+                }),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            _buildSectionTitle('4. Chọn giờ hẹn:'),
             if (_loadingSlots)
               const Center(
                 child: Padding(
@@ -522,6 +590,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       .bookAppointment(
                         serviceId: widget.service.id,
                         ticketId: selectedTicket,
+                        staffId: _selectedStaffId,
                         serviceName: widget.service.name,
                         date: _selectedDate,
                         timeSlot: _selectedTime,

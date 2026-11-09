@@ -9,6 +9,22 @@ import {
   DollarSign,
   RefreshCw,
   CheckCircle2,
+  Package,
+  Truck,
+  Sparkles,
+  Ticket,
+  User,
+  MapPin,
+  Clock,
+  ExternalLink,
+  ShoppingBag,
+  FileText,
+  Calendar,
+  Check,
+  ChevronRight,
+  Receipt,
+  Printer,
+  CreditCard,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -29,6 +45,7 @@ import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { ConfirmModal } from '../shared/ui/ConfirmModal';
+import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { useAuth } from '../app/providers/AuthProvider';
 
 export const OrdersPage = () => {
@@ -40,7 +57,27 @@ export const OrdersPage = () => {
   const [loading, setLoading] = useState(false);
 
   const [keyword, setKeyword] = useState('');
-  const [orderTypeTab, setOrderTypeTab] = useState('ALL');
+  const getInitialType = () => {
+    const match = window.location.hash.match(/[?&]type=([^&]+)/);
+    return match ? match[1].toUpperCase() : 'ALL';
+  };
+  const [orderTypeTab, setOrderTypeTabState] = useState(getInitialType);
+
+  const setOrderTypeTab = useCallback((nextType) => {
+    setOrderTypeTabState(nextType);
+    setPage(0);
+    const hash = window.location.hash || '#/admin/orders';
+    const [path, query] = hash.split('?');
+    const params = new URLSearchParams(query || '');
+    if (nextType && nextType !== 'ALL') {
+      params.set('type', nextType);
+    } else {
+      params.delete('type');
+    }
+    const qs = params.toString();
+    window.location.hash = qs ? `${path}?${qs}` : path;
+  }, []);
+
   const getInitialStatus = () => {
     const match = window.location.hash.match(/[?&]tab=([^&]+)/);
     return match ? match[1] : '';
@@ -58,8 +95,15 @@ export const OrdersPage = () => {
       const match = window.location.hash.match(/[?&]tab=([^&]+)/);
       if (match && match[1]) {
         setStatusState(match[1]);
-      } else if (!window.location.hash.includes('?tab=')) {
+      } else if (!window.location.hash.includes('tab=')) {
         setStatusState('');
+      }
+
+      const typeMatch = window.location.hash.match(/[?&]type=([^&]+)/);
+      if (typeMatch && typeMatch[1]) {
+        setOrderTypeTabState(typeMatch[1].toUpperCase());
+      } else if (!window.location.hash.includes('type=')) {
+        setOrderTypeTabState('ALL');
       }
     };
     window.addEventListener('hashchange', handleHashSync);
@@ -169,7 +213,8 @@ export const OrdersPage = () => {
     try {
       const res = await apiClient.get(ENDPOINTS.ORDERS.ADMIN_DETAIL(order.id));
       const fullOrder = res.data || res;
-      if (!fullOrder?.id || !Array.isArray(fullOrder.items)) throw new Error('Dữ liệu chi tiết đơn hàng không đầy đủ.');
+      if (!fullOrder?.id) throw new Error('Dữ liệu chi tiết đơn hàng không đầy đủ.');
+      fullOrder.items = Array.isArray(fullOrder.items) ? fullOrder.items : [];
       if (request === detailRequest.current) setSelectedOrder(fullOrder);
     } catch (e) {
       if (request === detailRequest.current) setDetailError(e.message || 'Không tải được chi tiết đơn hàng.');
@@ -272,13 +317,34 @@ export const OrdersPage = () => {
       header: 'Loại đơn',
       accessor: (row) => {
         const typeBadge = getOrderTypeBadge(row);
+        const type = getOrderType(row);
+        let IconComponent = Package;
+        let label = 'Đơn sản phẩm';
+        if (type === 'SPA_PACKAGE') {
+          IconComponent = Ticket;
+          label = 'Đơn gói dịch vụ';
+        } else if (type === 'SPA_VISIT') {
+          IconComponent = Sparkles;
+          label = 'Đơn dịch vụ đơn';
+        }
         return (
-          <Badge variant={typeBadge.variant}>
-            {typeBadge.text}
+          <Badge
+            variant={typeBadge.variant}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '3px 8px',
+              fontWeight: 600,
+              fontSize: '11.5px',
+            }}
+          >
+            <IconComponent size={12} />
+            <span>{label}</span>
           </Badge>
         );
       },
-      width: '140px',
+      width: '165px',
     },
     {
       header: 'Khách hàng',
@@ -414,26 +480,219 @@ export const OrdersPage = () => {
 
   return (
     <div className="content-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quản lý Đơn hàng & Luân chuyển</h1>
-          <p className="page-subtitle">
-            Theo dõi vòng đời đơn hàng, xác nhận giao dịch, xuất kho và xử lý hoàn trả
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fetchOrders(page)}
-          loading={loading}
-          icon={RefreshCw}
+      {/* Header Điều hướng & Thao tác */}
+      <AdminSectionNav
+        rootTitle="Bán hàng & Kho vận"
+        activeTab={orderTypeTab}
+        onChange={(nextTab) => setOrderTypeTab(nextTab)}
+        subtitle="Quản lý đơn hàng sản phẩm, gói dịch vụ và dịch vụ Spa"
+        items={[
+          {
+            id: 'ALL',
+            label: 'Tất cả đơn hàng',
+            icon: ShoppingBag,
+            description: 'Toàn bộ đơn hàng trong hệ thống',
+            count: orderTypeTab === 'ALL' ? totalElements : null,
+          },
+          {
+            id: 'PRODUCT',
+            label: 'Đơn sản phẩm',
+            icon: Package,
+            description: 'Đóng gói xuất kho và giao hàng COD',
+            count: orderTypeTab === 'PRODUCT' ? totalElements : null,
+          },
+          {
+            id: 'SPA_PACKAGE',
+            label: 'Đơn gói dịch vụ',
+            icon: Ticket,
+            description: 'Thẻ dịch vụ và liệu trình Spa trọn gói',
+            count: orderTypeTab === 'SPA_PACKAGE' ? totalElements : null,
+          },
+          {
+            id: 'SPA_VISIT',
+            label: 'Đơn dịch vụ đơn',
+            icon: Sparkles,
+            description: 'Lịch hẹn và dịch vụ chăm sóc tại Spa',
+            count: orderTypeTab === 'SPA_VISIT' ? totalElements : null,
+          },
+        ]}
+        actions={
+          <div className="page-header" style={{ margin: 0, padding: 0, border: 'none' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchOrders(page)}
+              loading={loading}
+              icon={RefreshCw}
+            >
+              Làm mới
+            </Button>
+          </div>
+        }
+        showQuickPills
+      />
+
+      {/* Phân loại đơn hàng */}
+      <div
+        className="order-types-hub"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '14px',
+          marginBottom: '20px',
+        }}
+      >
+        {/* Đơn sản phẩm */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOrderTypeTab(orderTypeTab === 'PRODUCT' ? 'ALL' : 'PRODUCT')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOrderTypeTab(orderTypeTab === 'PRODUCT' ? 'ALL' : 'PRODUCT'); }}
+          style={{
+            padding: '14px 16px',
+            background: orderTypeTab === 'PRODUCT' ? '#F5F3FF' : '#FFFFFF',
+            border: `1.5px solid ${orderTypeTab === 'PRODUCT' ? '#7C3AED' : '#E5E7EB'}`,
+            borderRadius: '10px',
+            cursor: 'pointer',
+            boxShadow: orderTypeTab === 'PRODUCT' ? '0 2px 8px rgba(124, 58, 237, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+            transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
         >
-          Làm mới
-        </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: '#EEF2FF',
+                color: '#4F46E5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Package size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '14px', color: '#1F2937' }}>
+                Đơn sản phẩm
+              </div>
+              <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                Đóng gói & giao hàng COD
+              </div>
+            </div>
+          </div>
+          {orderTypeTab === 'PRODUCT' && (
+            <Badge variant="primary" size="sm">Đang lọc</Badge>
+          )}
+        </div>
+
+        {/* Đơn gói dịch vụ */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOrderTypeTab(orderTypeTab === 'SPA_PACKAGE' ? 'ALL' : 'SPA_PACKAGE')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOrderTypeTab(orderTypeTab === 'SPA_PACKAGE' ? 'ALL' : 'SPA_PACKAGE'); }}
+          style={{
+            padding: '14px 16px',
+            background: orderTypeTab === 'SPA_PACKAGE' ? '#F0F9FF' : '#FFFFFF',
+            border: `1.5px solid ${orderTypeTab === 'SPA_PACKAGE' ? '#0284C7' : '#E5E7EB'}`,
+            borderRadius: '10px',
+            cursor: 'pointer',
+            boxShadow: orderTypeTab === 'SPA_PACKAGE' ? '0 2px 8px rgba(2, 132, 199, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+            transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: '#E0F2FE',
+                color: '#0284C7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Ticket size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '14px', color: '#1F2937' }}>
+                Đơn gói dịch vụ
+              </div>
+              <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                Thẻ liệu trình trọn gói
+              </div>
+            </div>
+          </div>
+          {orderTypeTab === 'SPA_PACKAGE' && (
+            <Badge variant="primary" size="sm">Đang lọc</Badge>
+          )}
+        </div>
+
+        {/* Đơn dịch vụ đơn */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOrderTypeTab(orderTypeTab === 'SPA_VISIT' ? 'ALL' : 'SPA_VISIT')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOrderTypeTab(orderTypeTab === 'SPA_VISIT' ? 'ALL' : 'SPA_VISIT'); }}
+          style={{
+            padding: '14px 16px',
+            background: orderTypeTab === 'SPA_VISIT' ? '#FFFBEB' : '#FFFFFF',
+            border: `1.5px solid ${orderTypeTab === 'SPA_VISIT' ? '#D97706' : '#E5E7EB'}`,
+            borderRadius: '10px',
+            cursor: 'pointer',
+            boxShadow: orderTypeTab === 'SPA_VISIT' ? '0 2px 8px rgba(217, 119, 6, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+            transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: '#FEF3C7',
+                color: '#D97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '14px', color: '#1F2937' }}>
+                Đơn dịch vụ đơn
+              </div>
+              <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                Lịch hẹn & buổi lẻ tại Spa
+              </div>
+            </div>
+          </div>
+          {orderTypeTab === 'SPA_VISIT' && (
+            <Badge variant="primary" size="sm">Đang lọc</Badge>
+          )}
+        </div>
       </div>
 
-      {isAdmin && orderTypeTab !== 'PRODUCT' && <ServiceBookingOrders admin refreshKey={orders} />}
-      <CommerceOperationsPanel orders={orders} onChanged={() => fetchOrders(page)} />
       <div
         className="card"
         style={{ padding: '16px', marginBottom: '20px' }}
@@ -506,7 +765,7 @@ export const OrdersPage = () => {
             Lọc đơn
           </Button>
 
-          {(keyword || status || paymentStatus || fromDate || toDate) && (
+          {(keyword || status || paymentStatus || fromDate || toDate || orderTypeTab !== 'ALL') && (
             <Button
               type="button"
               variant="outline"
@@ -516,6 +775,7 @@ export const OrdersPage = () => {
                 setPaymentStatus('');
                 setFromDate('');
                 setToDate('');
+                setOrderTypeTab('ALL');
               }}
             >
               Đặt lại
@@ -524,267 +784,659 @@ export const OrdersPage = () => {
         </form>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          className={`btn ${orderTypeTab === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setOrderTypeTab('ALL')}
-          style={{ fontSize: '13px', padding: '6px 14px' }}
-        >
-          Tất cả đơn
-        </button>
-        <button
-          type="button"
-          className={`btn ${orderTypeTab === 'PRODUCT' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setOrderTypeTab('PRODUCT')}
-          style={{ fontSize: '13px', padding: '6px 14px' }}
-        >
-          Đơn Mỹ phẩm (Vận chuyển)
-        </button>
-        <button
-          type="button"
-          className={`btn ${orderTypeTab === 'SPA' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setOrderTypeTab('SPA')}
-          style={{ fontSize: '13px', padding: '6px 14px' }}
-        >
-          Dịch vụ & Liệu trình Spa
-        </button>
+      {/* Tabs chuyển đổi phân loại đơn hàng */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className={`btn ${orderTypeTab === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setOrderTypeTab('ALL')}
+            style={{ fontSize: '13px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <ShoppingBag size={14} />
+            <span>Tất cả đơn</span>
+          </button>
+          <button
+            type="button"
+            className={`btn ${orderTypeTab === 'PRODUCT' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setOrderTypeTab('PRODUCT')}
+            style={{ fontSize: '13px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Package size={14} />
+            <span>Đơn sản phẩm</span>
+          </button>
+          <button
+            type="button"
+            className={`btn ${orderTypeTab === 'SPA_PACKAGE' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setOrderTypeTab('SPA_PACKAGE')}
+            style={{ fontSize: '13px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Ticket size={14} />
+            <span>Đơn gói dịch vụ</span>
+          </button>
+          <button
+            type="button"
+            className={`btn ${orderTypeTab === 'SPA_VISIT' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setOrderTypeTab('SPA_VISIT')}
+            style={{ fontSize: '13px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Sparkles size={14} />
+            <span>Đơn dịch vụ đơn</span>
+          </button>
+        </div>
+        <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+          Hiển thị: <strong>{totalElements.toLocaleString('vi-VN')}</strong> đơn hàng
+        </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={orders}
-        loading={loading}
-        emptyMessage="Không tìm thấy đơn hàng nào phù hợp bộ lọc."
-        page={page}
-        totalPages={totalPages}
-        totalElements={totalElements}
-        onPageChange={(p) => fetchOrders(p)}
-      />
+      {/* Khu vực hiển thị bảng theo phân loại đơn hàng */}
+      {orderTypeTab === 'SPA_VISIT' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Khối đơn đặt dịch vụ đơn lẻ */}
+          <ServiceBookingOrders admin refreshKey={orders} />
 
-      <Modal
+          {/* Khối hóa đơn dịch vụ đơn đã quyết toán (nếu có) */}
+          <div className="card" style={{ padding: '16px' }}>
+            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '12px', color: 'var(--text-main)' }}>
+              Hóa đơn dịch vụ đơn đã lập & quyết toán
+            </div>
+            <DataTable
+              columns={columns}
+              data={orders}
+              loading={loading}
+              emptyMessage="Chưa có hóa đơn dịch vụ đơn nào đã lập."
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              onPageChange={(p) => fetchOrders(p)}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={orders}
+            loading={loading}
+            emptyMessage="Không tìm thấy đơn hàng nào phù hợp bộ lọc."
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            onPageChange={(p) => fetchOrders(p)}
+          />
+
+          {/* Dịch vụ đơn đã đặt (hiển thị khi xem tất cả để theo dõi toàn bộ luồng) */}
+          {isAdmin && orderTypeTab === 'ALL' && (
+            <ServiceBookingOrders admin refreshKey={orders} />
+          )}
+
+          {/* Đổi trả sản phẩm & đối soát COD (chỉ hiển thị khi xem sản phẩm hoặc tất cả) */}
+          {(orderTypeTab === 'ALL' || orderTypeTab === 'PRODUCT') && (
+            <CommerceOperationsPanel orders={orders} onChanged={() => fetchOrders(page)} />
+          )}
+        </>
+      )}
+
+            <Modal
         isOpen={detailModalOpen}
         onClose={() => { detailRequest.current++; setDetailModalOpen(false); }}
         title={`Chi tiết đơn hàng: ${selectedOrder?.orderNumber || selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
-        maxWidth="680px"
-      >
-        {detailLoading && <p role="status">Đang tải chi tiết đơn hàng…</p>}
-        {detailError && <div role="alert"><p>{detailError}</p><Button onClick={() => handleOpenDetail(selectedOrder)}>Thử lại</Button></div>}
-        {selectedOrder && !detailLoading && !detailError && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="grid-2" style={{ gap: '12px' }}>
-              <div style={{ padding: '12px', border: '1px solid var(--border-subtle)', background: 'var(--color-primary-50)' }}>
-                <div style={{ fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  Thông tin người nhận
-                </div>
-                <div style={{ fontWeight: 600, marginTop: '4px' }}>{selectedOrder.customerName}</div>
-                <div>Điện thoại: {selectedOrder.customerPhone}</div>
-                <div>Địa chỉ: {selectedOrder.shippingAddress || 'Nhận tại cửa hàng'}</div>
-              </div>
-
-              <div style={{ padding: '12px', border: '1px solid var(--border-subtle)', background: 'var(--color-primary-50)' }}>
-                <div style={{ fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  Trạng thái vận đơn
-                </div>
-                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                  <Badge variant={getOrderStatusBadge(selectedOrder.status).variant}>
-                    {getOrderStatusBadge(selectedOrder.status).text}
-                  </Badge>
-                  <Badge variant={getPaymentStatusBadge(selectedOrder.paymentStatus).variant}>
-                    {getPaymentStatusBadge(selectedOrder.paymentStatus).text}
-                  </Badge>
-                </div>
-                {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
-                  <div style={{ marginTop: '8px' }}>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleConfirmPayment(selectedOrder)}
-                      style={{ color: '#059669', borderColor: '#059669', fontSize: '12px', padding: '4px 8px' }}
-                    >
-                      <CheckCircle2 size={13} style={{ marginRight: '4px' }} />
-                      Xác nhận đã thanh toán (PAID)
-                    </Button>
-                  </div>
-                )}
-                {selectedOrder.paymentMethod && (
-                  <div style={{ marginTop: '8px', fontSize: '12px' }}>
-                    Hình thức: <strong>{getPaymentMethodLabel(selectedOrder.paymentMethod)}</strong>
-                  </div>
-                )}
-                {selectedOrder.carrierName && (
-                  <div style={{ marginTop: '4px', fontSize: '12px' }}>
-                    Đơn vị giao: <strong>{selectedOrder.carrierName}</strong>
-                  </div>
-                )}
-                {selectedOrder.trackingCode && (
-                  <div style={{ fontSize: '12px' }}>
-                    Mã vận đơn: <strong>{selectedOrder.trackingCode}</strong>
-                  </div>
-                )}
-                {selectedOrder.cancelReason && (
-                  <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--color-danger-700)' }}>
-                    Lý do hủy: {selectedOrder.cancelReason}
-                  </div>
-                )}
+        maxWidth="840px"
+        footer={
+          selectedOrder && !detailLoading && !detailError ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Printer}
+                onClick={() => window.print()}
+                title="In hóa đơn chi tiết"
+              >
+                In hóa đơn
+              </Button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Edit}
+                  onClick={() => handleOpenStatusModal(selectedOrder)}
+                >
+                  Cập nhật trạng thái
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    detailRequest.current++;
+                    setDetailModalOpen(false);
+                  }}
+                >
+                  Đóng
+                </Button>
               </div>
             </div>
+          ) : null
+        }
+      >
+        {detailLoading && <p role="status" style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)' }}>Đang tải chi tiết đơn hàng…</p>}
+        {detailError && (
+          <div role="alert" style={{ padding: '12px', background: 'var(--color-danger-50)', border: '1px solid var(--color-danger-200)', borderRadius: '4px' }}>
+            <p style={{ color: 'var(--color-danger-700)', marginBottom: '8px' }}>{detailError}</p>
+            <Button size="sm" onClick={() => handleOpenDetail(selectedOrder)}>Thử lại</Button>
+          </div>
+        )}
+        {selectedOrder && !detailLoading && !detailError && (() => {
+          const orderItems = selectedOrder.items || [];
+          const spaVisitItems = selectedOrder.spaVisitItems || [];
+          const hasAnyItems = orderItems.length > 0 || spaVisitItems.length > 0;
+          const orderType = getOrderType(selectedOrder);
+          const isProductOrder = orderType === 'PRODUCT';
+          const isSpaPackageOrder = orderType === 'SPA_PACKAGE';
+          const isSpaVisitOrder = orderType === 'SPA_VISIT';
+          const isSpaOrder = !isProductOrder;
 
-            {selectedOrder.servicePackageId && (
-              <div style={{ padding: '12px 16px', background: '#FDF2F8', border: '1px solid #FBCFE8', borderRadius: '8px' }}>
-                <div style={{ fontWeight: 700, color: '#9D174D', fontSize: '13px' }}>
-                  Gói dịch vụ Spa / Liệu trình
-                </div>
-                <div style={{ fontSize: '12px', marginTop: '4px', color: '#831843' }}>
-                  Mã gói dịch vụ: <strong>#{selectedOrder.servicePackageId}</strong>
-                  {selectedOrder.spaBenefitType && (
-                    <span> · Loại quyền lợi: <strong>{selectedOrder.spaBenefitType === 'TREATMENT_COURSE' ? 'Lộ trình chăm sóc da chuyên sâu' : 'Gói dịch vụ Spa'}</strong></span>
+          const renderRow = (label, value, isLast = false) => (
+            <div
+              key={label}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                padding: '7px 0',
+                borderBottom: isLast ? 'none' : '1px solid #F1F5F9',
+                fontSize: '12.5px',
+                lineHeight: '1.45',
+                gap: '12px',
+              }}
+            >
+              <span
+                style={{
+                  width: '135px',
+                  minWidth: '135px',
+                  color: '#64748B',
+                  fontWeight: 500,
+                  flexShrink: 0,
+                }}
+              >
+                {label}
+              </span>
+              <span
+                style={{
+                  flex: 1,
+                  color: '#1E293B',
+                  fontWeight: 500,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {value}
+              </span>
+            </div>
+          );
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '13px' }}>
+              {/* Phân loại & Trạng thái đơn hàng */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: '#F8FAFC',
+                  border: '1px solid var(--border-subtle)',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>Loại đơn hàng:</span>
+                  <Badge variant={getOrderTypeBadge(selectedOrder).variant} size="sm">
+                    {getOrderTypeBadge(selectedOrder).label}
+                  </Badge>
+                  {isSpaVisitOrder && selectedOrder.appointmentId && (
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                      (Mã lịch hẹn: LH-{selectedOrder.appointmentId})
+                    </span>
                   )}
                 </div>
-              </div>
-            )}
-
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                Danh sách mặt hàng ({selectedOrder.items?.length || 0})
-              </div>
-              <div className="table-wrapper">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '56px' }}>Ảnh</th>
-                      <th>Sản phẩm / Biến thể</th>
-                      <th style={{ textAlign: 'right' }}>Đơn giá</th>
-                      <th style={{ textAlign: 'center' }}>Số lượng</th>
-                      <th style={{ textAlign: 'right' }}>Thành tiền</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(selectedOrder.items || []).map((item, idx) => {
-                      const unitPrice = Number(item.price || 0);
-                      const discount = Number(item.discount || 0);
-                      const effectivePrice = Math.max(0, unitPrice - discount);
-                      const lineTotal = effectivePrice * Number(item.quantity || 1);
-                      const img = item.imageUrl ? resolveMediaUrl(item.imageUrl) : null;
-
-                      return (
-                        <tr key={idx}>
-                          <td>
-                            <div style={{ width: 44, height: 44, borderRadius: 4, overflow: 'hidden', backgroundColor: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {img ? (
-                                <img src={img} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
-                              ) : (
-                                <Eye size={18} color="var(--text-muted)" />
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ fontWeight: 600 }}>{item.productName}</div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
-                              {item.variantName && <span>Phân loại: <strong>{item.variantName}</strong></span>}
-                              {item.sku && <span>SKU: <code>{item.sku}</code></span>}
-                            </div>
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            {discount > 0 ? (
-                              <div>
-                                <div style={{ fontWeight: 600 }}>{formatCurrency(effectivePrice)}</div>
-                                <div style={{ fontSize: '11px', textDecoration: 'line-through', color: 'var(--text-muted)' }}>{formatCurrency(unitPrice)}</div>
-                              </div>
-                            ) : (
-                              <span>{formatCurrency(unitPrice)}</span>
-                            )}
-                          </td>
-                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>
-                            {formatCurrency(lineTotal)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {selectedOrder.spaVisitItems && selectedOrder.spaVisitItems.length > 0 && (
-              <div style={{ marginTop: '16px' }}>
-                <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  Dịch vụ Spa thực hiện ({selectedOrder.spaVisitItems.length})
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>Trạng thái:</span>
+                  <Badge variant={getOrderStatusBadge(selectedOrder.status).variant} size="sm">
+                    {getOrderStatusBadge(selectedOrder.status).label}
+                  </Badge>
+                  <Badge variant={getPaymentStatusBadge(selectedOrder.paymentStatus).variant} size="sm">
+                    {getPaymentStatusBadge(selectedOrder.paymentStatus).label}
+                  </Badge>
                 </div>
-                <div className="table-wrapper">
-                  <table className="data-table">
+              </div>
+
+              {/* Thông tin khách hàng & Thông tin đơn hàng */}
+              <div className="grid-2" style={{ gap: '14px' }}>
+                {/* Thông tin khách hàng / Người đặt */}
+                <div
+                  style={{
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    background: '#FFFFFF',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '9px 14px',
+                      background: '#F8FAFC',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    <User size={14} style={{ color: 'var(--color-primary-600, #4F46E5)' }} />
+                    <span>Thông tin người đặt</span>
+                  </div>
+                  <div style={{ padding: '6px 14px' }}>
+                    {renderRow('Khách hàng:', <strong>{selectedOrder.customerName || 'Khách vãng lai'}</strong>)}
+                    {renderRow('Số điện thoại:', selectedOrder.customerPhone || '—')}
+                    {selectedOrder.customerEmail && renderRow('Email:', selectedOrder.customerEmail)}
+                    {renderRow(
+                      isProductOrder ? 'Địa chỉ nhận:' : 'Địa điểm phục vụ:',
+                      isProductOrder ? (selectedOrder.shippingAddress || '—') : 'Cơ sở Spa & Clinic BeautyShop'
+                    )}
+                    {selectedOrder.notes && renderRow('Ghi chú:', <span style={{ fontStyle: 'italic', color: '#475569' }}>{selectedOrder.notes}</span>, true)}
+                  </div>
+                </div>
+
+                {/* Thông tin đơn hàng & Giao dịch */}
+                <div
+                  style={{
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    background: '#FFFFFF',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '9px 14px',
+                      background: '#F8FAFC',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    <FileText size={14} style={{ color: 'var(--color-primary-600, #4F46E5)' }} />
+                    <span>Thông tin đơn hàng</span>
+                  </div>
+                  <div style={{ padding: '6px 14px' }}>
+                    {renderRow(
+                      'Trạng thái đơn:',
+                      <Badge variant={getOrderStatusBadge(selectedOrder.status).variant}>
+                        {getOrderStatusBadge(selectedOrder.status).text}
+                      </Badge>
+                    )}
+                    {renderRow(
+                      'Thanh toán:',
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Badge variant={getPaymentStatusBadge(selectedOrder.paymentStatus).variant}>
+                          {getPaymentStatusBadge(selectedOrder.paymentStatus).text}
+                        </Badge>
+                        <span style={{ color: '#475569' }}>· {getPaymentMethodLabel(selectedOrder.paymentMethod)}</span>
+                        {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleConfirmPayment(selectedOrder)}
+                            style={{ fontSize: '11px', padding: '2px 8px', height: '24px' }}
+                          >
+                            Xác nhận đã thanh toán
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {selectedOrder.createdAt && renderRow('Thời gian tạo:', formatDateTime(selectedOrder.createdAt))}
+                    {isProductOrder && (
+                      <>
+                        {renderRow('Đơn vị vận chuyển:', selectedOrder.carrierName || 'Chưa chỉ định')}
+                        {renderRow('Mã vận đơn:', selectedOrder.trackingCode || 'Chưa tạo vận đơn')}
+                      </>
+                    )}
+                    {isSpaPackageOrder && selectedOrder.servicePackageId && (
+                      renderRow('Mã gói liệu trình:', `#${selectedOrder.servicePackageId}`)
+                    )}
+                    {isSpaVisitOrder && selectedOrder.appointmentId && (
+                      renderRow('Mã lịch hẹn Spa:', `LH-#${selectedOrder.appointmentId}`)
+                    )}
+                    {selectedOrder.paidAt && renderRow('Thời gian TT:', formatDateTime(selectedOrder.paidAt))}
+                    {selectedOrder.cancelReason && renderRow(
+                      'Lý do hủy:',
+                      <span style={{ color: '#DC2626', fontWeight: 600 }}>{selectedOrder.cancelReason}</span>,
+                      true
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Danh sách sản phẩm / Dịch vụ */}
+              <div
+                style={{
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  background: '#FFFFFF',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    background: '#F8FAFC',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    <ShoppingBag size={14} style={{ color: 'var(--color-primary-600, #4F46E5)' }} />
+                    <span>Danh sách sản phẩm / dịch vụ</span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                    {orderItems.length + spaVisitItems.length || (hasAnyItems ? 1 : 0)} mục
+                  </span>
+                </div>
+                <div className="table-wrapper" style={{ margin: 0, overflowX: 'auto' }}>
+                  <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr>
-                        <th>Dịch vụ Spa</th>
-                        <th style={{ textAlign: 'right' }}>Đơn giá</th>
-                        <th style={{ textAlign: 'center' }}>Số buổi</th>
-                        <th style={{ textAlign: 'right' }}>Thành tiền</th>
+                      <tr style={{ background: '#F8FAFC' }}>
+                        <th style={{ width: '56px', textAlign: 'center' }}>Ảnh</th>
+                        <th style={{ textAlign: 'left' }}>Tên sản phẩm / Dịch vụ</th>
+                        <th style={{ textAlign: 'right', width: '120px' }}>Đơn giá</th>
+                        <th style={{ textAlign: 'center', width: '80px' }}>Số lượng</th>
+                        <th style={{ textAlign: 'right', width: '130px' }}>Thành tiền</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedOrder.spaVisitItems.map((sv, idx) => (
-                        <tr key={idx}>
-                          <td><strong>{sv.serviceName}</strong></td>
-                          <td style={{ textAlign: 'right' }}>{formatCurrency(sv.price)}</td>
-                          <td style={{ textAlign: 'center' }}>{sv.performedSessions ?? 1}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      {orderItems.map((item, idx) => {
+                        const unitPrice = Number(item.price || 0);
+                        const discount = Number(item.discount || 0);
+                        const effectivePrice = Math.max(0, unitPrice - discount);
+                        const lineTotal = effectivePrice * Number(item.quantity || 1);
+                        const resolvedImg = item.imageUrl ? resolveMediaUrl(item.imageUrl) : '';
+
+                        return (
+                          <tr key={`item-${idx}`}>
+                            <td style={{ width: '56px', textAlign: 'center', verticalAlign: 'middle', padding: '8px' }}>
+                              {resolvedImg ? (
+                                <img
+                                  src={resolvedImg}
+                                  alt={item.productName || 'Sản phẩm'}
+                                  style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    objectFit: 'cover',
+                                    borderRadius: '4px',
+                                    border: '1px solid #E5E7EB',
+                                    display: 'block',
+                                    margin: '0 auto',
+                                  }}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    if (e.currentTarget.nextSibling) {
+                                      e.currentTarget.nextSibling.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                style={{
+                                  width: '40px',
+                                  height: '40px',
+                                  borderRadius: '4px',
+                                  background: '#F3F4F6',
+                                  border: '1px solid #E5E7EB',
+                                  display: resolvedImg ? 'none' : 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  margin: '0 auto',
+                                  color: '#9CA3AF',
+                                }}
+                              >
+                                <Package size={18} />
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600, color: '#1E293B' }}>{item.productName}</div>
+                              {item.variantName && (
+                                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
+                                  Phân loại: <span>{item.variantName}</span>
+                                </div>
+                              )}
+                              {item.sku && (
+                                <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '1px' }}>
+                                  SKU: <span>{item.sku}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {discount > 0 ? (
+                                <div>
+                                  <div style={{ fontWeight: 600, color: '#1E293B' }}>{formatCurrency(effectivePrice)}</div>
+                                  <div style={{ fontSize: '11px', color: '#9CA3AF', textDecoration: 'line-through' }}>
+                                    {formatCurrency(unitPrice)}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span style={{ fontWeight: 600, color: '#1E293B' }}>{formatCurrency(effectivePrice)}</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center', fontWeight: 600, color: '#1E293B' }}>{item.quantity}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: '#1E293B' }}>{formatCurrency(lineTotal)}</td>
+                          </tr>
+                        );
+                      })}
+
+                      {spaVisitItems.map((sv, idx) => (
+                        <tr key={`spa-${idx}`}>
+                          <td style={{ width: '56px', textAlign: 'center', verticalAlign: 'middle', padding: '8px' }}>
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '4px',
+                                background: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto',
+                                color: '#6B7280',
+                              }}
+                            >
+                              <Sparkles size={18} />
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#1E293B' }}>{sv.serviceName}</div>
+                            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
+                              Dịch vụ Spa thực hiện tại cơ sở
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1E293B' }}>{formatCurrency(sv.price)}</td>
+                          <td style={{ textAlign: 'center', fontWeight: 600, color: '#1E293B' }}>{sv.performedSessions ?? 1}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: '#1E293B' }}>
                             {formatCurrency((sv.price || 0) * (sv.performedSessions || 1))}
                           </td>
                         </tr>
                       ))}
+
+                      {!hasAnyItems && isSpaOrder && (
+                        <tr>
+                          <td style={{ width: '56px', textAlign: 'center', verticalAlign: 'middle', padding: '8px' }}>
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '4px',
+                                background: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto',
+                                color: '#6B7280',
+                              }}
+                            >
+                              <Sparkles size={18} />
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#1E293B' }}>
+                              {selectedOrder.notes || (selectedOrder.servicePackageId ? `Gói dịch vụ / liệu trình Spa #${selectedOrder.servicePackageId}` : 'Dịch vụ Spa tại viện')}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
+                              {selectedOrder.spaBenefitType === 'TREATMENT_COURSE'
+                                ? 'Liệu trình chăm sóc chuyên sâu'
+                                : selectedOrder.servicePackageId
+                                ? 'Gói dịch vụ Spa'
+                                : 'Dịch vụ Spa tại cơ sở'}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1E293B' }}>
+                            {formatCurrency(selectedOrder.subTotal || selectedOrder.totalAmount || 0)}
+                          </td>
+                          <td style={{ textAlign: 'center', fontWeight: 600, color: '#1E293B' }}>1</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: '#1E293B' }}>
+                            {formatCurrency(selectedOrder.totalAmount || selectedOrder.subTotal || 0)}
+                          </td>
+                        </tr>
+                      )}
+
+                      {!hasAnyItems && !isSpaOrder && (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF' }}>
+                            Không có sản phẩm nào trong đơn hàng
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
-            )}
 
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                alignItems: 'flex-end',
-                paddingTop: '14px',
-                borderTop: '1px solid var(--border-subtle)',
-                fontSize: '13px',
-              }}
-            >
-              {selectedOrder.subTotal != null && (
-                <div style={{ display: 'flex', gap: 20 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Tạm tính tiền hàng:</span>
-                  <span style={{ fontFamily: 'monospace' }}>{formatCurrency(selectedOrder.subTotal)}</span>
+              {/* Tổng kết thanh toán */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div
+                  style={{
+                    width: '100%',
+                    maxWidth: '400px',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    background: '#FFFFFF',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '9px 14px',
+                      background: '#F8FAFC',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#334155',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    <Receipt size={14} style={{ color: 'var(--color-primary-600, #4F46E5)' }} />
+                    <span>Tổng kết thanh toán</span>
+                  </div>
+                  <div style={{ padding: '6px 14px' }}>
+                    {selectedOrder.subTotal != null && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: '12.5px' }}>
+                        <span style={{ color: '#64748B' }}>Tạm tính:</span>
+                        <span style={{ fontWeight: 500, color: '#1E293B' }}>{formatCurrency(selectedOrder.subTotal)}</span>
+                      </div>
+                    )}
+                    {selectedOrder.discountAmount != null && Number(selectedOrder.discountAmount) > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: '12.5px', color: '#059669' }}>
+                        <span>Giảm giá / Voucher:</span>
+                        <span style={{ fontWeight: 600 }}>-{formatCurrency(selectedOrder.discountAmount)}</span>
+                      </div>
+                    )}
+                    {selectedOrder.shippingFee != null && Number(selectedOrder.shippingFee) > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: '12.5px' }}>
+                        <span style={{ color: '#64748B' }}>Phí vận chuyển:</span>
+                        <span style={{ fontWeight: 500, color: '#1E293B' }}>{formatCurrency(selectedOrder.shippingFee)}</span>
+                      </div>
+                    )}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '10px 0',
+                      borderBottom: '1px solid #E2E8F0',
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      color: 'var(--color-primary-800, #312E81)',
+                    }}>
+                      <span>Tổng cộng:</span>
+                      <span style={{ fontSize: '15px' }}>{formatCurrency(selectedOrder.totalAmount)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: '12.5px', color: '#059669' }}>
+                      <span>Đã thanh toán:</span>
+                      <span style={{ fontWeight: 600 }}>{formatCurrency(selectedOrder.paidAmount || 0)}</span>
+                    </div>
+                    {selectedOrder.refundedAmount != null && Number(selectedOrder.refundedAmount) > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: '12.5px', color: '#DC2626' }}>
+                        <span>Đã hoàn tiền:</span>
+                        <span style={{ fontWeight: 600 }}>-{formatCurrency(selectedOrder.refundedAmount)}</span>
+                      </div>
+                    )}
+                    {(() => {
+                      const remaining = Math.max(0, Number(selectedOrder.totalAmount || 0) - Number(selectedOrder.paidAmount || 0));
+                      return (
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '8px 0 4px',
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          color: remaining > 0 ? '#D97706' : '#059669',
+                        }}>
+                          <span>{remaining > 0 ? 'Còn cần thu:' : 'Tất toán:'}</span>
+                          <span>{remaining > 0 ? formatCurrency(remaining) : 'Đã thanh toán đủ'}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
-              )}
-              {selectedOrder.discountAmount != null && Number(selectedOrder.discountAmount) > 0 && (
-                <div style={{ display: 'flex', gap: 20, color: 'var(--color-success-700)' }}>
-                  <span>Chiết khấu / Voucher:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>-{formatCurrency(selectedOrder.discountAmount)}</span>
-                </div>
-              )}
-              {selectedOrder.shippingFee != null && (
-                <div style={{ display: 'flex', gap: 20 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Phí vận chuyển:</span>
-                  <span style={{ fontFamily: 'monospace' }}>{Number(selectedOrder.shippingFee) === 0 ? 'MIỄN PHÍ' : formatCurrency(selectedOrder.shippingFee)}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 20, fontSize: '15px', fontWeight: 700, paddingTop: 4, borderTop: '1px dashed var(--border-subtle)' }}>
-                <span>Tổng giá trị đơn:</span>
-                <span style={{ color: 'var(--color-primary-800)', fontFamily: 'monospace' }}>{formatCurrency(selectedOrder.totalAmount)}</span>
               </div>
-              <div style={{ display: 'flex', gap: 20, color: '#059669' }}>
-                <span>Đã thanh toán:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{formatCurrency(selectedOrder.paidAmount || 0)}</span>
-              </div>
-              {selectedOrder.refundedAmount != null && Number(selectedOrder.refundedAmount) > 0 && (
-                <div style={{ display: 'flex', gap: 20, color: '#DC2626' }}>
-                  <span>Đã hoàn tiền:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>-{formatCurrency(selectedOrder.refundedAmount)}</span>
-                </div>
-              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
 
       <Modal
@@ -825,7 +1477,7 @@ export const OrdersPage = () => {
           {selectedOrder && getOrderType(selectedOrder) !== 'PRODUCT' ? (
             <>
               <div style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', fontSize: '12px', color: '#1E40AF', marginBottom: '14px' }}>
-                ℹ️ Đơn dịch vụ Spa (thực hiện tại cơ sở hoặc kích hoạt vé điện tử), không qua khâu vận chuyển hàng hóa.
+                Đơn dịch vụ Spa (thực hiện tại cơ sở hoặc kích hoạt vé điện tử), không qua khâu vận chuyển hàng hóa.
               </div>
               <Select
                 label="Chọn trạng thái đơn dịch vụ mới"

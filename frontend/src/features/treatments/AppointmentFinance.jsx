@@ -47,8 +47,8 @@ export const AppointmentFinance = ({ appointmentId, role, defaultOpen = false })
   pending.current||={key:crypto.randomUUID(),signature};await apiClient.post(`${base}/${kind}`,body,{headers:{'Idempotency-Key':pending.current.key}});pending.current=null;await load();setAmount('');setReference('');setReason('');
  }catch(e){setError(errorMessage(e));}finally{lock.current=false;setBusy(false);}};
  return <details className="treatment-form-session" open={defaultOpen} onToggle={e=>setOpen(e.currentTarget.open)}><summary>{role === 'customer' ? 'Thông tin thanh toán & Hướng dẫn VietQR' : 'Cọc, phí hủy/vắng hẹn & hoàn cọc'}</summary>{error&&<p role="alert">{error}</p>}{finance&&<>
- {finance.status==='CONFIRMED'&&Number(finance.depositCollected)>0&&<div style={{padding:'10px 14px',background:'#ecfdf5',color:'#065f46',borderRadius:'8px',marginBottom:'12px',fontWeight:600}}>✓ Đã nhận thanh toán thành công! Lịch hẹn đã được xác nhận tự động.</div>}
- {timeLeft&&<div style={{padding:'10px 14px',background:'#fffbeb',color:'#92400e',borderRadius:'8px',marginBottom:'12px',fontWeight:600}}>⏳ Thời gian giữ chỗ còn lại: <strong style={{color:'#b45309'}}>{timeLeft}</strong>. Vui lòng thanh toán trước khi hết hạn để tránh bị tự động hủy lịch.</div>}
+ {finance.status==='CONFIRMED'&&Number(finance.depositCollected)>0&&<div style={{padding:'10px 14px',background:'#ecfdf5',color:'#065f46',borderRadius:'8px',marginBottom:'12px',fontWeight:600}}>Đã nhận thanh toán thành công! Lịch hẹn đã được xác nhận tự động.</div>}
+ {timeLeft&&<div style={{padding:'10px 14px',background:'#fffbeb',color:'#92400e',borderRadius:'8px',marginBottom:'12px',fontWeight:600}}>Thời gian giữ chỗ còn lại: <strong style={{color:'#b45309'}}>{timeLeft}</strong>. Vui lòng thanh toán trước khi hết hạn để tránh bị tự động hủy lịch.</div>}
  {role === 'customer' ? (
   <p>Thanh toán trước yêu cầu: <strong>{money(finance.depositRequired)}</strong> · Đã chuyển: {money(finance.depositCollected)} · Còn lại cần chuyển: {money(finance.depositDue)}</p>
  ) : (
@@ -70,8 +70,40 @@ export const AppointmentFinance = ({ appointmentId, role, defaultOpen = false })
  </>}
  {!finance.depositPayment && Number(finance.depositDue)>0 && !finance.closed && <Button disabled={busy} onClick={createPayment}>Tạo mã thanh toán</Button>}
  {(finance.entries||[]).map(e=><p key={e.id}>{({DEPOSIT:'Thu cọc',FEE:'Thu phí',REFUND:'Đã hoàn',APPLY:'Trừ cọc vào hóa đơn'})[e.kind]} · {money(e.amount)} · {e.method}{e.externalReference&&` · ${e.externalReference}`}<br/><small>{e.reason}</small></p>)}
- </>}{canCollect&&<div className="treatment-form"><label>Loại phiếu<select value={kind} onChange={e=>setKind(e.target.value)}><option value="deposit-receipts">Thu cọc đã nhận</option><option value="fee-receipts">Thu phí còn thiếu</option>{canRefund&&<option value="deposit-refund-confirmations">Xác nhận đã hoàn cọc</option>}</select></label>
- <label>Số tiền VND<input type="number" min="1" step="1" value={amount} onChange={e=>setAmount(e.target.value)}/></label><label>Phương thức<select value={method} onChange={e=>setMethod(e.target.value)}><option value="CASH">Tiền mặt</option><option value="BANK">Chuyển khoản đã đối chiếu</option></select></label>
- <label>Mã phiếu tiền mặt / mã giao dịch ngân hàng<input maxLength={128} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Lý do<textarea maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label><Button disabled={busy} onClick={submit}>Ghi nhận bằng chứng giao dịch</Button></div>}
+ </>}{canCollect&&<div style={{display:'flex',flexDirection:'column',gap:'12px',marginTop:'14px',padding:'14px',background:'#F9FAFB',border:'1px solid var(--border-subtle)',borderRadius:'6px'}}>
+    <div style={{fontSize:'12px',fontWeight:600,color:'#374151'}}>Ghi nhận bằng chứng giao dịch</div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:'12px'}}>
+      <label style={{display:'flex',flexDirection:'column',gap:'4px',fontSize:'12px',color:'#4B5563'}}>
+        Loại phiếu
+        <select value={kind} onChange={e=>setKind(e.target.value)} style={{padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:'4px',fontSize:'13px'}}>
+          <option value="deposit-receipts">Thu cọc đã nhận</option>
+          <option value="fee-receipts">Thu phí còn thiếu</option>
+          {canRefund&&<option value="deposit-refund-confirmations">Xác nhận đã hoàn cọc</option>}
+        </select>
+      </label>
+      <label style={{display:'flex',flexDirection:'column',gap:'4px',fontSize:'12px',color:'#4B5563'}}>
+        Số tiền VND
+        <input type="number" min="1" step="1" value={amount} onChange={e=>setAmount(e.target.value)} style={{padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:'4px',fontSize:'13px'}} placeholder="Nhập số tiền..." />
+      </label>
+      <label style={{display:'flex',flexDirection:'column',gap:'4px',fontSize:'12px',color:'#4B5563'}}>
+        Phương thức
+        <select value={method} onChange={e=>setMethod(e.target.value)} style={{padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:'4px',fontSize:'13px'}}>
+          <option value="CASH">Tiền mặt</option>
+          <option value="BANK">Chuyển khoản đã đối chiếu</option>
+        </select>
+      </label>
+      <label style={{display:'flex',flexDirection:'column',gap:'4px',fontSize:'12px',color:'#4B5563'}}>
+        Mã phiếu tiền mặt / GD ngân hàng
+        <input maxLength={128} value={reference} onChange={e=>setReference(e.target.value)} style={{padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:'4px',fontSize:'13px'}} placeholder="VD: TM-01 hoặc FT123456" />
+      </label>
+    </div>
+    <label style={{display:'flex',flexDirection:'column',gap:'4px',fontSize:'12px',color:'#4B5563'}}>
+      Lý do
+      <textarea rows={2} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)} style={{padding:'7px 10px',border:'1px solid #D1D5DB',borderRadius:'4px',fontSize:'13px',resize:'vertical'}} placeholder="Nhập lý do giao dịch..." />
+    </label>
+    <div>
+      <Button disabled={busy} onClick={submit} variant="primary" size="sm">Ghi nhận bằng chứng giao dịch</Button>
+    </div>
+  </div>}
  <Button variant="outline" disabled={busy} onClick={()=>load().catch(e=>setError(errorMessage(e)))}>Tải lại sổ cọc</Button></details>;
 };

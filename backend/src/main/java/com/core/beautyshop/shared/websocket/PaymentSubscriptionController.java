@@ -2,11 +2,13 @@ package com.core.beautyshop.shared.websocket;
 
 import com.core.beautyshop.modules.order.application.service.OrderService;
 import com.core.beautyshop.shared.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import io.swagger.v3.oas.annotations.Operation;
 
 @RestController @RequiredArgsConstructor
+@Tag(name = "Theo dõi trạng thái thanh toán", description = "Cấp quyền token theo dõi trạng thái thanh toán thời gian thực qua WebSocket/SSE")
 public class PaymentSubscriptionController {
     private final OrderService orders;
     private final PaymentSubscriptionTokenService tokens;

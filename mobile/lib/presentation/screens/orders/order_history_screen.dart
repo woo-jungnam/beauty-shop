@@ -1,3 +1,5 @@
+import '../treatments/treatment_appointment_screen.dart';
+import '../../../core/network/api_client.dart';
 import 'order_detail_screen.dart';
 import 'order_lookup_screen.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +36,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     'Đang giao',
     'Đã giao',
     'Đã hủy',
+    'Dịch vụ đã đặt',
   ];
+  List<dynamic> _serviceOrders = [];
+  bool _loadingServiceOrders = false;
+  String? _serviceOrdersError;
 
   @override
   void initState() {
@@ -46,14 +52,41 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     );
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
-        final status = _tabIndexToStatus(_tabController.index);
-        context.read<OrderProvider>().fetchOrders(status: status);
+        if (_tabController.index == 5) {
+          _fetchServiceOrders();
+        } else {
+          final status = _tabIndexToStatus(_tabController.index);
+          context.read<OrderProvider>().fetchOrders(status: status);
+        }
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final initialStatus = _tabIndexToStatus(widget.initialTabIndex);
-      context.read<OrderProvider>().fetchOrders(status: initialStatus);
+      if (widget.initialTabIndex == 5) {
+        _fetchServiceOrders();
+      } else {
+        final initialStatus = _tabIndexToStatus(widget.initialTabIndex);
+        context.read<OrderProvider>().fetchOrders(status: initialStatus);
+      }
     });
+  }
+
+  Future<void> _fetchServiceOrders() async {
+    setState(() {
+      _loadingServiceOrders = true;
+      _serviceOrdersError = null;
+    });
+    try {
+      final res = await ApiClient().get<dynamic>('/api/v1/appointments/my-service-orders');
+      if (mounted) {
+        final data = res.data;
+        final list = data is Map ? data['content'] as List? ?? [] : (data is List ? data : []);
+        setState(() => _serviceOrders = list);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _serviceOrdersError = '$e');
+    } finally {
+      if (mounted) setState(() => _loadingServiceOrders = false);
+    }
   }
 
   String? _tabIndexToStatus(int tabIndex) {
@@ -174,6 +207,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           return TabBarView(
             controller: _tabController,
             children: List.generate(_tabs.length, (tabIdx) {
+              if (tabIdx == 5) {
+                return _buildServiceOrdersTab();
+              }
               final filtered = _filterOrders(allOrders, tabIdx);
 
               if (filtered.isEmpty) {
@@ -448,6 +484,102 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildServiceOrdersTab() {
+    if (_loadingServiceOrders) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    }
+    if (_serviceOrdersError != null) {
+      return CatalogState(message: _serviceOrdersError!, onRetry: _fetchServiceOrders);
+    }
+    if (_serviceOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.spa_outlined, size: 64, color: AppColors.textLight.withOpacity(0.5)),
+            const SizedBox(height: 12),
+            Text(
+              'Chưa có dịch vụ đơn chờ lập hóa đơn',
+              style: AppTypography.caption.copyWith(fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _fetchServiceOrders,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(12),
+        itemCount: _serviceOrders.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, idx) {
+          final row = _serviceOrders[idx];
+          final aptId = (row['appointmentId'] as num?)?.toInt() ?? 0;
+          final services = (row['services'] as List? ?? []).join(', ');
+          final dateStr = row['appointmentDate']?.toString() ?? '';
+          final timeStr = row['startTime']?.toString() ?? '';
+          final est = (row['estimatedAmount'] as num?)?.toDouble() ?? 0;
+          final collected = (row['collectedAmount'] as num?)?.toDouble() ?? 0;
+          final st = row['status']?.toString() ?? '';
+          return Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.getSurface(context),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.borderSubtle),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Mã đặt dịch vụ LH-$aptId', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDF2F8),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(st, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: Color(0xFF9D174D))),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(services.isNotEmpty ? services : 'Dịch vụ Spa', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 4),
+                Text('$dateStr · $timeStr', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Giá dự kiến: ${AppFormatters.formatCurrency(est)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        if (collected > 0)
+                          Text('Đã thu: ${AppFormatters.formatCurrency(collected)}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF059669), fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => TreatmentAppointmentScreen(id: aptId, operate: false)),
+                      ),
+                      child: const Text('Chi tiết'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

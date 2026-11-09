@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { Button } from '../../shared/ui/Button';
 import { apiClient } from '../../shared/api/client';
-import { dateLabel, errorMessage, rows, statusLabel, treatmentApi, unwrap } from './treatmentApi';
+import { dateLabel, errorMessage, money, rows, statusLabel, treatmentApi, unwrap } from './treatmentApi';
 import { AppointmentMaterials } from './AppointmentMaterials';
 import { AppointmentFinance } from './AppointmentFinance';
 import { SpaVisitCheckout } from '../../shared/ui/SpaVisitCheckout';
@@ -25,6 +25,12 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
   const [busy, setBusy] = useState('');
   const [loading, setLoading] = useState(true);
   const [ownStaffIds, setOwnStaffIds] = useState([]);
+  const [substituteItem, setSubstituteItem] = useState(null);
+  const [availableServices, setAvailableServices] = useState([]);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [substituteReason, setSubstituteReason] = useState('');
+  const [substituteConsent, setSubstituteConsent] = useState(false);
+  const [substituteError, setSubstituteError] = useState('');
   const lock = useRef(false);
   const operator = role !== 'customer';
   const admin = operator && isAdmin;
@@ -102,6 +108,53 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
         {(appointment.items || []).map(item => <section className="treatment-form-session" key={item.id}><div className="treatment-card-heading"><strong>{item.serviceName}</strong><span className="treatment-badge">{statusLabel(item.executionStatus)}</span></div><small>{item.staffName} · {item.startTime?.slice(0, 5)}–{item.endTime?.slice(0, 5)}</small>
           {reception && ['PENDING', 'CONFIRMED'].includes(appointment.status) && <label>Nhân viên đủ chuyên môn<select disabled={Boolean(busy)} value={assignments[item.id] || ''} onChange={event => setAssignments(previous => ({ ...previous, [item.id]: event.target.value }))}><option value="">Chọn nhân viên thực hiện</option>{(staffOptions[item.id] || []).map(staff => <option key={staff.id} value={staff.id}>{staff.fullName || staff.name || `Nhân viên #${staff.id}`}</option>)}</select></label>}
           {item.executionNotes && <p>{item.executionNotes}</p>}
+          {['PLANNED', 'IN_PROGRESS'].includes(item.executionStatus) && <Button size="sm" variant="outline" style={{ marginTop: '0.25rem' }} onClick={async () => {
+            setSubstituteItem(item); setSubstituteReason(''); setSelectedServiceId(''); setSubstituteConsent(false); setSubstituteError('');
+            if (!availableServices.length) {
+              try { const res = await apiClient.get('/api/v1/spa/services'); setAvailableServices(rows(res)); } catch (e) { setSubstituteError(errorMessage(e)); }
+            }
+          }}>Đổi dịch vụ chỉ định (Soi da & Bác sĩ)</Button>}
+          {substituteItem?.id === item.id && <div className="treatment-form" style={{ marginTop: '0.5rem', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: '#f8fafc' }}>
+            <strong>Đổi dịch vụ chỉ định theo tình trạng da</strong>
+            {substituteError && <p role="alert" className="treatment-notice error">{substituteError}</p>}
+            <label>Dịch vụ chỉ định thay thế
+              <select value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
+                <option value="">Chọn dịch vụ thay thế phù hợp</option>
+                {availableServices.filter(s => s.id !== item.serviceId).map(s => <option key={s.id} value={s.id}>{s.name} ({money(s.price || s.basePrice || 0)})</option>)}
+              </select>
+            </label>
+            <label>Kết quả soi da & Lý do chuyên môn (Bắt buộc)
+              <textarea rows={2} value={substituteReason} onChange={e => setSubstituteReason(e.target.value)} placeholder="VD: Soi da phát hiện mụn bọc viêm đỏ vùng má, chống chỉ định Aqua Peel; chuyển sang Điện di phục hồi B5 để làm dịu ổ viêm." />
+            </label>
+            {selectedServiceId && (() => {
+              const target = availableServices.find(s => String(s.id) === String(selectedServiceId));
+              const diff = Math.max(0, (target?.price || target?.basePrice || 0) - (item.price || 0));
+              return <p className="treatment-muted" style={{ margin: '0.25rem 0' }}>
+                {diff > 0 ? `Nâng cấp dịch vụ: Phụ thu chênh lệch ${money(diff)} (đối soát tại hóa đơn).` : 'Cùng giá hoặc tương đương: Bù trừ 0 đ theo chính sách lượt vé.'}
+              </p>;
+            })()}
+            <label className="treatment-check">
+              <input type="checkbox" checked={substituteConsent} onChange={e => setSubstituteConsent(e.target.checked)} />
+              Khách hàng đồng thuận đổi phác đồ theo chỉ định của bác sĩ/KTV
+            </label>
+            <div className="treatment-actions">
+              <Button size="sm" disabled={Boolean(busy)} loading={busy === `sub-${item.id}`} onClick={async () => {
+                if (!selectedServiceId) { setSubstituteError('Vui lòng chọn dịch vụ thay thế phù hợp với phác đồ.'); return; }
+                if (!substituteReason.trim()) { setSubstituteError('Vui lòng nhập lý do chuyên môn / kết quả soi da.'); return; }
+                if (!substituteConsent) { setSubstituteError('Cần xác nhận khách hàng đồng thuận đổi dịch vụ.'); return; }
+                const target = availableServices.find(s => String(s.id) === String(selectedServiceId));
+                const targetName = target?.name || `Dịch vụ #${selectedServiceId}`;
+                const diff = Math.max(0, (target?.price || target?.basePrice || 0) - (item.price || 0));
+                const recordNote = `[ĐỔI CHỈ ĐỊNH LÂM SÀNG] Đổi từ ${item.serviceName} sang ${targetName}. Lý do soi da: ${substituteReason.trim()}. Bù trừ: ${diff > 0 ? '+' + money(diff) : '0 đ'}. Khách đã ký xác nhận đồng thuận.`;
+                setNotes(prev => prev ? `${prev}\n${recordNote}` : recordNote);
+                await run(`sub-${item.id}`, async () => {
+                  if (item.executionStatus === 'IN_PROGRESS') await apiClient.put(`${base}/items/${item.id}/execution`, { status: 'IN_PROGRESS', notes: recordNote });
+                  setSubstituteItem(null); setSubstituteReason(''); setSubstituteConsent(false);
+                }, `Đã ghi nhận đổi chỉ định sang ${targetName}.`);
+              }}>Lưu chỉ định thay đổi</Button>
+              <Button size="sm" variant="outline" onClick={() => setSubstituteItem(null)}>Hủy bỏ</Button>
+            </div>
+          </div>}
           {canPerformItem(item) && item.executionStatus === 'PERFORMED' && <div className="treatment-form"><label>Hướng dẫn chăm sóc sau buổi<textarea maxLength={4000} value={aftercare[item.id] || ''} onChange={e => setAftercare(previous => ({ ...previous, [item.id]: e.target.value }))} /></label><Button variant="outline" disabled={Boolean(busy) || !aftercare[item.id]?.trim()} onClick={() => run(`aftercare-${item.id}`, () => treatmentApi.post(`${prepBase}/follow-up-instructions/items/${item.id}`, { content: aftercare[item.id].trim(), dueAt: new Date().toISOString() }), 'Đã lưu hướng dẫn chăm sóc cho khách.')}>Lưu hướng dẫn sau buổi</Button></div>}
           {canPerformItem(item) && appointment.status === 'IN_PROGRESS' && <div className="treatment-actions">
             {item.executionStatus === 'PLANNED' && <><Button disabled={Boolean(busy)} loading={busy === `start-${item.id}`} onClick={() => run(`start-${item.id}`, () => apiClient.put(`${base}/items/${item.id}/execution`, { status: 'IN_PROGRESS', notes }), 'Đã bắt đầu dịch vụ.')}>Bắt đầu dịch vụ</Button><Button variant="outline" disabled={Boolean(busy) || !notes.trim()} onClick={() => run(`skip-${item.id}`, () => apiClient.put(`${base}/items/${item.id}/execution`, { status: 'SKIPPED', notes }), 'Đã ghi nhận chưa thực hiện dịch vụ; phần chưa làm không tăng tiến độ.')}>Bỏ dịch vụ có lý do</Button></>}

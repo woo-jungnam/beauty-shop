@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/network/api_client.dart';
 import 'customer_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,8 +17,34 @@ import 'package:beautyshop_mobile/presentation/screens/spa/spa_tickets_screen.da
 import '../../../data/models/treatment_model.dart';
 import '../treatments/treatment_hub_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Map<String, dynamic>? _orderStatistics;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.read<AuthProvider>().isAuthenticated) {
+        _fetchOrderStatistics();
+      }
+    });
+  }
+
+  Future<void> _fetchOrderStatistics() async {
+    try {
+      final res = await ApiClient().get<dynamic>('/api/v1/users/order-statistics');
+      if (mounted && res.isSuccess && res.data is Map) {
+        setState(() => _orderStatistics = Map<String, dynamic>.from(res.data as Map));
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,9 +158,11 @@ class ProfileScreen extends StatelessWidget {
                                 color: Colors.white24,
                               ),
                               _buildProfileStat(
-                                'Điểm Tích Lũy',
-                                '${user?.rewardPoints ?? 0} Đ',
-                                Icons.stars,
+                                'Chi Tiêu Ròng',
+                                _orderStatistics != null
+                                    ? AppFormatters.formatCurrency((_orderStatistics!['netSpent'] as num?)?.toDouble() ?? 0)
+                                    : '${user?.rewardPoints ?? 0} Đ',
+                                Icons.account_balance_wallet_outlined,
                               ),
                               Container(
                                 width: 1,
@@ -359,10 +388,13 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       _buildMenuItem(
                         Icons.confirmation_number_outlined,
-                        'Áp Dụng Mã Giảm Giá',
+                        'Mã Ưu Đãi & Khuyến Mãi',
                         () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CartScreen()),
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const CustomerAccountScreen(area: 'vouchers'),
+                          ),
                         ),
                       ),
                       Consumer<ThemeProvider>(

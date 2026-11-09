@@ -66,8 +66,11 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const isAuthEndpoint =
+      originalRequest?.url?.includes('/api/v1/auth/login') ||
+      originalRequest?.url?.includes('/api/v1/auth/register');
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       const refreshToken = localStorage.getItem('beautyshop_admin_refresh_token');
 
       if (!refreshToken || originalRequest.url.includes('/api/v1/auth/refresh')) {
@@ -75,49 +78,47 @@ apiClient.interceptors.response.use(
         localStorage.removeItem('beautyshop_admin_refresh_token');
         localStorage.removeItem('beautyshop_admin_user');
         window.dispatchEvent(new Event('auth:logout'));
-        return Promise.reject(error);
-      }
-
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return apiClient(originalRequest);
+      } else {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
           })
-          .catch((err) => Promise.reject(err));
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshResponse = await axios.post(
-          `${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`,
-          { refreshToken },
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-
-        const newTokens = refreshResponse.data?.data || refreshResponse.data;
-        if (newTokens?.accessToken) {
-          localStorage.setItem('beautyshop_admin_token', newTokens.accessToken);
-          if (newTokens.refreshToken) {
-            localStorage.setItem('beautyshop_admin_refresh_token', newTokens.refreshToken);
-          }
-          originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
-          processQueue(null, newTokens.accessToken);
-          return apiClient(originalRequest);
+            .then((token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return apiClient(originalRequest);
+            })
+            .catch((err) => Promise.reject(err));
         }
-      } catch (refreshErr) {
-        processQueue(refreshErr, null);
-        localStorage.removeItem('beautyshop_admin_token');
-        localStorage.removeItem('beautyshop_admin_refresh_token');
-        localStorage.removeItem('beautyshop_admin_user');
-        window.dispatchEvent(new Event('auth:logout'));
-        return Promise.reject(refreshErr);
-      } finally {
-        isRefreshing = false;
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          const refreshResponse = await axios.post(
+            `${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`,
+            { refreshToken },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+
+          const newTokens = refreshResponse.data?.data || refreshResponse.data;
+          if (newTokens?.accessToken) {
+            localStorage.setItem('beautyshop_admin_token', newTokens.accessToken);
+            if (newTokens.refreshToken) {
+              localStorage.setItem('beautyshop_admin_refresh_token', newTokens.refreshToken);
+            }
+            originalRequest.headers.Authorization = `Bearer ${newTokens.accessToken}`;
+            processQueue(null, newTokens.accessToken);
+            return apiClient(originalRequest);
+          }
+        } catch (refreshErr) {
+          processQueue(refreshErr, null);
+          localStorage.removeItem('beautyshop_admin_token');
+          localStorage.removeItem('beautyshop_admin_refresh_token');
+          localStorage.removeItem('beautyshop_admin_user');
+          window.dispatchEvent(new Event('auth:logout'));
+        } finally {
+          isRefreshing = false;
+        }
       }
     }
 
@@ -156,7 +157,13 @@ apiClient.interceptors.response.use(
       }
     }
 
-    return Promise.reject(Object.assign(new Error(message), { status: error.response?.status }));
+    return Promise.reject(
+      Object.assign(new Error(message), {
+        status: error.response?.status,
+        response: error.response,
+        data: error.response?.data,
+      })
+    );
   }
 );
 

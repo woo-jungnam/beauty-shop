@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import '../../../core/utils/formatters.dart';
 import '../treatments/treatment_enrollment_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +35,7 @@ class CustomerAccountScreen extends StatefulWidget {
 class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
   final api = ApiClient();
   dynamic data;
+  List<dynamic> vouchers = [];
   String? error;
   bool busy = false;
   int page = 0, totalPages = 1;
@@ -41,13 +44,15 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
     'addresses' => '/api/v1/users/addresses',
     'wishlist' => '/api/v1/users/wishlist',
     'notifications' => '/api/v1/users/notifications',
+    'vouchers' => '/api/v1/promotions/available',
     _ => '/api/v1/users/profile',
   };
   String get title => switch (widget.area) {
     'skin' => 'Hồ sơ làn da',
     'addresses' => 'Sổ địa chỉ',
     'wishlist' => 'Sản phẩm yêu thích',
-    'notifications' => 'Thông báo',
+    'notifications' => 'Thông báo & Khuyến mãi',
+    'vouchers' => 'Mã ưu đãi & Khuyến mãi',
     _ => 'Thông tin & bảo mật',
   };
   @override
@@ -62,6 +67,14 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
       error = null;
     });
     try {
+      if (widget.area == 'notifications' || widget.area == 'vouchers') {
+        try {
+          final vRes = await api.get<dynamic>('/api/v1/promotions/available');
+          if (vRes.isSuccess && vRes.data is List) {
+            vouchers = vRes.data as List;
+          }
+        } catch (_) {}
+      }
       final response = await api.get<dynamic>(
         path,
         queryParameters: widget.area == 'notifications'
@@ -356,6 +369,75 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
                 ),
               ),
             ),
+          if ((widget.area == 'notifications' || widget.area == 'vouchers') && vouchers.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '🎁 Mã ưu đãi & Khuyến mãi hiện có',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF9D174D)),
+              ),
+            ),
+            ...vouchers.map((v) {
+              final code = '${v['code'] ?? ''}';
+              final name = '${v['name'] ?? ''}';
+              final isPercent = v['discountType'] == 'PERCENTAGE';
+              final val = v['discountValue'];
+              final discountText = isPercent
+                  ? 'Giảm $val%'
+                  : 'Giảm ${AppFormatters.formatCurrency((val as num?)?.toDouble() ?? 0)}';
+              final minOrder = v['minOrderAmount'] != null
+                  ? 'Đơn tối thiểu: ${AppFormatters.formatCurrency((v['minOrderAmount'] as num).toDouble())}'
+                  : null;
+              return Card(
+                color: const Color(0xFFFDF2F8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: const BorderSide(color: Color(0xFFF472B6)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFCE7F3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              code,
+                              style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF9D174D)),
+                            ),
+                          ),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: code));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Đã sao chép mã: $code')),
+                              );
+                            },
+                            icon: const Icon(Icons.copy, size: 14),
+                            label: const Text('Sao chép'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text(discountText, style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.w700, fontSize: 12)),
+                      if (minOrder != null)
+                        Text(minOrder, style: const TextStyle(color: Colors.black54, fontSize: 11)),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const Divider(height: 24),
+          ],
           if (widget.area == 'notifications') ...[
             ...accountRows(data).map(
               (row) => Card(

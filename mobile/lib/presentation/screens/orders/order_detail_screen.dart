@@ -245,6 +245,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 );
               },
             ),
+            ...(value['spaVisitItems'] as List? ?? []).map(
+              (item) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    color: const Color(0xFFFDF2F8),
+                    child: const Icon(
+                      Icons.spa,
+                      color: Color(0xFF9D174D),
+                      size: 22,
+                    ),
+                  ),
+                ),
+                title: Text('${item['serviceName'] ?? 'Dịch vụ Spa'}'),
+                subtitle: const Text('Dịch vụ Spa tại chỗ'),
+                trailing: Text(
+                  money((item['amount'] ?? item['price'] ?? item['unitPrice'] as num?) ?? 0),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
             Text(
               'Tổng đơn: ${money(value['totalAmount'])}\nĐã thu: ${money(value['paidAmount'])}\nĐã hoàn: ${money(value['refundedAmount'])}',
             ),

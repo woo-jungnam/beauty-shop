@@ -44,6 +44,7 @@ class _ProductCollectionScreenState extends State<ProductCollectionScreen> {
   void _openFilterBottomSheet() {
     String currentSort = _activeFilters['sort']?.toString() ?? 'createdAt,desc';
     String? currentSkinType = _activeFilters['skinType']?.toString();
+    String? currentActiveIngredient = _activeFilters['activeIngredients']?.toString();
     bool onSaleOnly = _activeFilters['onSale'] == true;
     bool inStockOnly = _activeFilters['inStock'] == true;
     String? priceRange = _getPriceRangeTag();
@@ -76,6 +77,7 @@ class _ProductCollectionScreenState extends State<ProductCollectionScreen> {
                         setSheetState(() {
                           currentSort = 'createdAt,desc';
                           currentSkinType = null;
+                          currentActiveIngredient = null;
                           onSaleOnly = false;
                           inStockOnly = false;
                           priceRange = null;
@@ -125,6 +127,20 @@ class _ProductCollectionScreenState extends State<ProductCollectionScreen> {
                   ],
                 ),
                 const SizedBox(height: 14),
+                const Text('Hoạt chất nổi bật:', style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _chip('Niacinamide', 'niacinamide', currentActiveIngredient, (val) => setSheetState(() => currentActiveIngredient = currentActiveIngredient == val ? null : val)),
+                    _chip('Panthenol B5', 'panthenol', currentActiveIngredient, (val) => setSheetState(() => currentActiveIngredient = currentActiveIngredient == val ? null : val)),
+                    _chip('BHA / Salicylic Acid', 'salicylic acid', currentActiveIngredient, (val) => setSheetState(() => currentActiveIngredient = currentActiveIngredient == val ? null : val)),
+                    _chip('Hyaluronic Acid', 'hyaluronic acid', currentActiveIngredient, (val) => setSheetState(() => currentActiveIngredient = currentActiveIngredient == val ? null : val)),
+                    _chip('Ceramide', 'ceramide', currentActiveIngredient, (val) => setSheetState(() => currentActiveIngredient = currentActiveIngredient == val ? null : val)),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Chỉ hiển thị sản phẩm đang giảm giá'),
@@ -153,6 +169,11 @@ class _ProductCollectionScreenState extends State<ProductCollectionScreen> {
                         updated['skinType'] = currentSkinType;
                       } else {
                         updated.remove('skinType');
+                      }
+                      if (currentActiveIngredient != null) {
+                        updated['activeIngredients'] = currentActiveIngredient;
+                      } else {
+                        updated.remove('activeIngredients');
                       }
                       if (onSaleOnly) {
                         updated['onSale'] = true;

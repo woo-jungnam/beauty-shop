@@ -220,6 +220,8 @@ class SpaProvider extends ChangeNotifier {
     int? financialPolicyVersion,
     String? paymentOption,
     int? ticketId,
+    int? staffId,
+    int? facilityId,
   }) async {
     final generation = _privateGeneration;
     _isLoading = true;
@@ -246,6 +248,8 @@ class SpaProvider extends ChangeNotifier {
           'items': [
             {
               'serviceId': serviceId,
+              if (staffId != null) 'staffId': staffId,
+              if (facilityId != null) 'facilityId': facilityId,
               if (ticketId != null) 'ticketId': ticketId,
             },
           ],

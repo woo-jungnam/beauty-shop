@@ -117,7 +117,11 @@ public class SwaggerConfig {
     public GroupedOpenApi voucherApis() {
         return GroupedOpenApi.builder()
                 .group("09-promotions").displayName("09 · Khuyến mãi và voucher")
-                .pathsToMatch("/api/v1/admin/vouchers/**", "/api/v1/promotions/**")
+                .pathsToMatch(
+                        "/api/v1/admin/vouchers/**",
+                        "/api/v1/promotions/**",
+                        "/api/v1/admin/flash-sales/**",
+                        "/api/v1/flash-sales/**")
                 .build();
     }
 

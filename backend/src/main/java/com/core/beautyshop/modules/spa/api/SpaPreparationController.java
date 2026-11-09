@@ -40,6 +40,17 @@ public class SpaPreparationController {
         return ApiResponse.created(preparation.submit(id, requirementId, command), "Customer consent recorded");
     }
 
+    @Operation(summary = "Khách hàng hoặc nhân viên rút lại / từ chối cam kết", description = "Chủ lịch hoặc nhân viên tiếp đón. Ghi nhận trạng thái chưa đồng ý để ngăn việc bắt đầu dịch vụ.")
+    @PostMapping("/preparation/forms/{requirementId}/withdraw")
+    @ResponseStatus(HttpStatus.OK)
+    @AuditAction(action="WITHDRAW_CUSTOMER_CONSENT", resourceType="APPOINTMENT")
+    public ApiResponse<SpaPreparationService.FormResponse> withdraw(
+            @PathVariable Long id, @PathVariable Long requirementId,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        String reason = body != null && body.containsKey("reason") ? body.get("reason") : "Customer withdrew consent";
+        return ApiResponse.success(preparation.withdraw(id, requirementId, reason));
+    }
+
     @Operation(summary = "Người thực hiện xác nhận đã đọc cảnh báo", description = "ADMIN hoặc STAFF có SPA_EXECUTION được giao đúng item. Item PLANNED, chưa START; gửi versionHash hiện tại từ care-summary. Hồ sơ/form thay đổi làm hash cũ không hợp lệ. START kiểm acknowledgment của chính actor bắt đầu; không xác nhận thay người khác.")
     @PostMapping("/preparation/items/{itemId}/acknowledge-warnings")
     @ResponseStatus(HttpStatus.CREATED)

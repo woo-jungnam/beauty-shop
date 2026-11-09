@@ -40,6 +40,7 @@ class ChatbotProvider extends ChangeNotifier {
 
     var answer = '';
     List<ProductItem> suggestions = [];
+    List<ChatAction> actions = [];
     final botMessageIndex = _messages.length;
     _messages.add(ChatMessage.bot(''));
 
@@ -54,6 +55,7 @@ class ChatbotProvider extends ChangeNotifier {
             _messages[botMessageIndex] = ChatMessage.bot(
               answer,
               products: suggestions.isNotEmpty ? suggestions : null,
+              actions: actions.isNotEmpty ? actions : null,
             );
             notifyListeners();
             break;
@@ -65,12 +67,21 @@ class ChatbotProvider extends ChangeNotifier {
                         ProductItem.fromJson(item as Map<String, dynamic>),
                   )
                   .toList();
-              _messages[botMessageIndex] = ChatMessage.bot(
-                answer,
-                products: suggestions,
-              );
-              notifyListeners();
             }
+            if (event['actions'] is List) {
+              actions = (event['actions'] as List)
+                  .map(
+                    (item) =>
+                        ChatAction.fromJson(item as Map<String, dynamic>),
+                  )
+                  .toList();
+            }
+            _messages[botMessageIndex] = ChatMessage.bot(
+              answer,
+              products: suggestions.isNotEmpty ? suggestions : null,
+              actions: actions.isNotEmpty ? actions : null,
+            );
+            notifyListeners();
             break;
           case 'done':
             if (event['session_id'] != null) {

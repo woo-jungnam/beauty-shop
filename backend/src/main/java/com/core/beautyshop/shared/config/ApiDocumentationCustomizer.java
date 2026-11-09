@@ -63,6 +63,17 @@ public class ApiDocumentationCustomizer implements GlobalOperationCustomizer, Gl
             operation.getParameters().stream().filter(parameter -> Set.of("page", "size").contains(parameter.getName()))
                     .forEach(parameter -> parameter.setRequired(false));
         }
+        if (operation.getParameters() != null) {
+            operation.getParameters().forEach(parameter -> {
+                if ("page".equals(parameter.getName()) && (parameter.getDescription() == null || parameter.getDescription().contains("Zero-based"))) {
+                    parameter.setDescription("Số thứ tự trang, bắt đầu từ 0 (0..N)");
+                } else if ("size".equals(parameter.getName()) && (parameter.getDescription() == null || parameter.getDescription().contains("size of the page"))) {
+                    parameter.setDescription("Số lượng bản ghi trên mỗi trang");
+                } else if ("sort".equals(parameter.getName()) && (parameter.getDescription() == null || parameter.getDescription().contains("Sorting criteria"))) {
+                    parameter.setDescription("Tiêu chí sắp xếp: tên_trường,(asc|desc)");
+                }
+            });
+        }
         if (operation.getResponses() != null) {
             addError(operation, "400", "JSON, tham số hoặc dữ liệu không hợp lệ; quy tắc nghiệp vụ bị từ chối.");
             addError(operation, "401", mode.equals("sepay-key") ? "Thiếu hoặc sai API key SePay." : "Thiếu, sai hoặc hết hạn thông tin xác thực khi API yêu cầu.");

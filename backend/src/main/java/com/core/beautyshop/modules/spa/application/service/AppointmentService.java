@@ -24,6 +24,8 @@ public interface AppointmentService {
     AppointmentResponse updateAppointmentStatus(Long id, UpdateAppointmentStatusRequest request);
     AppointmentResponse rescheduleAppointment(Long id, RescheduleAppointmentRequest request);
     AppointmentResponse checkIn(Long id);
+    AppointmentResponse addInSessionItem(Long appointmentId, com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest request);
     AppointmentResponse executeItem(Long id, Long itemId, ExecuteAppointmentItemRequest request);
+    void rateAppointment(Long appointmentId, int stars, String comment);
     Page<AppointmentActionHistory> actionHistory(Long id, Pageable page);
 }

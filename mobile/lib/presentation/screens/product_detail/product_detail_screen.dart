@@ -1,3 +1,5 @@
+import '../../../core/network/api_client.dart';
+import '../../../core/storage/storage_service.dart';
 import '../../widgets/customer_wishlist_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +43,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _selectedVariantId = widget.initialVariantId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().fetchProductDetail(widget.productId);
+      ApiClient().post<dynamic>(
+        '/api/v1/products/tracking/interaction',
+        data: {
+          'productId': widget.productId,
+          'actionType': 'VIEW',
+          'sessionId': StorageService.getGuestSessionId(),
+        },
+      ).catchError((_) {});
     });
   }
 

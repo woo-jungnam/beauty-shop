@@ -3,7 +3,7 @@ import { apiClient } from '../../../shared/api/client';
 import { Modal } from '../../../shared/ui/Modal';
 import { getGuestSessionId, useCustomerCart } from '../../stores/customerCartStore';
 import { Pagination, listRows, unwrap } from './AccountTools';
-import { resolveMediaUrl } from '../../../shared/utils/formatters';
+import { resolveMediaUrl, getOrderTypeBadge, getOrderType } from '../../../shared/utils/formatters';
 import { ServiceBookingOrders } from '../../../features/spa/ServiceBookingOrders';
 
 export const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value || 0));
@@ -25,14 +25,21 @@ export function OrderWorkspace({ onNavigate, initialOrderId }) {
       {error && <p role="alert">{error}</p>}
       <button onClick={load} disabled={loading}>Cập nhật đơn hàng</button>
       {listRows(data).map(order => {
-        const isSpa = order.servicePackageId != null || order.appointmentId != null || (order.spaVisitItems && order.spaVisitItems.length > 0);
+        const typeBadge = getOrderTypeBadge(order);
         return (
         <article className="account-card" key={order.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 8, flexWrap: 'wrap', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <strong>{order.orderNumber}</strong>
-              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: isSpa ? '#FCE7F3' : '#F3F4F6', color: isSpa ? '#9D174D' : '#374151', fontWeight: 600 }}>
-                {isSpa ? 'Dịch vụ Spa' : 'Đơn sản phẩm'}
+              <span style={{
+                fontSize: 11,
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: typeBadge.variant === 'info' ? '#E0F2FE' : typeBadge.variant === 'warning' ? '#FEF3C7' : '#F3F4F6',
+                color: typeBadge.variant === 'info' ? '#0369A1' : typeBadge.variant === 'warning' ? '#B45309' : '#374151',
+                fontWeight: 600
+              }}>
+                {typeBadge.text}
               </span>
             </div>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-primary)' }}>

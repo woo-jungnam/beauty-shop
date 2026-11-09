@@ -424,7 +424,9 @@ public class AppointmentServiceImpl implements AppointmentService {
             default -> false;
         };
         if (!valid) throw new BusinessException("Chuyển trạng thái lịch hẹn không hợp lệ");
-        if (assignments && next != AppointmentStatus.CONFIRMED) throw new BusinessException("Vui lòng phân công chuyên viên trước khi bắt đầu dịch vụ");
+        boolean isReassignDuringInProgress = previous == AppointmentStatus.IN_PROGRESS && next == AppointmentStatus.IN_PROGRESS && assignments;
+        if (assignments && next != AppointmentStatus.CONFIRMED && !isReassignDuringInProgress) 
+            throw new BusinessException("Vui lòng phân công chuyên viên trước khi bắt đầu dịch vụ");
         if (next == AppointmentStatus.CANCELLED) {
             if (appointment.getCheckedInAt() != null && (request.getNotes() == null || request.getNotes().trim().length() < 10)) {
                 throw new BusinessException("Hủy lịch hẹn đã check-in bắt buộc phải nhập lý do cụ thể (tối thiểu 10 ký tự) để đối soát.");
@@ -435,10 +437,17 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         if (next == AppointmentStatus.CONFIRMED || next == AppointmentStatus.IN_PROGRESS) {
             finance.requireDeposit(appointment);
-            if (previous != AppointmentStatus.IN_PROGRESS) validateAndAssignStaff(appointment, request.getStaffAssignments());
+            if (isReassignDuringInProgress) {
+                reassignStaffForInProgressAppointment(appointment, request.getStaffAssignments(), request.getNotes());
+            } else if (previous != AppointmentStatus.IN_PROGRESS) {
+                validateAndAssignStaff(appointment, request.getStaffAssignments());
+            }
             facilities.assign(appointment.getItems(), appointment.getAppointmentDate(), appointment.getId());
             if (isAppointmentPast(appointment) && next == AppointmentStatus.IN_PROGRESS) {
-                throw new BusinessException("Lịch hẹn đã quá giờ kết thúc, không thể bắt đầu dịch vụ. Vui lòng chuyển sang Hoàn thành hoặc Vắng mặt.");
+                if (appointment.getCheckedInAt() == null) {
+                    throw new BusinessException("Lịch hẹn đã quá giờ kết thúc và khách chưa check-in. Vui lòng chuyển sang Vắng mặt hoặc Hủy.");
+                }
+                requireActionReason(request.getNotes());
             }
             if (isAppointmentPast(appointment) && next == AppointmentStatus.CONFIRMED) {
                 requireActionReason(request.getNotes());
@@ -495,8 +504,35 @@ public class AppointmentServiceImpl implements AppointmentService {
             }
         }
         appointmentRepository.save(appointment);
-        appendHistory(appointment, null, assignments ? "ASSIGN_STAFF" : "CHANGE_STATUS", previous.name(), next.name(), request.getNotes());
+        appendHistory(appointment, null, isReassignDuringInProgress ? "REASSIGN_STAFF" : (assignments ? "ASSIGN_STAFF" : "CHANGE_STATUS"), previous.name(), next.name(), request.getNotes());
         return response(appointment);
+    }
+
+    private void reassignStaffForInProgressAppointment(Appointment appointment, Map<Long, Long> requested, String notes) {
+        if (!canManageAppointments()) throw new AccessDeniedException("Cần quyền tiếp đón/quản trị Spa để điều chuyển chuyên viên");
+        requireActionReason(notes);
+        if (requested == null || requested.isEmpty()) return;
+        for (Map.Entry<Long, Long> entry : requested.entrySet()) {
+            Long itemId = entry.getKey();
+            Long newStaffId = entry.getValue();
+            AppointmentItem item = appointment.getItems().stream()
+                    .filter(i -> itemId.equals(i.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException("Dịch vụ không tồn tại trong lịch hẹn"));
+            if (item.getExecutionStatus() != AppointmentItemExecutionStatus.PLANNED) {
+                throw new BusinessException("Chỉ có thể điều chuyển chuyên viên cho dịch vụ chưa bắt đầu (PLANNED)");
+            }
+            Staff newStaff = staffRepository.findByIdWithLock(newStaffId)
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy chuyên viên"));
+            validateService(item.getService());
+            validateStaff(newStaff, item.getService(), appointment.getAppointmentDate());
+            requireWorkingShift(newStaff, appointment.getAppointmentDate(), item.getStartTime(), item.getEndTime());
+            if (appointmentRepository.existsOverlappingAppointmentForStaffExcludingAppointment(
+                    newStaff.getId(), appointment.getAppointmentDate(), item.getStartTime(), item.getEndTime(), appointment.getId())) {
+                throw new BusinessException("Chuyên viên đã có lịch phục vụ khác trong khung giờ này");
+            }
+            item.setStaff(newStaff);
+        }
     }
 
     private void validateAndAssignStaff(Appointment appointment, Map<Long, Long> requested) {
@@ -529,6 +565,133 @@ public class AppointmentServiceImpl implements AppointmentService {
             appointmentRepository.save(a); appendHistory(a, null, "CHECK_IN", null, "CHECKED_IN", null);
         }
         return response(a);
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public AppointmentResponse addInSessionItem(Long appointmentId, AppointmentItemRequest request) {
+        calendar.lock();
+        if (!canManageAppointments()) throw new AccessDeniedException("Cần quyền tiếp đón/quản trị Spa để thêm dịch vụ phát sinh");
+        if (request == null || request.getServiceId() == null) throw new BusinessException("Thông tin dịch vụ phát sinh là bắt buộc");
+        Appointment appointment = locked(appointmentId);
+        treatments.lockAppointmentCourse(appointment);
+
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED && appointment.getStatus() != AppointmentStatus.IN_PROGRESS) {
+            throw new BusinessException("Chỉ có thể thêm dịch vụ phát sinh khi buổi hẹn đang mở (CONFIRMED hoặc IN_PROGRESS)");
+        }
+
+        BeautyService service = beautyServiceRepository.findAvailableByIdForUpdate(request.getServiceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ"));
+        validateService(service);
+
+        LocalTime currentStartTime = appointment.getItems().stream()
+                .map(AppointmentItem::getEndTime)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(appointment.getStartTime());
+
+        LocalTime itemEndTime = serviceEnd(currentStartTime, service);
+        if (itemEndTime.isAfter(calendar.forDate(appointment.getAppointmentDate()).closesAt())) {
+            throw new BusinessException("Dịch vụ phát sinh vượt quá khung giờ mở cửa của cơ sở");
+        }
+
+        Staff staff = null;
+        if (request.getStaffId() != null) {
+            staff = staffRepository.findByIdWithLock(request.getStaffId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chuyên viên"));
+            validateStaff(staff, service, appointment.getAppointmentDate());
+            requireWorkingShift(staff, appointment.getAppointmentDate(), currentStartTime, itemEndTime);
+            if (appointmentRepository.existsOverlappingAppointmentForStaffExcludingAppointment(
+                    staff.getId(), appointment.getAppointmentDate(), currentStartTime, itemEndTime, appointment.getId())) {
+                throw new BusinessException("Chuyên viên đã có lịch phục vụ khác trong khung giờ " + currentStartTime + " - " + itemEndTime);
+            }
+        }
+
+        UserServiceTicket ticket = null;
+        BigDecimal itemPrice = service.getBasePrice();
+        if (request.getTicketId() != null) {
+            ticket = ticketRepository.findByIdForUpdate(request.getTicketId())
+                    .filter(t -> !Boolean.TRUE.equals(t.getIsDeleted()))
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin vé liệu trình với ID: " + request.getTicketId()));
+            if (!ticket.getUserId().equals(appointment.getUserId())) {
+                throw new BusinessException("Vé liệu trình này không thuộc sở hữu của khách hàng!");
+            }
+            if (ticket.getStatus() != TicketStatus.ACTIVE) {
+                throw new BusinessException("Vé liệu trình không ở trạng thái hoạt động");
+            }
+            if (ticket.getExpiryDate() != null && ticket.getExpiryDate().isBefore(Instant.now())) {
+                throw new BusinessException("Vé liệu trình đã hết hạn sử dụng");
+            }
+            requireTicketExpiry(ticket, appointment.getAppointmentDate(), currentStartTime);
+            itemPrice = BigDecimal.ZERO;
+        }
+
+        AppointmentItem item = AppointmentItem.builder()
+                .appointment(appointment)
+                .service(service)
+                .serviceNameSnapshot(service.getName())
+                .staff(staff)
+                .ticket(ticket)
+                .price(itemPrice)
+                .startTime(currentStartTime)
+                .endTime(itemEndTime)
+                .executionStatus(AppointmentItemExecutionStatus.PLANNED)
+                .build();
+
+        if (request.getFacilityId() != null) {
+            item.setFacility(facilities.findFacility(request.getFacilityId()));
+        }
+        usage.requireCanReserve(item);
+
+        appointment.getItems().add(item);
+        if (appointment.getEndTime() == null || itemEndTime.isAfter(appointment.getEndTime())) {
+            appointment.setEndTime(itemEndTime);
+        }
+
+        facilities.assign(appointment.getItems(), appointment.getAppointmentDate(), appointment.getId());
+        Appointment saved = appointmentRepository.saveAndFlush(appointment);
+        preparation.snapshotRequirements(saved);
+        materials.snapshotItem(item);
+
+        if (ticket != null) {
+            usage.reserve(item);
+            usage.recordReservation(item);
+        }
+
+        appendHistory(saved, item, "ADD_IN_SESSION_ITEM", saved.getStatus().name(), saved.getStatus().name(), "Thêm dịch vụ phát sinh: " + service.getName());
+        var staffNames = resolveStaffNames(List.of(saved));
+        UserSummaryDto user = identityFacade.getUserSummaryById(saved.getUserId());
+        return AppointmentResponse.of(saved, user != null ? user.getFullName() : null, user != null ? user.getPhone() : null, staffNames);
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void rateAppointment(Long appointmentId, int stars, String comment) {
+        if (stars < 1 || stars > 5) throw new BusinessException("Điểm đánh giá phải từ 1 đến 5 sao");
+        Appointment appointment = locked(appointmentId);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (!appointment.getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("Chỉ khách hàng của lịch hẹn mới có thể gửi đánh giá");
+        }
+        if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
+            throw new BusinessException("Chỉ có thể đánh giá cho buổi hẹn đã hoàn thành (COMPLETED)");
+        }
+        Set<Staff> ratedStaff = appointment.getItems().stream()
+                .map(AppointmentItem::getStaff)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        for (Staff staff : ratedStaff) {
+            Staff lockedStaff = staffRepository.findByIdWithLock(staff.getId()).orElse(null);
+            if (lockedStaff != null) {
+                int count = lockedStaff.getTotalReviews() == null ? 0 : lockedStaff.getTotalReviews();
+                double currentRating = lockedStaff.getRating() == null ? 0.0 : lockedStaff.getRating();
+                double newRating = ((currentRating * count) + stars) / (count + 1.0);
+                lockedStaff.setTotalReviews(count + 1);
+                lockedStaff.setRating(Math.round(newRating * 10.0) / 10.0);
+                staffRepository.save(lockedStaff);
+            }
+        }
+        appendHistory(appointment, null, "RATE_EXPERIENCE", "COMPLETED", "COMPLETED", "Đánh giá " + stars + " sao" + (comment != null && !comment.isBlank() ? ": " + comment.trim() : ""));
     }
 
     @Override @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -786,17 +949,36 @@ public class AppointmentServiceImpl implements AppointmentService {
         row.setActorUserId(SecurityUtils.getCurrentUserIdOptional().orElse(null)); row.setAction(action);
         row.setFromState(from != null && from.length() <= 40 ? from : null); row.setToState(to);
         row.setDetails(details); history.save(row);
-        if(customerInbox!=null && row.getId()!=null && Set.of("BOOK","ASSIGN_STAFF","CHANGE_STATUS","CANCEL","EXPIRE_PENDING","RESCHEDULE","CHECK_IN").contains(action)) {
+        if(customerInbox!=null && row.getId()!=null && Set.of("BOOK","ASSIGN_STAFF","REASSIGN_STAFF","CHANGE_STATUS","CANCEL","EXPIRE_PENDING","RESCHEDULE","CHECK_IN","ADD_IN_SESSION_ITEM").contains(action)) {
             String title=switch(action) {
                 case "BOOK" -> "Đã tiếp nhận yêu cầu đặt lịch Spa";
                 case "RESCHEDULE" -> "Lịch hẹn Spa đã đổi giờ";
                 case "CANCEL","EXPIRE_PENDING" -> "Lịch hẹn Spa đã hủy";
                 case "CHECK_IN" -> "Đã ghi nhận khách đến Spa";
+                case "REASSIGN_STAFF" -> "Đã điều chuyển chuyên viên phục vụ";
+                case "ADD_IN_SESSION_ITEM" -> "Đã thêm dịch vụ phát sinh tại chỗ";
                 default -> "Lịch hẹn Spa đã cập nhật";
             };
             customerInbox.publish(a.getUserId(),"appointment:"+a.getId()+":history:"+row.getId(),"SPA",title,
                     "Lịch #"+a.getId()+" · "+a.getAppointmentDate()+" "+a.getStartTime()+" (giờ Việt Nam). Trạng thái: "+a.getStatus().name()+".",
                     "profile?tab=appointments&appointment="+a.getId());
+
+            // Đồng thời gửi thông báo tới chuyên viên/KTV được phân công trong lịch hẹn
+            if (a.getItems() != null) {
+                java.util.Set<Long> notifiedStaffUserIds = new java.util.HashSet<>();
+                for (AppointmentItem ai : a.getItems()) {
+                    if (ai.getStaff() != null && ai.getStaff().getUserId() != null
+                            && !ai.getStaff().getUserId().equals(a.getUserId())
+                            && notifiedStaffUserIds.add(ai.getStaff().getUserId())) {
+                        customerInbox.publish(ai.getStaff().getUserId(),
+                                "appointment:" + a.getId() + ":staff:" + ai.getStaff().getUserId() + ":history:" + row.getId(),
+                                "SPA_STAFF",
+                                "Lịch phục vụ Spa: " + title,
+                                "Lịch hẹn #" + a.getId() + " (" + ai.getServiceNameSnapshot() + ") · " + a.getAppointmentDate() + " " + a.getStartTime() + ". Trạng thái: " + a.getStatus().name() + ".",
+                                "staff/appointments/" + a.getId());
+                    }
+                }
+            }
         }
     }
 

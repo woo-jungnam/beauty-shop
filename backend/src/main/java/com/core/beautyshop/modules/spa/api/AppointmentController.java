@@ -128,6 +128,16 @@ public class AppointmentController {
         return ApiResponse.success(appointmentService.checkIn(id));
     }
 
+    @Operation(summary = "Thêm dịch vụ phát sinh tại chỗ (In-session Upsell)", description = "ADMIN hoặc STAFF có thẩm quyền. Buổi hẹn phải ở trạng thái CONFIRMED hoặc IN_PROGRESS. Tự động tính giá, gán chuyên viên (nếu có), nối tiếp thời lượng và chụp snapshot vật tư.")
+    @PostMapping("/{id}/items")
+    @AuditAction(action = "ADD_IN_SESSION_ITEM", resourceType = "APPOINTMENT")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ApiResponse<AppointmentResponse> addInSessionItem(
+            @PathVariable Long id,
+            @Valid @RequestBody com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest request) {
+        return ApiResponse.success(appointmentService.addInSessionItem(id, request));
+    }
+
     @Operation(summary = "Ghi kết quả thực hiện một dịch vụ", description = "ADMIN hoặc STAFF được phân công. Buổi phải IN_PROGRESS. PLANNED→IN_PROGRESS→PERFORMED hoặc PLANNED→SKIPPED; mục thuộc lộ trình có thể IN_PROGRESS→SKIPPED khi dừng do sự cố, bắt buộc lý do và lưu thời điểm dừng. START kiểm thứ tự item, staff/tài nguyên, form/ack, hạn vé và lộ trình. PERFORMED tiêu thụ lượt đã giữ; SKIPPED hoàn giữ và không tính hoàn thành điều trị.")
     @PutMapping("/{id}/items/{itemId}/execution")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
@@ -142,4 +152,20 @@ public class AppointmentController {
             @PathVariable Long id, @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
         return ApiResponse.success(PageResponse.of(appointmentService.actionHistory(id, pageable)));
     }
+
+    @Operation(summary = "Đánh giá chất lượng sau buổi Spa", description = "Chủ lịch sau khi buổi hẹn COMPLETED. Chấm điểm 1-5 sao và cập nhật uy tín chuyên viên.")
+    @PostMapping("/{id}/review")
+    @AuditAction(action = "RATE_APPOINTMENT", resourceType = "APPOINTMENT")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<Void> rateAppointment(
+            @PathVariable Long id,
+            @Valid @RequestBody RateAppointmentRequest request) {
+        appointmentService.rateAppointment(id, request.stars(), request.comment());
+        return ApiResponse.success(null);
+    }
+
+    @Schema(name = "RateAppointmentRequest", description = "Đánh giá buổi hẹn Spa")
+    public record RateAppointmentRequest(
+            @Parameter(description = "Số sao từ 1 đến 5", example = "5") int stars,
+            @Parameter(description = "Nhận xét đóng góp ý kiến", example = "Chuyên viên phục vụ rất tận tâm, da cải thiện rõ rệt.") String comment) {}
 }

@@ -12,21 +12,28 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController @RequiredArgsConstructor @RequestMapping("/api/v1/users/wishlist")
 @PreAuthorize("isAuthenticated()")
+@Tag(name = "Danh sách yêu thích (Wishlist)", description = "Quản lý sản phẩm yêu thích của người dùng: thêm, xóa và xem danh sách")
 public class CustomerWishlistController {
     private final EntityManager em;
     private final ProductService products;
+
+    @Operation(summary = "Xem danh sách sản phẩm yêu thích", description = "Lấy danh sách các sản phẩm mà người dùng đã lưu vào mục yêu thích")
     @GetMapping @Transactional(readOnly=true) public ApiResponse<List<ProductResponse>> list(){
         var ids=em.createQuery("select w.productId from CustomerWishlistEntry w where w.userId=:uid order by w.id desc",Long.class).setParameter("uid",SecurityUtils.getCurrentUserId()).getResultList();
         List<ProductResponse> result=new ArrayList<>();
         for(Long id:ids){try{result.add(products.getProductById(id));}catch(ResourceNotFoundException | BusinessException ignored){}}
         return ApiResponse.success(result);
     }
+
+    @Operation(summary = "Thêm sản phẩm vào danh sách yêu thích", description = "Lưu sản phẩm vào danh sách quan tâm của người dùng (tối đa 200 sản phẩm)")
     @PutMapping("/{productId}") @Transactional public ApiResponse<Void> add(@PathVariable Long productId){
         Long uid=SecurityUtils.getCurrentUserId();
         em.createNativeQuery("select id from users where id=:uid for update").setParameter("uid",uid).getSingleResult();
@@ -39,6 +46,8 @@ public class CustomerWishlistController {
         }
         return ApiResponse.success(null);
     }
+
+    @Operation(summary = "Xóa sản phẩm khỏi danh sách yêu thích", description = "Bỏ sản phẩm khỏi danh sách yêu thích của người dùng")
     @DeleteMapping("/{productId}") @Transactional public ApiResponse<Void> remove(@PathVariable Long productId){
         em.createQuery("delete from CustomerWishlistEntry w where w.userId=:uid and w.productId=:pid").setParameter("uid",SecurityUtils.getCurrentUserId()).setParameter("pid",productId).executeUpdate();return ApiResponse.success(null);
     }

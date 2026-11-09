@@ -181,6 +181,23 @@ public class SpaPreparationService {
     }
 
     @Transactional
+    public FormResponse withdraw(Long appointmentId, Long requirementId, String reason) {
+        Appointment appointment = appointment(appointmentId, true);
+        if (!Objects.equals(appointment.getUserId(), SecurityUtils.getCurrentUserId()) && !access.canManageReception()) {
+            throw new org.springframework.security.access.AccessDeniedException("Chỉ khách hàng hoặc nhân viên tiếp đón mới có quyền rút biểu mẫu cam kết");
+        }
+        requirePreparationOpen(appointment);
+        Requirement requirement = requirementForAppointment(appointment, requirementId);
+        requireItemPreparationOpen(item(appointment, requirement.appointmentItemId()));
+        if (reason == null || reason.isBlank()) throw new BusinessException("Lý do rút hoặc từ chối cam kết là bắt buộc");
+        Instant now = Instant.now();
+        Long actor = SecurityUtils.getCurrentUserId();
+        update("INSERT INTO spa_form_responses(requirement_id,customer_id,actor_id,acknowledged,answers_json,submitted_at) VALUES (?,?,?,?,?,?)",
+                requirementId, appointment.getUserId(), actor, false, encode(Map.of("status", "WITHDRAWN", "reason", reason.trim())), Timestamp.from(now));
+        return latestResponse(requirementId);
+    }
+
+    @Transactional
     public WarningAcknowledgment acknowledgeWarnings(Long appointmentId, Long itemId, WarningCommand command) {
         Appointment appointment = appointment(appointmentId, true);
         requirePreparationOpen(appointment);

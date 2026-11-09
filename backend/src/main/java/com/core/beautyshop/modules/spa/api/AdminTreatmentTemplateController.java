@@ -10,7 +10,7 @@ import static com.core.beautyshop.modules.spa.application.service.TreatmentContr
 
 @RestController @RequiredArgsConstructor @RequestMapping("/api/v1/admin/spa/treatment-templates")
 @PreAuthorize("hasRole('ADMIN')")
-@io.swagger.v3.oas.annotations.tags.Tag(name = "Treatment template administration")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Mẫu lộ trình điều trị Spa (Admin)", description = "Quản lý mẫu lộ trình điều trị, các phiên bản dự thảo và xuất bản áp dụng")
 public class AdminTreatmentTemplateController {
     private final TreatmentCourseService treatments;
     @Operation(summary = "Quản trị xem mẫu lộ trình và các bản nháp")

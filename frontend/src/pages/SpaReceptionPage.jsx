@@ -285,8 +285,42 @@ export const SpaReceptionPage = () => {
     } catch (err) { setTicketError(spaErrorMessage(err, 'Chưa tra cứu được vé liệu trình. Vui lòng thử lại.')); }
     finally { setTicketLoading(false); }
   };
+  const extendGracePeriod = appointment => {
+    if (appointment.checkedInAt) {
+      setNotice({ tone: 'warning', message: 'Khách hàng đã check-in tại quầy, không thể gia hạn giữ chỗ.' });
+      return;
+    }
+    const notes = appointment.notes || '';
+    if (notes.includes('Gia hạn giữ chỗ 15p') || notes.includes('Gia hạn 15p')) {
+      setNotice({ tone: 'warning', message: 'Lịch hẹn này đã được gia hạn giữ chỗ 15 phút. Nếu khách đến trễ hơn, vui lòng sắp xếp ca tiếp theo hoặc dời lịch.' });
+      return;
+    }
+    if (!appointment.startTime) {
+      setNotice({ tone: 'error', message: 'Lịch hẹn không có thời gian bắt đầu hợp lệ.' });
+      return;
+    }
+    const [h, m] = appointment.startTime.slice(0, 5).split(':').map(Number);
+    const newTotalMinutes = h * 60 + m + 15;
+    const newH = Math.floor(newTotalMinutes / 60);
+    const newM = newTotalMinutes % 60;
+    if (newH >= 21) {
+      setNotice({ tone: 'error', message: 'Không thể gia hạn vì vượt quá giờ đóng cửa của Spa (21:00).' });
+      return;
+    }
+    const newStartTime = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}:00`;
+    const newNotes = notes ? `${notes} | Gia hạn giữ chỗ 15p do khách báo trễ / kẹt xe` : 'Gia hạn giữ chỗ 15p do khách báo trễ / kẹt xe';
+
+    run(`grace-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.RESCHEDULE_APPOINTMENT(appointment.id), {
+      appointmentDate: appointment.appointmentDate,
+      startTime: newStartTime,
+      notes: newNotes,
+    }), 'Đã gia hạn giữ chỗ thêm 15 phút cho khách hàng.');
+  };
   const actions = appointment => <div className="reception-card-actions">
-    {['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now)} loading={busy === `check-${appointment.id}`} onClick={() => checkIn(appointment)}><Check size={15} /> Check-in ngay</Button>}
+    {['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <>
+      <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now)} loading={busy === `check-${appointment.id}`} onClick={() => checkIn(appointment)}><Check size={15} /> Check-in ngay</Button>
+      <Button size="sm" variant="outline" disabled={Boolean(busy)} loading={busy === `grace-${appointment.id}`} onClick={() => extendGracePeriod(appointment)} title="Khách báo trễ kẹt xe: Gia hạn giữ chỗ thêm 15 phút">+15p giữ chỗ</Button>
+    </>}
     {appointment.status === 'PENDING' && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Chỉ định KTV</Button>}
     {appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Đổi KTV</Button>}
     {appointment.status === 'CONFIRMED' && appointment.checkedInAt && <>
@@ -298,6 +332,7 @@ export const SpaReceptionPage = () => {
     {appointment.status === 'COMPLETED' && <Button size="sm" onClick={() => setCheckout(appointment)}>Mở thu ngân <ArrowRight size={15} /></Button>}
     <details className="reception-more"><summary aria-label={`Thao tác khác cho ${appointmentCode(appointment)}`}><MoreHorizontal size={18} /></summary><div>
       <button type="button" onClick={() => setWorkspaceId(appointment.id)}>Chuẩn bị / thực hiện ca</button>
+      {['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <button type="button" onClick={() => extendGracePeriod(appointment)}>+15p giữ chỗ (Khách kẹt xe)</button>}
       {['PENDING', 'CONFIRMED'].includes(appointment.status) && <button type="button" onClick={() => openEdit(appointment, 'reschedule')}>Đổi lịch hẹn</button>}
       {appointment.status === 'CONFIRMED' && <button type="button" onClick={() => setAssign({ appointment, checkIn: false })}>Đổi chuyên viên</button>}
       {appointment.status === 'CONFIRMED' && <button type="button" onClick={() => openEdit(appointment, 'no-show')}>Ghi nhận vắng mặt</button>}

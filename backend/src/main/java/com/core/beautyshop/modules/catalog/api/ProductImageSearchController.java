@@ -4,6 +4,7 @@ import com.core.beautyshop.modules.catalog.application.service.ProductImageSearc
 import com.core.beautyshop.modules.catalog.infrastructure.ImageSearchException;
 import com.core.beautyshop.shared.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@Tag(name = "Tìm kiếm sản phẩm bằng hình ảnh", description = "Tìm kiếm trực quan bằng AI/CLIP: tra cứu sản phẩm tương tự từ ảnh tải lên")
 public class ProductImageSearchController {
     private final ProductImageSearchService service;
 

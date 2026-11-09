@@ -38,6 +38,16 @@ public class SpaRefundService {
         return quote(lockedTicket(id), balance);
     }
 
+    @PreAuthorize("isAuthenticated()")
+    public PackageQuote userPackageQuote(Long id) {
+        var observed = ticket(id);
+        if (!Objects.equals(observed.getUserId(), SecurityUtils.getCurrentUserId()) && !SecurityUtils.isAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền xem báo giá hoàn tiền của vé này");
+        }
+        var balance = orders.lockSpaRefundBalance(observed.getOrderId());
+        return quote(lockedTicket(id), balance);
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     public SpaServiceRefund settlePackage(Long id, Confirmation c) {
         validate(c, true);

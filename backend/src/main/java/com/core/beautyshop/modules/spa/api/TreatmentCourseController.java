@@ -18,7 +18,7 @@ import java.util.Objects;
 import static com.core.beautyshop.modules.spa.application.service.TreatmentContracts.*;
 
 @RestController @RequiredArgsConstructor @RequestMapping("/api/v1/spa")
-@io.swagger.v3.oas.annotations.tags.Tag(name = "Treatment courses", description = "Published plans, purchases, patient-owned progress and customer confirmations")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Lộ trình điều trị Spa", description = "Lộ trình đã xuất bản, mua gói, tiến độ điều trị và xác nhận của khách hàng")
 public class TreatmentCourseController {
     private final TreatmentCourseService treatments;
     private final AppointmentService appointments;
