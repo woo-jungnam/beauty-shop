@@ -29,6 +29,9 @@ public class CartItemResponse {
     @Schema(description = "Tên hiển thị biến thể", example = "Chai 50ml")
     private String variantName;
 
+    @Schema(description = "Tên sản phẩm", example = "Kem chống nắng La Roche-Posay Anthelios XL")
+    private String productName;
+
     @Schema(description = "Số lượng trong giỏ", example = "2")
     private Integer quantity;
 
@@ -65,6 +68,7 @@ public class CartItemResponse {
                 .id(entity.getId())
                 .variantId(entity.getProductVariantId())
                 .sku(sku)
+                .productName(variant != null ? variant.getProductName() : null)
                 .variantName(variantName)
                 .quantity(entity.getQuantity())
                 .price(price)

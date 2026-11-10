@@ -187,6 +187,7 @@ export const ADMIN_SECTIONS = [
           { id: "config", label: "Chỉ tiêu & Cấu hình" },
           { id: "chatbot", label: "Trợ lý tư vấn AI" },
           { id: "recommendations", label: "Gợi ý sản phẩm tương tự" },
+          { id: "image-search", label: "Chỉ mục tìm kiếm bằng ảnh" },
         ],
       },
     ],

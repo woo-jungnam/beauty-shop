@@ -33,67 +33,73 @@ def test_chat_action_schema():
 def test_order_repository_formatting():
     repo = OrderRepository()
     mock_order = {
-        "order_number": "ORD-20261102-001",
+        "order_number": "ORD-A1B2C3D4E5F678901234567890ABCDEF",
         "status": "PROCESSING",
-        "status_vi": "Đang đóng gói chuẩn bị hàng",
         "payment_status": "PAID",
-        "payment_status_vi": "Đã thanh toán thành công",
-        "customer_name": "Nguyễn Văn A",
         "customer_phone": "0912345678",
-        "shipping_address": "123 Lê Lợi, P. Bến Nghé",
-        "city": "TP. Hồ Chí Minh",
-        "total_amount": 750000.0,
-        "items": [
-            {
-                "product_name": "Serum Centella Skin1004",
-                "variant_name": "55ml",
-                "quantity": 2,
-                "price": 350000.0,
-            }
-        ],
     }
     summary = repo.formatOrderSummary(mock_order)
-    assert "#ORD-20261102-001" in summary
+    assert "#ORD-A1B2C3D4E5F678901234567890ABCDEF" in summary
     assert "Đang đóng gói chuẩn bị hàng" in summary
-    assert "Nguyễn Văn A (0912345678)" in summary
-    assert "750,000đ" in summary
+    assert "Đã thanh toán thành công" in summary
+    assert "******5678" in summary
+    # Đảm bảo không chứa PII địa chỉ, tên khách, tổng tiền hay danh sách items
+    assert "Nguyễn Văn" not in summary
+    assert "Lê Lợi" not in summary
+    assert "750,000" not in summary
 
 
 def test_query_router_order_lookup_parsing(monkeypatch):
     router = QueryRouter()
 
-    # Case 1: Không có mã đơn hoặc SĐT
+    # Case 1: Không có mã đơn hoặc SĐT -> yêu cầu cung cấp cả hai
     reply, order = router.handleOrderLookup("tôi muốn hỏi về thời gian làm việc")
-    assert "vui lòng cung cấp Mã đơn hàng" in reply
+    assert "cung cấp đồng thời Mã đơn hàng" in reply
     assert order is None
 
-    # Case 2: Mock order repository findOrder trả về order
-    def mock_find_order(identifier: str):
-        if identifier in ("ORD-99999", "0987654321"):
+    # Case 2: Chỉ có mã đơn mà không có SĐT -> từ chối tra cứu đơn lẻ
+    reply_only_code, order_only_code = router.handleOrderLookup("kiểm tra giúp đơn hàng ORD-A1B2C3D4E5F678901234567890ABCDEF")
+    assert order_only_code is None
+    assert "cung cấp đồng thời Mã đơn hàng" in reply_only_code
+
+    # Case 3: Chỉ có SĐT mà không có mã đơn -> từ chối tra cứu đơn lẻ (chống PII scraping)
+    reply_only_phone, order_only_phone = router.handleOrderLookup("tra cứu đơn số điện thoại 0987654321")
+    assert order_only_phone is None
+    assert "cung cấp đồng thời Mã đơn hàng" in reply_only_phone
+
+    # Case 4: Có đủ cả mã đơn và SĐT hợp lệ
+    def mock_find_order(order_number: str, customer_phone: str):
+        if order_number == "ORD-A1B2C3D4E5F678901234567890ABCDEF" and customer_phone == "0987654321":
             return {
-                "order_number": "ORD-99999",
-                "status_vi": "Đang giao hàng",
-                "payment_status_vi": "Chưa thanh toán (COD)",
-                "customer_name": "Trần Thị B",
-                "customer_phone": "0987654321",
-                "shipping_address": "456 Nguyễn Huệ",
-                "city": "Hà Nội",
-                "total_amount": 320000.0,
-                "items": [],
+                "id": 1,
+                "order_number": "ORD-A1B2C3D4E5F678901234567890ABCDEF",
+                "status": "SHIPPING",
+                "payment_status": "PENDING",
+                "customer_phone": "******4321",
             }
         return None
 
     from app.repositories.order_repository import orderRepository
     monkeypatch.setattr(orderRepository, "findOrder", mock_find_order)
 
-    reply_found, order_found = router.handleOrderLookup("kiểm tra giúp đơn hàng ORD-99999")
+    # Đầy đủ cặp mã đơn và số điện thoại
+    query_text = "kiểm tra đơn ORD-A1B2C3D4E5F678901234567890ABCDEF sđt 0987654321"
+    reply_found, order_found = router.handleOrderLookup(query_text)
     assert order_found is not None
-    assert "#ORD-99999" in reply_found
+    assert "#ORD-A1B2C3D4E5F678901234567890ABCDEF" in reply_found
     assert "Đang giao hàng" in reply_found
 
-    reply_phone, order_phone = router.handleOrderLookup("tra cứu đơn số điện thoại 0987654321")
-    assert order_phone is not None
-    assert "0987654321" in reply_phone
+    # Hỗ trợ đầu số +84
+    query_plus84 = "đơn ORD-A1B2C3D4E5F678901234567890ABCDEF sđt +84987654321"
+    reply_84, order_84 = router.handleOrderLookup(query_plus84)
+    assert order_84 is not None
+    assert "Đang giao hàng" in reply_84
+
+    # Sai số điện thoại hoặc mã đơn không khớp
+    query_mismatch = "kiểm tra đơn ORD-A1B2C3D4E5F678901234567890ABCDEF sđt 0912345678"
+    reply_mismatch, order_mismatch = router.handleOrderLookup(query_mismatch)
+    assert order_mismatch is None
+    assert "Không tìm thấy đơn hàng khớp với mã đơn và số điện thoại" in reply_mismatch
 
 
 def test_fast_path_order_status():

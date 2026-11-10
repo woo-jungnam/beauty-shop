@@ -311,7 +311,10 @@ class ConversationContextManager:
         uIntent = getattr(cur.intent, "value", str(cur.intent))
         pIntent = getattr(cur.primary_intent, "value", str(cur.primary_intent or ""))
 
-        if uIntent == "OUT_OF_DOMAIN" or pIntent in (PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI"):
+        if uIntent in ("OUT_OF_DOMAIN", "ORDER_STATUS") or pIntent in (
+            PrimaryIntent.NGOAI_PHAM_VI.value, "NGOÀI_PHẠM_VI", "NGOAI_PHAM_VI",
+            PrimaryIntent.HO_TRO_DON_HANG.value, "HO_TRO_DON_HANG",
+        ):
             return cur
 
         if uIntent in ("COMPARISON", "PRODUCT_COMPARISON", "ROUTINE_RECOMMENDATION", "ROUTINE"):

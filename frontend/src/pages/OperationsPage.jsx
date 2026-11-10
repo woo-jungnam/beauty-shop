@@ -22,6 +22,7 @@ import {
   Layers,
   X,
   Cpu,
+  Camera,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -33,6 +34,7 @@ import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { formatCurrency, formatDateTime, formatNumber } from '../shared/utils/formatters';
 import { RecommendationAdminPanel } from './RecommendationAdminPanel';
+import { ImageSearchAdminPanel } from './ImageSearchAdminPanel';
 import { PaymentExceptionPanel } from './PaymentExceptionPanel';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import './operations.css';
@@ -220,6 +222,8 @@ export const OperationsPage = () => {
         checkChatbotHealth();
       } else if (tab === 'recommendations') {
         // Managed by RecommendationAdminPanel
+      } else if (tab === 'image-search') {
+        // Managed by ImageSearchAdminPanel
       } else {
         const res = await apiClient.get(ENDPOINTS.SYSTEM.CONFIGS);
         setConfigs(res.data || res || []);
@@ -457,6 +461,12 @@ export const OperationsPage = () => {
             icon: Sparkles,
             description: 'Huấn luyện ma trận TF-IDF và thuật toán gợi ý mỹ phẩm',
           },
+          {
+            id: 'image-search',
+            label: 'Chỉ mục tìm kiếm bằng ảnh',
+            icon: Camera,
+            description: 'Kho vector Qdrant độc lập và đồng bộ chỉ mục hình ảnh CLIP',
+          },
         ]}
         actions={
           <>
@@ -465,7 +475,7 @@ export const OperationsPage = () => {
                 Thêm cấu hình
               </Button>
             )}
-            {tab !== 'recommendations' && (
+            {tab !== 'recommendations' && tab !== 'image-search' && (
               <>
                 <Button
                   variant="outline"
@@ -846,6 +856,9 @@ export const OperationsPage = () => {
 
       {/* TAB 5: GỢI Ý SẢN PHẨM TƯƠNG TỰ */}
       {tab === 'recommendations' && <RecommendationAdminPanel />}
+
+      {/* TAB 6: CHỈ MỤC TÌM KIẾM BẰNG HÌNH ẢNH */}
+      {tab === 'image-search' && <ImageSearchAdminPanel />}
 
       {/* Modal Thêm cấu hình */}
       <Modal isOpen={configModalOpen} onClose={() => setConfigModalOpen(false)} title="Thêm cấu hình hệ thống mới" maxWidth="540px">

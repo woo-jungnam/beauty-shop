@@ -34,6 +34,7 @@ import java.util.concurrent.Semaphore;
 public class ChatbotServiceImpl implements ChatbotService {
 
     private final String chatbotBaseUrl;
+    private final String internalToken;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -48,9 +49,11 @@ public class ChatbotServiceImpl implements ChatbotService {
             @Value("${chatbot.service.url:http://localhost:8000}") String chatbotBaseUrl,
             ObjectMapper objectMapper,
             @Value("${chatbot.service.timeout-seconds:60}") int timeoutSeconds,
-            @Value("${chatbot.service.max-concurrent-streams:32}") int maxStreams
+            @Value("${chatbot.service.max-concurrent-streams:32}") int maxStreams,
+            @Value("${chatbot.service.internal-token:${CHATBOT_INTERNAL_TOKEN:}}") String internalToken
     ) {
         this.chatbotBaseUrl = chatbotBaseUrl.endsWith("/") ? chatbotBaseUrl.substring(0, chatbotBaseUrl.length() - 1) : chatbotBaseUrl;
+        this.internalToken = internalToken == null ? "" : internalToken;
         this.objectMapper = objectMapper;
         if (timeoutSeconds <= 0 || maxStreams <= 0) throw new IllegalArgumentException("Giới hạn cấu hình chatbot không hợp lệ");
         this.requestTimeout = Duration.ofSeconds(timeoutSeconds);
@@ -157,6 +160,7 @@ public class ChatbotServiceImpl implements ChatbotService {
                         }
                         return uriBuilder.build();
                     })
+                    .header("X-Chatbot-Token", internalToken)
                     .retrieve()
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
@@ -171,6 +175,7 @@ public class ChatbotServiceImpl implements ChatbotService {
             log.info("Gửi yêu cầu kiểm tra NLU hiểu truy vấn tới {}: {}", this.chatbotBaseUrl, request.getMessage());
             return restClient.post()
                     .uri("/test/understand")
+                    .header("X-Chatbot-Token", internalToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()

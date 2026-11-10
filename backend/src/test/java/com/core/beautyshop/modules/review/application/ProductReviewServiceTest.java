@@ -62,12 +62,16 @@ class ProductReviewServiceTest {
         when(orders.findEligibleDeliveredOrderId(3L, 7L)).thenReturn(Optional.of(99L));
         when(orders.isDeliveredProductPurchase(99L, 3L, 7L)).thenReturn(true);
         when(reviews.save(any(ProductReview.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reviews.summarizeApproved(7L)).thenReturn(new ApprovedReviewSummary(5.0d, 1L));
 
         var result = service.create(new ProductReviewService.ReviewCommand(7L, null, 5, null, "Auto linked"));
 
         assertEquals(99L, result.orderId());
         assertEquals(5, result.rating());
         assertTrue(result.isVerifiedPurchase());
+        assertEquals(ReviewStatus.APPROVED, result.status());
+        assertNotNull(result.approvedAt());
+        verify(catalog).updateProductRating(7L, 5.0d, 1);
     }
 
     @Test
@@ -76,12 +80,32 @@ class ProductReviewServiceTest {
         when(catalog.productExistsById(7L)).thenReturn(true);
         when(orders.isDeliveredProductPurchase(9L, 3L, 7L)).thenReturn(true);
         when(reviews.save(any(ProductReview.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reviews.summarizeApproved(7L)).thenReturn(new ApprovedReviewSummary(5.0d, 1L));
 
         var result = service.create(new ProductReviewService.ReviewCommand(7L, 9L, 5, null, "Rated"));
 
         assertEquals(9L, result.orderId());
         assertEquals(5, result.rating());
         assertTrue(result.isVerifiedPurchase());
+        assertEquals(ReviewStatus.APPROVED, result.status());
+        assertNotNull(result.approvedAt());
+        verify(catalog).updateProductRating(7L, 5.0d, 1);
+    }
+
+    @Test
+    void verifiedPurchaseReviewIsAutoApprovedWithoutAdminModeration() {
+        asCustomer(3L);
+        when(catalog.productExistsById(7L)).thenReturn(true);
+        when(orders.isDeliveredProductPurchase(9L, 3L, 7L)).thenReturn(true);
+        when(reviews.save(any(ProductReview.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reviews.summarizeApproved(7L)).thenReturn(new ApprovedReviewSummary(4.0d, 3L));
+
+        var result = service.create(new ProductReviewService.ReviewCommand(7L, 9L, 4, "Tốt", "Sản phẩm dùng rất ưng ý"));
+
+        assertEquals(ReviewStatus.APPROVED, result.status());
+        assertNotNull(result.approvedAt());
+        assertTrue(result.isVerifiedPurchase());
+        verify(catalog).updateProductRating(7L, 4.0d, 3);
     }
 
     @Test

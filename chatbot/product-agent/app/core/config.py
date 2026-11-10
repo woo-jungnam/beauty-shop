@@ -1,8 +1,9 @@
 import os
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DB_PATH = BASE_DIR / "cosmetics_ecommerce.db"
@@ -15,6 +16,8 @@ class Settings(BaseSettings):
     debug: bool = True
     host: str = "0.0.0.0"
     port: int = 8000
+    chatbot_internal_token: str = ""
+    chatbot_cors_allowed_origins: str = ""
 
     database_url: str = f"sqlite:///{DEFAULT_DB_PATH.as_posix()}"
 
@@ -80,6 +83,20 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
     )
+
+    @field_validator("chatbot_cors_allowed_origins")
+    @classmethod
+    def validate_cors_origins(cls, value: str) -> str:
+        origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+        for origin in origins:
+            parsed = urlsplit(origin)
+            if (parsed.scheme not in ("http", "https") or not parsed.hostname
+                    or parsed.username is not None or parsed.password is not None
+                    or parsed.path or parsed.query or parsed.fragment or "*" in origin
+                    or any(char.isspace() for char in origin)):
+                raise ValueError("CORS origins must be explicit HTTP(S) origins without paths or wildcards")
+            _ = parsed.port  # Reject invalid port numbers too.
+        return ",".join(origins)
 
     @property
     def appName(self) -> str:

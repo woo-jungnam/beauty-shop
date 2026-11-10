@@ -7,7 +7,8 @@ import {
   ShieldCheck,
   Zap,
   Award,
-  Search
+  Search,
+  Ticket
 } from 'lucide-react';
 import { ProductCard } from '../components/product/ProductCard';
 import { ProductCardSkeleton } from '../components/product/ProductCardSkeleton';
@@ -1262,14 +1263,22 @@ export const HomePage = ({ onNavigate }) => {
             ))}
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap', marginTop: '40px' }}>
             <button
               onClick={() => onNavigate('booking')}
               className="btn-luxury-gold pulse-glow"
-              style={{ padding: '14px 36px', fontSize: '14px' }}
+              style={{ padding: '14px 32px', fontSize: '14px' }}
             >
               <span>Xem Bảng Giá & Đặt Lịch Hẹn Spa</span>
               <Calendar size={16} />
+            </button>
+            <button
+              onClick={() => onNavigate('service-packages')}
+              className="btn-luxury-outline"
+              style={{ padding: '14px 28px', fontSize: '14px', background: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+            >
+              <Ticket size={16} color="var(--c-primary)" />
+              <span>Gói Dịch Vụ Nhiều Lượt Tiết Kiệm</span>
             </button>
           </div>
         </div>

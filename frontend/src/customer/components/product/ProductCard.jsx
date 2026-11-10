@@ -10,10 +10,16 @@ const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
 };
 
-const PRODUCT_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><rect width="800" height="800" fill="#F8F6F2"/><g fill="none" stroke="#C5BDB4" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><rect x="310" y="250" width="180" height="230" rx="20"/><path d="M350 250v-45h100v45M365 335h70M365 375h70"/></g><text x="400" y="560" text-anchor="middle" fill="#817970" font-family="Arial,sans-serif" font-size="28">Chưa có ảnh sản phẩm</text></svg>')}`;
+export const PRODUCT_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><rect width="800" height="800" fill="#F8F6F2"/><g fill="none" stroke="#C5BDB4" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><rect x="310" y="250" width="180" height="230" rx="20"/><path d="M350 250v-45h100v45M365 335h70M365 375h70"/></g><text x="400" y="560" text-anchor="middle" fill="#817970" font-family="Arial,sans-serif" font-size="28">Chưa có ảnh sản phẩm</text></svg>')}`;
 
 export const resolveProductImage = (product) => {
-  const raw = product?.featuredImage || product?.thumbnailUrl || product?.images?.[0]?.imageUrl;
+  if (typeof product === 'string' && product.trim().length > 0) {
+    if (product.startsWith('/') && !product.startsWith('//')) {
+      return resolveMediaUrl(product);
+    }
+    return product;
+  }
+  const raw = product?.featuredImage || product?.thumbnailUrl || product?.image || product?.imageUrl || product?.images?.[0]?.imageUrl;
   if (typeof raw === 'string' && raw.trim().length > 0) {
     if (raw.startsWith('/') && !raw.startsWith('//')) {
       return resolveMediaUrl(raw);

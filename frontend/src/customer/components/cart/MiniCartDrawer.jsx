@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Trash2, ShoppingBag, ArrowRight, Tag, Check, Sparkles } from 'lucide-react';
 import { useCustomerCart } from '../../stores/customerCartStore';
 import { useCustomerDialog } from '../ui/useCustomerDialog';
+import { resolveProductImage, PRODUCT_PLACEHOLDER } from '../product/ProductCard';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -242,21 +243,24 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <Sparkles size={20} color="var(--c-gold)" />
-                  )}
+                  <img
+                    src={resolveProductImage(item)}
+                    alt={item.name || 'Sản phẩm'}
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = PRODUCT_PLACEHOLDER;
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '11px', color: 'var(--c-gold-hover)', fontWeight: 600, textTransform: 'uppercase' }}>
-                    {item.brand}
-                  </div>
+                  {item.brand && (
+                    <div style={{ fontSize: '11px', color: 'var(--c-gold-hover)', fontWeight: 600, textTransform: 'uppercase' }}>
+                      {item.brand}
+                    </div>
+                  )}
                   <div style={{
                     fontSize: '13px',
                     fontWeight: 600,
@@ -267,9 +271,11 @@ export const MiniCartDrawer = ({ onNavigate }) => {
                   }}>
                     {item.name}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--c-text-light)', marginTop: '2px' }}>
-                    Phân loại: <strong>{item.variantName}</strong>
-                  </div>
+                  {item.variantName && item.variantName !== item.name && (
+                    <div style={{ fontSize: '12px', color: 'var(--c-text-light)', marginTop: '2px' }}>
+                      Phân loại: <strong>{item.variantName}</strong>
+                    </div>
+                  )}
 
                   <div style={{
                     display: 'flex',

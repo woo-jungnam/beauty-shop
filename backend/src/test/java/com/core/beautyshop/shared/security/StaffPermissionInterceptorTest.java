@@ -4,6 +4,8 @@ import com.core.beautyshop.modules.identity.api.StaffPermissionService;
 import com.core.beautyshop.shared.security.services.UserDetailsImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
@@ -44,6 +46,24 @@ class StaffPermissionInterceptorTest {
         verify(permissions, never()).has("CATALOG");
         actor("ROLE_ADMIN"); clearInvocations(permissions);
         assertTrue(request("POST", path)); verifyNoInteractions(permissions);
+    }
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1/admin/flash-sales", "/api/v1/admin/flash-sales/7", "/api/v1/admin/flash-sales/candidate-items"})
+    void flashSaleReadsRequireCatalogAndAllowAdmin(String path) {
+        actor("ROLE_STAFF");
+        assertThrows(AccessDeniedException.class, () -> request("GET", path));
+        when(permissions.has("CATALOG")).thenReturn(true);
+        assertTrue(request("GET", path));
+        actor("ROLE_ADMIN"); clearInvocations(permissions);
+        assertTrue(request("GET", path)); verifyNoInteractions(permissions);
+    }
+    @ParameterizedTest
+    @ValueSource(strings = {"CRM", "SPA_RECEPTION", "SPA_EXECUTION"})
+    void unrelatedGrantsCannotReadFlashSales(String grant) {
+        actor("ROLE_STAFF");
+        when(permissions.has(anyString())).thenAnswer(invocation -> grant.equals(invocation.getArgument(0)));
+        for (String path : List.of("/api/v1/admin/flash-sales", "/api/v1/admin/flash-sales/7", "/api/v1/admin/flash-sales/candidate-items"))
+            assertThrows(AccessDeniedException.class, () -> request("GET", path));
     }
     @Test void catalogGrantCannotReadOrdersOrMutateStockAndAdminRemainsAuthorized() {
         actor("ROLE_STAFF"); when(permissions.has("CATALOG")).thenReturn(true);

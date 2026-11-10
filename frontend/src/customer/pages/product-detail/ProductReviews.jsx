@@ -226,7 +226,12 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
       if (canRate) setSubmittedOrderIds((ids) => [...new Set([...ids, orderId])]);
       const nextOrder = canRate ? availableOrders.find((order) => Number(order.id) !== orderId) : null;
       setForm({ orderId: nextOrder?.id ? String(nextOrder.id) : '', rating: 5, title: '', content: '' });
-      setSuccess(canRate ? 'Đánh giá đã gửi và đang chờ duyệt.' : 'Bình luận đã gửi và đang chờ duyệt.');
+      setSuccess(
+        response?.status === 'APPROVED' || canRate
+          ? 'Đánh giá của bạn đã được duyệt và đăng công khai thành công!'
+          : 'Đánh giá đã gửi và đang chờ duyệt.'
+      );
+      loadReviewPage(0);
     } catch (requestError) {
       if (!controller.signal.aborted && submissionRequest.current === controller) setError(submissionError(requestError));
     } finally {
@@ -286,7 +291,7 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
             <div className="shopee-review-notice">
               <p>
                 {submittedOrderIds.length > 0
-                  ? 'Cảm ơn bạn! Đánh giá của bạn đã được gửi và đang chờ BeautyShop kiểm duyệt.'
+                  ? 'Cảm ơn bạn! Đánh giá của bạn đã được đăng thành công.'
                   : 'Chỉ những khách hàng đã mua sản phẩm này và đơn hàng đã giao thành công mới có thể gửi đánh giá.'}
               </p>
               {eligibility.phase === 'loading' && <small>Đang kiểm tra lịch sử mua hàng của bạn…</small>}
@@ -310,7 +315,7 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
                     ))}
                   </fieldset>
                 </div>
-                <p className="pd-review-note">Đánh giá của bạn sẽ được hiển thị công khai sau khi BeautyShop kiểm duyệt chất lượng.</p>
+                <p className="pd-review-note">Đánh giá từ đơn hàng đã mua của bạn sẽ được hiển thị công khai ngay sau khi gửi.</p>
                 <label className="pd-review-field" htmlFor={`${fieldId}-title`}>Tiêu đề (không bắt buộc)
                   <input id={`${fieldId}-title`} type="text" value={form.title} maxLength={150} onChange={(event) => setForm((previous) => ({ ...previous, title: event.target.value }))} placeholder="Cảm nhận tổng quan về sản phẩm" />
                 </label>

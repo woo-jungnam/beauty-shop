@@ -222,4 +222,11 @@ export const ENDPOINTS = {
     NOTES: (id) => `/api/v1/admin/crm/customers/${id}/notes`,
     DELETE_NOTE: (noteId) => `/api/v1/admin/crm/notes/${noteId}`,
   },
+
+  IMAGE_SEARCH: {
+    STATUS: '/api/v1/admin/image-search/status',
+    REINDEX: '/api/v1/admin/image-search/reindex',
+    REINDEX_STATUS: '/api/v1/admin/image-search/reindex-status',
+    TEST_SEARCH: '/api/v1/admin/image-search/test-search',
+  },
 };

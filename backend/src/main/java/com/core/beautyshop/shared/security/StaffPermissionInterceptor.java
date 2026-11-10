@@ -39,7 +39,7 @@ public class StaffPermissionInterceptor implements HandlerInterceptor {
         if(p.startsWith("/api/v1/spa/appointments/") && (p.endsWith("/deposit-receipts") || p.endsWith("/fee-receipts")))return "SPA_RECEPTION";
         if(p.startsWith("/api/v1/spa/appointments/") && (p.endsWith("/material-usages") || p.endsWith("/material-waiver") || p.endsWith("/acknowledge-warnings")))return "SPA_EXECUTION";
         if(p.equals("/api/v1/orders") || (p.startsWith("/api/v1/orders/") && p.endsWith("/status")))return "ORDERS";
-        if(p.startsWith("/api/v1/admin/") && List.of("products","media","ingredients","dermatology","banners","reviews","vouchers","recommendations").stream().anyMatch(s->p.startsWith("/api/v1/admin/"+s)))return "CATALOG";
+        if(p.startsWith("/api/v1/admin/") && List.of("products","media","ingredients","dermatology","banners","reviews","vouchers","flash-sales","recommendations").stream().anyMatch(s->p.startsWith("/api/v1/admin/"+s)))return "CATALOG";
         if(!"GET".equals(method) && List.of("categories","brands","attributes","tags").stream().anyMatch(s->p.startsWith("/api/v1/"+s)))return "CATALOG";
         return null;
     }

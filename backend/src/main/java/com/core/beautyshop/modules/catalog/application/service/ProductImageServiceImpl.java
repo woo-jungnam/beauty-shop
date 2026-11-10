@@ -8,6 +8,7 @@ import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.modules.catalog.domain.ProductImageRepository;
 import com.core.beautyshop.modules.catalog.domain.ProductRepository;
+import com.core.beautyshop.modules.catalog.infrastructure.ImageSearchClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
@@ -23,6 +24,7 @@ public class ProductImageServiceImpl implements ProductImageService {
 
     private final ProductImageRepository imageRepository;
     private final ProductRepository productRepository;
+    private final ImageSearchClient imageSearchClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,6 +56,9 @@ public class ProductImageServiceImpl implements ProductImageService {
                 .build();
 
         image = imageRepository.save(image);
+        try {
+            imageSearchClient.syncImage(productId, image.getId(), image.getImageUrl(), "UPSERT", product.getName(), false);
+        } catch (Exception ignored) { }
         return mapToResponse(image);
     }
 
@@ -79,7 +84,11 @@ public class ProductImageServiceImpl implements ProductImageService {
         if (productId != null && !productId.equals(image.getProduct().getId())) {
             throw new ResourceNotFoundException("Hình ảnh không thuộc sản phẩm với id: " + productId);
         }
+        Long prodId = image.getProduct() != null ? image.getProduct().getId() : productId;
         imageRepository.delete(image);
+        try {
+            imageSearchClient.syncImage(prodId, imageId, null, "DELETE", null, false);
+        } catch (Exception ignored) { }
     }
 
     private ProductImageResponse mapToResponse(ProductImage image) {

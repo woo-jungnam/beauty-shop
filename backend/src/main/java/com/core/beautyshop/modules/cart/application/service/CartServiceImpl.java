@@ -259,7 +259,7 @@ public class CartServiceImpl implements CartService {
                     .map(item -> {
                         ProductVariantSummaryDto variant = variantMap.get(item.getProductVariantId());
                         java.math.BigDecimal flashPrice = null;
-                        if (variant != null && flashSaleFacade.isPresent()) {
+                        if (variant != null && flashSaleFacade != null && flashSaleFacade.isPresent()) {
                             flashPrice = flashSaleFacade.get().resolveActiveFlashSale(variant.getId())
                                     .map(com.core.beautyshop.modules.promotion.api.FlashSaleFacade.FlashSalePriceResolution::flashPrice)
                                     .orElse(null);
@@ -278,7 +278,7 @@ public class CartServiceImpl implements CartService {
         Integer discountPercentage = 0;
         BigDecimal membershipDiscount = BigDecimal.ZERO;
 
-        if (cart.getUserId() != null && identityFacade.isPresent()) {
+        if (cart.getUserId() != null && identityFacade != null && identityFacade.isPresent()) {
             var userSummary = identityFacade.get().getUserSummaryById(cart.getUserId());
             if (userSummary != null) {
                 membershipTier = userSummary.getMembershipTier();
@@ -294,7 +294,7 @@ public class CartServiceImpl implements CartService {
         BigDecimal defaultFee = BigDecimal.valueOf(25000);
         BigDecimal estimatedShipping = BigDecimal.ZERO;
 
-        if (systemConfigService.isPresent()) {
+        if (systemConfigService != null && systemConfigService.isPresent()) {
             threshold = systemConfigService.get().getShippingFreeThreshold();
             defaultFee = systemConfigService.get().getDefaultShippingFee();
             estimatedShipping = systemConfigService.get().calculateShippingFee(total);

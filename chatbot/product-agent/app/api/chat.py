@@ -1,7 +1,9 @@
+import secrets
 from typing import List
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import StreamingResponse
 
+from app.core.config import getSettings
 from app.core.logging import getLogger
 from app.llm.client import (
     LLMAPIError,
@@ -26,6 +28,12 @@ router = APIRouter(tags=["Tư vấn sản phẩm"])
 logger = getLogger("chatApi")
 
 
+def authorize(x_chatbot_token: str = Header("")):
+    expected = getSettings().chatbot_internal_token
+    if not expected.strip() or not secrets.compare_digest(x_chatbot_token.encode(), expected.encode()):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Không có quyền quản trị chatbot.")
+
+
 def formatProductCards(candidates: List[RerankedCandidate]) -> List[ProductCard]:
     return agentOrchestrator.formatProductCards(candidates)
 
@@ -42,6 +50,7 @@ _format_sources = formatSources
 
 @router.post(
     "/sync/database",
+    dependencies=[Depends(authorize)],
     summary="Đồng bộ dữ liệu từ MySQL (Read-Only)",
     description="Truy xuất dữ liệu sản phẩm từ MySQL chính ở chế độ chỉ đọc và nạp vào hệ thống RAG",
 )
@@ -62,6 +71,7 @@ sync_database_endpoint = syncDatabaseEndpoint
 
 @router.post(
     "/test/understand",
+    dependencies=[Depends(authorize)],
     response_model=UnderstandingResult,
     summary="Kiểm tra hiểu truy vấn",
     description="Phân tích tin nhắn người dùng và trích xuất kết quả theo cấu trúc NLU 6 tầng",

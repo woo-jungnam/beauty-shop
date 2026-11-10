@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.review.api;
 
 import com.core.beautyshop.modules.review.application.ProductReviewService;
+import com.core.beautyshop.modules.review.domain.enums.ReviewStatus;
 import com.core.beautyshop.shared.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,12 +34,16 @@ public class ProductReviewController {
         return ApiResponse.success(service.checkEligibility(productId));
     }
 
-    @Operation(summary = "Gửi đánh giá từ đơn hàng đã giao", description = "Yêu cầu đăng nhập. Đơn DELIVERED phải thuộc người gửi và chứa sản phẩm; mỗi sản phẩm/đơn/người dùng chỉ có một đánh giá. Tạo trạng thái PENDING để kiểm duyệt, chưa hiển thị công khai.")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã nhận đánh giá chờ kiểm duyệt", useReturnTypeSchema = true)
+    @Operation(summary = "Gửi đánh giá từ đơn hàng đã giao", description = "Yêu cầu đăng nhập. Đơn DELIVERED phải thuộc người gửi và chứa sản phẩm; mỗi sản phẩm/đơn/người dùng chỉ có một đánh giá. Đánh giá từ người mua hợp lệ sẽ được phê duyệt tự động và hiển thị công khai ngay.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã nhận đánh giá", useReturnTypeSchema = true)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<ProductReviewService.ReviewView> create(@Valid @RequestBody ProductReviewService.ReviewCommand command) {
-        return ApiResponse.created(service.create(command), "Review submitted for moderation");
+        ProductReviewService.ReviewView view = service.create(command);
+        String message = view.status() == ReviewStatus.APPROVED
+                ? "Đánh giá đã được phê duyệt và hiển thị công khai"
+                : "Review submitted for moderation";
+        return ApiResponse.created(view, message);
     }
 }

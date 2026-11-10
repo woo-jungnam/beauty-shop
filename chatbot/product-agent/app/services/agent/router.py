@@ -1,7 +1,7 @@
 import re
 from typing import Any, Dict, Optional, Tuple
 from app.core.taxonomy import Taxonomy
-from app.repositories.order_repository import orderRepository
+from app.repositories.order_repository import OrderRepository, orderRepository
 from app.schemas.query import (
     ActionRouting,
     ComplexityLevel,
@@ -15,6 +15,9 @@ from app.services.ingestion.cleaning import TextCleaner
 
 
 class QueryRouter:
+    ORDER_NUMBER_PATTERN = OrderRepository.ORDER_NUMBER_PATTERN
+    PHONE_PATTERN = OrderRepository.PHONE_PATTERN
+
     RETRIEVAL_INTENTS = {
         Intent.PRODUCT_SEARCH,
         Intent.PRODUCT_DETAIL,
@@ -30,8 +33,10 @@ class QueryRouter:
 
     CANNED_RESPONSES = {
         Intent.ORDER_STATUS: (
-            "Để tra cứu đơn hàng, bạn vui lòng cung cấp Mã đơn hàng (ví dụ: #DH12345) "
-            "hoặc số điện thoại đặt hàng để hệ thống hỗ trợ kiểm tra tiến độ giao hàng nhé!"
+            "Để tra cứu đơn hàng, bạn vui lòng cung cấp đồng thời Mã đơn hàng "
+            "(ORD- kèm 32 ký tự chữ số hệ 16 trên xác nhận đặt hàng) và số điện thoại đặt hàng "
+            "trong cùng một tin nhắn. Số điện thoại phải gồm 10 chữ số bắt đầu bằng 03, 05, 07, 08, 09 "
+            "hoặc dùng đầu +84 tương ứng."
         ),
         Intent.GENERAL_CHAT: (
             "Xin chào! Tôi là trợ lý AI chuyên về mỹ phẩm và dịch vụ chăm sóc da tại BeautyShop. "
@@ -108,34 +113,24 @@ class QueryRouter:
 
     def handleOrderLookup(self, rawText: str) -> Tuple[str, Optional[Dict[str, Any]]]:
         cleanText = rawText.strip()
-        phoneMatch = re.search(r"\b(0[3|5|7|8|9]\d{8})\b", cleanText)
-        orderCodeMatch = re.search(
-            r"(?:mã\s+đơn|mã|đơn\s+hàng|đơn|order|code|#)\s*:?\s*([A-Za-z0-9_-]{4,30})",
-            cleanText,
-            re.I,
+        orderNumbers = {match.upper() for match in self.ORDER_NUMBER_PATTERN.findall(cleanText)}
+        # Remove order tokens before parsing phones; a numeric code is not a second proof.
+        phoneText = re.sub(r"(?<!\w)#?ORD-[\w-]+", " ", cleanText, flags=re.I)
+        phones = {
+            "0" + phone[3:] if phone.startswith("+84") else phone
+            for phone in self.PHONE_PATTERN.findall(phoneText)
+        }
+        if len(orderNumbers) != 1 or len(phones) != 1:
+            return self.CANNED_RESPONSES[Intent.ORDER_STATUS], None
+
+        order = orderRepository.findOrder(next(iter(orderNumbers)), next(iter(phones)))
+        if order:
+            return orderRepository.formatOrderSummary(order), order
+        return (
+            "Không tìm thấy đơn hàng khớp với mã đơn và số điện thoại đặt hàng. "
+            "Bạn vui lòng kiểm tra lại cả hai thông tin.",
+            None,
         )
-        directCodeMatch = re.search(r"\b([A-Za-z]{2,5}-\d{4,20})\b", cleanText, re.I)
-
-        identifier = None
-        if phoneMatch:
-            identifier = phoneMatch.group(1)
-        elif directCodeMatch:
-            identifier = directCodeMatch.group(1)
-        elif orderCodeMatch:
-            cand = orderCodeMatch.group(1).strip()
-            if cand.lower() not in ("hàng", "hang", "don", "shop", "ad", "của", "tôi", "mình"):
-                identifier = cand
-
-        if identifier:
-            order = orderRepository.findOrder(identifier)
-            if order:
-                return orderRepository.formatOrderSummary(order), order
-            return (
-                f"Rất tiếc, hệ thống không tìm thấy đơn hàng nào khớp với thông tin '{identifier}'. "
-                "Bạn vui lòng kiểm tra lại chính xác Mã đơn hàng (ví dụ: ORD-123456) hoặc Số điện thoại đặt hàng nhé!",
-                None,
-            )
-        return self.CANNED_RESPONSES[Intent.ORDER_STATUS], None
 
     handle_order_lookup = handleOrderLookup
 
@@ -156,8 +151,7 @@ class QueryRouter:
             "HỖ_TRỢ_ĐƠN_HÀNG",
             "HO_TRO_DON_HANG",
         ):
-            fullText = f"{uMsg} {understanding.raw_query or ''}".strip()
-            reply, _ = self.handleOrderLookup(fullText)
+            reply, _ = self.handleOrderLookup(uMsg)
             return reply
 
         if understanding.needs_clarification and understanding.clarification_question:
@@ -202,6 +196,18 @@ class FastPathParser:
         if not clean:
             clean = message.strip().lower()
 
+        if (
+            self.ORDER_STATUS_PATTERN.search(message)
+            or self.ORDER_STATUS_PATTERN.search(clean)
+            or QueryRouter.ORDER_NUMBER_PATTERN.search(message)
+            or OrderRepository.PHONE_PATTERN.fullmatch(message.strip())
+        ):
+            res = self.buildResult(Intent.ORDER_STATUS, "tra cứu đơn hàng", "tra cứu đơn hàng")
+            res.primary_intent = PrimaryIntent.HO_TRO_DON_HANG.value
+            res.action_routing = ActionRouting.FAST_PATH.value
+            res.needs_clarification = False
+            return res
+
         for pat in self.OUT_OF_DOMAIN_PATTERNS:
             if pat.search(clean) or pat.search(message):
                 res = self.buildResult(Intent.OUT_OF_DOMAIN, message, message)
@@ -213,13 +219,6 @@ class FastPathParser:
         if self.THANKS_PATTERN.search(clean):
             return self.buildResult(Intent.GENERAL_INFORMATION, message, message)
 
-        if self.ORDER_STATUS_PATTERN.search(clean):
-            res = self.buildResult(Intent.ORDER_STATUS, message, message)
-            res.primary_intent = PrimaryIntent.HO_TRO_DON_HANG.value
-            res.action_routing = ActionRouting.FAST_PATH.value
-            res.needs_clarification = False
-            return res
-
         if self.GREETING_PATTERN.match(clean):
             res = self.buildResult(Intent.GENERAL_CHAT, message, message)
             res.primary_intent = "CHÀO_HỎI"
@@ -229,13 +228,6 @@ class FastPathParser:
 
         if self.THANKS_PATTERN.search(clean):
             return self.buildResult(Intent.GENERAL_INFORMATION, message, message)
-
-        if self.ORDER_STATUS_PATTERN.search(clean):
-            res = self.buildResult(Intent.ORDER_STATUS, message, message)
-            res.primary_intent = PrimaryIntent.HO_TRO_DON_HANG.value
-            res.action_routing = ActionRouting.FAST_PATH.value
-            res.needs_clarification = False
-            return res
 
         if self.GREETING_PATTERN.match(clean):
             res = self.buildResult(Intent.GENERAL_CHAT, message, message)

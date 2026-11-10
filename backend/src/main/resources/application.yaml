@@ -178,6 +178,7 @@ chatbot:
 
 image-search:
   enabled: ${IMAGE_SEARCH_ENABLED:false}
+  service-url: ${IMAGE_SEARCH_SERVICE_URL:http://localhost:8001}
   internal-token: ${IMAGE_SEARCH_INTERNAL_TOKEN:}
   timeout-seconds: ${IMAGE_SEARCH_TIMEOUT_SECONDS:30}
 
@@ -189,6 +190,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     operations-sorter: alpha
+    tags-sorter: alpha
     groups-order: asc
     default-models-expand-depth: 0
     display-request-duration: true

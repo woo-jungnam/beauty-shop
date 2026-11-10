@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from app.core.logging import getLogger
 from app.services.ingestion.extractor import dbExtractor
 
@@ -7,6 +7,9 @@ logger = getLogger("order_repository")
 
 
 class OrderRepository:
+    # OrderFactory.generateOrderNumber: ORD- followed by a UUID without hyphens.
+    ORDER_NUMBER_PATTERN = re.compile(r"(?<![\w-])ORD-[A-F0-9]{32}(?![\w-])", re.I)
+    PHONE_PATTERN = re.compile(r"(?<![\w+-])(?:0|\+84)[35789][0-9]{8}(?![\w+-])")
 
     STATUS_MAP = {
         "PENDING": "Chờ xác nhận",
@@ -25,66 +28,51 @@ class OrderRepository:
         "REFUNDED": "Đã hoàn tiền",
     }
 
-    def findOrder(self, identifier: str) -> Optional[Dict[str, Any]]:
-        cleanId = identifier.strip().lstrip("#")
+    @staticmethod
+    def maskPhone(phone: str) -> str:
+        if re.fullmatch(r"\*{6}[0-9]{4}", phone):
+            return phone
+        if OrderRepository.PHONE_PATTERN.fullmatch(phone):
+            return f"******{phone[-4:]}"
+        return "Đã ẩn"
+
+    def findOrder(self, orderNumber: str, customerPhone: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        cleanOrder = (orderNumber or "").strip().removeprefix("#").upper()
+        cleanPhone = (customerPhone or "").strip()
+        if not self.ORDER_NUMBER_PATTERN.fullmatch(cleanOrder) or not self.PHONE_PATTERN.fullmatch(cleanPhone):
+            return None
+        cleanPhone = cleanPhone.replace("+84", "0", 1)
+
         try:
             conn = dbExtractor.getConnection()
-        except Exception as exc:
-            logger.warning("Không thể kết nối MySQL khi tra cứu đơn hàng: %s", exc)
+        except Exception:
+            logger.warning("Không thể kết nối MySQL khi tra cứu đơn hàng")
             return None
 
         try:
             with conn.cursor() as cursor:
-                sqlOrder = """
-                    SELECT
-                        id,
-                        order_number,
-                        status,
-                        payment_method,
-                        payment_status,
-                        customer_name,
-                        customer_phone,
-                        shipping_address,
-                        ward,
-                        district,
-                        city,
-                        sub_total,
-                        shipping_fee,
-                        discount_amount,
-                        total_amount,
-                        created_at
+                cursor.execute(
+                    """
+                    SELECT id, order_number, status, payment_status
                     FROM orders
-                    WHERE (order_number = %s OR customer_phone = %s)
+                    WHERE order_number = %s
+                      AND REPLACE(customer_phone, '+84', '0') = %s
                       AND is_deleted = 0
-                    ORDER BY created_at DESC
                     LIMIT 1
-                """
-                cursor.execute(sqlOrder, (cleanId, cleanId))
-                order = cursor.fetchone()
-                if not order:
+                    """,
+                    (cleanOrder, cleanPhone),
+                )
+                row = cursor.fetchone()
+                if not row:
                     return None
 
-                sqlItems = """
-                    SELECT
-                        id,
-                        product_name,
-                        variant_name,
-                        quantity,
-                        price,
-                        discount
-                    FROM order_items
-                    WHERE order_id = %s
-                      AND is_deleted = 0
-                """
-                cursor.execute(sqlItems, (order["id"],))
-                order["items"] = cursor.fetchall() or []
-                order["status_vi"] = self.STATUS_MAP.get(order["status"], order["status"])
-                order["payment_status_vi"] = self.PAYMENT_STATUS_MAP.get(
-                    order["payment_status"], order["payment_status"]
-                )
+                order = {key: row[key] for key in ("id", "order_number", "status", "payment_status")}
+                order["customer_phone"] = self.maskPhone(cleanPhone)
+                order["status_vi"] = self.STATUS_MAP.get(order["status"], "Chưa cập nhật")
+                order["payment_status_vi"] = self.PAYMENT_STATUS_MAP.get(order["payment_status"], "Chưa cập nhật")
                 return order
-        except Exception as exc:
-            logger.error("Lỗi truy vấn cơ sở dữ liệu khi tra cứu đơn: %s", exc)
+        except Exception:
+            logger.error("Lỗi truy vấn cơ sở dữ liệu khi tra cứu đơn")
             return None
         finally:
             try:
@@ -96,39 +84,15 @@ class OrderRepository:
 
     def formatOrderSummary(self, order: Dict[str, Any]) -> str:
         orderNumber = order.get("order_number", "")
-        statusVi = order.get("status_vi", order.get("status", ""))
-        payStatusVi = order.get("payment_status_vi", order.get("payment_status", ""))
-        customerName = order.get("customer_name", "Quý khách")
-        phone = order.get("customer_phone", "")
-        address = order.get("shipping_address", "")
-        city = order.get("city", "")
-        fullAddress = f"{address}, {city}".strip(", ") if city else address
-        totalAmount = float(order.get("total_amount", 0.0) or 0.0)
-
-        items = order.get("items", [])
-        itemsText = ""
-        if items:
-            itemList = []
-            for it in items:
-                pName = it.get("product_name", "Sản phẩm")
-                vName = f" ({it.get('variant_name')})" if it.get("variant_name") else ""
-                qty = it.get("quantity", 1)
-                price = float(it.get("price", 0.0) or 0.0)
-                itemList.append(f"- **{pName}{vName}** x{qty}: {price:,.0f}đ")
-            itemsText = "\n".join(itemList)
-        else:
-            itemsText = "- Chưa có thông tin sản phẩm"
-
-        lines = [
+        statusVi = self.STATUS_MAP.get(order.get("status"), "Chưa cập nhật")
+        payStatusVi = self.PAYMENT_STATUS_MAP.get(order.get("payment_status"), "Chưa cập nhật")
+        phone = self.maskPhone(order.get("customer_phone") or "")
+        return "\n".join([
             f"**Thông tin đơn hàng #{orderNumber}**",
             f"- **Trạng thái giao vận**: {statusVi}",
             f"- **Thanh toán**: {payStatusVi}",
-            f"- **Người nhận**: {customerName} ({phone})",
-            f"- **Địa chỉ giao hàng**: {fullAddress}",
-            f"- **Danh sách sản phẩm**:\n{itemsText}",
-            f"- **Tổng tiền thanh toán**: **{totalAmount:,.0f}đ**",
-        ]
-        return "\n".join(lines)
+            f"- **Số điện thoại đặt hàng**: {phone}",
+        ])
 
     format_order_summary = formatOrderSummary
 

@@ -214,7 +214,7 @@ class AgentOrchestrator:
         if fastResult is not None:
             with tracker.measure("fast_path_understanding"):
                 understanding = fastResult
-                logger.info("Khớp mẫu xử lý nhanh Fast-path cho tin nhắn: '%s'", request.message)
+                logger.info("Khớp mẫu xử lý nhanh Fast-path")
         else:
             refRes = ctx.entityMemory.resolveReference(request.message)
             activeEnt = ctx.entityMemory.getActiveEntity()

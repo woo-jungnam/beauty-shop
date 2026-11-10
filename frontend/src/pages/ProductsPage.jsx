@@ -17,6 +17,7 @@ import {
   Search,
   X,
   MoreHorizontal,
+  Camera,
 } from 'lucide-react';
 import { apiClient, uploadFile } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -1685,9 +1686,19 @@ export const ProductsPage = () => {
         actions={
           <>
             {activeTab === 'products' && (
-              <Button variant="primary" size="sm" onClick={handleOpenCreateProduct} icon={Plus}>
-                Thêm sản phẩm mới
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { window.location.hash = '#operations?tab=image-search'; }}
+                  icon={Camera}
+                >
+                  Chỉ mục ảnh AI
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleOpenCreateProduct} icon={Plus}>
+                  Thêm sản phẩm mới
+                </Button>
+              </>
             )}
             {activeTab === 'categories' && (
               <Button variant="primary" size="sm" onClick={handleOpenCreateCategory} icon={Plus}>

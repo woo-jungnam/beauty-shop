@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '../../shared/api/client';
 import { ENDPOINTS } from '../../shared/api/endpoints';
 import { isClearanceProduct } from '../utils/productSelection';
+import { resolveMediaUrl } from '../../shared/utils/formatters';
 
 const STORAGE_KEY = 'beautyshop_customer_cart';
 const DEFAULT_FALLBACK_THRESHOLD = 249000;
@@ -40,19 +41,33 @@ const notifyListeners = () => {
   listeners.forEach((listener) => listener());
 };
 
-const mapBackendItem = (ci) => ({
-  itemId: String(ci.id),
-  backendId: ci.id,
-  variantId: ci.variantId,
-  name: ci.variantName || ci.sku || 'Sản phẩm',
-  variantName: ci.variantName || ci.sku || '',
-  sku: ci.sku,
-  price: Number(ci.price ?? 0),
-  originalPrice: Number(ci.price ?? 0),
-  image: (ci.imageUrl && !ci.imageUrl.includes('img.com')) ? ci.imageUrl : '',
-  quantity: ci.quantity,
-  available: ci.available !== false,
-});
+const mapBackendItem = (ci, context = {}) => {
+  const existing = memoryState.items.find(
+    (item) => String(item.itemId) === String(ci.id) || Number(item.variantId) === Number(ci.variantId)
+  );
+  const newProduct = context.variantId === ci.variantId ? context.product : null;
+  const rawImage = ci.imageUrl || newProduct?.featuredImage || newProduct?.thumbnailUrl || newProduct?.image || newProduct?.images?.[0]?.imageUrl || existing?.image || '';
+  const cleanImage = (rawImage && !rawImage.includes('img.com')) ? rawImage : '';
+  const resolvedImage = cleanImage ? resolveMediaUrl(cleanImage) : '';
+
+  const name = ci.productName || newProduct?.name || existing?.name || ci.variantName || ci.sku || 'Sản phẩm';
+  const brand = newProduct?.brand?.name || (typeof newProduct?.brand === 'string' ? newProduct.brand : '') || existing?.brand || '';
+
+  return {
+    itemId: String(ci.id),
+    backendId: ci.id,
+    variantId: ci.variantId,
+    name,
+    variantName: ci.variantName || ci.sku || '',
+    brand,
+    sku: ci.sku,
+    price: Number(ci.price ?? 0),
+    originalPrice: Number(ci.price ?? 0),
+    image: resolvedImage,
+    quantity: ci.quantity,
+    available: ci.available !== false,
+  };
+};
 
 const isPositiveId = (value) => (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value)))
   && Number.isSafeInteger(Number(value)) && Number(value) > 0;
@@ -129,7 +144,7 @@ export const cartActions = {
         return true;
       }
       if (res?.success !== false && isValidCart(cartData)) {
-        memoryState.items = cartData.items.map(mapBackendItem);
+        memoryState.items = cartData.items.map((ci) => mapBackendItem(ci));
         memoryState.cartId = cartData.id || null;
         memoryState.membershipTier = cartData.membershipTier || null;
         memoryState.membershipDiscountPercentage = Number(cartData.membershipDiscountPercentage || 0);
@@ -211,7 +226,7 @@ export const cartActions = {
           || confirmedItem.quantity < minimumQuantity) {
         return fail('Máy chủ chưa xác nhận sản phẩm trong giỏ. Vui lòng kiểm tra giỏ trước khi thử lại.');
       }
-      memoryState.items = cartData.items.map(mapBackendItem);
+      memoryState.items = cartData.items.map((ci) => mapBackendItem(ci, { variantId, product }));
       memoryState.cartId = cartData.id || null;
       memoryState.cartError = '';
       memoryState.isCartOpen = true;
@@ -252,7 +267,7 @@ export const cartActions = {
         );
         const cartData = res?.data || res;
         if (cartData && Array.isArray(cartData.items)) {
-          memoryState.items = cartData.items.map(mapBackendItem);
+          memoryState.items = cartData.items.map((ci) => mapBackendItem(ci));
           memoryState.cartId = cartData.id || null;
         }
       } catch (err) {
@@ -275,7 +290,7 @@ export const cartActions = {
         const res = await apiClient.delete(ENDPOINTS.CART.REMOVE_ITEM(backendId, sessionId));
         const cartData = res?.data || res;
         if (cartData && Array.isArray(cartData.items)) {
-          memoryState.items = cartData.items.map(mapBackendItem);
+          memoryState.items = cartData.items.map((ci) => mapBackendItem(ci));
           memoryState.cartId = cartData.id || null;
           saveCart();
         }

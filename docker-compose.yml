@@ -98,6 +98,7 @@ services:
       EMBEDDING_PROVIDER: gemini
       EMBEDDING_CACHE_DIR: /app/data/embedding_cache
       IMAGE_SEARCH_ENABLED: ${IMAGE_SEARCH_ENABLED:-false}
+      IMAGE_SEARCH_SERVICE_URL: http://image-search:8001
       IMAGE_SEARCH_INTERNAL_TOKEN: ${IMAGE_SEARCH_INTERNAL_TOKEN:-}
       IMAGE_SEARCH_MODEL_ID: ${IMAGE_SEARCH_MODEL_ID:-sentence-transformers/clip-ViT-B-32}
       IMAGE_SEARCH_MODEL_REVISION: ${IMAGE_SEARCH_MODEL_REVISION:-327ab6726d33c0e22f920c83f2ff9e4bd38ca37f}
@@ -110,6 +111,8 @@ services:
       IMAGE_SEARCH_MAX_PIXELS: ${IMAGE_SEARCH_MAX_PIXELS:-20000000}
       IMAGE_SEARCH_BATCH_SIZE: ${IMAGE_SEARCH_BATCH_SIZE:-16}
       RECOMMENDATION_INTERNAL_TOKEN: ${JWT_SECRET:?JWT_SECRET is required}
+      CHATBOT_INTERNAL_TOKEN: ${CHATBOT_INTERNAL_TOKEN:-}
+      CHATBOT_CORS_ALLOWED_ORIGINS: ${CHATBOT_CORS_ALLOWED_ORIGINS:-}
     ports:
       - "127.0.0.1:${CHATBOT_PORT:-18000}:8000"
     volumes:
@@ -128,6 +131,46 @@ services:
       timeout: 10s
       retries: 5
       start_period: 180s
+
+  image-search:
+    build:
+      context: ./image-search
+      dockerfile: Dockerfile
+    container_name: beautyshop_image_search
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8001
+      DEBUG: "false"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_DATABASE: beautyshop
+      QDRANT_STORAGE_PATH: /app/data/qdrant_image_storage
+      QDRANT_COLLECTION: product_images
+      VECTOR_DIMENSION: 512
+      IMAGE_SEARCH_MODEL_ID: ${IMAGE_SEARCH_MODEL_ID:-sentence-transformers/clip-ViT-B-32}
+      IMAGE_SEARCH_MODEL_REVISION: ${IMAGE_SEARCH_MODEL_REVISION:-327ab6726d33c0e22f920c83f2ff9e4bd38ca37f}
+      IMAGE_SEARCH_CACHE_DIR: /app/data/model-cache
+      IMAGE_SEARCH_UPLOAD_DIR: /app/uploads
+      IMAGE_SEARCH_INTERNAL_TOKEN: ${IMAGE_SEARCH_INTERNAL_TOKEN:-}
+    ports:
+      - "127.0.0.1:${IMAGE_SEARCH_PORT:-18001}:8001"
+    volumes:
+      - image_search_data:/app/data
+      - uploads_data:/app/uploads:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - beautyshop_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
 
   frontend:
     build:
@@ -176,7 +219,9 @@ services:
       SEPAY_BANK_BIN: ${SEPAY_BANK_BIN:-970422}
       MEDIA_UPLOAD_DIR: /app/uploads
       CHATBOT_SERVICE_URL: http://chatbot:8000
+      CHATBOT_INTERNAL_TOKEN: ${CHATBOT_INTERNAL_TOKEN:-}
       IMAGE_SEARCH_ENABLED: ${IMAGE_SEARCH_ENABLED:-false}
+      IMAGE_SEARCH_SERVICE_URL: http://image-search:8001
       IMAGE_SEARCH_INTERNAL_TOKEN: ${IMAGE_SEARCH_INTERNAL_TOKEN:-}
       IMAGE_SEARCH_TIMEOUT_SECONDS: ${IMAGE_SEARCH_TIMEOUT_SECONDS:-30}
       RECOMMENDATION_INTERNAL_TOKEN: ${JWT_SECRET:?JWT_SECRET is required}
@@ -271,6 +316,7 @@ volumes:
   grafana_data:
   uploads_data:
   chatbot_data:
+  image_search_data:
 
 networks:
   beautyshop_net:

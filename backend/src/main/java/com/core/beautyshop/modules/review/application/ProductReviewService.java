@@ -47,13 +47,22 @@ public class ProductReviewService {
                 throw new BusinessException("Đơn hàng này đã được đánh giá trước đó");
             }
         }
+        ReviewStatus initialStatus = verifiedPurchase ? ReviewStatus.APPROVED : ReviewStatus.PENDING;
+        Instant approvedAt = verifiedPurchase ? Instant.now() : null;
+
         ProductReview review = ProductReview.builder().productId(command.productId()).userId(userId)
                 .orderId(verifiedPurchase ? eligibleOrderId : null)
                 .rating(verifiedPurchase ? command.rating() : null)
                 .isVerifiedPurchase(verifiedPurchase)
                 .title(command.title()).content(command.content().trim())
-                .status(ReviewStatus.PENDING).build();
-        return ReviewView.from(repository.save(review));
+                .status(initialStatus)
+                .approvedAt(approvedAt)
+                .build();
+        ProductReview saved = repository.save(review);
+        if (verifiedPurchase) {
+            refreshRating(command.productId());
+        }
+        return ReviewView.from(saved);
     }
 
     @Transactional(readOnly = true)

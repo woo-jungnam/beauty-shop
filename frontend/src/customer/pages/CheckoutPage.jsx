@@ -16,6 +16,7 @@ import { useCustomerCart } from '../stores/customerCartStore';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { apiClient } from '../../shared/api/client';
 import { getGuestSessionId } from '../../shared/utils/session';
+import { resolveProductImage, PRODUCT_PLACEHOLDER } from '../components/product/ProductCard';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -558,7 +559,16 @@ export const CheckoutPage = ({ onNavigate }) => {
                 <div key={item.itemId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '4px', backgroundColor: 'var(--c-canvas-subtle)', overflow: 'hidden', flexShrink: 0 }}>
-                      {item.image && <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      <img
+                        src={resolveProductImage(item)}
+                        alt={item.name || ''}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = PRODUCT_PLACEHOLDER;
+                        }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: 'var(--c-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
