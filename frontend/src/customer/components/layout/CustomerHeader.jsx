@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowRight, Calendar, ChevronDown, Home, LayoutDashboard, LogOut, Menu,
+  ArrowRight, Calendar, Camera, ChevronDown, Home, LayoutDashboard, LogOut, Menu,
   Package, Search, ShieldCheck, ShoppingBag, Sparkles, User, X,
 } from 'lucide-react';
 import { useCustomerCart } from '../../stores/customerCartStore';
@@ -230,6 +230,15 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
             <Search size={19} aria-hidden="true" />
             <input ref={searchInputRef} type="search" aria-label="Tìm kiếm sản phẩm" placeholder="Tìm sản phẩm, thương hiệu, hoạt chất…" value={keyword} onChange={(event) => setKeyword(event.target.value)} onFocus={() => { setSearchOpen(true); setOpenDropdown(null); }} />
             {keyword && <button className="storefront-search-clear" type="button" aria-label="Xóa từ khóa tìm kiếm" onClick={() => { setKeyword(''); searchInputRef.current?.focus(); }}><X size={16} /></button>}
+            <button
+              type="button"
+              className="storefront-search-camera-btn"
+              aria-label="Tìm kiếm bằng ảnh hoặc camera"
+              title="Tìm kiếm sản phẩm bằng ảnh hoặc camera"
+              onClick={() => navigate('image-search')}
+            >
+              <Camera size={18} />
+            </button>
             <button className="storefront-search-submit" type="submit" aria-label="Tìm kiếm"><ArrowRight size={20} /></button>
           </form>
           {searchOpen && suggestions.length > 0 && (
@@ -241,7 +250,10 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
         </div>
 
         <div className="storefront-actions">
-          <button type="button" className="storefront-action" onClick={() => navigate('image-search')}>Tìm bằng ảnh</button>
+          <button type="button" className="storefront-action storefront-action-camera" onClick={() => navigate('image-search')}>
+            <Camera size={18} />
+            <span>Tìm bằng ảnh</span>
+          </button>
           <button type="button" className="storefront-booking" onClick={() => navigate('booking')}><Calendar size={18} /><span>Đặt lịch Spa</span></button>
           <button type="button" className="storefront-action storefront-cart" aria-label={`Giỏ hàng${totalItems > 0 ? `, ${totalItems} sản phẩm` : ''}`} onClick={() => { setMobileOpen(false); setOpenDropdown(null); setCartOpen(true); }}>
             <ShoppingBag size={21} /><span>Giỏ hàng</span>{totalItems > 0 && <b>{totalItems}</b>}
@@ -288,6 +300,24 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
           <section ref={dialogRef} id="storefront-mobile-menu" className="storefront-mobile-panel" role="dialog" aria-modal="true" aria-labelledby="storefront-menu-title" tabIndex={-1}>
             <div className="storefront-mobile-heading"><div><small>BEAUTYSHOP</small><h2 id="storefront-menu-title">Khám phá cửa hàng</h2></div><button type="button" className="storefront-action" aria-label="Đóng menu điều hướng" onClick={closeMobileMenu}><X size={22} /></button></div>
             <nav aria-label="Điều hướng trên điện thoại">
+              <a
+                href="#/image-search"
+                onClick={closeMobileMenu}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 0',
+                  color: 'var(--c-primary, #8c2a47)',
+                  fontWeight: 700,
+                  borderBottom: '1px solid #f6eef1',
+                }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                  <Camera size={19} /> Chụp ảnh tìm sản phẩm
+                </span>
+                <ArrowRight size={17} />
+              </a>
               {NAV_LINKS.map((link) => <a key={link.id} href={`#/${link.route}`} aria-current={isActive(link) ? 'page' : undefined} onClick={closeMobileMenu}>{link.label}<ArrowRight size={17} /></a>)}
             </nav>
             {categories.length > 0 && <div className="storefront-mobile-categories"><strong>Danh mục sản phẩm</strong>{categories.slice(0, 8).map((category) => <a key={category.id} href={`#/${categoryRoute(category)}`} onClick={closeMobileMenu}>{cleanDisplayName(category.name)}</a>)}</div>}

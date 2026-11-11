@@ -56,6 +56,14 @@
   background: #ad3f61; color: #fff; border: 0; border-radius: 9px; cursor: pointer;
 }
 .storefront-search-clear { display: grid; place-items: center; background: transparent; border: 0; color: #816d75; cursor: pointer; width: 28px; height: 36px; }
+.storefront-search-camera-btn {
+  display: grid; place-items: center; background: transparent; border: 0;
+  color: #816d75; cursor: pointer; width: 34px; height: 36px; flex-shrink: 0;
+  border-radius: 8px; transition: color 0.15s, background-color 0.15s;
+}
+.storefront-search-camera-btn:hover { color: #ad3f61; background: #f1e4e9; }
+.storefront-action-camera { color: #8c2a47; }
+.storefront-action-camera:hover { background: #fff0f3; color: #721b29; }
 .storefront-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .storefront-action {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;

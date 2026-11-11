@@ -40,7 +40,6 @@ export const ImageSearchAdminPanel = () => {
   const [testResult, setTestResult] = useState(null);
   const [testError, setTestError] = useState(null);
   const [minSimilarity, setMinSimilarity] = useState(0.65);
-  const [filterCategoryId, setFilterCategoryId] = useState('');
   const fileInputRef = useRef(null);
 
   const pollTimerRef = useRef(null);
@@ -165,9 +164,6 @@ export const ImageSearchAdminPanel = () => {
       formData.append('image', testFile);
       const params = new URLSearchParams();
       if (minSimilarity) params.append('minSimilarity', String(minSimilarity));
-      if (filterCategoryId && filterCategoryId.trim() !== '') {
-        params.append('categoryId', filterCategoryId.trim());
-      }
       const query = params.toString() ? `?${params.toString()}` : '';
       const res = await apiClient.post(`${ENDPOINTS.IMAGE_SEARCH.TEST_SEARCH}${query}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -415,20 +411,20 @@ export const ImageSearchAdminPanel = () => {
           </p>
         </div>
 
-        {/* CONTROLS BAR: CONFIDENCE THRESHOLD & CATEGORY FILTER */}
+        {/* CONTROLS BAR: CONFIDENCE THRESHOLD */}
         <div
           style={{
             display: 'flex',
-            flexWrap: 'wrap',
-            gap: 16,
             alignItems: 'center',
+            gap: 16,
             padding: '12px 16px',
             background: 'var(--color-surface-hover, #f9fafb)',
             borderRadius: 8,
             border: '1px solid var(--color-border, #e5e7eb)',
+            maxWidth: 420,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 240px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
             <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-secondary, #4b5563)', whiteSpace: 'nowrap' }}>
               Ngưỡng tin cậy (Cutoff):
             </span>
@@ -444,26 +440,6 @@ export const ImageSearchAdminPanel = () => {
             <span style={{ fontSize: 13, fontWeight: 700, color: '#4f46e5', minWidth: 40, textAlign: 'right' }}>
               {Math.round(minSimilarity * 100)}%
             </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '0 1 200px' }}>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-secondary, #4b5563)', whiteSpace: 'nowrap' }}>
-              Mã danh mục:
-            </span>
-            <input
-              type="number"
-              placeholder="Tất cả danh mục"
-              value={filterCategoryId}
-              onChange={(e) => setFilterCategoryId(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '4px 8px',
-                fontSize: 12.5,
-                borderRadius: 6,
-                border: '1px solid var(--color-border, #d1d5db)',
-                background: '#ffffff',
-              }}
-            />
           </div>
         </div>
 
