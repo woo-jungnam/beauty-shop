@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../constants/api_constants.dart';
 import '../storage/storage_service.dart';
@@ -208,10 +209,15 @@ class ApiClient {
         if (!line.startsWith('data:')) continue;
         final payload = line.substring(5).trim();
         if (payload.isEmpty || payload == '[DONE]') continue;
-        final decoded = jsonDecode(payload);
-        if (decoded is Map<String, dynamic>) yield decoded;
+        try {
+          final decoded = jsonDecode(payload);
+          if (decoded is Map<String, dynamic>) yield decoded;
+        } catch (e) {
+          debugPrint('SSE payload parse warning: $e');
+        }
       }
     } on DioException catch (e) {
+      debugPrint('postSse DioException: $e');
       throw _handleDioError(e);
     }
   }

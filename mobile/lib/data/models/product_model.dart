@@ -90,24 +90,40 @@ class ProductItem {
         ? clearance.discountPrice
         : (json['salePrice'] as num?)?.toDouble() ?? lowestVariantPrice;
 
+    int parseId(dynamic rawId) {
+      if (rawId == null) return 0;
+      if (rawId is num) return rawId.toInt();
+      final str = rawId.toString();
+      final numericPart = RegExp(r'\d+').firstMatch(str)?.group(0);
+      return numericPart != null ? int.tryParse(numericPart) ?? 0 : 0;
+    }
+
+    final rawThumbnail = json['thumbnailUrl'] ??
+        json['image'] ??
+        json['imageUrl'] ??
+        json['image_url'];
+
+    final parsedBrand = json['brandName']?.toString() ??
+        (json['brand'] is Map
+            ? (json['brand'] as Map)['name']?.toString()
+            : json['brand']?.toString());
+
     return ProductItem(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: parseId(json['id']),
       name: json['name']?.toString() ?? '',
       slug: json['slug']?.toString() ?? '',
-      shortDescription: json['shortDescription']?.toString(),
-      thumbnailUrl: ImageUtils.resolveUrl(
-        json['thumbnailUrl']?.toString() ?? json['image']?.toString(),
-      ),
+      shortDescription: json['shortDescription']?.toString() ??
+          json['reasonForRecommendation']?.toString() ??
+          json['reason_for_recommendation']?.toString(),
+      thumbnailUrl: ImageUtils.resolveUrl(rawThumbnail?.toString()),
       basePrice: baseP > 0 ? baseP : (saleP ?? 0.0),
       salePrice: saleP != null && saleP >= 0 && saleP < baseP ? saleP : null,
       status: json['status']?.toString() ?? 'ACTIVE',
       isFeatured: json['isFeatured'] == true,
-      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
-      totalReviews: (json['totalReviews'] as num?)?.toInt() ?? 0,
-      totalSold: (json['totalSold'] as num?)?.toInt() ?? 0,
-      brandName:
-          json['brandName']?.toString() ??
-          (json['brand'] is Map ? json['brand']['name']?.toString() : null),
+      averageRating: ((json['averageRating'] ?? json['rating']) as num?)?.toDouble() ?? 0.0,
+      totalReviews: ((json['totalReviews'] ?? json['total_reviews']) as num?)?.toInt() ?? 0,
+      totalSold: ((json['totalSold'] ?? json['total_sold']) as num?)?.toInt() ?? 0,
+      brandName: parsedBrand,
       clearanceVariant: clearance,
       earliestExpirationDate: DateTime.tryParse(
         json['earliestExpirationDate']?.toString() ?? '',

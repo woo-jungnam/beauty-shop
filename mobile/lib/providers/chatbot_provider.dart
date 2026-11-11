@@ -47,7 +47,11 @@ class ChatbotProvider extends ChangeNotifier {
     try {
       await for (final event in _apiClient.postSse(
         ApiConstants.chatStream,
-        data: {'message': cleanText, 'session_id': _sessionId},
+        data: {
+          'message': cleanText,
+          'session_id': _sessionId,
+          'sessionId': _sessionId,
+        },
       )) {
         switch (event['type']) {
           case 'token':
@@ -61,20 +65,34 @@ class ChatbotProvider extends ChangeNotifier {
             break;
           case 'metadata':
             if (event['products'] is List) {
-              suggestions = (event['products'] as List)
-                  .map(
-                    (item) =>
-                        ProductItem.fromJson(item as Map<String, dynamic>),
-                  )
-                  .toList();
+              final productList = <ProductItem>[];
+              for (final item in event['products']) {
+                if (item is Map) {
+                  try {
+                    productList.add(
+                      ProductItem.fromJson(Map<String, dynamic>.from(item)),
+                    );
+                  } catch (e) {
+                    debugPrint('Chatbot product parse warning: $e');
+                  }
+                }
+              }
+              suggestions = productList;
             }
             if (event['actions'] is List) {
-              actions = (event['actions'] as List)
-                  .map(
-                    (item) =>
-                        ChatAction.fromJson(item as Map<String, dynamic>),
-                  )
-                  .toList();
+              final actionList = <ChatAction>[];
+              for (final act in event['actions']) {
+                if (act is Map) {
+                  try {
+                    actionList.add(
+                      ChatAction.fromJson(Map<String, dynamic>.from(act)),
+                    );
+                  } catch (e) {
+                    debugPrint('Chatbot action parse warning: $e');
+                  }
+                }
+              }
+              actions = actionList;
             }
             _messages[botMessageIndex] = ChatMessage.bot(
               answer,
@@ -88,46 +106,79 @@ class ChatbotProvider extends ChangeNotifier {
               _sessionId = event['session_id'].toString();
             }
             break;
+          case 'error':
+            final detail = event['detail']?.toString() ?? 'Lỗi dịch vụ AI';
+            debugPrint('Chatbot stream error event: $detail');
+            if (answer.isEmpty) {
+              throw StateError(detail);
+            }
+            break;
         }
       }
 
-      if (answer.isEmpty) {
+      if (answer.trim().isEmpty) {
         throw StateError('Empty stream response');
       }
-    } catch (_) {
-      try {
-        final fallbackRes = await _apiClient.post(
-          ApiConstants.chat,
-          data: {'sessionId': _sessionId, 'message': cleanText},
+    } catch (sseError) {
+      debugPrint('Chatbot SSE stream error: $sseError');
+      if (answer.trim().isNotEmpty) {
+        // Da nhan duoc cau tra loi mot phan hoac toan bo tu stream, giu nguyen khong ghi de loi
+        _messages[botMessageIndex] = ChatMessage.bot(
+          answer,
+          products: suggestions.isNotEmpty ? suggestions : null,
+          actions: actions.isNotEmpty ? actions : null,
         );
-        final raw = fallbackRes.data;
-        if (fallbackRes.isSuccess && raw is Map) {
-          final replyText =
-              raw['response'] ??
-              raw['text'] ??
-              raw['answer'] ??
-              raw['message'] ??
-              '';
-          if (replyText.toString().trim().isEmpty)
-            throw StateError('Empty reply');
-          if (raw['products'] is List) {
-            suggestions = (raw['products'] as List)
-                .map((p) => ProductItem.fromJson(p as Map<String, dynamic>))
-                .toList();
-          }
-          _messages[botMessageIndex] = ChatMessage.bot(
-            replyText.toString(),
-            products: suggestions.isNotEmpty ? suggestions : null,
+      } else {
+        try {
+          final fallbackRes = await _apiClient.post(
+            ApiConstants.chat,
+            data: {
+              'sessionId': _sessionId,
+              'session_id': _sessionId,
+              'message': cleanText,
+            },
           );
-        } else {
+          final raw = fallbackRes.data;
+          if (fallbackRes.isSuccess && raw is Map) {
+            final replyText =
+                raw['answer'] ??
+                raw['message'] ??
+                raw['response'] ??
+                raw['text'] ??
+                '';
+            if (replyText.toString().trim().isEmpty) {
+              throw StateError('Empty reply');
+            }
+            if (raw['products'] is List) {
+              final productList = <ProductItem>[];
+              for (final p in raw['products']) {
+                if (p is Map) {
+                  try {
+                    productList.add(
+                      ProductItem.fromJson(Map<String, dynamic>.from(p)),
+                    );
+                  } catch (e) {
+                    debugPrint('Fallback product parse error: $e');
+                  }
+                }
+              }
+              suggestions = productList;
+            }
+            _messages[botMessageIndex] = ChatMessage.bot(
+              replyText.toString(),
+              products: suggestions.isNotEmpty ? suggestions : null,
+            );
+          } else {
+            _messages[botMessageIndex] = ChatMessage.bot(
+              'Không thể kết nối trợ lý AI. Vui lòng thử gửi lại tin nhắn.',
+            );
+          }
+        } catch (fallbackError) {
+          debugPrint('Chatbot fallback error: $fallbackError');
           _messages[botMessageIndex] = ChatMessage.bot(
             'Không thể kết nối trợ lý AI. Vui lòng thử gửi lại tin nhắn.',
           );
         }
-      } catch (_) {
-        _messages[botMessageIndex] = ChatMessage.bot(
-          'Không thể kết nối trợ lý AI. Vui lòng thử gửi lại tin nhắn.',
-        );
       }
     }
 

@@ -23,8 +23,8 @@ class ApiConstants {
     return 'https://api.dermascan.world';
   }
 
-  static const Duration connectTimeout = Duration(seconds: 15);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration connectTimeout = Duration(seconds: 25);
+  static const Duration receiveTimeout = Duration(seconds: 60);
 
   static const String login = '/api/v1/auth/login';
   static const String register = '/api/v1/auth/register';
