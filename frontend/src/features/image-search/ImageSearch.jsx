@@ -266,21 +266,37 @@ export function ImageSearch({ onNavigate }) {
                 <span>{webcamError}</span>
               </div>
             ) : (
-              <div className="image-search-video-container">
+              <div className="image-search-video-container tiktok-scanner-view">
                 <video ref={videoRef} autoPlay playsInline muted className="image-search-video-feed" />
-                <div className="image-search-video-reticle" />
+                <div className="tiktok-scanner-reticle">
+                  <div className="tiktok-corner tl" />
+                  <div className="tiktok-corner tr" />
+                  <div className="tiktok-corner bl" />
+                  <div className="tiktok-corner br" />
+                  <div className="tiktok-laser-beam" />
+                  <div className="tiktok-scanner-guide">Căn chỉnh sản phẩm vào khung hình</div>
+                </div>
               </div>
             )}
 
-            <div className="image-search-webcam-actions">
+            <div className="image-search-webcam-actions tiktok-webcam-actions">
               <button type="button" className="btn-luxury-secondary" onClick={stopWebcam}>
-                Hủy bỏ
+                Đóng
               </button>
               {!webcamError && (
-                <button type="button" className="btn-luxury-primary" onClick={captureWebcamPhoto}>
-                  <Camera size={18} /> Chụp ảnh này
+                <button
+                  type="button"
+                  className="tiktok-shutter-btn"
+                  onClick={captureWebcamPhoto}
+                  title="Chụp ảnh tìm kiếm"
+                  aria-label="Chụp ảnh tìm kiếm"
+                >
+                  <div className="tiktok-shutter-inner">
+                    <Camera size={26} />
+                  </div>
                 </button>
               )}
+              <div style={{ width: 60 }} />
             </div>
           </div>
         )}
@@ -331,8 +347,13 @@ export function ImageSearch({ onNavigate }) {
               </div>
             ) : (
               <div className="image-search-preview-card">
-                <div className="image-search-preview-media">
+                <div className="image-search-preview-media tiktok-preview-frame">
                   <img src={preview} alt="Ảnh sản phẩm bạn chọn" />
+                  <div className="tiktok-corner tl" />
+                  <div className="tiktok-corner tr" />
+                  <div className="tiktok-corner bl" />
+                  <div className="tiktok-corner br" />
+                  {loading && <div className="tiktok-laser-beam" />}
                   <div className="image-search-preview-overlay">
                     <span className="image-search-filename">{file?.name || 'Ảnh đã chọn'}</span>
                     <button
@@ -344,7 +365,7 @@ export function ImageSearch({ onNavigate }) {
                         if (cameraInputRef.current) cameraInputRef.current.value = '';
                       }}
                     >
-                      <RefreshCw size={14} /> Đổi ảnh khác
+                      <RefreshCw size={14} /> Chụp / Đổi ảnh khác
                     </button>
                   </div>
                 </div>
