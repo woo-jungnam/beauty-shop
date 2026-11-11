@@ -512,12 +512,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               _showSuccessDialog(context, createdOrder);
                             }
                           } else {
+                            final err = context.read<OrderProvider>().errorMessage ??
+                                'Không thể tạo đơn hàng';
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(
-                                  context.read<OrderProvider>().errorMessage ??
-                                      'Không thể tạo đơn hàng',
-                                ),
+                                content: Text(err),
+                                backgroundColor: AppColors.dealRed,
+                                duration: const Duration(seconds: 4),
                               ),
                             );
                           }

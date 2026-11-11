@@ -564,7 +564,15 @@ public class OrderServiceImpl implements OrderService {
                 throw new ResourceNotFoundException("Không tìm thấy thông tin biến thể với ID: " + item.getVariantId());
             }
 
-            inventoryFacade.reserveStock(order.getOrderNumber(), item.getVariantId(), item.getQuantity());
+            try {
+                inventoryFacade.reserveStock(order.getOrderNumber(), item.getVariantId(), item.getQuantity());
+            } catch (com.core.beautyshop.modules.inventory.api.exception.InsufficientStockException e) {
+                String displayName = variant.getProductName() != null
+                        ? variant.getProductName() + " (" + variant.getVariantName() + ")"
+                        : "biến thể #" + item.getVariantId();
+                throw new com.core.beautyshop.modules.inventory.api.exception.InsufficientStockException(
+                        "Sản phẩm '" + displayName + "' hiện không đủ số lượng khả dụng trong kho hoặc đã cận hạn sử dụng. Vui lòng kiểm tra lại giỏ hàng.");
+            }
 
             Optional<BigDecimal> flashSalePrice = flashSaleFacade.tryAllocateFlashSale(
                     item.getVariantId(),

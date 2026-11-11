@@ -267,6 +267,11 @@ class ApiClient {
             message = errorList.join('; ');
           }
         }
+        if (message.contains('Insufficient sellable stock for variant')) {
+          final match = RegExp(r'#(\d+)').firstMatch(message);
+          final vid = match?.group(1) ?? '';
+          message = 'Sản phẩm trong kho (biến thể #$vid) không đủ số lượng khả dụng hoặc đã cận hạn sử dụng. Vui lòng kiểm tra lại giỏ hàng.';
+        }
       }
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {

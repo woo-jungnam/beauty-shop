@@ -42,7 +42,7 @@ public class StockAllocationService {
             remaining -= take;
             if (remaining == 0) break;
         }
-        if (remaining != 0) throw new InsufficientStockException("Insufficient sellable stock for variant #" + variantId);
+        if (remaining != 0) throw new InsufficientStockException("Sản phẩm trong kho không đủ số lượng khả dụng hoặc đã cận hạn sử dụng (biến thể #" + variantId + ")");
     }
 
     @Transactional
