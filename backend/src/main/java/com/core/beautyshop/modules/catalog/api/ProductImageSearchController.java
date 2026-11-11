@@ -19,10 +19,14 @@ public class ProductImageSearchController {
     private final ProductImageSearchService service;
 
     @Operation(summary = "Tìm tối đa 5 sản phẩm còn tồn an toàn có ảnh gần giống",
-            description = "Ảnh JPEG/PNG/WebP tối đa 5 MiB. Kết quả là ứng viên theo hình ảnh, chưa xác nhận SKU hay công dụng.")
+            description = "Ảnh JPEG/PNG/WebP tối đa 5 MiB. Kết quả là ứng viên theo hình ảnh, có thể lọc theo danh mục, thương hiệu và ngưỡng tương đồng.")
     @PostMapping(value = "/search-by-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<ProductImageSearchService.SearchResult> search(@RequestParam("image") MultipartFile image) {
-        return ApiResponse.success(service.search(image));
+    public ApiResponse<ProductImageSearchService.SearchResult> search(
+            @RequestParam("image") MultipartFile image,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "brandId", required = false) Long brandId,
+            @RequestParam(value = "minSimilarity", required = false, defaultValue = "0.65") Double minSimilarity) {
+        return ApiResponse.success(service.search(image, categoryId, brandId, minSimilarity));
     }
 
     @ExceptionHandler(ImageSearchException.class)

@@ -20,7 +20,32 @@ class UnsupportedImageError(InvalidImageError):
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "AVIF", "GIF", "BMP"}
 
 
-def decode_image_bytes(raw: bytes, max_pixels: int = 20_000_000) -> Image.Image:
+def preprocess_image_square(image: Image.Image, target_size: int = 224) -> Image.Image:
+    """
+    Dua anh ve kich thuoc vuong chuan bang cach giu nguyen ti le goc
+    va them vien trang (letterbox padding viền trắng), giup mo hinh CLIP nhan dien
+    chinh xac ty le hinh hoc san pham ma khong bi bop meo hay bien dang.
+    """
+    w, h = image.size
+    if w <= 0 or h <= 0:
+        return image
+
+    if w == h:
+        return image.resize((target_size, target_size), Image.Resampling.LANCZOS)
+
+    ratio = target_size / max(w, h)
+    new_w = max(1, int(w * ratio))
+    new_h = max(1, int(h * ratio))
+
+    resized_img = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    padded_img = Image.new("RGB", (target_size, target_size), (255, 255, 255))
+    paste_x = (target_size - new_w) // 2
+    paste_y = (target_size - new_h) // 2
+    padded_img.paste(resized_img, (paste_x, paste_y))
+    return padded_img
+
+
+def decode_image_bytes(raw: bytes, max_pixels: int = 20_000_000, square_pad: bool = True) -> Image.Image:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
@@ -30,7 +55,10 @@ def decode_image_bytes(raw: bytes, max_pixels: int = 20_000_000) -> Image.Image:
                 if image.width * image.height > max_pixels:
                     raise InvalidImageError("Do phan giai anh qua lon vuot nguong an toan.")
                 image.load()
-                return ImageOps.exif_transpose(image).convert("RGB")
+                rgb = ImageOps.exif_transpose(image).convert("RGB")
+                if square_pad:
+                    return preprocess_image_square(rgb)
+                return rgb
     except InvalidImageError:
         raise
     except (UnidentifiedImageError, OSError, ValueError) as exc:
@@ -89,7 +117,7 @@ def read_catalog_image(upload_dir: str, url: str, max_bytes: int = 5 * 1024 * 10
 
 
 def fetch_all_catalog_images(settings) -> List[Dict]:
-    """Doc toan bo anh san pham va thumbnail tu MySQL database."""
+    """Doc toan bo anh san pham va thumbnail tu MySQL database gom ca category_ids va brand_id."""
     connection = pymysql.connect(
         host=settings.mysql_host,
         port=settings.mysql_port,
@@ -106,17 +134,25 @@ def fetch_all_catalog_images(settings) -> List[Dict]:
             cursor.execute(
                 """
                 SELECT p.id AS product_id, pi.id AS image_id, pi.image_url,
-                       p.status AS product_status, p.name AS product_name, 0 AS is_thumbnail
+                       p.status AS product_status, p.name AS product_name,
+                       p.brand_id, 0 AS is_thumbnail,
+                       GROUP_CONCAT(DISTINCT pc.category_id SEPARATOR ',') AS category_ids_str
                 FROM products p
                 JOIN product_images pi ON pi.product_id = p.id
+                LEFT JOIN product_categories pc ON pc.product_id = p.id
                 WHERE p.is_deleted = 0 AND pi.is_deleted = 0
                   AND TRIM(pi.image_url) <> ''
+                GROUP BY p.id, pi.id, pi.image_url, p.status, p.name, p.brand_id
                 UNION ALL
                 SELECT p.id AS product_id, -p.id AS image_id, p.thumbnail_url AS image_url,
-                       p.status AS product_status, p.name AS product_name, 1 AS is_thumbnail
+                       p.status AS product_status, p.name AS product_name,
+                       p.brand_id, 1 AS is_thumbnail,
+                       GROUP_CONCAT(DISTINCT pc.category_id SEPARATOR ',') AS category_ids_str
                 FROM products p
+                LEFT JOIN product_categories pc ON pc.product_id = p.id
                 WHERE p.is_deleted = 0
                   AND p.thumbnail_url IS NOT NULL AND TRIM(p.thumbnail_url) <> ''
+                GROUP BY p.id, p.thumbnail_url, p.status, p.name, p.brand_id
                 ORDER BY product_id, image_id DESC
             """
             )
@@ -131,6 +167,12 @@ def fetch_all_catalog_images(settings) -> List[Dict]:
         if not url:
             continue
         row["image_url"] = url
+        
+        # Parse chuoi category_ids thanh danh sach so nguyen
+        cat_str = str(row.pop("category_ids_str", "") or "")
+        category_ids = [int(c.strip()) for c in cat_str.split(",") if c.strip().isdigit()]
+        row["category_ids"] = category_ids
+
         key = (row["product_id"], url)
         if key not in seen:
             seen.add(key)

@@ -39,6 +39,8 @@ export const ImageSearchAdminPanel = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [testError, setTestError] = useState(null);
+  const [minSimilarity, setMinSimilarity] = useState(0.65);
+  const [filterCategoryId, setFilterCategoryId] = useState('');
   const fileInputRef = useRef(null);
 
   const pollTimerRef = useRef(null);
@@ -161,7 +163,13 @@ export const ImageSearchAdminPanel = () => {
     try {
       const formData = new FormData();
       formData.append('image', testFile);
-      const res = await apiClient.post(ENDPOINTS.IMAGE_SEARCH.TEST_SEARCH, formData, {
+      const params = new URLSearchParams();
+      if (minSimilarity) params.append('minSimilarity', String(minSimilarity));
+      if (filterCategoryId && filterCategoryId.trim() !== '') {
+        params.append('categoryId', filterCategoryId.trim());
+      }
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const res = await apiClient.post(`${ENDPOINTS.IMAGE_SEARCH.TEST_SEARCH}${query}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const data = res?.data ?? res;
@@ -407,6 +415,58 @@ export const ImageSearchAdminPanel = () => {
           </p>
         </div>
 
+        {/* CONTROLS BAR: CONFIDENCE THRESHOLD & CATEGORY FILTER */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 16,
+            alignItems: 'center',
+            padding: '12px 16px',
+            background: 'var(--color-surface-hover, #f9fafb)',
+            borderRadius: 8,
+            border: '1px solid var(--color-border, #e5e7eb)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 240px' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-secondary, #4b5563)', whiteSpace: 'nowrap' }}>
+              Ngưỡng tin cậy (Cutoff):
+            </span>
+            <input
+              type="range"
+              min="0.50"
+              max="0.90"
+              step="0.05"
+              value={minSimilarity}
+              onChange={(e) => setMinSimilarity(parseFloat(e.target.value))}
+              style={{ flex: 1, cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#4f46e5', minWidth: 40, textAlign: 'right' }}>
+              {Math.round(minSimilarity * 100)}%
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '0 1 200px' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-secondary, #4b5563)', whiteSpace: 'nowrap' }}>
+              Mã danh mục:
+            </span>
+            <input
+              type="number"
+              placeholder="Tất cả danh mục"
+              value={filterCategoryId}
+              onChange={(e) => setFilterCategoryId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '4px 8px',
+                fontSize: 12.5,
+                borderRadius: 6,
+                border: '1px solid var(--color-border, #d1d5db)',
+                background: '#ffffff',
+              }}
+            />
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: previewUrl ? '280px 1fr' : '1fr', gap: 20 }}>
           {/* UPLOAD / DROP ZONE */}
           <div>
@@ -499,51 +559,80 @@ export const ImageSearchAdminPanel = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }}>
                     {testResult.items.map((item, idx) => {
                       const score = Math.round((item.similarity || 0) * 100);
+                      const isHigh = score >= 80;
+                      const isMid = score >= 65;
+                      const color = isHigh ? '#15803d' : isMid ? '#4f46e5' : '#6b7280';
+                      const badgeText = isHigh ? 'Độ khớp cao' : isMid ? 'Khớp hình học' : 'Dưới chuẩn';
+
                       return (
                         <div
                           key={`${item.product_id}-${item.image_id}-${idx}`}
                           style={{
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '10px 14px',
+                            flexDirection: 'column',
+                            gap: 8,
+                            padding: '12px 14px',
                             borderRadius: 8,
                             border: '1px solid var(--color-border, #e5e7eb)',
                             background: '#ffffff',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted, #9ca3af)', width: 18 }}>
-                              #{idx + 1}
-                            </span>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--color-text-primary, #111827)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                {item.product_name || `Sản phẩm ID: ${item.product_id}`}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted, #9ca3af)', width: 18 }}>
+                                #{idx + 1}
+                              </span>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--color-text-primary, #111827)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                  {item.product_name || `Sản phẩm ID: ${item.product_id}`}
+                                </div>
+                                <div style={{ fontSize: 11.5, color: 'var(--color-text-muted, #9ca3af)', marginTop: 2 }}>
+                                  Mã sản phẩm #{item.product_id} · Tệp ảnh #{item.image_id}
+                                </div>
                               </div>
-                              <div style={{ fontSize: 11.5, color: 'var(--color-text-muted, #9ca3af)' }}>
-                                Product #{item.product_id} · Image #{item.image_id}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: '2px 8px',
+                                  borderRadius: 4,
+                                  background: isHigh ? '#f0fdf4' : isMid ? '#eef2ff' : '#f3f4f6',
+                                  color,
+                                  border: `1px solid ${isHigh ? '#bbf7d0' : isMid ? '#c7d2fe' : '#e5e7eb'}`,
+                                }}
+                              >
+                                {badgeText}
+                              </span>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color }}>
+                                  {score}%
+                                </div>
                               </div>
+                              <a
+                                href={`/product/${item.product_id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ color: 'var(--color-text-muted, #9ca3af)', padding: 4 }}
+                                title="Xem trang sản phẩm"
+                              >
+                                <ArrowUpRight size={16} />
+                              </a>
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: score > 80 ? '#15803d' : '#4f46e5' }}>
-                                {score}%
-                              </div>
-                              <div style={{ fontSize: 10.5, color: 'var(--color-text-muted, #9ca3af)' }}>
-                                Tương đồng Cosine
-                              </div>
-                            </div>
-                            <a
-                              href={`/product/${item.product_id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: 'var(--color-text-muted, #9ca3af)', padding: 4 }}
-                              title="Xem trang sản phẩm"
-                            >
-                              <ArrowUpRight size={16} />
-                            </a>
+                          {/* SIMILARITY PROGRESS BAR */}
+                          <div style={{ width: '100%', height: 4, background: '#f3f4f6', borderRadius: 2, overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: `${Math.min(100, Math.max(0, score))}%`,
+                                height: '100%',
+                                background: color,
+                                transition: 'width 0.3s ease',
+                              }}
+                            />
                           </div>
                         </div>
                       );

@@ -7,6 +7,7 @@ import com.core.beautyshop.modules.catalog.application.dto.request.ProductSearch
 import com.core.beautyshop.modules.catalog.application.dto.response.*;
 import com.core.beautyshop.modules.catalog.domain.*;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
+import com.core.beautyshop.modules.catalog.infrastructure.ImageSearchClient;
 import com.core.beautyshop.modules.catalog.infrastructure.RecommendationClient;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.inventory.api.InventoryExpiryPolicy;
@@ -52,6 +53,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryFacade inventoryFacade;
     private final RecommendationClient recommendationClient;
+    private final ImageSearchClient imageSearchClient;
     private final UserProductInteractionRepository userProductInteractionRepository;
     private final ProductInteractionRecorder interactionRecorder;
 
@@ -209,6 +211,15 @@ public class ProductServiceImpl implements ProductService {
 
         product.setAttributeValues(new ArrayList<>());
         Product saved = productRepository.save(product);
+        if (saved.getThumbnailUrl() != null && !saved.getThumbnailUrl().isBlank()) {
+            try {
+                Long brandId = saved.getBrand() != null ? saved.getBrand().getId() : null;
+                List<Long> categoryIds = saved.getCategories() != null
+                        ? saved.getCategories().stream().map(Category::getId).toList()
+                        : null;
+                imageSearchClient.syncImage(saved.getId(), -saved.getId(), saved.getThumbnailUrl(), "UPSERT", saved.getName(), true, categoryIds, brandId);
+            } catch (Exception ignored) { }
+        }
         return mapToProductResponse(saved);
     }
 
@@ -304,6 +315,19 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product saved = productRepository.saveAndFlush(product);
+        if (request.getThumbnailUrl() != null) {
+            try {
+                if (saved.getThumbnailUrl() != null && !saved.getThumbnailUrl().isBlank()) {
+                    Long brandId = saved.getBrand() != null ? saved.getBrand().getId() : null;
+                    List<Long> categoryIds = saved.getCategories() != null
+                            ? saved.getCategories().stream().map(Category::getId).toList()
+                            : null;
+                    imageSearchClient.syncImage(saved.getId(), -saved.getId(), saved.getThumbnailUrl(), "UPSERT", saved.getName(), true, categoryIds, brandId);
+                } else {
+                    imageSearchClient.syncImage(saved.getId(), -saved.getId(), null, "DELETE", null, true);
+                }
+            } catch (Exception ignored) { }
+        }
         return mapToProductResponse(saved);
     }
 
@@ -318,6 +342,9 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
         product.setIsDeleted(true);
         productRepository.save(product);
+        try {
+            imageSearchClient.syncImage(id, -id, null, "DELETE", null, true);
+        } catch (Exception ignored) { }
     }
 
     private ProductResponse mapToProductResponse(Product product) {

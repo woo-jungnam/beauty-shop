@@ -63,6 +63,8 @@ class SyncImageRequest(BaseModel):
     product_status: Optional[str] = "ACTIVE"
     is_thumbnail: Optional[bool] = False
     product_name: Optional[str] = ""
+    category_ids: Optional[list[int]] = None
+    brand_id: Optional[int] = None
 
 
 @app.get("/health", tags=["He thong"])
@@ -95,6 +97,9 @@ async def get_index_status():
 async def search_by_image(
     image: UploadFile = File(...),
     limit: int = Query(default=20, ge=1, le=50),
+    min_similarity: float = Query(default=0.65, ge=0.0, le=1.0),
+    category_id: Optional[int] = Query(default=None),
+    brand_id: Optional[int] = Query(default=None),
 ):
     try:
         raw_bytes = await image.read(settings.image_search_max_bytes + 1)
@@ -116,7 +121,15 @@ async def search_by_image(
     finally:
         pil_image.close()
 
-    candidates = await run_in_threadpool(image_store.search, query_vector, limit)
+    candidates = await run_in_threadpool(
+        image_store.search,
+        query_vector,
+        limit,
+        filter_active=True,
+        category_id=category_id,
+        brand_id=brand_id,
+        min_similarity=min_similarity,
+    )
 
     return {
         "status": "success",
@@ -160,6 +173,8 @@ async def sync_single_image(req: SyncImageRequest):
         is_deleted=False,
         is_thumbnail=bool(req.is_thumbnail),
         product_name=req.product_name or "",
+        category_ids=req.category_ids,
+        brand_id=req.brand_id,
     )
 
     return {

@@ -67,6 +67,8 @@ class QdrantImageStore:
         is_deleted: bool = False,
         is_thumbnail: bool = False,
         product_name: str = "",
+        category_ids: Optional[List[int]] = None,
+        brand_id: Optional[int] = None,
     ):
         point_id = self.make_point_id(product_id, image_id)
         payload = {
@@ -77,6 +79,8 @@ class QdrantImageStore:
             "is_deleted": bool(is_deleted),
             "is_thumbnail": bool(is_thumbnail),
             "product_name": product_name,
+            "category_ids": [int(c) for c in category_ids] if category_ids else [],
+            "brand_id": int(brand_id) if brand_id is not None else None,
         }
         point = PointStruct(id=point_id, vector=vector, payload=payload)
         self.client.upsert(collection_name=self.collection_name, points=[point])
@@ -86,10 +90,22 @@ class QdrantImageStore:
             return
         self.client.upsert(collection_name=self.collection_name, points=points)
 
-    def search(self, query_vector: List[float], limit: int = 20, filter_active: bool = True) -> List[Dict[str, Any]]:
+    def search(
+        self,
+        query_vector: List[float],
+        limit: int = 20,
+        filter_active: bool = True,
+        category_id: Optional[int] = None,
+        brand_id: Optional[int] = None,
+        min_similarity: float = 0.65,
+    ) -> List[Dict[str, Any]]:
         conditions = []
         if filter_active:
             conditions.append(FieldCondition(key="is_deleted", match=MatchValue(value=False)))
+        if category_id is not None:
+            conditions.append(FieldCondition(key="category_ids", match=MatchValue(value=int(category_id))))
+        if brand_id is not None:
+            conditions.append(FieldCondition(key="brand_id", match=MatchValue(value=int(brand_id))))
 
         query_filter = Filter(must=conditions) if conditions else None
 
@@ -97,12 +113,17 @@ class QdrantImageStore:
             collection_name=self.collection_name,
             query_vector=query_vector,
             query_filter=query_filter,
-            limit=limit * 2,  # Lay du phong de deduplicate product_id
+            limit=limit * 3,  # Lay du phong de deduplicate product_id
         )
 
         seen_products = set()
         candidates = []
         for point in scored_points:
+            score = float(point.score)
+            # Nguong tuong dong Confidence Score Cutoff (loai bo ket qua rac/khong lien quan)
+            if score < min_similarity:
+                continue
+
             pid = point.payload.get("product_id")
             if pid in seen_products:
                 continue
@@ -113,7 +134,9 @@ class QdrantImageStore:
                     "image_id": point.payload.get("image_id"),
                     "image_url": point.payload.get("image_url"),
                     "product_name": point.payload.get("product_name"),
-                    "similarity": float(point.score),
+                    "category_ids": point.payload.get("category_ids", []),
+                    "brand_id": point.payload.get("brand_id"),
+                    "similarity": score,
                 }
             )
             if len(candidates) == limit:

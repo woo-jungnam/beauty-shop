@@ -26,16 +26,21 @@ public class ImageSearchClient {
                             @JsonProperty("image_id") Long imageId,
                             @JsonProperty("image_url") String imageUrl,
                             @JsonProperty("product_name") String productName,
+                            @JsonProperty("category_ids") List<Long> categoryIds,
+                            @JsonProperty("brand_id") Long brandId,
                             Double similarity) {
         public Candidate(Long productId, Long imageId, Double similarity) {
-            this(productId, imageId, null, null, similarity);
+            this(productId, imageId, null, null, null, null, similarity);
+        }
+        public Candidate(Long productId, Long imageId, String imageUrl, String productName, Double similarity) {
+            this(productId, imageId, imageUrl, productName, null, null, similarity);
         }
     }
 
     public record Result(String status, @JsonProperty("match_status") String matchStatus,
                          @JsonProperty("index_version") String indexVersion, List<Candidate> items) {}
 
-    public ImageSearchClient(@Value("${image-search.service-url:${chatbot.service.url:http://localhost:8001}}") String url,
+    public ImageSearchClient(@Value("${image-search.service-url:http://image-search:8001}") String url,
                              @Value("${image-search.internal-token:}") String token,
                              @Value("${image-search.enabled:false}") boolean enabled,
                              @Value("${image-search.timeout-seconds:30}") int timeout) {
@@ -53,13 +58,27 @@ public class ImageSearchClient {
     }
 
     public Result search(byte[] image) {
+        return search(image, null, null, 0.65);
+    }
+
+    public Result search(byte[] image, Long categoryId, Long brandId, Double minSimilarity) {
         if (!enabled || token.isBlank()) throw unavailable();
         var parts = new LinkedMultiValueMap<String, Object>();
         parts.add("image", new ByteArrayResource(image) {
             @Override public String getFilename() { return "query-image"; }
         });
         try {
-            var result = client.post().uri("/image-search/search?limit=20")
+            var uriBuilder = new StringBuilder("/image-search/search?limit=20");
+            if (minSimilarity != null) {
+                uriBuilder.append("&min_similarity=").append(minSimilarity);
+            }
+            if (categoryId != null) {
+                uriBuilder.append("&category_id=").append(categoryId);
+            }
+            if (brandId != null) {
+                uriBuilder.append("&brand_id=").append(brandId);
+            }
+            var result = client.post().uri(uriBuilder.toString())
                     .header("X-Image-Search-Token", token)
                     .contentType(MediaType.MULTIPART_FORM_DATA).body(parts)
                     .retrieve().body(Result.class);
@@ -80,8 +99,13 @@ public class ImageSearchClient {
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> getStatus() {
-        if (!enabled || token.isBlank()) {
-            return Map.of("enabled", false, "ready", false, "total_vectors", 0, "message", "Dịch vụ tìm kiếm ảnh đang tắt.");
+        if (!enabled) {
+            return Map.of("enabled", false, "ready", false, "total_vectors", 0,
+                    "message", "Chưa bật tìm kiếm ảnh trong file .env (IMAGE_SEARCH_ENABLED=true)");
+        }
+        if (token.isBlank()) {
+            return Map.of("enabled", true, "ready", false, "total_vectors", 0,
+                    "message", "Chưa cấu hình khóa bí mật IMAGE_SEARCH_INTERNAL_TOKEN trong file .env");
         }
         try {
             return client.get().uri("/image-search/status")
@@ -89,7 +113,8 @@ public class ImageSearchClient {
                     .retrieve().body(Map.class);
         } catch (Exception error) {
             log.warn("Khong the lay status Image Search: {}", error.getMessage());
-            return Map.of("enabled", true, "ready", false, "total_vectors", 0, "error", error.getMessage());
+            return Map.of("enabled", true, "ready", false, "total_vectors", 0,
+                    "error", "Không thể kết nối đến dịch vụ AI (image-search:8001): " + error.getMessage());
         }
     }
 
@@ -120,6 +145,11 @@ public class ImageSearchClient {
     }
 
     public void syncImage(Long productId, Long imageId, String imageUrl, String action, String productName, Boolean isThumbnail) {
+        syncImage(productId, imageId, imageUrl, action, productName, isThumbnail, null, null);
+    }
+
+    public void syncImage(Long productId, Long imageId, String imageUrl, String action, String productName,
+                          Boolean isThumbnail, List<Long> categoryIds, Long brandId) {
         if (!enabled || token.isBlank() || productId == null || imageId == null) return;
         try {
             if ("DELETE".equalsIgnoreCase(action)) {
@@ -127,14 +157,16 @@ public class ImageSearchClient {
                         .header("X-Image-Search-Token", token)
                         .retrieve().toBodilessEntity();
             } else {
-                var body = Map.of(
-                        "product_id", productId,
-                        "image_id", imageId,
-                        "image_url", imageUrl != null ? imageUrl : "",
-                        "product_status", "ACTIVE",
-                        "is_thumbnail", Boolean.TRUE.equals(isThumbnail),
-                        "product_name", productName != null ? productName : ""
-                );
+                var body = new java.util.HashMap<String, Object>();
+                body.put("product_id", productId);
+                body.put("image_id", imageId);
+                body.put("image_url", imageUrl != null ? imageUrl : "");
+                body.put("product_status", "ACTIVE");
+                body.put("is_thumbnail", Boolean.TRUE.equals(isThumbnail));
+                body.put("product_name", productName != null ? productName : "");
+                if (categoryIds != null) body.put("category_ids", categoryIds);
+                if (brandId != null) body.put("brand_id", brandId);
+
                 client.post().uri("/image-search/sync")
                         .header("X-Image-Search-Token", token)
                         .contentType(MediaType.APPLICATION_JSON)

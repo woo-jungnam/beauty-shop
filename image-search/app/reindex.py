@@ -162,6 +162,8 @@ class ReindexManager:
                 pid = meta["product_id"]
                 img_id = meta["image_id"]
                 point_id = self.store.make_point_id(pid, img_id)
+                category_ids = meta.get("category_ids", [])
+                brand_id = meta.get("brand_id")
                 payload = {
                     "product_id": int(pid),
                     "image_id": int(img_id),
@@ -170,6 +172,8 @@ class ReindexManager:
                     "is_deleted": False,
                     "is_thumbnail": bool(meta.get("is_thumbnail", 0)),
                     "product_name": meta.get("product_name", ""),
+                    "category_ids": [int(c) for c in category_ids] if category_ids else [],
+                    "brand_id": int(brand_id) if brand_id is not None else None,
                 }
                 points.append(PointStruct(id=point_id, vector=vec.tolist(), payload=payload))
 

@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.catalog.application.service;
 
 import com.core.beautyshop.modules.catalog.application.dto.request.ProductImageRequest;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse;
+import com.core.beautyshop.modules.catalog.domain.Category;
 import com.core.beautyshop.modules.catalog.domain.Product;
 import com.core.beautyshop.modules.catalog.domain.ProductImage;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
@@ -57,7 +58,11 @@ public class ProductImageServiceImpl implements ProductImageService {
 
         image = imageRepository.save(image);
         try {
-            imageSearchClient.syncImage(productId, image.getId(), image.getImageUrl(), "UPSERT", product.getName(), false);
+            Long brandId = product.getBrand() != null ? product.getBrand().getId() : null;
+            List<Long> categoryIds = product.getCategories() != null
+                    ? product.getCategories().stream().map(Category::getId).toList()
+                    : null;
+            imageSearchClient.syncImage(productId, image.getId(), image.getImageUrl(), "UPSERT", product.getName(), false, categoryIds, brandId);
         } catch (Exception ignored) { }
         return mapToResponse(image);
     }

@@ -23,14 +23,23 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductImageSearchService {
     public static final int MAX_BYTES = 5 * 1024 * 1024;
+    public static final double MIN_SIMILARITY = 0.65;
     private final ImageSearchClient client;
     private final ProductSearchRepository products;
     private final ProductImageRepository images;
 
-    public record Item(ProductListResponse product, boolean inStock, String detailPath) {}
+    public record Item(ProductListResponse product, boolean inStock, String detailPath, Double similarity) {
+        public Item(ProductListResponse product, boolean inStock, String detailPath) {
+            this(product, inStock, detailPath, null);
+        }
+    }
     public record SearchResult(String matchStatus, String indexVersion, List<Item> items) {}
 
     public SearchResult search(MultipartFile image) {
+        return search(image, null, null, MIN_SIMILARITY);
+    }
+
+    public SearchResult search(MultipartFile image, Long categoryId, Long brandId, Double minSimilarity) {
         if (image == null || image.isEmpty()) throw new ImageSearchException(400, "Vui lòng chọn ảnh.");
         if (image.getSize() > MAX_BYTES) throw new ImageSearchException(413, "Ảnh tối đa 5 MiB.");
         byte[] raw;
@@ -41,20 +50,30 @@ public class ProductImageSearchService {
         }
         if (raw.length > MAX_BYTES) throw new ImageSearchException(413, "Ảnh tối đa 5 MiB.");
         if (!supported(raw)) throw new ImageSearchException(415, "Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.");
-        return resolve(client.search(raw));
+        double cutoff = (minSimilarity != null && minSimilarity >= 0.0 && minSimilarity <= 1.0) ? minSimilarity : MIN_SIMILARITY;
+        return resolve(client.search(raw, categoryId, brandId, cutoff), cutoff);
     }
 
     public SearchResult resolve(ImageSearchClient.Result result) {
-        var ids = result.items().stream().map(ImageSearchClient.Candidate::productId).toList();
+        return resolve(result, MIN_SIMILARITY);
+    }
+
+    public SearchResult resolve(ImageSearchClient.Result result, Double minSimilarity) {
+        double cutoff = minSimilarity != null ? minSimilarity : MIN_SIMILARITY;
+        var validCandidates = result.items().stream()
+                .filter(c -> c.similarity() != null && c.similarity() >= cutoff)
+                .toList();
+
+        var ids = validCandidates.stream().map(ImageSearchClient.Candidate::productId).toList();
         if (ids.isEmpty()) return new SearchResult("EMPTY", result.indexVersion(), List.of());
         var available = products.findAvailableByIds(ids, BusinessTime.today()).stream()
                 .collect(Collectors.toMap(ProductListResponse::getId, Function.identity(), (a, b) -> a));
-        var photoIds = result.items().stream().map(ImageSearchClient.Candidate::imageId)
+        var photoIds = validCandidates.stream().map(ImageSearchClient.Candidate::imageId)
                 .filter(id -> id > 0).toList();
         var photos = images.findAllById(photoIds).stream()
                 .filter(image -> !Boolean.TRUE.equals(image.getIsDeleted()))
                 .collect(Collectors.toMap(ProductImage::getId, Function.identity(), (a, b) -> a));
-        var items = result.items().stream().map(candidate -> {
+        var items = validCandidates.stream().map(candidate -> {
                     var product = available.get(candidate.productId());
                     if (product == null) return null;
                     String photoUrl = null;
@@ -66,9 +85,9 @@ public class ProductImageSearchService {
                     }
                     if (!isUploadUrl(photoUrl)) return null;
                     product.setThumbnailUrl(photoUrl);
-                    return product;
+                    return new Item(product, true, "product/" + product.getId(), candidate.similarity());
                 }).filter(Objects::nonNull).limit(5)
-                .map(product -> new Item(product, true, "product/" + product.getId())).toList();
+                .toList();
         return new SearchResult(items.isEmpty() ? "EMPTY" : "CANDIDATES", result.indexVersion(), items);
     }
 

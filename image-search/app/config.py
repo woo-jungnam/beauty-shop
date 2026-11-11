@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     image_search_model_revision: str = "327ab6726d33c0e22f920c83f2ff9e4bd38ca37f"
     image_search_cache_dir: str = str(BASE_DIR / "data" / "model-cache")
     image_search_internal_token: str = ""
+    min_similarity_threshold: float = 0.65
 
     # Image upload directory (Shared Docker volume)
     image_search_upload_dir: str = "/app/uploads"
