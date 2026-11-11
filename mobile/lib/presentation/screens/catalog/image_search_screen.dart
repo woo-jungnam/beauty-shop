@@ -244,7 +244,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
     );
   }
 
-  // Giao dien Scanner / Camera chup anh phong cach TikTok
+  // Giao dien Scanner / Camera chup anh BeautyShop
   Widget _buildScannerView() {
     return Column(
       children: [
@@ -301,15 +301,15 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // 4 goc TikTok scanner
-                          const _TikTokCornerBrackets(
+                          // 4 goc BeautyShop scanner
+                          const _BeautyShopCornerBrackets(
                             length: 28,
                             strokeWidth: 3.5,
                             color: Color(0xFFDB5A77),
                           ),
 
-                          // Tia laser quet TikTok
-                          _TikTokScanBeam(animation: _scanAnimation),
+                          // Tia laser quet BeautyShop
+                          _BeautyShopScanBeam(animation: _scanAnimation),
 
                           // Icon huong dan o giua
                           Column(
@@ -429,7 +429,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
           ),
         ],
 
-        // Bottom Controls Bar (TikTok Style)
+        // Bottom Controls Bar
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           decoration: BoxDecoration(
@@ -442,13 +442,13 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Nut Thu vien
-              _buildTikTokSideButton(
+              _buildBeautyShopSideButton(
                 icon: Icons.photo_library_outlined,
                 label: 'Thư viện',
                 onTap: () => _pickImage(ImageSource.gallery),
               ),
 
-              // Nut Chup TikTok Shutter Button
+              // Nut Chup Shutter Button
               GestureDetector(
                 onTap: () => _pickImage(ImageSource.camera),
                 child: Container(
@@ -474,7 +474,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
               ),
 
               // Nut Dan URL
-              _buildTikTokSideButton(
+              _buildBeautyShopSideButton(
                 icon: Icons.link,
                 label: 'Dán URL',
                 onTap: () {
@@ -488,11 +488,11 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
     );
   }
 
-  // Giao dien Ket qua phong cach TikTok Shop
+  // Giao dien Ket qua phong cach BeautyShop Shop
   Widget _buildResultsView() {
     return Column(
       children: [
-        // Top section: Captured photo preview with TikTok frame & Retake action
+        // Top section: Captured photo preview with BeautyShop frame & Retake action
         Container(
           height: 220,
           color: const Color(0xFF0D0D11),
@@ -518,14 +518,14 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                           fit: BoxFit.contain,
                         ),
                       ),
-                      // 4 goc TikTok overlay tren anh
-                      const _TikTokCornerBrackets(
+                      // 4 goc BeautyShop overlay tren anh
+                      const _BeautyShopCornerBrackets(
                         length: 20,
                         strokeWidth: 2.5,
                         color: Color(0xFFDB5A77),
                       ),
                       // Tia laser scan neu dang load
-                      if (_loading) _TikTokScanBeam(animation: _scanAnimation),
+                      if (_loading) _BeautyShopScanBeam(animation: _scanAnimation),
                     ],
                   ),
                 ),
@@ -545,7 +545,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                 ),
               ),
 
-              // Retake button top-right (TikTok pill style)
+              // Retake button top-right (pill style)
               Positioned(
                 top: 8,
                 right: 12,
@@ -617,7 +617,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
           ),
         ),
 
-        // Bottom section: TikTok Shop Results Draggable Sheet
+        // Bottom section: BeautyShop Results Draggable Sheet
         Expanded(
           child: Container(
             decoration: BoxDecoration(
@@ -678,7 +678,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                             Icon(Icons.auto_awesome, size: 12, color: AppColors.primary),
                             SizedBox(width: 4),
                             Text(
-                              'TikTok Visual AI',
+                              'BeautyShop Visual AI',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: AppColors.primary,
@@ -784,24 +784,25 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
       );
     }
 
+    // Dieu chinh childAspectRatio tu 0.62 xuong 0.55 de loai bo hoan toan loi overflow pixel o duoi the
     return GridView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       itemCount: _results!.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.62,
+        childAspectRatio: 0.55,
       ),
       itemBuilder: (context, idx) {
         final item = _results![idx];
-        return _buildTikTokProductCard(item);
+        return _buildBeautyShopProductCard(item);
       },
     );
   }
 
-  // The san pham phong cach TikTok Shop
-  Widget _buildTikTokProductCard(ImageSearchResultEntry item) {
+  // The san pham phong cach BeautyShop Shop
+  Widget _buildBeautyShopProductCard(ImageSearchResultEntry item) {
     final p = item.product;
     final similarity = item.similarity;
     final simScore = similarity != null ? (similarity * 100).toStringAsFixed(1) : null;
@@ -865,7 +866,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                   ),
                 ),
 
-                // TikTok Style Similarity Match Badge
+                // Similarity Match Badge
                 if (simScore != null)
                   Positioned(
                     top: 6,
@@ -905,7 +906,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
               ],
             ),
 
-            // Thong tin san pham TikTok Shop
+            // Thong tin san pham BeautyShop
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -915,15 +916,16 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         if (p.brandName != null && p.brandName!.isNotEmpty)
                           Text(
                             p.brandName!.toUpperCase(),
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 9,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primary.withValues(alpha: 0.9),
-                              letterSpacing: 0.4,
+                              letterSpacing: 0.3,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -933,8 +935,8 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                           p.name,
                           style: AppTypography.bodySmall.copyWith(
                             fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            height: 1.25,
+                            fontSize: 11.5,
+                            height: 1.2,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -942,7 +944,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                       ],
                     ),
 
-                    // Gia ca va nut mua TikTok Shop
+                    // Gia ca va nut mua BeautyShop
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -956,23 +958,28 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                                 AppFormatters.formatCurrency(displayPrice),
                                 style: const TextStyle(
                                   color: AppColors.dealRed,
-                                  fontSize: 13,
+                                  fontSize: 12.5,
                                   fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               if (hasDiscount)
                                 Text(
                                   AppFormatters.formatCurrency(p.basePrice),
                                   style: const TextStyle(
                                     color: Colors.grey,
-                                    fontSize: 10,
+                                    fontSize: 9.5,
                                     decoration: TextDecoration.lineThrough,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                             ],
                           ),
                         ),
-                        // Nut gio hang nhanh phong cach TikTok Shop
+                        const SizedBox(width: 4),
+                        // Nut gio hang nhanh BeautyShop
                         InkWell(
                           onTap: () {
                             addProductToCart(
@@ -983,9 +990,9 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                               thumbnailUrl: p.thumbnailUrl,
                             );
                           },
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(14),
                           child: Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
                               color: AppColors.primaryLight,
                               shape: BoxShape.circle,
@@ -1013,7 +1020,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
     );
   }
 
-  Widget _buildTikTokSideButton({
+  Widget _buildBeautyShopSideButton({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -1116,13 +1123,13 @@ class _TipRow extends StatelessWidget {
   }
 }
 
-// 4 goc TikTok Scanner
-class _TikTokCornerBrackets extends StatelessWidget {
+// 4 goc BeautyShop Scanner
+class _BeautyShopCornerBrackets extends StatelessWidget {
   final double length;
   final double strokeWidth;
   final Color color;
 
-  const _TikTokCornerBrackets({
+  const _BeautyShopCornerBrackets({
     this.length = 24.0,
     this.strokeWidth = 3.5,
     this.color = const Color(0xFFDB5A77),
@@ -1131,7 +1138,7 @@ class _TikTokCornerBrackets extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: _TikTokCornerPainter(
+      painter: _BeautyShopCornerPainter(
         length: length,
         strokeWidth: strokeWidth,
         color: color,
@@ -1141,12 +1148,12 @@ class _TikTokCornerBrackets extends StatelessWidget {
   }
 }
 
-class _TikTokCornerPainter extends CustomPainter {
+class _BeautyShopCornerPainter extends CustomPainter {
   final double length;
   final double strokeWidth;
   final Color color;
 
-  _TikTokCornerPainter({
+  _BeautyShopCornerPainter({
     required this.length,
     required this.strokeWidth,
     required this.color,
@@ -1185,11 +1192,11 @@ class _TikTokCornerPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// Tia laser quet TikTok Scan Beam
-class _TikTokScanBeam extends StatelessWidget {
+// Tia laser quet BeautyShop Scan Beam
+class _BeautyShopScanBeam extends StatelessWidget {
   final Animation<double> animation;
 
-  const _TikTokScanBeam({required this.animation});
+  const _BeautyShopScanBeam({required this.animation});
 
   @override
   Widget build(BuildContext context) {
