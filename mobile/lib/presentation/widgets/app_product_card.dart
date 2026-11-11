@@ -197,14 +197,18 @@ class AppProductCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 2),
                             ],
-                            Text(
-                              product.totalReviews > 0
-                                  ? product.averageRating.toStringAsFixed(1)
-                                  : 'Chưa có đánh giá',
-                              style: TextStyle(
-                                color: AppColors.getTextMain(context),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 9,
+                            Flexible(
+                              child: Text(
+                                product.totalReviews > 0
+                                    ? product.averageRating.toStringAsFixed(1)
+                                    : 'Chưa có đánh giá',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.getTextMain(context),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 9,
+                                ),
                               ),
                             ),
                             if (product.totalSold > 0) ...[

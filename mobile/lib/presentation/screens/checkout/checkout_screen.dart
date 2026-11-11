@@ -447,7 +447,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         }
                         setState(() => _placing = true);
                         try {
-                          await cart.fetchShippingPolicy();
+                          if (!cart.hasShippingPolicy) {
+                            await cart.fetchShippingPolicy();
+                          }
                           if (!mounted || !context.mounted) return;
                           if (!cart.hasShippingPolicy ||
                               !await cart.revalidateVoucher()) {

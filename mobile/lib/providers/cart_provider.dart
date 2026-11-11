@@ -76,13 +76,16 @@ class CartProvider extends ChangeNotifier {
   Future<void> fetchShippingPolicy() async {
     _isLoadingShipping = true;
     _shippingError = null;
-    _freeShippingThreshold = null;
-    _defaultShippingFee = null;
     notifyListeners();
     try {
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiConstants.publicConfigs,
-        fromJsonT: (json) => json as Map<String, dynamic>,
+        fromJsonT: (json) {
+          if (json is Map) {
+            return Map<String, dynamic>.from(json);
+          }
+          return <String, dynamic>{};
+        },
       );
       if (!response.isSuccess || response.data == null) {
         throw StateError('Missing shipping policy');
@@ -100,8 +103,11 @@ class CartProvider extends ChangeNotifier {
       }
       _freeShippingThreshold = threshold;
       _defaultShippingFee = fee;
+      _shippingError = null;
     } catch (_) {
-      _shippingError = 'Không thể tải phí vận chuyển. Vui lòng thử lại.';
+      if (_freeShippingThreshold == null || _defaultShippingFee == null) {
+        _shippingError = 'Không thể tải phí vận chuyển. Vui lòng thử lại.';
+      }
     } finally {
       _isLoadingShipping = false;
       notifyListeners();
@@ -125,6 +131,12 @@ class CartProvider extends ChangeNotifier {
       );
       if (response.isSuccess) {
         _cart = response.data ?? CartResponse.empty();
+        if (_freeShippingThreshold == null && _cart.freeShippingThreshold != null) {
+          _freeShippingThreshold = _cart.freeShippingThreshold;
+        }
+        if (_defaultShippingFee == null && _cart.defaultShippingFee != null) {
+          _defaultShippingFee = _cart.defaultShippingFee;
+        }
         _invalidateVoucher();
       } else {
         _errorMessage = response.message ?? 'Không thể tải giỏ hàng';

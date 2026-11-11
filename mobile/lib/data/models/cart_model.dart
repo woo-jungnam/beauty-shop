@@ -66,6 +66,8 @@ class CartResponse {
   final String? membershipTier;
   final int? membershipDiscountPercentage;
   final double estimatedMembershipDiscount;
+  final double? freeShippingThreshold;
+  final double? defaultShippingFee;
 
   CartResponse({
     required this.items,
@@ -76,6 +78,8 @@ class CartResponse {
     this.membershipTier,
     this.membershipDiscountPercentage,
     this.estimatedMembershipDiscount = 0.0,
+    this.freeShippingThreshold,
+    this.defaultShippingFee,
   });
 
   factory CartResponse.fromJson(Map<String, dynamic> json) {
@@ -99,6 +103,8 @@ class CartResponse {
     final memTier = json['membershipTier']?.toString();
     final memPercent = (json['membershipDiscountPercentage'] as num?)?.toInt();
     final memDisc = (json['estimatedMembershipDiscount'] as num?)?.toDouble() ?? 0.0;
+    final freeThreshold = (json['freeShippingThreshold'] as num?)?.toDouble();
+    final defShippingFee = (json['defaultShippingFee'] as num?)?.toDouble();
     final tot = (json['totalAmount'] as num?)?.toDouble() ??
         (json['totalPrice'] as num?)?.toDouble() ??
         (sub + shipping - disc - memDisc);
@@ -112,6 +118,8 @@ class CartResponse {
       membershipTier: memTier,
       membershipDiscountPercentage: memPercent,
       estimatedMembershipDiscount: memDisc,
+      freeShippingThreshold: freeThreshold,
+      defaultShippingFee: defShippingFee,
     );
   }
 
