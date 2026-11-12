@@ -11,7 +11,7 @@ import { AccountSettings, AddressBook, SkinProfile, NotificationInbox, WishlistP
 import { OrderWorkspace } from '../components/account/OrderWorkspace';
 import { AppointmentTools } from '../components/account/AppointmentTools';
 import { TicketDetails } from '../../features/spa/TicketDetails';
-import { buildGoogleCalendarUrl } from '../../shared/utils/formatters';
+import { buildGoogleCalendarUrl, resolveMediaUrl } from '../../shared/utils/formatters';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -60,6 +60,8 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const [loading, setLoading] = useState(true);
   const [cancellingAptId, setCancellingAptId] = useState(null);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [aptActionError, setAptActionError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -88,6 +90,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
 
       if (profileRes.status === 'fulfilled') {
         setProfile(profileRes.value?.data || profileRes.value);
+        setAvatarFailed(false);
       }
       if (ticketsRes.status === 'fulfilled') {
         const tData = ticketsRes.value?.data || ticketsRes.value;
@@ -122,16 +125,18 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     onNavigate?.(`profile?tab=${tabId}`, { scroll: false });
+    if (tabId === 'overview') loadData();
   };
 
   const handleCancelAppointment = async (aptId) => {
     if (!window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn Spa này không?')) return;
     setCancellingAptId(aptId);
+    setAptActionError('');
     try {
       await apiClient.put(`/api/v1/appointments/${aptId}/cancel`);
       await loadData();
     } catch (err) {
-      alert(err.message || 'Không thể hủy lịch hẹn');
+      setAptActionError(err.message || 'Không thể hủy lịch hẹn');
     } finally {
       setCancellingAptId(null);
     }
@@ -170,12 +175,13 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   const membershipTier = typeof displayUser.membershipTier === 'string' ? displayUser.membershipTier.trim() : '';
   const totalSpent = statistics?.netSpent;
   const deliveredOrders = orders.filter((order) => order.status === 'DELIVERED').length;
-  const nextTierPoints = { MEMBER: 1000, BRONZE: 1000, SILVER: 5000, GOLD: 10000 }[membershipTier] ?? null;
-  const nextTierName = { MEMBER: 'HẠNG ĐỒNG', BRONZE: 'HẠNG BẠC', SILVER: 'HẠNG VÀNG', GOLD: 'HẠNG BẠCH KIM' }[membershipTier] ?? 'HẠNG VIP';
+  const nextTierPoints = { MEMBER: 1000, SILVER: 5000, GOLD: 10000 }[membershipTier] ?? null;
+  const nextTierName = { MEMBER: 'HẠNG BẠC', SILVER: 'HẠNG VÀNG', GOLD: 'HẠNG BẠCH KIM' }[membershipTier] ?? 'HẠNG VIP';
   const isHighestTier = membershipTier === 'PLATINUM' || membershipTier === 'DIAMOND';
   const loyaltyPoints = knownCount(displayUser.loyaltyPoints);
 
-  const getAppointmentStatusText = (status) => {
+  const getAppointmentStatusText = (status, checkedInAt = null) => {
+    if (status === 'CONFIRMED' && checkedInAt) return 'Đã check-in';
     switch (status) {
       case 'PENDING': return 'Chờ xác nhận';
       case 'CONFIRMED': return 'Đã xác nhận';
@@ -272,7 +278,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
             {activeTab !== 'overview' && <><span aria-hidden="true">/</span><span>{currentTabTitle}</span></>}
           </nav>
           <button onClick={loadData} disabled={loading} className="btn-editorial-outline" title="Làm mới dữ liệu">
-            <RefreshCw size={18} className={loading ? 'spin' : ''} />
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             {loading ? 'Đang đồng bộ...' : 'Làm mới'}
           </button>
         </div>
@@ -289,7 +295,13 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
             <div className="profile-vip-card">
               <div className="profile-vip-header">
                 <div className="profile-vip-avatar">
-                  {displayUser.avatarUrl ? <img src={displayUser.avatarUrl} alt={displayName} /> : avatarLetter}
+                  {displayUser.avatarUrl && !avatarFailed ? (
+                    <img
+                      src={resolveMediaUrl(displayUser.avatarUrl)}
+                      alt={displayName}
+                      onError={() => setAvatarFailed(true)}
+                    />
+                  ) : avatarLetter}
                 </div>
                 <div className="profile-vip-identity">
                   <h3>{displayName}</h3>
@@ -391,7 +403,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                   <div className="bento-ticket-widget">
                     <div className="bento-ticket-header">
                       <h2>Lịch hẹn Spa</h2>
-                      {upcomingAppointment && <span className="profile-status-badge">{getAppointmentStatusText(upcomingAppointment.status)}</span>}
+                      {upcomingAppointment && <span className="profile-status-badge">{getAppointmentStatusText(upcomingAppointment.status, upcomingAppointment.checkedInAt)}</span>}
                     </div>
                     {upcomingAppointment ? (
                       <>
@@ -452,19 +464,21 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                     <div>
                       <div className="profile-card-heading">
                         <h2>Đơn hàng gần nhất</h2>
-                        {latestOrder && <span className="profile-status-badge">{({ PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PROCESSING: 'Đang xử lý', SHIPPED: 'Đang giao', DELIVERED: 'Đã giao', COMPLETED: 'Hoàn tất', CANCELLED: 'Đã hủy', RETURNED: 'Đã trả hàng' })[latestOrder.status] || latestOrder.status || 'Chưa có trạng thái'}</span>}
+                        {latestOrder && <span className="profile-status-badge">{({ PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PROCESSING: 'Đang xử lý', SHIPPED: 'Đang giao', DELIVERED: 'Đã giao', COMPLETED: 'Hoàn tất', CANCELLED: 'Đã hủy', RETURNED: 'Đã trả hàng', DELIVERY_FAILED: 'Giao không thành công', RETURN_TO_SENDER: 'Hàng hoàn về kho' })[latestOrder.status] || latestOrder.status || 'Chưa có trạng thái'}</span>}
                       </div>
                       {latestOrder ? (
                         <div>
                           <div className="profile-muted">Mã đơn hàng:</div>
                           <div className="profile-order-code">#{latestOrder.orderNumber || latestOrder.orderCode || latestOrder.id}</div>
-                          <div className="editorial-progress-track">
-                            {['Đã đặt', 'Xác nhận', 'Đang giao', 'Hoàn tất'].map((label, index) => (
-                              <div key={label} className={`editorial-progress-step ${orderStepIndex >= index + 1 ? 'is-done' : ''}`}>
-                                <div className="editorial-progress-dot" /><span className="editorial-progress-label">{label}</span>
-                              </div>
-                            ))}
-                          </div>
+                          {!['CANCELLED', 'RETURNED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'].includes(latestOrder.status) && (
+                            <div className="editorial-progress-track">
+                              {['Đã đặt', 'Xác nhận', 'Đang giao', 'Hoàn tất'].map((label, index) => (
+                                <div key={label} className={`editorial-progress-step ${orderStepIndex >= index + 1 ? 'is-done' : ''}`}>
+                                  <div className="editorial-progress-dot" /><span className="editorial-progress-label">{label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           <div className="profile-order-total"><span>Tổng thanh toán:</span><strong>{formatCurrency(latestOrder.totalAmount || latestOrder.finalAmount)}</strong></div>
                         </div>
                       ) : (
@@ -497,7 +511,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                           const total = knownCount(tck.totalSessions);
                           return (
                             <div key={tck.id} className="profile-mini-pass-card">
-                              <div className="profile-pass-heading"><span>Mã vé #{tck.id}</span><span className="profile-muted">{tck.expiryDate ? new Date(tck.expiryDate).toLocaleDateString('vi-VN') : 'Vô hạn'}</span></div>
+                              <div className="profile-pass-heading"><span>Mã vé #{tck.id}</span><span className="profile-muted">{tck.expiryDate ? new Date(tck.expiryDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Vô hạn'}</span></div>
                               <h4>{tck.packageName || `Gói Liệu Trình #${tck.id}`}</h4>
                               <div className="profile-pass-usage">Còn lại: {remaining ?? '—'} buổi (Đã dùng {used ?? '—'} / {total ?? '—'})</div>
                               {used !== null && total !== null && total > 0 && <div className="profile-pass-progress"><div style={{ width: `${Math.min(100, Math.round((used / total) * 100))}%` }} /></div>}
@@ -545,7 +559,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                           {used !== null && total !== null && total > 0 && <div className="profile-pass-progress"><div style={{ width: `${Math.min(100, Math.round((used / total) * 100))}%` }} /></div>}
                           <div className="profile-ticket-info">
                             <div>• Mã vé: <strong className="profile-reference">#{tck.id}</strong></div>
-                            <div>• Hạn sử dụng: <strong>{tck.expiryDate ? new Date(tck.expiryDate).toLocaleDateString('vi-VN') : 'Không giới hạn'}</strong></div>
+                            <div>• Hạn sử dụng: <strong>{tck.expiryDate ? new Date(tck.expiryDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Không giới hạn'}</strong></div>
                             <div>• Trạng thái: <strong>{getTicketStatusText(tck.status)}</strong></div>
                           </div>
                           <TicketDetails ticket={tck} onNavigate={onNavigate} />
@@ -560,6 +574,11 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
             {activeTab === 'appointments' && (
               <div className="profile-detail-stack">
                 <div className="profile-card-heading"><p>Danh sách các buổi hẹn chăm sóc da tại BeautyShop Spa.</p><button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn mới</button></div>
+                {aptActionError && (
+                  <div role="alert" className="profile-load-error">
+                    <p>{aptActionError}</p>
+                  </div>
+                )}
                 {appointments.length === 0 ? (
                   <div className="account-card profile-empty-state">
                     <Calendar size={40} /><h3>Bạn chưa có lịch hẹn Spa nào</h3>
@@ -567,11 +586,11 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                     <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn ngay</button>
                   </div>
                 ) : appointments.map((apt) => {
-                  const isCancellable = apt.status === 'PENDING' || apt.status === 'CONFIRMED';
+                  const isCancellable = (apt.status === 'PENDING' || apt.status === 'CONFIRMED') && !apt.checkedInAt;
                   return (
                     <div key={apt.id} className="account-card profile-appointment-card">
                       <div>
-                        <div className="profile-metadata"><strong className="profile-reference">SPA-APT-#{apt.id}</strong><span className="profile-status-badge">{getAppointmentStatusText(apt.status)}</span></div>
+                        <div className="profile-metadata"><strong className="profile-reference">SPA-APT-#{apt.id}</strong><span className="profile-status-badge">{getAppointmentStatusText(apt.status, apt.checkedInAt)}</span></div>
                         <div className="profile-metadata">
                           <span className="profile-icon-label"><Calendar size={18} /><strong>{apt.appointmentDate}</strong></span>
                           <span className="profile-icon-label"><Clock size={18} /><span>{apt.startTime ? String(apt.startTime).slice(0, 5) : ''} - {apt.endTime ? String(apt.endTime).slice(0, 5) : ''}</span></span>
@@ -606,7 +625,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
               </div>
             )}
 
-            {activeTab === 'orders' && <OrderWorkspace onNavigate={onNavigate} initialOrderId={params.get('order')} />}
+            {activeTab === 'orders' && <OrderWorkspace onNavigate={onNavigate} initialOrderId={params.get('order')} onOrderChanged={loadData} />}
             {activeTab === 'skin' && <SkinProfile />}
             {activeTab === 'settings' && <AccountSettings profile={displayUser} onSaved={loadData} />}
             {activeTab === 'addresses' && <AddressBook />}

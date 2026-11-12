@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '../../../shared/api/client';
 import { useAuth } from '../../../app/providers/AuthProvider';
+import { getVietnamDateString } from '../../../shared/utils/formatters';
 import { ProductCard } from '../product/ProductCard';
 import './account-tools.css';
 
@@ -68,7 +69,7 @@ export function AccountSettings({ profile, onSaved }) {
         <h3>Thông tin cá nhân</h3>
         <label>Họ và tên *<input required maxLength={100} value={form.fullName} onChange={event => setForm({ ...form, fullName: event.target.value })} /></label>
         <label>Số điện thoại<input type="tel" placeholder="0987654321 hoặc +84987654321" pattern="(0|\\+84)[35789][0-9]{8}" value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} /></label>
-        <label>Ngày sinh<input type="date" value={form.dateOfBirth} onChange={event => setForm({ ...form, dateOfBirth: event.target.value })} /></label>
+        <label>Ngày sinh<input type="date" max={getVietnamDateString()} value={form.dateOfBirth} onChange={event => setForm({ ...form, dateOfBirth: event.target.value })} /></label>
         <label>Giới tính
           <select value={form.gender} onChange={event => setForm({ ...form, gender: event.target.value })}>
             <option value="">Chưa cung cấp</option>
@@ -77,7 +78,7 @@ export function AccountSettings({ profile, onSaved }) {
             <option value="OTHER">Khác</option>
           </select>
         </label>
-        <label>Ảnh đại diện (URL)<input type="url" maxLength={500} placeholder="https://example.com/avatar.jpg" value={form.avatarUrl} onChange={event => setForm({ ...form, avatarUrl: event.target.value })} /></label>
+        <label>Ảnh đại diện (URL)<input type="text" maxLength={500} placeholder="https://example.com/avatar.jpg hoặc /uploads/..." value={form.avatarUrl} onChange={event => setForm({ ...form, avatarUrl: event.target.value })} /></label>
         <label>Giới thiệu bản thân<textarea maxLength={500} placeholder="Chia sẻ đôi nét về bạn..." value={form.bio} onChange={event => setForm({ ...form, bio: event.target.value })} /></label>
         <button className="btn-luxury-primary" disabled={busy}>{busy ? 'Đang lưu...' : 'Lưu thông tin'}</button>
       </form>
@@ -97,10 +98,12 @@ export function SkinProfile() {
   const [form, setForm] = useState(empty);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
+    setLoadingProfile(true);
     try {
       const data = unwrap(await apiClient.get('/api/v1/users/skin-profile'));
       setForm({
@@ -118,6 +121,8 @@ export function SkinProfile() {
       setFeedback({ type: '', text: '' });
     } catch (e) {
       setFeedback({ type: 'error', text: message(e) });
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
@@ -170,7 +175,7 @@ export function SkinProfile() {
         </div>
         <p>Thông tin do bạn cung cấp để chuyên viên tham khảo. Có thể để trống những mục chưa biết và cập nhật sau khi tư vấn.</p>
         {!loaded ? (
-          <button type="button" onClick={load} className="btn-luxury-outline">Tải lại hồ sơ</button>
+          loadingProfile ? <p role="status">Đang tải hồ sơ làn da…</p> : <button type="button" onClick={load} className="btn-luxury-outline">Tải lại hồ sơ</button>
         ) : (
           <>
             <label>Loại da
@@ -250,7 +255,7 @@ export function NotificationInbox({ onNavigate }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
             {vouchers.map(v => {
               const discountText = v.discountType === 'PERCENTAGE'
-                ? `Giảm ${v.discountValue}% (tối đa ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v.maxDiscountAmount || 0)})`
+                ? `Giảm ${v.discountValue}%${v.maxDiscountAmount != null ? ` (tối đa ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v.maxDiscountAmount)})` : ''}`
                 : `Giảm ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v.discountValue)}`;
               const isCopied = copiedCode === v.code;
               return (
@@ -329,9 +334,6 @@ export function NotificationInbox({ onNavigate }) {
             {typeof row.target === 'string' && /^(profile|treatments|order-lookup)(\?|$)/.test(row.target) && (
               <button onClick={() => onNavigate(row.target)}>Mở nội dung liên quan</button>
             )}
-            {row.orderId && <button onClick={() => onNavigate(`profile?tab=orders&order=${row.orderId}`)}>Xem đơn hàng</button>}
-            {row.appointmentId && <button onClick={() => onNavigate(`profile?tab=appointments&appointment=${row.appointmentId}`)}>Xem lịch hẹn</button>}
-            {row.courseId && <button onClick={() => onNavigate(`treatments?course=${row.courseId}&tab=courses`)}>Xem lộ trình</button>}
           </div>
         </article>
       ))}
@@ -348,9 +350,9 @@ export function AddressBook({ onSelect }) {
   const blank = Object.fromEntries(addressFields.map(([key]) => [key, '']));
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ ...blank, isDefault: false });
-  const [error, setError] = useState('');
+  const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [busy, setBusy] = useState(false);
-  const load = async () => { try { setItems(listRows(await apiClient.get('/api/v1/users/addresses'))); } catch (e) { setError(message(e)); } };
+  const load = async () => { try { setItems(listRows(await apiClient.get('/api/v1/users/addresses'))); } catch (e) { setFeedback({ type: 'error', text: message(e) }); } };
   useEffect(() => {
     load();
     const handleUpdated = () => load();
@@ -360,16 +362,16 @@ export function AddressBook({ onSelect }) {
   return (
     <section className="account-stack">
       <h3>Sổ địa chỉ</h3>
-      {error && (
-        <div style={{
+      {feedback.text && (
+        <div role={feedback.type === 'error' ? 'alert' : 'status'} style={{
           padding: '10px 14px',
           borderRadius: 6,
           fontSize: 13,
-          backgroundColor: error.includes('thành công') ? '#ECFDF5' : '#FEF2F2',
-          color: error.includes('thành công') ? '#065F46' : '#991B1B',
-          border: `1px solid ${error.includes('thành công') ? '#A7F3D0' : '#FECACA'}`
+          backgroundColor: feedback.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+          color: feedback.type === 'success' ? '#065F46' : '#991B1B',
+          border: `1px solid ${feedback.type === 'success' ? '#A7F3D0' : '#FECACA'}`
         }}>
-          {error}
+          {feedback.text}
         </div>
       )}
       {items.map(row => (
@@ -382,17 +384,23 @@ export function AddressBook({ onSelect }) {
           </div>
           <div className="account-actions" style={{ marginTop: 10 }}>
             {onSelect && <button type="button" className="btn-luxury-primary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => onSelect(row)}>Giao tới địa chỉ này</button>}
-            <button type="button" onClick={() => setForm({ ...blank, ...row })}>Sửa</button>
+            <button type="button" onClick={() => setForm({
+              ...blank,
+              ...Object.fromEntries(addressFields.map(([key]) => [key, row[key] || ''])),
+              id: row.id,
+              isDefault: Boolean(row.isDefault),
+            })}>Sửa</button>
             <button type="button" disabled={busy} onClick={async () => {
               if (!window.confirm('Xóa địa chỉ này khỏi sổ địa chỉ?')) return;
               setBusy(true);
+              setFeedback({ type: '', text: '' });
               try {
                 await apiClient.delete(`/api/v1/users/addresses/${row.id}`);
                 window.dispatchEvent(new Event('auth:address-updated'));
                 await load();
-                setError('Đã xóa địa chỉ thành công.');
+                setFeedback({ type: 'success', text: 'Đã xóa địa chỉ thành công.' });
               } catch (e) {
-                setError(message(e));
+                setFeedback({ type: 'error', text: message(e) });
               } finally {
                 setBusy(false);
               }
@@ -401,30 +409,30 @@ export function AddressBook({ onSelect }) {
         </article>
       ))}
       <form className="account-card account-form" onSubmit={async event => {
-        event.preventDefault(); setBusy(true); setError('');
+        event.preventDefault(); setBusy(true); setFeedback({ type: '', text: '' });
         try {
           if (form.id) await apiClient.put(`/api/v1/users/addresses/${form.id}`, form);
           else await apiClient.post('/api/v1/users/addresses', form);
           setForm({ ...blank, isDefault: false });
           window.dispatchEvent(new Event('auth:address-updated'));
           await load();
-          setError('Đã lưu địa chỉ thành công.');
+          setFeedback({ type: 'success', text: 'Đã lưu địa chỉ thành công.' });
         } catch (e) {
-          setError(message(e));
+          setFeedback({ type: 'error', text: message(e) });
         } finally {
           setBusy(false);
         }
       }}>
         <h4>{form.id ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}</h4>
         {addressFields.map(([key, label]) => (
-          <label key={key}>{label} *
+          <label key={key}>{label}{key !== 'district' ? ' *' : ''}
             <input
               required={key !== 'district'}
               maxLength={key === 'address' ? 500 : 100}
               type={key === 'phone' ? 'tel' : 'text'}
               pattern={key === 'phone' ? '(0|\\+84)[35789][0-9]{8}' : undefined}
               placeholder={key === 'phone' ? '0987654321' : ''}
-              value={form[key]}
+              value={form[key] || ''}
               onChange={e => setForm({ ...form, [key]: e.target.value })}
             />
           </label>

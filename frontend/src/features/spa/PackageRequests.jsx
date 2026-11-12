@@ -1,15 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { apiClient } from '../../shared/api/client';
-import { unwrap, errorMessage } from '../treatments/treatmentApi';
+import { unwrap, errorMessage, money } from '../treatments/treatmentApi';
 
 const labels = { PENDING_APPROVAL: 'Chờ admin duyệt', APPROVED: 'Đã gia hạn', REJECTED: 'Đã từ chối', AWAITING_SETTLEMENT: 'Đã duyệt dừng, chờ quyết toán và chứng từ hoàn', COMPLETED: 'Đã quyết toán' };
 export const PackageRequests = ({ ticket, admin = false, onUpdated }) => {
-  const [open, setOpen] = useState(false), [requests, setRequests] = useState([]);
-  const [type, setType] = useState('EXTEND'), [days, setDays] = useState(30), [reason, setReason] = useState('');
+  const [open, setOpen] = useState(false), [requests, setRequests] = useState([]), [quote, setQuote] = useState(null);
+  const [type, setType] = useState(ticket.expiryDate ? 'EXTEND' : 'CANCEL'), [days, setDays] = useState(30), [reason, setReason] = useState('');
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [reviewReason, setReviewReason] = useState('');
   const lock = useRef(false);
   const root = `/api/v1/${admin ? 'admin/' : ''}spa/tickets/${ticket.id}/requests`;
-  const load = async () => setRequests(unwrap(await apiClient.get(root)) || []);
+  const load = async () => {
+    const [reqRes, quoteRes] = await Promise.allSettled([
+      apiClient.get(root),
+      !admin && ticket.status !== 'REVOKED'
+        ? apiClient.get(`/api/v1/spa/tickets/${ticket.id}/settlement-quote`)
+        : Promise.resolve(null),
+    ]);
+    if (reqRes.status === 'fulfilled') setRequests(unwrap(reqRes.value) || []);
+    else throw reqRes.reason;
+    if (quoteRes.status === 'fulfilled' && quoteRes.value) setQuote(unwrap(quoteRes.value));
+  };
   const run = async action => {
     if (lock.current) return;
     lock.current = true; setBusy(true); setError('');
@@ -29,6 +39,18 @@ export const PackageRequests = ({ ticket, admin = false, onUpdated }) => {
     {open && <div aria-live="polite">
       {error && <p role="alert">{error}</p>}
       <p>Gia hạn chỉ có hiệu lực sau khi admin duyệt. Dừng gói cần quyết toán phần chưa dùng và chứng từ hoàn tiền riêng. Hãy hủy các lịch đang giữ lượt trước khi quyết toán.</p>
+      {!admin && quote && (
+        <div style={{ padding: '10px 12px', marginBottom: 10, borderRadius: 8, background: '#FAF7F8', border: '1px solid #F0DEE3', fontSize: 13 }}>
+          <strong>Báo giá quyết toán dự kiến:</strong>{' '}
+          {quote.blockedReason ? (
+            <span style={{ color: '#B45309' }}>{quote.blockedReason}</span>
+          ) : (
+            <span>
+              Hoàn dự kiến <strong>{money(quote.refundableAmount)}</strong> (còn {quote.unusedSessions} lượt{quote.purchasedAmount != null ? ` / giá mua ${money(quote.purchasedAmount)}` : ''}).
+            </span>
+          )}
+        </div>
+      )}
       {requests.map(request => <div key={request.id}>
         <strong>{request.type === 'EXTEND' ? `Gia hạn ${request.extensionDays} ngày` : 'Dừng / hoàn tiền'} · {labels[request.status] || request.status}</strong>
         <p>{request.reason}{request.reviewReason ? ` · Phản hồi: ${request.reviewReason}` : ''}</p>

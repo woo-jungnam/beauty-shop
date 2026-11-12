@@ -863,7 +863,7 @@ export const CheckoutPage = ({ onNavigate }) => {
               {!loadingVouchers && availableVouchers.map(v => {
                 const isApplicable = subtotal >= Number(v.minOrderAmount || 0);
                 const discountLabel = v.discountType === 'PERCENTAGE'
-                  ? `Giảm ${v.discountValue}% (tối đa ${formatCurrency(v.maxDiscountAmount || 0)})`
+                  ? `Giảm ${v.discountValue}%${v.maxDiscountAmount != null ? ` (tối đa ${formatCurrency(v.maxDiscountAmount)})` : ''}`
                   : `Giảm ${formatCurrency(v.discountValue)}`;
                 return (
                   <div key={v.id} style={{

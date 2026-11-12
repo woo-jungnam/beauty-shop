@@ -122,7 +122,7 @@ const FILTER_TABS = [
   { key: 'CANCELLED', label: 'Đã hủy / Đổi trả', statuses: ['CANCELLED', 'RETURNED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'] }
 ];
 
-export function OrderWorkspace({ onNavigate, initialOrderId }) {
+export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
   const { fetchCart, setCartOpen } = useCustomerCart();
   const [page, setPage] = useState(0);
   const [data, setData] = useState({ content: [] });
@@ -723,7 +723,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId }) {
         <OrderDetailDialog
           orderId={selected}
           onClose={() => setSelected(null)}
-          onChanged={load}
+          onChanged={() => { load(); onOrderChanged?.(); }}
           onNavigate={onNavigate}
         />
       )}
