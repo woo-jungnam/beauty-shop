@@ -121,21 +121,36 @@ export const ProcurementPage = () => {
   };
   const fetchCatalogVariants = useCallback(async () => {
     try {
-      const res = await apiClient.get('/api/v1/admin/products?size=100');
+      const res = await apiClient.get('/api/v1/products/search?size=100&includeOutOfStock=true');
       const products = res.data?.content || res.content || res || [];
       const flattened = [];
-      products.forEach(p => {
-        (p.variants || []).forEach(v => {
-          flattened.push({
-            id: v.id,
-            productId: p.id,
-            productName: p.name,
-            variantName: v.variantName || v.volume || 'Tiêu chuẩn',
-            sku: v.sku,
-            price: v.price || p.minPrice || 0,
+      for (let i = 0; i < products.length; i += 10) {
+        const chunk = products.slice(i, i + 10);
+        const results = await Promise.allSettled(
+          chunk.map(async (p) => {
+            if (Array.isArray(p.variants) && p.variants.length > 0) {
+              return { p, variants: p.variants };
+            }
+            const vRes = await apiClient.get(`/api/v1/products/${p.id}/variants`);
+            const variants = vRes?.data || vRes || [];
+            return { p, variants: Array.isArray(variants) ? variants : [] };
+          })
+        );
+        results.forEach((result) => {
+          if (result.status !== 'fulfilled') return;
+          const { p, variants } = result.value;
+          variants.forEach((v) => {
+            flattened.push({
+              id: v.id,
+              productId: p.id,
+              productName: p.name,
+              variantName: v.variantName || v.volume || 'Tiêu chuẩn',
+              sku: v.sku,
+              price: v.price || p.minPrice || 0,
+            });
           });
         });
-      });
+      }
       setCatalogVariants(flattened);
     } catch {
       // Fallback khi không tải được catalog

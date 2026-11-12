@@ -178,8 +178,8 @@ export const OrdersPage = () => {
       if (keyword.trim()) params.append('keyword', keyword.trim());
       if (status) params.append('status', status);
       if (paymentStatus) params.append('paymentStatus', paymentStatus);
-      if (fromDate) params.append('from', `${fromDate}T00:00:00Z`);
-      if (toDate) params.append('to', `${toDate}T23:59:59Z`);
+      if (fromDate) params.append('from', new Date(`${fromDate}T00:00:00+07:00`).toISOString());
+      if (toDate) params.append('to', new Date(`${toDate}T23:59:59.999+07:00`).toISOString());
       if (orderTypeTab && orderTypeTab !== 'ALL') params.append('orderType', orderTypeTab);
 
       const res = await apiClient.get(`${ENDPOINTS.ORDERS.LIST}?${params.toString()}`);
@@ -293,9 +293,14 @@ export const OrdersPage = () => {
       isPermanent: false,
       confirmText: 'Xác nhận PAID',
       onConfirm: async () => {
-        await apiClient.post(ENDPOINTS.ORDERS.CONFIRM_PAYMENT(order.id));
+        const res = await apiClient.post(ENDPOINTS.ORDERS.CONFIRM_PAYMENT(order.id));
+        const confirmedOrder = res?.data || res;
         if (selectedOrder && selectedOrder.id === order.id) {
-          setSelectedOrder((prev) => ({ ...prev, paymentStatus: 'PAID' }));
+          if (confirmedOrder && confirmedOrder.id) {
+            setSelectedOrder(confirmedOrder);
+          } else {
+            await handleOpenDetail(order);
+          }
         }
         fetchOrders(page);
       },
@@ -1256,7 +1261,10 @@ export const OrdersPage = () => {
                         );
                       })}
 
-                      {spaVisitItems.map((sv, idx) => (
+                      {spaVisitItems.map((sv, idx) => {
+                        const unitPrice = Number(sv.unitPrice ?? sv.price ?? 0);
+                        const sessions = Number(sv.performedSessions ?? 1);
+                        return (
                         <tr key={`spa-${idx}`}>
                           <td style={{ width: '56px', textAlign: 'center', verticalAlign: 'middle', padding: '8px' }}>
                             <div
@@ -1282,13 +1290,14 @@ export const OrdersPage = () => {
                               Dịch vụ Spa thực hiện tại cơ sở
                             </div>
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1E293B' }}>{formatCurrency(sv.price)}</td>
-                          <td style={{ textAlign: 'center', fontWeight: 600, color: '#1E293B' }}>{sv.performedSessions ?? 1}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1E293B' }}>{formatCurrency(unitPrice)}</td>
+                          <td style={{ textAlign: 'center', fontWeight: 600, color: '#1E293B' }}>{sessions}</td>
                           <td style={{ textAlign: 'right', fontWeight: 700, color: '#1E293B' }}>
-                            {formatCurrency((sv.price || 0) * (sv.performedSessions || 1))}
+                            {formatCurrency(unitPrice * sessions)}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
 
                       {!hasAnyItems && isSpaOrder && (
                         <tr>
@@ -1416,7 +1425,10 @@ export const OrdersPage = () => {
                       </div>
                     )}
                     {(() => {
-                      const remaining = Math.max(0, Number(selectedOrder.totalAmount || 0) - Number(selectedOrder.paidAmount || 0));
+                      const isClosed = ['CANCELLED', 'RETURNED', 'RETURN_TO_SENDER'].includes(selectedOrder.status);
+                      const remaining = isClosed
+                        ? 0
+                        : Math.max(0, Number(selectedOrder.totalAmount || 0) - Number(selectedOrder.paidAmount || 0));
                       return (
                         <div style={{
                           display: 'flex',
@@ -1424,10 +1436,10 @@ export const OrdersPage = () => {
                           padding: '8px 0 4px',
                           fontSize: '12.5px',
                           fontWeight: 600,
-                          color: remaining > 0 ? '#D97706' : '#059669',
+                          color: isClosed ? '#64748B' : remaining > 0 ? '#D97706' : '#059669',
                         }}>
-                          <span>{remaining > 0 ? 'Còn cần thu:' : 'Tất toán:'}</span>
-                          <span>{remaining > 0 ? formatCurrency(remaining) : 'Đã thanh toán đủ'}</span>
+                          <span>{isClosed ? 'Trạng thái thu:' : remaining > 0 ? 'Còn cần thu:' : 'Tất toán:'}</span>
+                          <span>{isClosed ? 'Đơn đã đóng' : remaining > 0 ? formatCurrency(remaining) : 'Đã thanh toán đủ'}</span>
                         </div>
                       );
                     })()}

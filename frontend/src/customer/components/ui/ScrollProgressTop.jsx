@@ -38,9 +38,9 @@ export const ScrollProgressTop = () => {
     <div
       style={{
         position: 'fixed',
-        bottom: '28px',
-        right: '28px',
-        zIndex: 990,
+        bottom: '86px',
+        right: '24px',
+        zIndex: 910,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

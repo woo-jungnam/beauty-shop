@@ -27,6 +27,9 @@ export const CheckoutPage = ({ onNavigate }) => {
     items,
     subtotal,
     discountAmount,
+    membershipDiscount: storeMembershipDiscount,
+    membershipTier: storeMembershipTier,
+    membershipDiscountPercentage: storeMembershipPercent,
     voucher,
     shippingFee,
     isFreeShipping,
@@ -34,19 +37,26 @@ export const CheckoutPage = ({ onNavigate }) => {
     clearCart,
     applyVoucher,
     removeVoucher,
+    fetchCart,
   } = useCustomerCart();
 
   const { user, isAuthenticated } = useAuth();
 
-  const tierDiscountPercent = {
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const tierDiscountPercent = storeMembershipPercent || ({
     SILVER: 5,
     GOLD: 10,
     PLATINUM: 15,
-  }[user?.membershipTier] || 0;
+  }[storeMembershipTier || user?.membershipTier] || 0);
 
-  const membershipDiscount = (isAuthenticated && tierDiscountPercent > 0 && subtotal > 0)
-    ? Math.round(subtotal * (tierDiscountPercent / 100))
-    : 0;
+  const membershipDiscount = storeMembershipDiscount || (
+    (isAuthenticated && tierDiscountPercent > 0 && subtotal > 0)
+      ? Math.round(subtotal * (tierDiscountPercent / 100))
+      : 0
+  );
 
   const finalTotalAmount = Math.max(0, subtotal + shippingFee - discountAmount - membershipDiscount);
 
@@ -176,17 +186,7 @@ export const CheckoutPage = ({ onNavigate }) => {
 
         if (!hasBackendItems) {
           for (const item of items) {
-            let variantId = item.variantId;
-            if (!variantId || isNaN(Number(variantId))) {
-              try {
-                const pDetail = await apiClient.get(`/api/v1/products/${item.productId}`);
-                const prod = pDetail?.data || pDetail;
-                variantId = prod?.variants?.[0]?.id || item.productId;
-              } catch {
-                variantId = item.productId;
-              }
-            }
-
+            const variantId = item.variantId;
             if (variantId && !isNaN(Number(variantId))) {
               await apiClient.post('/api/v1/cart/add', {
                 variantId: Number(variantId),

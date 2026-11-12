@@ -42,6 +42,13 @@ import { SpaRefundDialog } from '../features/spa/SpaRefundDialog';
 import { TicketDetails } from '../features/spa/TicketDetails';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 
+const toLocalDatetimeString = (value) => {
+  const d = value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const slugify = (value) =>
   value
     .trim()
@@ -173,8 +180,8 @@ export const SpaPage = () => {
   const [blocksModalOpen, setBlocksModalOpen] = useState(false);
   const [selectedFacForBlocks, setSelectedFacForBlocks] = useState(null);
   const [blocksList, setBlocksList] = useState([]);
-  const [blockStart, setBlockStart] = useState(() => new Date().toISOString().slice(0, 16));
-  const [blockEnd, setBlockEnd] = useState(() => new Date(Date.now() + 3600000 * 2).toISOString().slice(0, 16));
+  const [blockStart, setBlockStart] = useState(() => toLocalDatetimeString(new Date()));
+  const [blockEnd, setBlockEnd] = useState(() => toLocalDatetimeString(new Date(Date.now() + 3600000 * 2)));
   const [blockReason, setBlockReason] = useState('Bảo trì thiết bị định kỳ');
   const [blockSubmitting, setBlockSubmitting] = useState(false);
 
@@ -596,10 +603,15 @@ export const SpaPage = () => {
   const handleCompensateTicket = async (e) => {
     e.preventDefault();
     if (!selectedTicket) return;
+    const svcId = Number(compensateServiceId || selectedTicket.services?.[0]?.serviceId);
+    if (!svcId) {
+      alert('Vui lòng chọn dịch vụ bồi thường.');
+      return;
+    }
     try {
       const key = `tkt-${selectedTicket.id}:comp:${Date.now()}`;
       await apiClient.put(ENDPOINTS.SPA.TICKET_COMPENSATE(selectedTicket.id), {
-        serviceId: Number(compensateServiceId || selectedTicket.serviceId || (services[0]?.id)),
+        serviceId: svcId,
         sessions: parseInt(compensateSessions, 10),
         reason: compensateReason.trim() || 'Bồi thường buổi theo biên bản xử lý',
         idempotencyKey: key,
@@ -666,6 +678,8 @@ export const SpaPage = () => {
   const handleOpenBlocks = async (fac) => {
     setSelectedFacForBlocks(fac);
     setBlocksModalOpen(true);
+    setBlockStart(toLocalDatetimeString(new Date()));
+    setBlockEnd(toLocalDatetimeString(new Date(Date.now() + 3600000 * 2)));
     setBlockReason('Bảo trì thiết bị định kỳ');
     try {
       const res = await apiClient.get(ENDPOINTS.SPA.FACILITY_BLOCKS(fac.id));
@@ -941,6 +955,7 @@ export const SpaPage = () => {
             size="sm"
             onClick={() => {
               setSelectedTicket(row);
+              setCompensateServiceId(String(row.services?.[0]?.serviceId || ''));
               setCompensateModalOpen(true);
             }}
             icon={Gift}
@@ -1596,10 +1611,21 @@ export const SpaPage = () => {
         <form onSubmit={handleCompensateTicket}>
           <div style={{ marginBottom: '12px' }}>
             <Select
-              label="Dịch vụ bồi thường"
+              label="Dịch vụ bồi thường *"
+              required
               value={compensateServiceId}
               onChange={(e) => setCompensateServiceId(e.target.value)}
-              options={services.map((s) => ({ label: s.name, value: String(s.id) }))}
+              options={[
+                { label: '-- Chọn dịch vụ bồi thường --', value: '' },
+                ...(selectedTicket?.services?.length
+                  ? selectedTicket.services.map((s) => ({
+                      label: `${s.serviceName} (Còn ${s.available} buổi)`,
+                      value: String(s.serviceId),
+                    }))
+                  : services
+                      .filter((s) => s.serviceType !== 'TREATMENT_COURSE')
+                      .map((s) => ({ label: s.name, value: String(s.id) }))),
+              ]}
             />
           </div>
           <Input label="Số buổi bồi thường cộng thêm *" type="number" min={1} max={100} value={compensateSessions} onChange={(e) => setCompensateSessions(e.target.value)} required />

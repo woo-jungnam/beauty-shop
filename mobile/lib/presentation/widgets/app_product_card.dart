@@ -80,6 +80,36 @@ class AppProductCard extends StatelessWidget {
                     }(),
                   ),
                 ),
+                if (product.isOutOfStock)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.45),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(8),
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.75),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Hết hàng',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   top: 2,
                   right: 2,
@@ -259,26 +289,27 @@ class AppProductCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        InkWell(
-                          onTap: onAddToCart ?? onTap,
-                          borderRadius: BorderRadius.circular(11),
-                          child: Container(
-                            width: 22,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              borderRadius: BorderRadius.circular(11),
-                              border: Border.all(
-                                color: AppColors.primarySoft,
+                        if (!product.isOutOfStock)
+                          InkWell(
+                            onTap: onAddToCart ?? onTap,
+                            borderRadius: BorderRadius.circular(11),
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(11),
+                                border: Border.all(
+                                  color: AppColors.primarySoft,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.add_shopping_cart,
+                                color: AppColors.primary,
+                                size: 12,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.add_shopping_cart,
-                              color: AppColors.primary,
-                              size: 12,
-                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],

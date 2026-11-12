@@ -9,22 +9,30 @@ public interface FlashSaleFacade {
             Long flashSaleItemId,
             BigDecimal flashPrice,
             boolean isFlashSale,
-            Integer remainingQuota
+            Integer remainingQuota,
+            Integer remainingUserQuota
+    ) {
+        public FlashSalePriceResolution(Long flashSaleItemId, BigDecimal flashPrice, boolean isFlashSale, Integer remainingQuota) {
+            this(flashSaleItemId, flashPrice, isFlashSale, remainingQuota, remainingQuota);
+        }
+    }
+
+    record FlashSaleAllocation(
+            Long flashSaleItemId,
+            BigDecimal flashPrice,
+            int allocatedQuantity,
+            Long userId
     ) {}
 
-    /**
-     * Tra cứu giá Flash Sale hiệu lực cho biến thể ở thời điểm hiện tại (không giữ quota, dùng cho Cart / Product View)
-     */
-    Optional<FlashSalePriceResolution> resolveActiveFlashSale(Long variantId);
+    default Optional<FlashSalePriceResolution> resolveActiveFlashSale(Long variantId) {
+        return resolveActiveFlashSale(variantId, null);
+    }
 
-    /**
-     * Cố gắng giữ suất bán Flash Sale nguyên tử cho đơn hàng.
-     * Trả về giá Flash Sale nếu thành công, ngược lại Optional.empty()
-     */
-    Optional<BigDecimal> tryAllocateFlashSale(Long variantId, int quantity, Long orderId, Long userId);
+    Optional<FlashSalePriceResolution> resolveActiveFlashSale(Long variantId, Long userId);
 
-    /**
-     * Giải phóng suất Flash Sale khi đơn hàng bị hủy
-     */
+    Optional<FlashSaleAllocation> tryAllocateFlashSale(Long variantId, int requestedQuantity, Long userId);
+
+    void confirmAllocation(Long orderId, Long flashSaleItemId, Long userId, int quantity);
+
     void releaseAllocations(Long orderId);
 }

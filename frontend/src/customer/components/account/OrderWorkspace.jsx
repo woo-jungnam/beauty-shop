@@ -25,6 +25,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { apiClient } from '../../../shared/api/client';
+import { useAuth } from '../../../app/providers/AuthProvider';
 import { Modal } from '../../../shared/ui/Modal';
 import { getGuestSessionId, useCustomerCart } from '../../stores/customerCartStore';
 import { Pagination, listRows, unwrap } from './AccountTools';
@@ -738,10 +739,12 @@ function SparklesIcon() {
   );
 }
 
-export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
+export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onChanged, onNavigate }) {
+  const { isAuthenticated } = useAuth();
   const { fetchCart, setCartOpen } = useCustomerCart();
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState(initialOrder);
   const [returns, setReturns] = useState([]);
+  const [sessionOwned, setSessionOwned] = useState(!initialOrder);
   const [quantities, setQuantities] = useState({});
   const [reason, setReason] = useState('');
   const returnReplay = useRef({ fingerprint: '', key: '' });
@@ -757,12 +760,15 @@ export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
     ]);
     if (results[0].status === 'fulfilled') {
       setOrder(unwrap(results[0].value));
-    } else {
+      setSessionOwned(true);
+    } else if (!initialOrder) {
       setError(results[0].reason.message);
+    } else {
+      setSessionOwned(false);
     }
     if (results[1].status === 'fulfilled') {
       setReturns(listRows(results[1].value));
-    } else {
+    } else if (!initialOrder || results[1].reason?.status !== 403) {
       setError(`Chưa tải được yêu cầu đổi trả. ${results[1].reason.message}`);
     }
   };
@@ -1188,7 +1194,7 @@ export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
               )}
               {order.discountAmount != null && Number(order.discountAmount) > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', minWidth: 260, color: '#059669' }}>
-                  <span>Voucher giảm giá:</span>
+                  <span>Giảm giá & ưu đãi:</span>
                   <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>-{money(order.discountAmount)}</span>
                 </div>
               )}
@@ -1237,7 +1243,7 @@ export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
 
             {/* Action Buttons */}
             <div className="account-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4, alignItems: 'center' }}>
-              {order.status === 'PENDING' && (
+              {order.status === 'PENDING' && isAuthenticated && order.userId != null && (
                 <button
                   type="button"
                   disabled={busy}
@@ -1251,6 +1257,11 @@ export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
                 >
                   Hủy đơn hàng
                 </button>
+              )}
+              {order.status === 'PENDING' && (!isAuthenticated || order.userId == null) && (
+                <span style={{ fontSize: 12, color: '#6B7280', fontStyle: 'italic' }}>
+                  Đơn khách vãng lai không hỗ trợ tự hủy trực tuyến. Vui lòng liên hệ hotline CSKH nếu cần hủy đơn.
+                </span>
               )}
               {['CONFIRMED', 'PROCESSING'].includes(order.status) && (
                 <span style={{ fontSize: 12, color: '#6B7280', fontStyle: 'italic' }}>
@@ -1328,7 +1339,7 @@ export function OrderDetailDialog({ orderId, onClose, onChanged, onNavigate }) {
                 </article>
               ))}
 
-              {order.status === 'DELIVERED' && (
+              {order.status === 'DELIVERED' && sessionOwned && (
                 <form
                   className="account-form"
                   style={{ backgroundColor: '#F9FAFB', padding: '16px 18px', borderRadius: 8, border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: 12 }}

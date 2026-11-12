@@ -140,7 +140,9 @@ public class ProductReturnService {
         var order=lockedOrder(orderId);
         if(order.getStatus()!=OrderStatus.PENDING&&order.getStatus()!=OrderStatus.CONFIRMED&&order.getStatus()!=OrderStatus.PROCESSING)throw new BusinessException("Replace batches before shipment only");
         if(order.getItems()==null||order.getItems().isEmpty())throw new BusinessException("Only physical product orders support batch replacement");
-        for(var item:order.getItems())inventory.replaceAllocation(order.getOrderNumber(),item.getProductVariantId(),item.getQuantity());
+        Map<Long,Integer> qtyByVariant=new LinkedHashMap<>();
+        order.getItems().forEach(i->qtyByVariant.merge(i.getProductVariantId(),i.getQuantity(),Integer::sum));
+        qtyByVariant.forEach((vId,qty)->inventory.replaceAllocation(order.getOrderNumber(),vId,qty));
         order.getStatusHistories().add(OrderStatusHistory.builder().order(order).status(order.getStatus()).notes("Allocated stock replaced using currently sellable FEFO batches").build());
     }
     private void recordRefund(Order order,BigDecimal amount,String reference,String reason,String kind,Long returnId) {

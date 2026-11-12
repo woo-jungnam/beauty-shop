@@ -25,13 +25,11 @@ const knownCount = (value) => {
 
 const getAptDateParts = (dateStr) => {
   if (!dateStr) return { day: '--', month: 'HẸN SPA' };
+  const match = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return { day: match[3], month: `THÁNG ${match[2]}` };
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) {
-      const parts = String(dateStr).split('-');
-      if (parts.length === 3) return { day: parts[2], month: `THÁNG ${parts[1]}` };
-      return { day: dateStr, month: 'LỊCH HẸN' };
-    }
+    if (isNaN(d.getTime())) return { day: dateStr, month: 'LỊCH HẸN' };
     const day = d.getDate().toString().padStart(2, '0');
     const month = `THÁNG ${(d.getMonth() + 1).toString().padStart(2, '0')}`;
     return { day, month };
@@ -39,6 +37,8 @@ const getAptDateParts = (dateStr) => {
     return { day: dateStr, month: 'LỊCH HẸN' };
   }
 };
+
+const displayStaffName = (name) => (!name || name === 'No preference') ? 'Spa sắp xếp chuyên viên' : name;
 
 const getOrderStepIndex = (status) => {
   const s = String(status || '').toUpperCase();
@@ -369,7 +369,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                 <div className="bento-kpi-grid">
                   <div className="bento-kpi-card">
                     <div className="bento-kpi-label">Đơn mua hàng</div>
-                    <div><div className="bento-kpi-value">{(statistics?.totalOrders ?? orders.length).toString().padStart(2, '0')}</div><div className="bento-kpi-sub">{deliveredOrders} đơn giao thành công</div></div>
+                    <div><div className="bento-kpi-value">{(statistics?.totalOrders ?? orders.length).toString().padStart(2, '0')}</div><div className="bento-kpi-sub">{(statistics?.totalOrders == null || orders.length >= statistics.totalOrders) ? `${deliveredOrders} đơn giao thành công` : `${deliveredOrders} đơn đã giao trong ${orders.length} đơn gần nhất`}</div></div>
                   </div>
                   <div className="bento-kpi-card">
                     <div className="bento-kpi-label">Tích lũy chi tiêu</div>
@@ -405,7 +405,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                             <h3>{upcomingAppointment.items && upcomingAppointment.items.length > 0 ? upcomingAppointment.items.map((it) => it.serviceName || `Dịch vụ #${it.serviceId}`).join(', ') : 'Chăm sóc & Phục hồi da chuyên sâu'}</h3>
                             <div className="profile-metadata">
                               <span className="profile-icon-label"><Clock size={18} /><span>{upcomingAppointment.startTime ? String(upcomingAppointment.startTime).slice(0, 5) : ''} - {upcomingAppointment.endTime ? String(upcomingAppointment.endTime).slice(0, 5) : ''}</span></span>
-                              {upcomingAppointment.items?.[0]?.staffName && <span className="profile-icon-label"><User size={18} /><span>KTV: <strong>{upcomingAppointment.items[0].staffName}</strong></span></span>}
+                              {upcomingAppointment.items?.[0]?.staffName && <span className="profile-icon-label"><User size={18} /><span>KTV: <strong>{displayStaffName(upcomingAppointment.items[0].staffName)}</strong></span></span>}
                             </div>
                           </div>
                         </div>
@@ -457,7 +457,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                       {latestOrder ? (
                         <div>
                           <div className="profile-muted">Mã đơn hàng:</div>
-                          <div className="profile-order-code">#{latestOrder.orderCode || latestOrder.id}</div>
+                          <div className="profile-order-code">#{latestOrder.orderNumber || latestOrder.orderCode || latestOrder.id}</div>
                           <div className="editorial-progress-track">
                             {['Đã đặt', 'Xác nhận', 'Đang giao', 'Hoàn tất'].map((label, index) => (
                               <div key={label} className={`editorial-progress-step ${orderStepIndex >= index + 1 ? 'is-done' : ''}`}>
@@ -577,7 +577,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                           <span className="profile-icon-label"><Clock size={18} /><span>{apt.startTime ? String(apt.startTime).slice(0, 5) : ''} - {apt.endTime ? String(apt.endTime).slice(0, 5) : ''}</span></span>
                         </div>
                         <h3>{apt.items && apt.items.length > 0 ? apt.items.map((it) => it.serviceName || `Dịch vụ #${it.serviceId}`).join(', ') : 'Dịch vụ Chăm Sóc Da Spa'}</h3>
-                        {apt.items && apt.items[0]?.staffName && <div className="profile-muted">Kỹ thuật viên: <strong>{apt.items[0].staffName}</strong></div>}
+                        {apt.items && apt.items[0]?.staffName && <div className="profile-muted">Kỹ thuật viên: <strong>{displayStaffName(apt.items[0].staffName)}</strong></div>}
                       </div>
                       <div className="account-actions">
                         <AppointmentTools appointment={apt} onSaved={loadData} autoOpen={String(apt.id) === params.get('appointment')} />

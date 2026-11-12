@@ -19,6 +19,7 @@ class ProductProvider extends ChangeNotifier {
   List<BannerItem> _banners = [];
   bool _isLoading = false, _isLoadingDetail = false;
   int _productsPage = 0;
+  int _productsPageSize = 60;
   bool _hasMoreCatalog = true;
   bool _isLoadingMoreCatalog = false;
   String? _errorMessage,
@@ -26,7 +27,9 @@ class ProductProvider extends ChangeNotifier {
       _dealsError,
       _recommendedError,
       _bestSellingError,
-      _detailError;
+      _detailError,
+      _reviewSubmitError;
+  String? get reviewSubmitError => _reviewSubmitError;
   ProductDetail? _selectedProductDetail;
   List<ReviewItem> _currentProductReviews = [];
   List<ProductItem> _similarProducts = [];
@@ -114,6 +117,7 @@ class ProductProvider extends ChangeNotifier {
         filters: {'page': page, 'size': size},
       );
       _productsPage = page;
+      _productsPageSize = size;
       _hasMoreCatalog = _products.length >= size;
     } catch (_) {
       _products = [];
@@ -122,25 +126,28 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> loadMoreCatalogProducts({int size = 6}) async {
+  Future<bool> loadMoreCatalogProducts({int? size}) async {
     if (_isLoadingMoreCatalog || !_hasMoreCatalog) return false;
+    final pageSize = _productsPageSize > 0 ? _productsPageSize : (size ?? 60);
     _isLoadingMoreCatalog = true;
     notifyListeners();
     try {
       final nextPage = _productsPage + 1;
       final newItems = await fetchCatalogProducts(
-        filters: {'page': nextPage, 'size': size},
+        filters: {'page': nextPage, 'size': pageSize},
       );
       if (newItems.isEmpty) {
         _hasMoreCatalog = false;
-      } else {
-        _products.addAll(newItems);
-        _productsPage = nextPage;
-        if (newItems.length < size) {
-          _hasMoreCatalog = false;
-        }
+        return false;
       }
-      return newItems.isNotEmpty;
+      final existingIds = _products.map((p) => p.id).toSet();
+      final uniqueNew = newItems.where((p) => existingIds.add(p.id)).toList();
+      _products.addAll(uniqueNew);
+      _productsPage = nextPage;
+      if (newItems.length < pageSize) {
+        _hasMoreCatalog = false;
+      }
+      return uniqueNew.isNotEmpty;
     } catch (_) {
       return false;
     } finally {
@@ -276,7 +283,7 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _categoryProductsMap[categoryId] = await fetchCatalogProducts(
-        filters: {'categoryId': categoryId},
+        filters: {'categoryId': categoryId, 'includeChildCategories': true},
       );
     } catch (_) {
       _categoryProductsMap.remove(categoryId);
@@ -357,6 +364,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<bool> submitReview(CreateReviewRequest request) async {
+    _reviewSubmitError = null;
     try {
       final response = await _apiClient.post(
         ApiConstants.reviews,
@@ -366,7 +374,12 @@ class ProductProvider extends ChangeNotifier {
         await fetchReviewsForProduct(request.productId);
         return true;
       }
-    } catch (_) {}
+      _reviewSubmitError = response.message ?? 'Không thể gửi đánh giá lúc này';
+    } catch (e) {
+      _reviewSubmitError = e is ApiException
+          ? e.message
+          : 'Không thể gửi đánh giá lúc này';
+    }
     return false;
   }
 

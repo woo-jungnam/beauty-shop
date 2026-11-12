@@ -21,6 +21,17 @@ import { getAdminSections } from '../app/adminNavigation';
 import { Button } from '../shared/ui/Button';
 import '../customer/styles/customer-auth.css';
 
+const consumeCustomerRedirect = () => {
+  try {
+    const target = sessionStorage.getItem('auth_redirect');
+    sessionStorage.removeItem('auth_redirect');
+    if (target && ['booking', 'checkout', 'treatments', 'profile', 'service-packages'].includes(target)) {
+      return `#/${target}`;
+    }
+  } catch {}
+  return '#/profile';
+};
+
 export const LoginPage = () => {
   const { login, register } = useAuth();
   const route = window.location.hash.replace(/^#\/?/, '');
@@ -64,7 +75,7 @@ export const LoginPage = () => {
           username: regUsername.trim(),
           password: regPassword,
         });
-        window.location.hash = '#/profile';
+        window.location.hash = consumeCustomerRedirect();
       } catch (err) {
         const errorMsg =
           err.response?.data?.message ||
@@ -96,7 +107,7 @@ export const LoginPage = () => {
         const firstTab = sections[0]?.items[0]?.id;
         window.location.hash = firstTab ? `#/admin/${firstTab}` : '#/admin';
       } else {
-        window.location.hash = '#/profile';
+        window.location.hash = consumeCustomerRedirect();
       }
     } catch (err) {
       const errorMsg =

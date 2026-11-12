@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.promotion.application;
 
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
+import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.promotion.api.FlashSaleFacade;
 import com.core.beautyshop.modules.promotion.domain.*;
 import com.core.beautyshop.modules.promotion.domain.enums.FlashSaleStatus;
@@ -34,6 +35,7 @@ public class FlashSaleService implements FlashSaleFacade {
     private final FlashSaleItemRepository itemRepository;
     private final FlashSaleOrderAllocationRepository allocationRepository;
     private final CatalogFacade catalogFacade;
+    private final InventoryFacade inventoryFacade;
     private final JdbcTemplate jdbcTemplate;
 
     // =========================================================================
@@ -322,10 +324,13 @@ public class FlashSaleService implements FlashSaleFacade {
         if (items.isEmpty()) return List.of();
         List<Long> variantIds = items.stream().map(FlashSaleItem::getProductVariantId).toList();
         Map<Long, ProductVariantSummaryDto> variants = catalogFacade.getVariantSummariesByIds(variantIds);
+        Map<Long, Integer> stockMap = inventoryFacade.getAvailableQuantities(variantIds);
 
         return items.stream().map(it -> {
             ProductVariantSummaryDto v = variants.get(it.getProductVariantId());
-            int remaining = Math.max(0, it.getQuantityQuota() - it.getQuantitySold());
+            int quotaRemaining = Math.max(0, it.getQuantityQuota() - it.getQuantitySold());
+            int realStock = stockMap.getOrDefault(it.getProductVariantId(), 0);
+            int remaining = Math.min(quotaRemaining, realStock);
             int soldPercent = it.getQuantityQuota() > 0
                     ? Math.min(100, (int) Math.round(((double) it.getQuantitySold() / it.getQuantityQuota()) * 100))
                     : 0;
@@ -356,59 +361,88 @@ public class FlashSaleService implements FlashSaleFacade {
     @Override
     @Transactional(readOnly = true)
     public Optional<FlashSalePriceResolution> resolveActiveFlashSale(Long variantId) {
+        return resolveActiveFlashSale(variantId, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<FlashSalePriceResolution> resolveActiveFlashSale(Long variantId, Long userId) {
         if (variantId == null) return Optional.empty();
         List<FlashSaleItem> activeItems = itemRepository.findActiveFlashItemsForVariant(variantId, Instant.now());
         if (activeItems.isEmpty()) return Optional.empty();
 
         FlashSaleItem item = activeItems.getFirst();
-        int remaining = item.getQuantityQuota() - item.getQuantitySold();
-        if (remaining <= 0) return Optional.empty();
+        int remainingQuota = item.getQuantityQuota() - item.getQuantitySold();
+        if (remainingQuota <= 0) return Optional.empty();
+
+        int userLimit = item.getUserLimit() != null && item.getUserLimit() > 0 ? item.getUserLimit() : Integer.MAX_VALUE;
+        int alreadyBought = (userId != null && item.getUserLimit() != null && item.getUserLimit() > 0)
+                ? allocationRepository.countUserPurchasedQuantity(item.getId(), userId)
+                : 0;
+
+        int userRemaining = Math.max(0, userLimit - alreadyBought);
+        if (userRemaining <= 0) return Optional.empty();
+
+        int remainingUserQuota = Math.min(remainingQuota, userRemaining);
 
         return Optional.of(new FlashSalePriceResolution(
                 item.getId(),
                 item.getFlashPrice(),
                 true,
-                remaining
+                remainingQuota,
+                remainingUserQuota
         ));
     }
 
     @Override
     @Transactional
-    public Optional<BigDecimal> tryAllocateFlashSale(Long variantId, int quantity, Long orderId, Long userId) {
-        if (variantId == null || quantity <= 0) return Optional.empty();
+    public Optional<FlashSaleAllocation> tryAllocateFlashSale(Long variantId, int requestedQuantity, Long userId) {
+        if (variantId == null || requestedQuantity <= 0) return Optional.empty();
         Instant now = Instant.now();
         List<FlashSaleItem> activeItems = itemRepository.findActiveFlashItemsForVariant(variantId, now);
         if (activeItems.isEmpty()) return Optional.empty();
 
         FlashSaleItem item = activeItems.getFirst();
 
-        // Kiểm tra giới hạn mua mỗi tài khoản nếu có userId
-        if (userId != null && item.getUserLimit() != null && item.getUserLimit() > 0) {
-            int alreadyBought = allocationRepository.countUserPurchasedQuantity(item.getId(), userId);
-            if (alreadyBought + quantity > item.getUserLimit()) {
-                // Vượt quota user -> Không áp dụng giá Flash Sale cho đơn này
-                return Optional.empty();
-            }
-        }
+        int userLimit = item.getUserLimit() != null && item.getUserLimit() > 0 ? item.getUserLimit() : Integer.MAX_VALUE;
+        int alreadyBought = (userId != null && item.getUserLimit() != null && item.getUserLimit() > 0)
+                ? allocationRepository.countUserPurchasedQuantity(item.getId(), userId)
+                : 0;
 
-        // Cố gắng trừ quota nguyên tử (atomic decrement)
-        int updatedRows = itemRepository.reserveQuotaAtomic(item.getId(), quantity);
+        int userRemaining = Math.max(0, userLimit - alreadyBought);
+        if (userRemaining <= 0) return Optional.empty();
+
+        int remainingQuota = Math.max(0, item.getQuantityQuota() - item.getQuantitySold());
+        if (remainingQuota <= 0) return Optional.empty();
+
+        int allocQty = Math.min(requestedQuantity, Math.min(userRemaining, remainingQuota));
+        if (allocQty <= 0) return Optional.empty();
+
+        int updatedRows = itemRepository.reserveQuotaAtomic(item.getId(), allocQty);
         if (updatedRows > 0) {
-            // Lưu bản ghi giữ chỗ
-            if (orderId != null) {
-                FlashSaleOrderAllocation allocation = FlashSaleOrderAllocation.builder()
-                        .flashSaleItemId(item.getId())
-                        .orderId(orderId)
-                        .userId(userId != null ? userId : 0L)
-                        .quantity(quantity)
-                        .allocatedAt(now)
-                        .build();
-                allocationRepository.save(allocation);
-            }
-            return Optional.of(item.getFlashPrice());
+            return Optional.of(new FlashSaleAllocation(
+                    item.getId(),
+                    item.getFlashPrice(),
+                    allocQty,
+                    userId
+            ));
         }
 
         return Optional.empty();
+    }
+
+    @Override
+    @Transactional
+    public void confirmAllocation(Long orderId, Long flashSaleItemId, Long userId, int quantity) {
+        if (orderId == null || flashSaleItemId == null || quantity <= 0) return;
+        FlashSaleOrderAllocation allocation = FlashSaleOrderAllocation.builder()
+                .flashSaleItemId(flashSaleItemId)
+                .orderId(orderId)
+                .userId(userId != null ? userId : 0L)
+                .quantity(quantity)
+                .allocatedAt(Instant.now())
+                .build();
+        allocationRepository.save(allocation);
     }
 
     @Override

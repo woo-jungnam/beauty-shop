@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
+import '../core/storage/storage_service.dart';
 import '../data/models/chat_model.dart';
 import '../data/models/product_model.dart';
 
 class ChatbotProvider extends ChangeNotifier {
   final ApiClient _apiClient;
+  bool _disposed = false;
 
   ChatbotProvider({ApiClient? apiClient})
-    : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient() {
+    StorageService.authCleared.addListener(_onSessionChanged);
+    StorageService.authSessionChanged.addListener(_onSessionChanged);
+  }
+
+  void _onSessionChanged() {
+    if (_disposed) return;
+    resetConversation();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    StorageService.authCleared.removeListener(_onSessionChanged);
+    StorageService.authSessionChanged.removeListener(_onSessionChanged);
+    super.dispose();
+  }
 
   final List<ChatMessage> _messages = [
     ChatMessage.bot(
@@ -164,9 +182,25 @@ class ChatbotProvider extends ChangeNotifier {
               }
               suggestions = productList;
             }
+            if (raw['actions'] is List) {
+              final actionList = <ChatAction>[];
+              for (final act in raw['actions']) {
+                if (act is Map) {
+                  try {
+                    actionList.add(
+                      ChatAction.fromJson(Map<String, dynamic>.from(act)),
+                    );
+                  } catch (e) {
+                    debugPrint('Fallback action parse error: $e');
+                  }
+                }
+              }
+              actions = actionList;
+            }
             _messages[botMessageIndex] = ChatMessage.bot(
               replyText.toString(),
               products: suggestions.isNotEmpty ? suggestions : null,
+              actions: actions.isNotEmpty ? actions : null,
             );
           } else {
             _messages[botMessageIndex] = ChatMessage.bot(

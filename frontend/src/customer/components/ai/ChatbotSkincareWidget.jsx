@@ -746,14 +746,14 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      addItem({
+                                    onClick={async () => {
+                                      const added = await addItem({
                                         id: item.id,
                                         name: item.name,
                                         price: item.price,
                                         image: item.image,
                                       }, null, 1);
-                                      alert(`Đã thêm "${item.name}" vào giỏ hàng`);
+                                      if (!added) return;
                                     }}
                                     className="chatbot-card-btn chatbot-card-btn-outline"
                                   >
@@ -785,7 +785,7 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                         onClick={() => {
                           if (act.actionType === 'ADD_TO_CART') {
                             addItem({
-                              id: act.payload.product_id,
+                              id: String(act.payload.product_id ?? '').replace(/^(mysql_|service_)/, ''),
                               name: act.payload.product_name,
                               price: act.payload.price,
                               image: act.payload.image_url,
@@ -797,7 +797,9 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
                             else window.location.hash = `/${route}`;
                           } else if (act.actionType === 'VIEW_ORDER') {
                             setIsOpen(false);
-                            const route = `account/orders?code=${encodeURIComponent(act.payload.order_number || '')}`;
+                            const route = act.payload.order_number
+                              ? `order-lookup?code=${encodeURIComponent(act.payload.order_number)}`
+                              : 'profile?tab=orders';
                             if (typeof onNavigate === 'function') onNavigate(route);
                             else window.location.hash = `/${route}`;
                           }

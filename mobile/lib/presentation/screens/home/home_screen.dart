@@ -30,9 +30,7 @@ class _HomeScreenState extends State<HomeScreen>
   late final ScrollController _brandScrollController;
   final Map<int, int> _visibleCountByTab = {0: 6, 1: 6, 2: 6};
   bool _isLoadingMore = false;
-  Timer? _countdownTimer;
   Timer? _brandMarqueeTimer;
-  Duration _timeLeft = const Duration(hours: 2, minutes: 45, seconds: 30);
 
   @override
   void initState() {
@@ -40,20 +38,7 @@ class _HomeScreenState extends State<HomeScreen>
     _tabs = TabController(length: 3, vsync: this)..addListener(_onTabChanged);
     _scrollController = ScrollController()..addListener(_onScroll);
     _brandScrollController = ScrollController();
-    _startCountdown();
     _startBrandMarquee();
-  }
-
-  void _startCountdown() {
-    _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return;
-      if (_timeLeft.inSeconds > 0) {
-        setState(() => _timeLeft -= const Duration(seconds: 1));
-      } else {
-        _countdownTimer?.cancel();
-      }
-    });
   }
 
   void _startBrandMarquee() {
@@ -103,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (tabIndex == 2 && provider.hasMoreCatalog) {
       setState(() => _isLoadingMore = true);
-      final loaded = await provider.loadMoreCatalogProducts(size: 6);
+      final loaded = await provider.loadMoreCatalogProducts();
       if (!mounted) return;
       setState(() {
         if (loaded) {
@@ -120,7 +105,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
-    _countdownTimer?.cancel();
     _brandMarqueeTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
@@ -140,36 +124,25 @@ class _HomeScreenState extends State<HomeScreen>
       );
 
   Widget _buildFlashSaleHeader() {
-    final hours = _timeLeft.inHours.toString().padLeft(2, '0');
-    final minutes = (_timeLeft.inMinutes % 60).toString().padLeft(2, '0');
-    final seconds = (_timeLeft.inSeconds % 60).toString().padLeft(2, '0');
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
       child: Row(
         children: [
-          const Icon(Icons.flash_on, color: AppColors.dealRed, size: 20),
+          const Icon(Icons.local_offer, color: AppColors.dealRed, size: 20),
           const SizedBox(width: 4),
-          const Text(
-            'GIỜ VÀNG SĂN SALE',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 14,
-              color: AppColors.dealRed,
-              letterSpacing: 0.5,
+          const Expanded(
+            child: Text(
+              'XẢ KHO CẬN HẠN · 31–90 NGÀY',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 13.5,
+                color: AppColors.dealRed,
+                letterSpacing: 0.3,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Spacer(),
-          _buildTimerBox(hours),
-          const Text(
-            ' : ',
-            style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.dealRed),
-          ),
-          _buildTimerBox(minutes),
-          const Text(
-            ' : ',
-            style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.dealRed),
-          ),
-          _buildTimerBox(seconds),
           const SizedBox(width: 8),
           TextButton(
             onPressed: () => widget.onNavigateTab?.call(3),
@@ -181,25 +154,6 @@ class _HomeScreenState extends State<HomeScreen>
             child: const Text('Xem tất cả', style: TextStyle(fontSize: 12)),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTimerBox(String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.dealRed,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        value,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w900,
-          fontSize: 11,
-          fontFamily: 'monospace',
-        ),
       ),
     );
   }
@@ -442,21 +396,21 @@ class _HomeScreenState extends State<HomeScreen>
                       category.displayImage,
                       () => _openCollection(category.name, {
                         'categoryId': category.id,
+                        'includeChildCategories': true,
                       }),
                     );
                   },
                 ),
               ),
             ],
-            _buildFlashSaleHeader(),
-            if (provider.dealsError != null)
+            if (provider.dealsError != null) ...[
+              _buildFlashSaleHeader(),
               CatalogState(
                 message: provider.dealsError!,
                 onRetry: provider.fetchFlashSaleProducts,
-              )
-            else if (!provider.isLoading && provider.flashSaleProducts.isEmpty)
-              const CatalogState(message: 'Hiện chưa có sản phẩm ưu đãi')
-            else if (provider.flashSaleProducts.isNotEmpty)
+              ),
+            ] else if (provider.flashSaleProducts.isNotEmpty) ...[
+              _buildFlashSaleHeader(),
               SizedBox(
                 height: 285,
                 child: ListView.separated(
@@ -470,6 +424,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
               ),
+            ],
             if (provider.brands.isNotEmpty) ...[
               _title('Thương hiệu đối tác'),
               SizedBox(

@@ -90,6 +90,10 @@ public class ProductSearchRequest {
     @Schema(description = "Các ID vấn đề da được sản phẩm hỗ trợ (OR)")
     private List<@NotNull @Positive Long> skinConcernIds;
 
+    private Boolean includeChildCategories;
+
+    private Boolean includeOutOfStock;
+
     @NotNull @Min(0)
     @Schema(hidden = true)
     private Integer page = 0;

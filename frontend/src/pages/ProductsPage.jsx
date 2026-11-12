@@ -40,7 +40,7 @@ import { ProductFeaturesModal } from './ProductFeaturesModal';
 import { lines, ingredientCatalog } from './productFeatures.js';
 
 const QUICK_SAMPLE_IMAGES = [];
-const EMPTY_PRODUCT_FILTERS = { keyword: '', categoryId: '', brandId: '', status: '', onSale: '' };
+const EMPTY_PRODUCT_FILTERS = { keyword: '', categoryId: '', brandId: '', status: '' };
 const PRODUCT_STATUSES = {
   ACTIVE: { label: 'Đang bán', variant: 'success' },
   INACTIVE: { label: 'Tạm ẩn', variant: 'default' },
@@ -1758,7 +1758,6 @@ export const ProductsPage = () => {
               <Select label="Lọc danh mục" value={draftFilters.categoryId} onChange={event => setDraftFilters({ ...draftFilters, categoryId: event.target.value })} options={[{ value: '', label: 'Tất cả danh mục' }, ...categories.map(category => ({ value: String(category.id), label: category.name }))]} />
               <Select label="Lọc thương hiệu" value={draftFilters.brandId} onChange={event => setDraftFilters({ ...draftFilters, brandId: event.target.value })} options={[{ value: '', label: 'Tất cả thương hiệu' }, ...brands.map(brand => ({ value: String(brand.id), label: brand.name }))]} />
               <Select label="Lọc trạng thái" value={draftFilters.status} onChange={event => setDraftFilters({ ...draftFilters, status: event.target.value })} options={[{ value: '', label: 'Tất cả trạng thái' }, ...Object.entries(PRODUCT_STATUSES).map(([value, meta]) => ({ value, label: meta.label }))]} />
-              <Select label="Lọc Flash Sale / Khuyến mãi" value={draftFilters.onSale} onChange={event => setDraftFilters({ ...draftFilters, onSale: event.target.value })} options={[{ value: '', label: 'Tất cả sản phẩm' }, { value: 'true', label: 'Đang Flash Sale / Giảm giá' }]} />
               <Select
                 label="Sắp xếp theo"
                 value={productSort}

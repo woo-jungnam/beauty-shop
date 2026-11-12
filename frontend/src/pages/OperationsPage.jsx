@@ -58,10 +58,11 @@ const exportCsv = (name, rows) => {
     ...rows.map((row) => headers.map((key) => escape(row[key])).join(',')),
   ].join('\n');
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
+  const href = URL.createObjectURL(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }));
+  link.href = href;
   link.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
-  URL.revokeObjectURL(link.href);
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
 };
 
 export const OperationsPage = () => {

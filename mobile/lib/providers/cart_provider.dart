@@ -10,6 +10,7 @@ class CartProvider extends ChangeNotifier {
 
   CartResponse _cart = CartResponse.empty();
   bool _isLoading = false;
+  bool _disposed = false;
   String? _errorMessage;
   String? _appliedVoucherCode;
   String? _voucherToken;
@@ -58,7 +59,14 @@ class CartProvider extends ChangeNotifier {
         : _defaultShippingFee!;
   }
 
-  double get membershipDiscount => _cart.estimatedMembershipDiscount;
+  double get membershipDiscount {
+    final sub = selectedSubtotal;
+    if (sub <= 0) return 0.0;
+    if (allItemsSelected) return _cart.estimatedMembershipDiscount;
+    final pct = _cart.membershipDiscountPercentage ?? 0;
+    if (pct <= 0) return 0.0;
+    return (sub * pct / 100).roundToDouble();
+  }
 
   double get finalTotal {
     final total = selectedSubtotal + shippingFee - voucherDiscount - membershipDiscount;
@@ -67,10 +75,31 @@ class CartProvider extends ChangeNotifier {
 
   CartProvider({ApiClient? apiClient, bool loadOnCreate = true})
     : _apiClient = apiClient ?? ApiClient() {
+    StorageService.authCleared.addListener(_onAuthCleared);
+    StorageService.authSessionChanged.addListener(_onAuthSessionChanged);
     if (loadOnCreate) {
       fetchShippingPolicy();
       fetchCart();
     }
+  }
+
+  void _onAuthCleared() {
+    _cart = CartResponse.empty();
+    _invalidateVoucher();
+    _errorMessage = null;
+    if (!_disposed) notifyListeners();
+  }
+
+  void _onAuthSessionChanged() {
+    if (!_disposed) fetchCart();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    StorageService.authCleared.removeListener(_onAuthCleared);
+    StorageService.authSessionChanged.removeListener(_onAuthSessionChanged);
+    super.dispose();
   }
 
   Future<void> fetchShippingPolicy() async {
@@ -174,10 +203,16 @@ class CartProvider extends ChangeNotifier {
             final activeVariants = rawVariants
                 .where((v) => v['isActive'] != false && v['isDeleted'] != true)
                 .toList();
-            if (activeVariants.isNotEmpty) {
-              final defaultVar = activeVariants.firstWhere(
+            final inStockVariants = activeVariants
+                .where((v) => ((v['stockQuantity'] as num?)?.toInt() ?? 0) > 0)
+                .toList();
+            final pool = inStockVariants.isNotEmpty
+                ? inStockVariants
+                : activeVariants;
+            if (pool.isNotEmpty) {
+              final defaultVar = pool.firstWhere(
                 (v) => v['isDefault'] == true,
-                orElse: () => activeVariants.first,
+                orElse: () => pool.first,
               );
               resolvedVariantId =
                   (defaultVar['id'] as num?)?.toInt() ?? resolvedVariantId;
@@ -228,42 +263,134 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateQuantity(int itemId, int newQuantity) async {
+  CartResponse _snapshotCart() {
+    return CartResponse(
+      items: _cart.items
+          .map(
+            (i) => CartItem(
+              id: i.id,
+              productId: i.productId,
+              variantId: i.variantId,
+              productName: i.productName,
+              variantName: i.variantName,
+              thumbnailUrl: i.thumbnailUrl,
+              price: i.price,
+              originalPrice: i.originalPrice,
+              quantity: i.quantity,
+              isSelected: i.isSelected,
+            ),
+          )
+          .toList(),
+      subtotal: _cart.subtotal,
+      shippingFee: _cart.shippingFee,
+      discountAmount: _cart.discountAmount,
+      totalAmount: _cart.totalAmount,
+      membershipTier: _cart.membershipTier,
+      membershipDiscountPercentage: _cart.membershipDiscountPercentage,
+      estimatedMembershipDiscount: _cart.estimatedMembershipDiscount,
+      freeShippingThreshold: _cart.freeShippingThreshold,
+      defaultShippingFee: _cart.defaultShippingFee,
+    );
+  }
+
+  void _applyCartPreservingSelection(
+    CartResponse updated,
+    Map<int, bool> selectedById,
+  ) {
+    for (final item in updated.items) {
+      if (selectedById.containsKey(item.id)) {
+        item.isSelected = selectedById[item.id]!;
+      }
+    }
+    _cart = updated;
+    if (_freeShippingThreshold == null && _cart.freeShippingThreshold != null) {
+      _freeShippingThreshold = _cart.freeShippingThreshold;
+    }
+    if (_defaultShippingFee == null && _cart.defaultShippingFee != null) {
+      _defaultShippingFee = _cart.defaultShippingFee;
+    }
+  }
+
+  Future<bool> updateQuantity(int itemId, int newQuantity) async {
     if (newQuantity <= 0) {
-      await removeItem(itemId);
-      return;
+      return removeItem(itemId);
     }
     final index = _cart.items.indexWhere((i) => i.id == itemId);
-    if (index >= 0) {
-      _cart.items[index].quantity = newQuantity;
-      _invalidateVoucher();
-      notifyListeners();
-    }
+    if (index < 0) return false;
+    final previousCart = _snapshotCart();
+    final selectedById = {for (final i in _cart.items) i.id: i.isSelected};
+    _cart.items[index].quantity = newQuantity;
+    _errorMessage = null;
+    _invalidateVoucher();
+    notifyListeners();
     try {
       final sessionId = StorageService.getGuestSessionId();
-      await _apiClient.put(
+      final response = await _apiClient.put<CartResponse?>(
         '${ApiConstants.updateCartItem}$itemId',
         queryParameters: {
           'quantity': newQuantity,
           if (!StorageService.isLoggedIn) 'sessionId': sessionId,
         },
+        fromJsonT: (json) => json is Map
+            ? CartResponse.fromJson(Map<String, dynamic>.from(json))
+            : null,
       );
-    } catch (_) {}
+      if (response.isSuccess) {
+        if (response.data != null) {
+          _applyCartPreservingSelection(response.data!, selectedById);
+        }
+        _errorMessage = null;
+        if (!_disposed) notifyListeners();
+        return true;
+      }
+      _cart = previousCart;
+      _errorMessage = response.message ?? 'Không thể cập nhật số lượng sản phẩm';
+    } catch (e) {
+      _cart = previousCart;
+      _errorMessage = e is ApiException
+          ? e.message
+          : 'Không thể cập nhật số lượng. Vui lòng thử lại.';
+    }
+    if (!_disposed) notifyListeners();
+    return false;
   }
 
-  Future<void> removeItem(int itemId) async {
+  Future<bool> removeItem(int itemId) async {
+    final previousCart = _snapshotCart();
+    final selectedById = {for (final i in _cart.items) i.id: i.isSelected};
     _cart.items.removeWhere((i) => i.id == itemId);
+    _errorMessage = null;
     _invalidateVoucher();
     notifyListeners();
     try {
       final sessionId = StorageService.getGuestSessionId();
-      await _apiClient.delete(
+      final response = await _apiClient.delete<CartResponse?>(
         '${ApiConstants.removeCartItem}$itemId',
         queryParameters: !StorageService.isLoggedIn
             ? {'sessionId': sessionId}
             : null,
+        fromJsonT: (json) => json is Map
+            ? CartResponse.fromJson(Map<String, dynamic>.from(json))
+            : null,
       );
-    } catch (_) {}
+      if (response.isSuccess) {
+        if (response.data != null) {
+          _applyCartPreservingSelection(response.data!, selectedById);
+        }
+        _errorMessage = null;
+        if (!_disposed) notifyListeners();
+        return true;
+      }
+      _cart = previousCart;
+      _errorMessage = response.message ?? 'Không thể xóa sản phẩm khỏi giỏ hàng';
+    } catch (e) {
+      _cart = previousCart;
+      _errorMessage = e is ApiException
+          ? e.message
+          : 'Không thể xóa sản phẩm. Vui lòng thử lại.';
+    }
+    if (!_disposed) notifyListeners();
+    return false;
   }
 
   void toggleItemSelection(int itemId) {

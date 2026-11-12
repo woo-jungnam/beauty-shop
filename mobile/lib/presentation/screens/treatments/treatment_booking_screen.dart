@@ -32,10 +32,15 @@ class _TreatmentBookingScreenState extends State<TreatmentBookingScreen> {
     _generation = context.read<TreatmentProvider>().generation;
     final first = widget.session.earliestBookingAt;
     if (first != null) {
-      final earliest = DateTime.tryParse(
-        first,
-      )?.toUtc().add(const Duration(hours: 7));
-      if (earliest != null && earliest.isAfter(_date)) _date = earliest;
+      final parsed = DateTime.tryParse(first);
+      if (parsed != null) {
+        final hasOffset =
+            first.endsWith('Z') || RegExp(r'[+-]\d\d:\d\d$').hasMatch(first);
+        final earliest = hasOffset
+            ? parsed.toUtc().add(const Duration(hours: 7))
+            : parsed;
+        if (earliest.isAfter(_date)) _date = earliest;
+      }
     }
     _load();
   }
@@ -186,7 +191,9 @@ class _TreatmentBookingScreenState extends State<TreatmentBookingScreen> {
                         children: slots
                             .map(
                               (slot) => ChoiceChip(
-                                label: Text(slot.substring(0, 5)),
+                                label: Text(
+                                  slot.length >= 5 ? slot.substring(0, 5) : slot,
+                                ),
                                 selected: _selected == slot,
                                 onSelected: _busy
                                     ? null

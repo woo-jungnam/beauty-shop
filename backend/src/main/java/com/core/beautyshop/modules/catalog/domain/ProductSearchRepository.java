@@ -5,6 +5,9 @@ import com.core.beautyshop.modules.catalog.application.dto.response.ProductListR
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
 import com.core.beautyshop.modules.catalog.domain.enums.SkinType;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
+import com.core.beautyshop.modules.promotion.domain.FlashSaleCampaign;
+import com.core.beautyshop.modules.promotion.domain.FlashSaleItem;
+import com.core.beautyshop.modules.promotion.domain.enums.FlashSaleStatus;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ErrorCode;
 import com.core.beautyshop.shared.time.BusinessTime;
@@ -28,12 +31,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @Repository
@@ -83,7 +90,7 @@ public class ProductSearchRepository {
                 product.get("totalReviews"), product.get("totalSold"), brand.get("name"), brand.get("id"),
                 firstCategoryId(builder, query, product)));
         query.where(filters(builder, query, product, brand, request, businessDate, ids, excludeId, categoryOrBrand).toArray(Predicate[]::new));
-        query.orderBy(orders(builder, product, minPrice, maxPrice, pageable.getSort()));
+        query.orderBy(orders(builder, query, product, minPrice, maxPrice, pageable.getSort(), request, businessDate));
 
         if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
             throw invalid("Page offset exceeds the supported range");
@@ -91,6 +98,7 @@ public class ProductSearchRepository {
         var selection = entityManager.createQuery(query);
         if (pageable.isPaged()) selection.setFirstResult((int) pageable.getOffset()).setMaxResults(pageable.getPageSize());
         List<ProductListResponse> content = selection.getResultList();
+        enrichTotalStock(content);
 
         CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
         Root<Product> countProduct = countQuery.from(Product.class);
@@ -196,7 +204,9 @@ public class ProductSearchRepository {
             conditions.add(builder.equal(builder.lower(product.get("originCountry")), request.getOriginCountry().trim().toLowerCase(Locale.ROOT)));
         }
 
-        if (request.getMinPrice() != null || request.getMaxPrice() != null || request.getOnSale() != null || !Boolean.FALSE.equals(request.getInStock())) {
+        boolean includeOutOfStock = request.getInStock() == null && Boolean.TRUE.equals(request.getIncludeOutOfStock());
+        boolean checkInStock = Boolean.TRUE.equals(request.getInStock()) || (request.getInStock() == null && !includeOutOfStock);
+        if (request.getMinPrice() != null || request.getMaxPrice() != null || request.getOnSale() != null || checkInStock || includeOutOfStock) {
             Subquery<Integer> variantQuery = query.subquery(Integer.class);
             Root<ProductVariant> variant = variantQuery.from(ProductVariant.class);
             variantQuery.select(builder.literal(1)).where(matchingVariantConditions(builder, variantQuery, variant, product, request, businessDate)
@@ -250,12 +260,32 @@ public class ProductSearchRepository {
         if (request.getMinPrice() != null) conditions.add(builder.greaterThanOrEqualTo(price, request.getMinPrice()));
         if (request.getMaxPrice() != null) conditions.add(builder.lessThanOrEqualTo(price, request.getMaxPrice()));
         if (request.getOnSale() != null) {
-            Predicate sale = builder.and(builder.isNotNull(variant.get("discountPrice")),
+            Subquery<Integer> activeFlashSale = query.subquery(Integer.class);
+            Root<FlashSaleItem> flashItem = activeFlashSale.from(FlashSaleItem.class);
+            Join<FlashSaleItem, FlashSaleCampaign> campaign = flashItem.join("campaign");
+            Instant now = Instant.now();
+            activeFlashSale.select(builder.literal(1)).where(
+                    builder.equal(flashItem.get("productVariantId"), variant.get("id")),
+                    builder.isFalse(campaign.get("isDeleted")),
+                    builder.or(
+                            builder.equal(campaign.get("status"), FlashSaleStatus.ACTIVE),
+                            builder.and(
+                                    builder.equal(campaign.get("status"), FlashSaleStatus.SCHEDULED),
+                                    builder.lessThanOrEqualTo(campaign.get("startsAt"), now),
+                                    builder.greaterThan(campaign.get("endsAt"), now)
+                            )
+                    ),
+                    builder.greaterThan(flashItem.<Integer>get("quantityQuota"), flashItem.<Integer>get("quantitySold")),
+                    builder.lessThan(flashItem.<BigDecimal>get("flashPrice"), variant.<BigDecimal>get("price"))
+            );
+            Predicate catalogSale = builder.and(builder.isNotNull(variant.get("discountPrice")),
                     builder.greaterThanOrEqualTo(variant.<BigDecimal>get("discountPrice"), BigDecimal.ZERO),
                     builder.lessThan(variant.<BigDecimal>get("discountPrice"), variant.<BigDecimal>get("price")));
+            Predicate sale = builder.or(catalogSale, builder.exists(activeFlashSale));
             conditions.add(Boolean.TRUE.equals(request.getOnSale()) ? sale : builder.not(sale));
         }
-        if (!Boolean.FALSE.equals(request.getInStock())) {
+        boolean checkInStock = Boolean.TRUE.equals(request.getInStock()) || (request.getInStock() == null && !Boolean.TRUE.equals(request.getIncludeOutOfStock()));
+        if (checkInStock) {
             conditions.add(inventoryFacade.hasAvailableStock(builder, query, variant.get("id"), businessDate));
         }
         return conditions;
@@ -282,9 +312,19 @@ public class ProductSearchRepository {
         return categoryQuery;
     }
 
-    private List<Order> orders(CriteriaBuilder builder, Root<Product> product, Expression<BigDecimal> minPrice,
-                                Expression<BigDecimal> maxPrice, Sort sort) {
+    private List<Order> orders(CriteriaBuilder builder, CommonAbstractCriteria query, Root<Product> product, Expression<BigDecimal> minPrice,
+                                Expression<BigDecimal> maxPrice, Sort sort, ProductSearchRequest request, LocalDate businessDate) {
         List<Order> orders = new ArrayList<>();
+        if (request.getInStock() == null && Boolean.TRUE.equals(request.getIncludeOutOfStock())) {
+            Subquery<Integer> stockedVariant = query.subquery(Integer.class);
+            Root<ProductVariant> variant = stockedVariant.from(ProductVariant.class);
+            stockedVariant.select(builder.literal(1)).where(activeVariant(builder, variant, product),
+                    inventoryFacade.hasAvailableStock(builder, stockedVariant, variant.get("id"), businessDate));
+            Expression<Integer> stockRank = builder.<Integer>selectCase()
+                    .when(builder.exists(stockedVariant), 0)
+                    .otherwise(1);
+            orders.add(builder.asc(stockRank));
+        }
         boolean hasId = false;
         for (Sort.Order order : sort) {
             Expression<?> expression = switch (order.getProperty()) {
@@ -329,6 +369,34 @@ public class ProductSearchRepository {
         if (alias != null) ids.add(alias);
         if (list != null) ids.addAll(list);
         return ids;
+    }
+
+    private void enrichTotalStock(List<ProductListResponse> items) {
+        if (items == null || items.isEmpty()) return;
+        List<Long> productIds = items.stream()
+                .map(ProductListResponse::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (productIds.isEmpty()) return;
+        List<Object[]> variantRows = entityManager.createQuery(
+                        "SELECT v.id, v.product.id FROM ProductVariant v WHERE v.product.id IN :productIds AND v.isDeleted = false AND v.isActive = true",
+                        Object[].class)
+                .setParameter("productIds", productIds)
+                .getResultList();
+        if (variantRows.isEmpty()) {
+            items.forEach(item -> item.setTotalStock(0));
+            return;
+        }
+        List<Long> variantIds = variantRows.stream().map(r -> (Long) r[0]).toList();
+        Map<Long, Integer> stockByVariant = inventoryFacade.getAvailableQuantities(variantIds);
+        Map<Long, Integer> stockByProduct = new HashMap<>();
+        for (Object[] row : variantRows) {
+            Long variantId = (Long) row[0];
+            Long productId = (Long) row[1];
+            stockByProduct.merge(productId, stockByVariant.getOrDefault(variantId, 0), Integer::sum);
+        }
+        items.forEach(item -> item.setTotalStock(stockByProduct.getOrDefault(item.getId(), 0)));
     }
 
     private boolean present(Collection<?> values) { return values != null && !values.isEmpty(); }

@@ -61,6 +61,7 @@ const POLICIES = {
 export const CustomerFooter = ({ onNavigate }) => {
   const [activePolicy, setActivePolicy] = useState(null);
   const [storeContact, setStoreContact] = useState({ address: '', hotline: '', email: '' });
+  const [featuredCategories, setFeaturedCategories] = useState([]);
   useEffect(() => {
     let active = true;
     apiClient.get('/api/v1/system-configs/public').then(response => {
@@ -68,6 +69,11 @@ export const CustomerFooter = ({ onNavigate }) => {
       const configs = response?.data ?? response;
       const text = key => typeof configs?.[key] === 'string' ? configs[key].trim() : '';
       setStoreContact({ address: text('store.address'), hotline: text('store.hotline'), email: text('store.email') });
+    }).catch(() => {});
+    apiClient.get('/api/v1/categories').then(response => {
+      if (!active) return;
+      const list = response?.data ?? response;
+      if (Array.isArray(list)) setFeaturedCategories(list.slice(0, 5));
     }).catch(() => {});
     return () => { active = false; };
   }, []);
@@ -271,12 +277,14 @@ export const CustomerFooter = ({ onNavigate }) => {
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Danh Mục Nổi Bật
               </h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#CBD5E1' }}>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('products?categoryId=100&category=cham-soc-da-mat&name=' + encodeURIComponent('Chăm sóc da mặt'))}>Chăm sóc da mặt chuyên sâu</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('products?categoryId=6&category=kem-chong-nang&name=' + encodeURIComponent('Kem chống nắng'))}>Kem chống nắng quang phổ rộng</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('products?categoryId=1&category=sua-rua-mat&name=' + encodeURIComponent('Sữa rửa mặt'))}>Sữa rửa mặt & Tẩy trang dịu nhẹ</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('products?categoryId=4&category=serum&name=' + encodeURIComponent('Serum'))}>Serum B5 & Tinh chất phục hồi</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('products?categoryId=5&category=kem-duong&name=' + encodeURIComponent('Kem dưỡng'))}>Dưỡng ẩm & Tái tạo hàng rào da</li>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FDE8ED' }}>
+                {featuredCategories.length > 0 ? featuredCategories.map((cat) => (
+                  <li key={cat.id} style={{ cursor: 'pointer' }} onClick={() => onNavigate(`products?categoryId=${cat.id}${cat.slug ? `&category=${encodeURIComponent(cat.slug)}` : ''}&name=${encodeURIComponent(cat.name)}`)}>
+                    {cat.name}
+                  </li>
+                )) : (
+                  <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('products')}>Khám phá tất cả sản phẩm</li>
+                )}
               </ul>
             </div>
 
@@ -345,7 +353,7 @@ export const CustomerFooter = ({ onNavigate }) => {
             flexWrap: 'wrap',
             gap: '12px',
             fontSize: '12px',
-            color: '#94A3B8'
+            color: '#F8D0DA'
           }}>
             <div>
               © 2026 BeautyShop. Mỹ phẩm & dịch vụ làm đẹp.

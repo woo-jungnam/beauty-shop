@@ -131,7 +131,8 @@ public class OrderServiceImpl implements OrderService {
             order.setPaymentDeadline(Instant.now().plusSeconds(paymentTimeoutMinutes * 60));
         }
 
-        BigDecimal subTotal = buildOrderItems(order, cart);
+        List<FlashSaleFacade.FlashSaleAllocation> flashSaleAllocations = new ArrayList<>();
+        BigDecimal subTotal = buildOrderItems(order, cart, flashSaleAllocations);
 
         BigDecimal membershipDiscount = BigDecimal.ZERO;
         if (userId != null) {
@@ -177,6 +178,15 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
+        for (FlashSaleFacade.FlashSaleAllocation alloc : flashSaleAllocations) {
+            flashSaleFacade.confirmAllocation(
+                    savedOrder.getId(),
+                    alloc.flashSaleItemId(),
+                    alloc.userId(),
+                    alloc.allocatedQuantity()
+            );
+        }
+
         promotionFacade.redeem(appliedVoucher, userId, savedOrder.getId());
 
         eventPublisher.publishEvent(OrderEvents.OrderCreatedEvent.builder()
@@ -188,14 +198,7 @@ public class OrderServiceImpl implements OrderService {
                 .build());
 
         if (freeBankOrder) {
-            List<OrderEvents.OrderItemSummary> itemSummaries = savedOrder.getItems() != null
-                    ? savedOrder.getItems().stream()
-                    .map(item -> OrderEvents.OrderItemSummary.builder()
-                            .variantId(item.getProductVariantId())
-                            .quantity(item.getQuantity())
-                            .build())
-                    .toList()
-                    : List.of();
+            List<OrderEvents.OrderItemSummary> itemSummaries = extractItemSummaries(savedOrder);
 
             eventPublisher.publishEvent(OrderEvents.OrderStatusChangedEvent.builder().orderId(savedOrder.getId())
                     .orderNumber(savedOrder.getOrderNumber()).previousStatus(OrderStatus.PENDING).newStatus(OrderStatus.PROCESSING).build());
@@ -384,9 +387,11 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán trước khi giao hàng");
         }
         if (newStatus == OrderStatus.SHIPPED) {
-            for (var item : order.getItems()) {
-                inventoryFacade.validateForDispatch(order.getOrderNumber(), item.getProductVariantId(), item.getQuantity());
-                inventoryFacade.deductStock(order.getOrderNumber(), item.getProductVariantId(), item.getQuantity());
+            Map<Long, Integer> totalQtyByVariant = order.getItems().stream()
+                    .collect(Collectors.groupingBy(OrderItem::getProductVariantId, Collectors.summingInt(OrderItem::getQuantity)));
+            for (var entry : totalQtyByVariant.entrySet()) {
+                inventoryFacade.validateForDispatch(order.getOrderNumber(), entry.getKey(), entry.getValue());
+                inventoryFacade.deductStock(order.getOrderNumber(), entry.getKey(), entry.getValue());
             }
         }
         if (newStatus == OrderStatus.DELIVERED && order.getDeliveredAt() == null) order.setDeliveredAt(Instant.now());
@@ -543,7 +548,7 @@ public class OrderServiceImpl implements OrderService {
         return cart;
     }
 
-    private BigDecimal buildOrderItems(Order order, CartResponse cart) {
+    private BigDecimal buildOrderItems(Order order, CartResponse cart, List<FlashSaleFacade.FlashSaleAllocation> flashSaleAllocations) {
         BigDecimal subTotal = BigDecimal.ZERO;
 
         List<Long> variantIds = cart.getItems().stream()
@@ -574,41 +579,80 @@ public class OrderServiceImpl implements OrderService {
                         "Sản phẩm '" + displayName + "' hiện không đủ số lượng khả dụng trong kho hoặc đã cận hạn sử dụng. Vui lòng kiểm tra lại giỏ hàng.");
             }
 
-            Optional<BigDecimal> flashSalePrice = flashSaleFacade.tryAllocateFlashSale(
+            Optional<FlashSaleFacade.FlashSaleAllocation> allocOpt = flashSaleFacade.tryAllocateFlashSale(
                     item.getVariantId(),
                     item.getQuantity(),
-                    order.getId(),
                     order.getUserId()
             );
 
-            BigDecimal price;
-            BigDecimal discount;
-            if (flashSalePrice.isPresent()) {
-                price = flashSalePrice.get();
-                discount = variant.getPrice().subtract(price).max(BigDecimal.ZERO);
+            if (allocOpt.isPresent() && allocOpt.get().allocatedQuantity() > 0) {
+                FlashSaleFacade.FlashSaleAllocation alloc = allocOpt.get();
+                flashSaleAllocations.add(alloc);
+
+                int flashQty = alloc.allocatedQuantity();
+                int regularQty = item.getQuantity() - flashQty;
+
+                BigDecimal flashPrice = alloc.flashPrice();
+                BigDecimal flashDiscount = variant.getPrice().subtract(flashPrice).max(BigDecimal.ZERO);
+
+                order.getItems().add(OrderItem.builder()
+                        .order(order)
+                        .productVariantId(variant.getId())
+                        .sku(variant.getSku())
+                        .productName(variant.getProductName())
+                        .variantName(variant.getVariantName())
+                        .imageUrl(variant.getProductThumbnailUrl())
+                        .quantity(flashQty)
+                        .price(variant.getPrice())
+                        .discount(flashDiscount)
+                        .build());
+
+                subTotal = subTotal.add(flashPrice.multiply(BigDecimal.valueOf(flashQty)));
+
+                if (regularQty > 0) {
+                    BigDecimal regPrice = variant.getDiscountPrice() != null
+                            ? variant.getDiscountPrice()
+                            : variant.getPrice();
+                    BigDecimal regDiscount = variant.getDiscountPrice() != null
+                            ? variant.getPrice().subtract(variant.getDiscountPrice()).max(BigDecimal.ZERO)
+                            : BigDecimal.ZERO;
+
+                    order.getItems().add(OrderItem.builder()
+                            .order(order)
+                            .productVariantId(variant.getId())
+                            .sku(variant.getSku())
+                            .productName(variant.getProductName())
+                            .variantName(variant.getVariantName())
+                            .imageUrl(variant.getProductThumbnailUrl())
+                            .quantity(regularQty)
+                            .price(variant.getPrice())
+                            .discount(regDiscount)
+                            .build());
+
+                    subTotal = subTotal.add(regPrice.multiply(BigDecimal.valueOf(regularQty)));
+                }
             } else {
-                price = variant.getDiscountPrice() != null
+                BigDecimal regPrice = variant.getDiscountPrice() != null
                         ? variant.getDiscountPrice()
                         : variant.getPrice();
-                discount = variant.getDiscountPrice() != null
+                BigDecimal regDiscount = variant.getDiscountPrice() != null
                         ? variant.getPrice().subtract(variant.getDiscountPrice()).max(BigDecimal.ZERO)
                         : BigDecimal.ZERO;
+
+                order.getItems().add(OrderItem.builder()
+                        .order(order)
+                        .productVariantId(variant.getId())
+                        .sku(variant.getSku())
+                        .productName(variant.getProductName())
+                        .variantName(variant.getVariantName())
+                        .imageUrl(variant.getProductThumbnailUrl())
+                        .quantity(item.getQuantity())
+                        .price(variant.getPrice())
+                        .discount(regDiscount)
+                        .build());
+
+                subTotal = subTotal.add(regPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
             }
-
-            subTotal = subTotal.add(price.multiply(new BigDecimal(item.getQuantity())));
-
-            OrderItem orderItem = OrderItem.builder()
-                    .order(order)
-                    .productVariantId(variant.getId())
-                    .sku(variant.getSku())
-                    .productName(variant.getProductName())
-                    .variantName(variant.getVariantName())
-                    .imageUrl(variant.getProductThumbnailUrl())
-                    .quantity(item.getQuantity())
-                    .price(variant.getPrice())
-                    .discount(discount)
-                    .build();
-            order.getItems().add(orderItem);
         }
 
         return subTotal;
@@ -623,19 +667,26 @@ public class OrderServiceImpl implements OrderService {
         order.getStatusHistories().add(history);
     }
 
+    private List<OrderEvents.OrderItemSummary> extractItemSummaries(Order order) {
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            return List.of();
+        }
+        return order.getItems().stream()
+                .collect(Collectors.groupingBy(OrderItem::getProductVariantId, Collectors.summingInt(OrderItem::getQuantity)))
+                .entrySet().stream()
+                .map(e -> OrderEvents.OrderItemSummary.builder()
+                        .variantId(e.getKey())
+                        .quantity(e.getValue())
+                        .build())
+                .toList();
+    }
+
     private void publishOrderCancelledEvent(Order order) {
         if (order.getItems() != null) {
-            List<OrderEvents.OrderItemSummary> itemSummaries = order.getItems().stream()
-                    .map(item -> OrderEvents.OrderItemSummary.builder()
-                            .variantId(item.getProductVariantId())
-                            .quantity(item.getQuantity())
-                            .build())
-                    .collect(Collectors.toList());
-
             eventPublisher.publishEvent(OrderEvents.OrderCancelledEvent.builder()
                     .orderId(order.getId())
                     .orderNumber(order.getOrderNumber())
-                    .items(itemSummaries)
+                    .items(extractItemSummaries(order))
                     .build());
         }
     }
@@ -668,38 +719,24 @@ public class OrderServiceImpl implements OrderService {
 
     private void publishOrderDeliveredEvent(Order order) {
         if (order.getItems() != null) {
-            List<OrderEvents.OrderItemSummary> itemSummaries = order.getItems().stream()
-                    .map(item -> OrderEvents.OrderItemSummary.builder()
-                            .variantId(item.getProductVariantId())
-                            .quantity(item.getQuantity())
-                            .build())
-                    .collect(Collectors.toList());
-
             eventPublisher.publishEvent(OrderEvents.OrderDeliveredEvent.builder()
                     .orderId(order.getId())
                     .sessionId(order.getGuestSessionId())
                     .orderNumber(order.getOrderNumber())
                     .userId(order.getUserId())
                     .totalAmount(order.getTotalAmount())
-                    .items(itemSummaries)
+                    .items(extractItemSummaries(order))
                     .build());
         }
     }
 
     private void publishOrderReturnedEvent(Order order) {
         if (order.getItems() != null) {
-            List<OrderEvents.OrderItemSummary> itemSummaries = order.getItems().stream()
-                    .map(item -> OrderEvents.OrderItemSummary.builder()
-                            .variantId(item.getProductVariantId())
-                            .quantity(item.getQuantity())
-                            .build())
-                    .collect(Collectors.toList());
-
             eventPublisher.publishEvent(OrderEvents.OrderReturnedEvent.builder()
                     .orderId(order.getId())
                     .userId(order.getUserId())
                     .orderNumber(order.getOrderNumber())
-                    .items(itemSummaries)
+                    .items(extractItemSummaries(order))
                     .build());
         }
     }

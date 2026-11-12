@@ -16,6 +16,7 @@ import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.time.BusinessTime;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
@@ -51,6 +52,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductTagRepository productTagRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final SkinConcernRepository skinConcernRepository;
     private final InventoryFacade inventoryFacade;
     private final RecommendationClient recommendationClient;
     private final ImageSearchClient imageSearchClient;
@@ -107,7 +109,15 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> searchProducts(ProductSearchRequest request, Pageable pageable) {
-        return productSearchRepository.search(request, pageable);
+        ProductSearchRequest effective = request;
+        if (request != null && Boolean.TRUE.equals(request.getIncludeChildCategories())
+                && (request.getCategoryId() != null || (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()))) {
+            effective = new ProductSearchRequest();
+            BeanUtils.copyProperties(request, effective);
+            effective.setCategoryId(null);
+            effective.setCategoryIds(expandActiveCategoryIds(request.getCategoryId(), request.getCategoryIds()));
+        }
+        return productSearchRepository.search(effective, pageable);
     }
 
     @Override
@@ -633,6 +643,49 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         return result;
+    }
+
+    private List<Long> expandActiveCategoryIds(Long singleId, List<Long> listIds) {
+        Set<Long> seeds = new LinkedHashSet<>();
+        if (singleId != null) seeds.add(singleId);
+        if (listIds != null) seeds.addAll(listIds);
+        if (seeds.isEmpty()) return List.of();
+        List<CategoryResponse> allCategories = categoryRepository.findAllCategoryDtoList();
+        Map<Long, Boolean> activeById = new HashMap<>();
+        Map<Long, List<Long>> childrenMap = new HashMap<>();
+        for (CategoryResponse cat : allCategories) {
+            boolean active = Boolean.TRUE.equals(cat.getIsActive());
+            activeById.put(cat.getId(), active);
+            if (active && cat.getParentId() != null) {
+                childrenMap.computeIfAbsent(cat.getParentId(), k -> new ArrayList<>()).add(cat.getId());
+            }
+        }
+        Set<Long> result = new LinkedHashSet<>(seeds);
+        Queue<Long> queue = new ArrayDeque<>();
+        for (Long seed : seeds) {
+            if (Boolean.TRUE.equals(activeById.get(seed))) {
+                queue.add(seed);
+            }
+        }
+        while (!queue.isEmpty()) {
+            Long current = queue.poll();
+            for (Long childId : childrenMap.getOrDefault(current, List.of())) {
+                if (result.add(childId)) {
+                    queue.add(childId);
+                }
+            }
+        }
+        return new ArrayList<>(result);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductFilterOptionsResponse getFilterOptions() {
+        List<ProductFilterOptionsResponse.SkinConcernOption> concerns = skinConcernRepository.findAllByOrderByIdAsc().stream()
+                .map(sc -> new ProductFilterOptionsResponse.SkinConcernOption(sc.getId(), sc.getCode(), sc.getName()))
+                .toList();
+        List<String> origins = productRepository.findDistinctActiveOriginCountries();
+        return new ProductFilterOptionsResponse(concerns, origins);
     }
 
     @Override

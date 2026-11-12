@@ -19,7 +19,14 @@ async function mock(page, { missing = false, empty = false, failed = false, sold
     if (path === '/api/v1/products/expiring-soon') {
       if (failed) return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
       data = empty ? [] : [clearance];
+    } else if (path === '/api/v1/flash-sales/current') {
+      if (failed) return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
+      data = { items: [], slots: [] };
     } else if (path === '/api/v1/products/42') data = product;
+    else if (path === '/api/v1/products/search' && new URL(route.request().url()).searchParams.get('onSale') === 'true') {
+      if (failed) return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
+      data = { content: [], totalElements: 0, totalPages: 0, page: 0 };
+    }
     else if (path === '/api/v1/products' || path === '/api/v1/products/search') data = { content: [normal], totalElements: 1, totalPages: 1, page: 0 };
     else if (path === '/api/v1/cart') data = { id: 1, items: [], totalPrice: 0 };
     else if (path === '/api/v1/cart/add') {
@@ -106,11 +113,15 @@ for (const failed of [false, true]) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     const area = page.locator('#flash-sale');
-    await expect(area).toContainText(failed ? 'Chưa tải được sản phẩm xả kho' : 'Hiện chưa có sản phẩm xả kho đủ điều kiện');
-    await expect(area.locator('.product-card-resolved')).toHaveCount(0);
-    await expect(area.getByText(/kết thúc sau|đã bán.*%|chỉ còn 10/i)).toHaveCount(0);
-    await area.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: test.info().outputPath(`clearance-${failed ? 'error' : 'empty'}-mobile.png`) });
+    if (failed) {
+      await expect(area).toContainText('Chưa tải được sản phẩm Flash Sale');
+      await expect(area.locator('.product-card-resolved')).toHaveCount(0);
+      await expect(area.getByText(/kết thúc sau|đã bán.*%|chỉ còn 10/i)).toHaveCount(0);
+      await area.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: test.info().outputPath('clearance-error-mobile.png') });
+    } else {
+      await expect(area).toHaveCount(0);
+    }
     expect(api.errors).toEqual([]);
   });
 }

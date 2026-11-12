@@ -136,7 +136,7 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
 
   const instruction = invoice?.paymentInstruction;
   const paid = invoice?.paymentStatus === 'PAID';
-  const canCollect = canManage && invoice?.paymentStatus === 'PENDING' && Number(invoice?.amountDue) > 0 && Number(invoice?.refundedAmount) === 0;
+  const canCollect = canManage && invoice?.paymentStatus === 'PENDING' && Number(invoice?.amountDue) > 0 && Number(invoice?.refundedAmount || 0) === 0;
   return (
     <div className="spa-visit-checkout">
       {refundOpen && <SpaRefundDialog appointmentId={appointment.id} onClose={() => setRefundOpen(false)} onUpdated={refresh} />}

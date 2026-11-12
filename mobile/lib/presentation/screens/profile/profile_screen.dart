@@ -27,24 +27,45 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _orderStatistics;
+  int? _statsUserId;
+  bool _loadingStats = false;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.read<AuthProvider>().isAuthenticated) {
-        _fetchOrderStatistics();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final auth = context.watch<AuthProvider>();
+    final uid = auth.isAuthenticated ? auth.currentUser?.id : null;
+    if (uid == null) {
+      if (_orderStatistics != null || _statsUserId != null) {
+        _orderStatistics = null;
+        _statsUserId = null;
       }
-    });
+    } else if (uid != _statsUserId && !_loadingStats) {
+      _orderStatistics = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _fetchOrderStatistics(uid);
+      });
+    }
   }
 
-  Future<void> _fetchOrderStatistics() async {
+  Future<void> _fetchOrderStatistics(int userId) async {
+    if (_loadingStats) return;
+    _loadingStats = true;
     try {
       final res = await ApiClient().get<dynamic>('/api/v1/users/order-statistics');
-      if (mounted && res.isSuccess && res.data is Map) {
-        setState(() => _orderStatistics = Map<String, dynamic>.from(res.data as Map));
+      if (mounted &&
+          context.read<AuthProvider>().currentUser?.id == userId &&
+          res.isSuccess &&
+          res.data is Map) {
+        setState(() {
+          _statsUserId = userId;
+          _orderStatistics = Map<String, dynamic>.from(res.data as Map);
+        });
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _loadingStats = false;
+    }
   }
 
   @override
@@ -162,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 'Chi Tiêu Ròng',
                                 _orderStatistics != null
                                     ? AppFormatters.formatCurrency((_orderStatistics!['netSpent'] as num?)?.toDouble() ?? 0)
-                                    : '${user?.rewardPoints ?? 0} Đ',
+                                    : '--',
                                 Icons.account_balance_wallet_outlined,
                               ),
                               Container(

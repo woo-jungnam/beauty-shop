@@ -105,10 +105,10 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
           {canUpdateVisit && appointment.status === 'CONFIRMED' && appointment.checkedInAt && <Button disabled={Boolean(busy)} loading={busy === 'start'} onClick={() => run('start', () => updateStatus('IN_PROGRESS'), 'Đã bắt đầu lịch hẹn.')}>Bắt đầu buổi hẹn</Button>}
           {reception && appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <Button variant="outline" disabled={Boolean(busy) || !notes.trim()} loading={busy === 'noshow'} onClick={() => run('noshow', () => updateStatus('NO_SHOW'), 'Đã ghi nhận vắng hẹn theo chính sách; không tính là đã điều trị.')}>Ghi nhận vắng hẹn</Button>}
         </div>
-        {(appointment.items || []).map(item => <section className="treatment-form-session" key={item.id}><div className="treatment-card-heading"><strong>{item.serviceName}</strong><span className="treatment-badge">{statusLabel(item.executionStatus)}</span></div><small>{item.staffName} · {item.startTime?.slice(0, 5)}–{item.endTime?.slice(0, 5)}</small>
+        {(appointment.items || []).map(item => <section className="treatment-form-session" key={item.id}><div className="treatment-card-heading"><strong>{item.serviceName}</strong><span className="treatment-badge">{statusLabel(item.executionStatus)}</span></div><small>{(!item.staffName || item.staffName === 'No preference') ? 'Spa sắp xếp chuyên viên' : item.staffName} · {item.startTime?.slice(0, 5)}–{item.endTime?.slice(0, 5)}</small>
           {reception && ['PENDING', 'CONFIRMED'].includes(appointment.status) && <label>Nhân viên đủ chuyên môn<select disabled={Boolean(busy)} value={assignments[item.id] || ''} onChange={event => setAssignments(previous => ({ ...previous, [item.id]: event.target.value }))}><option value="">Chọn nhân viên thực hiện</option>{(staffOptions[item.id] || []).map(staff => <option key={staff.id} value={staff.id}>{staff.fullName || staff.name || `Nhân viên #${staff.id}`}</option>)}</select></label>}
           {item.executionNotes && <p>{item.executionNotes}</p>}
-          {['PLANNED', 'IN_PROGRESS'].includes(item.executionStatus) && <Button size="sm" variant="outline" style={{ marginTop: '0.25rem' }} onClick={async () => {
+          {(admin || reception) && appointment.status === 'IN_PROGRESS' && item.treatmentSessionItemId == null && ['PLANNED', 'IN_PROGRESS'].includes(item.executionStatus) && <Button size="sm" variant="outline" style={{ marginTop: '0.25rem' }} onClick={async () => {
             setSubstituteItem(item); setSubstituteReason(''); setSelectedServiceId(''); setSubstituteConsent(false); setSubstituteError('');
             if (!availableServices.length) {
               try { const res = await apiClient.get('/api/v1/spa/services'); setAvailableServices(rows(res)); } catch (e) { setSubstituteError(errorMessage(e)); }
@@ -120,7 +120,7 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
             <label>Dịch vụ chỉ định thay thế
               <select value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
                 <option value="">Chọn dịch vụ thay thế phù hợp</option>
-                {availableServices.filter(s => s.id !== item.serviceId).map(s => <option key={s.id} value={s.id}>{s.name} ({money(s.price || s.basePrice || 0)})</option>)}
+                {availableServices.filter(s => s.id !== item.serviceId && s.serviceType !== 'TREATMENT_COURSE').map(s => <option key={s.id} value={s.id}>{s.name} ({money(s.price || s.basePrice || 0)})</option>)}
               </select>
             </label>
             <label>Kết quả soi da & Lý do chuyên môn (Bắt buộc)
@@ -148,9 +148,16 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
                 const recordNote = `[ĐỔI CHỈ ĐỊNH LÂM SÀNG] Đổi từ ${item.serviceName} sang ${targetName}. Lý do soi da: ${substituteReason.trim()}. Bù trừ: ${diff > 0 ? '+' + money(diff) : '0 đ'}. Khách đã ký xác nhận đồng thuận.`;
                 setNotes(prev => prev ? `${prev}\n${recordNote}` : recordNote);
                 await run(`sub-${item.id}`, async () => {
-                  if (item.executionStatus === 'IN_PROGRESS') await apiClient.put(`${base}/items/${item.id}/execution`, { status: 'IN_PROGRESS', notes: recordNote });
+                  await apiClient.post(`${base}/items`, {
+                    serviceId: Number(selectedServiceId),
+                    ...(item.staffId ? { staffId: Number(item.staffId) } : {}),
+                  });
+                  await apiClient.put(`${base}/items/${item.id}/execution`, {
+                    status: 'SKIPPED',
+                    notes: recordNote,
+                  });
                   setSubstituteItem(null); setSubstituteReason(''); setSubstituteConsent(false);
-                }, `Đã ghi nhận đổi chỉ định sang ${targetName}.`);
+                }, `Đã thêm ${targetName} và ghi nhận đổi chỉ định.`);
               }}>Lưu chỉ định thay đổi</Button>
               <Button size="sm" variant="outline" onClick={() => setSubstituteItem(null)}>Hủy bỏ</Button>
             </div>

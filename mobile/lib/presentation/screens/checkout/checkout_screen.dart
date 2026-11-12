@@ -1,9 +1,11 @@
+import 'dart:convert';
 import '../profile/customer_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
+import 'package:beautyshop_mobile/core/utils/idempotency_key.dart';
 import 'package:beautyshop_mobile/core/storage/storage_service.dart';
 import 'package:beautyshop_mobile/providers/cart_provider.dart';
 import 'package:beautyshop_mobile/providers/order_provider.dart';
@@ -21,6 +23,8 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _placing = false;
   String _paymentMethod = 'VIETQR';
+  String? _checkoutFingerprint;
+  String? _checkoutIdempotencyKey;
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
@@ -177,7 +181,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         child: TextField(
                           controller: _districtController,
                           decoration: const InputDecoration(
-                            labelText: 'Quận/Huyện *',
+                            labelText: 'Quận/Huyện (nếu có)',
                             isDense: true,
                           ),
                         ),
@@ -369,6 +373,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       isDiscount: true,
                     ),
                   ],
+                  if (cart.membershipDiscount > 0) ...[
+                    const SizedBox(height: 6),
+                    _buildCostRow(
+                      'Ưu đãi thành viên:',
+                      '-${AppFormatters.formatCurrency(cart.membershipDiscount)}',
+                      isDiscount: true,
+                    ),
+                  ],
                   const Divider(color: AppColors.borderSubtle, height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -417,7 +429,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'Vui lòng điền đầy đủ họ tên, số điện thoại, địa chỉ, phường/xã, quận/huyện và tỉnh/thành phố',
+                                'Vui lòng điền đầy đủ họ tên, số điện thoại, địa chỉ, phường/xã và tỉnh/thành phố',
                               ),
                               backgroundColor: AppColors.dealRed,
                             ),
@@ -467,7 +479,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           }
                           if (!mounted || !context.mounted) return;
 
+                          final draftPayload = {
+                            'sessionId': !StorageService.isLoggedIn
+                                ? StorageService.getGuestSessionId()
+                                : null,
+                            'customerName': _nameController.text.trim(),
+                            'customerPhone': _phoneController.text.trim(),
+                            'customerEmail': _emailController.text.trim().isEmpty
+                                ? null
+                                : _emailController.text.trim(),
+                            'shippingAddress': _addressController.text.trim(),
+                            'ward': _wardController.text.trim(),
+                            'district': _districtController.text.trim(),
+                            'city': _cityController.text.trim(),
+                            'paymentMethod': _paymentMethod == 'VIETQR'
+                                ? 'BANK'
+                                : 'COD',
+                            'notes': _noteController.text.trim(),
+                            'voucherCode': cart.appliedVoucherCode,
+                            'items': cart.cart.items
+                                .map((i) => {'v': i.variantId, 'q': i.quantity})
+                                .toList(),
+                          };
+                          final fingerprint = jsonEncode(draftPayload);
+                          if (fingerprint != _checkoutFingerprint ||
+                              _checkoutIdempotencyKey == null) {
+                            _checkoutFingerprint = fingerprint;
+                            _checkoutIdempotencyKey =
+                                generateIdempotencyKey('ord');
+                          }
+
                           final request = CheckoutRequest(
+                            idempotencyKey: _checkoutIdempotencyKey,
                             sessionId: !StorageService.isLoggedIn
                                 ? StorageService.getGuestSessionId()
                                 : null,
@@ -493,6 +536,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           if (!mounted || !context.mounted) return;
 
                           if (createdOrder != null) {
+                            _checkoutFingerprint = null;
+                            _checkoutIdempotencyKey = null;
                             await StorageService.setDeliveryDetails({
                               'address': _addressController.text.trim(),
                               'ward': _wardController.text.trim(),

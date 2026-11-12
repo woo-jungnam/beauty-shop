@@ -119,7 +119,6 @@ export const ADMIN_SECTIONS = [
           { id: "staff", label: "Chuyên viên & Kỹ năng" },
           { id: "policy", label: "Chính sách & Giờ làm" },
           { id: "tickets", label: "Vé liệu trình" },
-          { id: "maintenance", label: "Bảo trì thiết bị" },
         ],
       },
       {
@@ -207,7 +206,6 @@ export const getAdminSections = (roles = [], permissions = []) => {
       if (isAdmin) return true;
       if (!isStaff) return false;
       if (!item.role) return false;
-      if (permList.length === 0) return true;
       const required = TAB_PERMISSIONS[item.id];
       if (!required) return true;
       return Array.isArray(required)

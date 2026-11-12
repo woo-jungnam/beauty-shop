@@ -252,10 +252,10 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
         <div className="shopee-review-overview">
           <div className="shopee-rating-overview-score">
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span className="shopee-score-num">{hasAverage ? ratingValue.toFixed(1) : '5.0'}</span>
-              <span className="shopee-score-max">trên 5</span>
+              <span className="shopee-score-num">{hasAverage ? ratingValue.toFixed(1) : '—'}</span>
+              <span className="shopee-score-max">{hasAverage ? 'trên 5' : 'Chưa có đánh giá'}</span>
             </div>
-            <RatingStars value={hasAverage ? ratingValue : 5} size={20} />
+            <RatingStars value={hasAverage ? ratingValue : 0} size={20} />
           </div>
           <div className="shopee-review-filter-pills" role="tablist" aria-label="Bộ lọc số sao đánh giá">
             <button
@@ -263,7 +263,7 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
               className={`shopee-filter-pill ${ratingFilter === 'ALL' ? 'is-active' : ''}`}
               onClick={() => setRatingFilter('ALL')}
             >
-              Tất cả ({reviewPage.rows.length})
+              Tất cả ({reviewPage.total ?? reviewPage.rows.length})
             </button>
             {[5, 4, 3, 2, 1].map((star) => (
               <button

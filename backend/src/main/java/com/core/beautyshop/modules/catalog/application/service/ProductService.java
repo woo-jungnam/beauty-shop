@@ -3,6 +3,7 @@ package com.core.beautyshop.modules.catalog.application.service;
 import com.core.beautyshop.modules.catalog.application.dto.request.CreateProductRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.UpdateProductRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.ProductSearchRequest;
+import com.core.beautyshop.modules.catalog.application.dto.response.ProductFilterOptionsResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductResponse;
 import com.core.beautyshop.modules.catalog.domain.enums.ProductStatus;
@@ -43,4 +44,6 @@ public interface ProductService {
     List<ProductListResponse> getExpiringSoonProducts(int thresholdDays, int limit);
 
     void recordInteraction(Long userId, String sessionId, Long productId, String actionType);
+
+    ProductFilterOptionsResponse getFilterOptions();
 }

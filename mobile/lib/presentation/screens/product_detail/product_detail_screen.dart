@@ -156,20 +156,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  return IconButton(
-                    icon: Icon(
-                      index < selectedRating ? Icons.star : Icons.star_border,
-                      color: AppColors.star,
-                      size: 32,
-                    ),
-                    onPressed: () =>
-                        setSheetState(() => selectedRating = index + 1),
-                  );
-                }),
-              ),
+              if (hasDelivered)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      icon: Icon(
+                        index < selectedRating ? Icons.star : Icons.star_border,
+                        color: AppColors.star,
+                        size: 32,
+                      ),
+                      onPressed: () =>
+                          setSheetState(() => selectedRating = index + 1),
+                    );
+                  }),
+                ),
               const SizedBox(height: 12),
               TextField(
                 controller: titleController,
@@ -196,7 +197,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     backgroundColor: AppColors.primary,
                   ),
                   onPressed: () async {
-                    if (contentController.text.trim().isEmpty) return;
+                    if (contentController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui lòng nhập nội dung nhận xét'),
+                          backgroundColor: AppColors.dealRed,
+                        ),
+                      );
+                      return;
+                    }
 
                     final req = CreateReviewRequest(
                       productId: widget.productId,
@@ -208,16 +217,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       content: contentController.text.trim(),
                     );
                     Navigator.pop(ctx);
-                    final ok = await context
-                        .read<ProductProvider>()
-                        .submitReview(req);
+                    final pp = context.read<ProductProvider>();
+                    final ok = await pp.submitReview(req);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
                             ok
                                 ? 'Cảm ơn bạn đã gửi đánh giá!'
-                                : 'Không thể gửi đánh giá lúc này',
+                                : pp.reviewSubmitError ??
+                                      'Không thể gửi đánh giá lúc này',
                           ),
                           backgroundColor: ok
                               ? AppColors.primary

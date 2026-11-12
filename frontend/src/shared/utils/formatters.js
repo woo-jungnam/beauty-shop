@@ -274,6 +274,8 @@ export const getUserStatusBadge = (status) => {
   switch (status) {
     case 'ACTIVE':
       return { variant: 'success', text: 'Hoạt động' };
+    case 'SUSPENDED':
+      return { variant: 'warning', text: 'Tạm ngưng' };
     case 'INACTIVE':
       return { variant: 'default', text: 'Tạm khóa' };
     case 'BLOCKED':

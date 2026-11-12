@@ -164,4 +164,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     boolean existsBySlug(String slug);
     boolean existsByIdAndIsDeletedFalse(Long id);
+
+    @Query("SELECT DISTINCT TRIM(p.originCountry) FROM Product p " +
+           "WHERE p.isDeleted = false AND p.status = com.core.beautyshop.modules.catalog.domain.enums.ProductStatus.ACTIVE " +
+           "AND p.originCountry IS NOT NULL AND TRIM(p.originCountry) <> '' " +
+           "ORDER BY TRIM(p.originCountry) ASC")
+    List<String> findDistinctActiveOriginCountries();
 }

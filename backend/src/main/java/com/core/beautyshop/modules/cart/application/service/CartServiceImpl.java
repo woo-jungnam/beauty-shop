@@ -258,13 +258,22 @@ public class CartServiceImpl implements CartService {
             itemResponses = cartItems.stream()
                     .map(item -> {
                         ProductVariantSummaryDto variant = variantMap.get(item.getProductVariantId());
-                        java.math.BigDecimal flashPrice = null;
+                        java.math.BigDecimal effectivePrice = null;
                         if (variant != null && flashSaleFacade != null && flashSaleFacade.isPresent()) {
-                            flashPrice = flashSaleFacade.get().resolveActiveFlashSale(variant.getId())
-                                    .map(com.core.beautyshop.modules.promotion.api.FlashSaleFacade.FlashSalePriceResolution::flashPrice)
-                                    .orElse(null);
+                            var flashOpt = flashSaleFacade.get().resolveActiveFlashSale(variant.getId(), cart.getUserId());
+                            if (flashOpt.isPresent()) {
+                                var flash = flashOpt.get();
+                                int requestedQty = item.getQuantity() != null && item.getQuantity() > 0 ? item.getQuantity() : 1;
+                                int allowedFlashQty = Math.min(requestedQty, flash.remainingUserQuota());
+                                if (allowedFlashQty > 0) {
+                                    BigDecimal regularPrice = variant.getDiscountPrice() != null ? variant.getDiscountPrice() : variant.getPrice();
+                                    BigDecimal flashTotal = flash.flashPrice().multiply(BigDecimal.valueOf(allowedFlashQty));
+                                    BigDecimal regularTotal = regularPrice.multiply(BigDecimal.valueOf(requestedQty - allowedFlashQty));
+                                    effectivePrice = flashTotal.add(regularTotal).divide(BigDecimal.valueOf(requestedQty), 0, RoundingMode.HALF_UP);
+                                }
+                            }
                         }
-                        return CartItemResponse.of(item, variant, flashPrice);
+                        return CartItemResponse.of(item, variant, effectivePrice);
                     })
                     .collect(Collectors.toList());
 

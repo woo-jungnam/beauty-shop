@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
   static final ValueNotifier<int> authCleared = ValueNotifier<int>(0);
+  static final ValueNotifier<int> authSessionChanged = ValueNotifier<int>(0);
   static const String _keyAccessToken = 'auth_access_token';
   static const String _keyRefreshToken = 'auth_refresh_token';
   static const String _keyGuestSessionId = 'guest_session_id';

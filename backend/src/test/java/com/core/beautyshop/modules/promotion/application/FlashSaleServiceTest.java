@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.promotion.application;
 
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
+import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.promotion.domain.FlashSaleCampaignRepository;
 import com.core.beautyshop.modules.promotion.domain.FlashSaleItemRepository;
 import com.core.beautyshop.modules.promotion.domain.FlashSaleOrderAllocationRepository;
@@ -26,6 +27,7 @@ class FlashSaleServiceTest {
     @Mock FlashSaleItemRepository itemRepository;
     @Mock FlashSaleOrderAllocationRepository allocationRepository;
     @Mock CatalogFacade catalogFacade;
+    @Mock InventoryFacade inventoryFacade;
     @Mock JdbcTemplate jdbcTemplate;
 
     @InjectMocks FlashSaleService service;

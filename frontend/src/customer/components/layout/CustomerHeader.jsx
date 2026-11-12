@@ -30,6 +30,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [services, setServices] = useState([]);
+  const [hotline, setHotline] = useState('1800 6324');
   const headerRef = useRef(null);
   const dialogRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -57,13 +58,18 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
       apiClient.get('/api/v1/categories'),
       apiClient.get('/api/v1/brands?size=12'),
       apiClient.get('/api/v1/spa/services'),
-    ]).then(([categoryResult, brandResult, serviceResult]) => {
+      apiClient.get('/api/v1/system-configs/public'),
+    ]).then(([categoryResult, brandResult, serviceResult, configResult]) => {
       if (cancelled) return;
       const getData = (result) => result.status === 'fulfilled'
         ? result.value?.data ?? result.value : [];
       const categoryData = getData(categoryResult);
       const brandData = getData(brandResult);
       const serviceData = getData(serviceResult);
+      const configData = configResult.status === 'fulfilled' ? (configResult.value?.data ?? configResult.value) : null;
+      if (typeof configData?.['store.hotline'] === 'string' && configData['store.hotline'].trim()) {
+        setHotline(configData['store.hotline'].trim());
+      }
       setCategories(Array.isArray(categoryData) ? categoryData : []);
       setBrands(Array.isArray(brandData?.content) ? brandData.content : Array.isArray(brandData) ? brandData : []);
       setServices(Array.isArray(serviceData) ? serviceData : []);
@@ -184,7 +190,9 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
       && !catalogFilters?.brandIds.length && !currentRoute.includes('filter=sale');
     if (link.id === 'brands') return Boolean(catalogFilters?.brandIds.length);
     if (link.id === 'spa') return /^(booking|spa)/.test(path);
-    return path === 'profile' && currentRoute.includes('tab=orders');
+    if (link.id === 'treatments') return path === 'treatments';
+    if (link.id === 'orders') return path === 'order-lookup';
+    return false;
   };
 
   const renderDropdown = (type) => {
@@ -215,7 +223,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
         <div className="storefront-container">
           <span><ShieldCheck size={14} aria-hidden="true" /> Mỹ phẩm chính hãng · Chăm sóc da cùng BeautyShop</span>
           {!isAuthenticated && <a href="#/recover-password">Quên mật khẩu?</a>}
-          <a href="tel:18006324">Hỗ trợ: 1800 6324</a>
+          <a href={`tel:${hotline.replace(/[\s().-]/g, '')}`}>Hỗ trợ: {hotline}</a>
         </div>
       </div>
 
@@ -323,7 +331,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
             {categories.length > 0 && <div className="storefront-mobile-categories"><strong>Danh mục sản phẩm</strong>{categories.slice(0, 8).map((category) => <a key={category.id} href={`#/${categoryRoute(category)}`} onClick={closeMobileMenu}>{cleanDisplayName(category.name)}</a>)}</div>}
             <div className="storefront-mobile-footer">
               <button type="button" className="btn-luxury-primary" onClick={() => navigate(isAuthenticated ? 'profile' : 'login')}><User size={18} /> {isAuthenticated ? 'Tài khoản của tôi' : 'Đăng nhập / Đăng ký'}</button>
-              <a href="tel:18006324">Cần hỗ trợ? Gọi 1800 6324</a>
+              <a href={`tel:${hotline.replace(/[\s().-]/g, '')}`}>Cần hỗ trợ? Gọi {hotline}</a>
             </div>
           </section>
         </div>

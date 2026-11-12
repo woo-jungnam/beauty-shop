@@ -67,6 +67,7 @@ class Appointment {
   final String status;
   final String? notes;
   final int? userId;
+  final String? checkedInAt;
   final List<AppointmentItem> items;
 
   Appointment({
@@ -79,17 +80,32 @@ class Appointment {
     required this.status,
     this.notes,
     this.userId,
+    this.checkedInAt,
     this.items = const [],
   });
 
   bool get canCancel {
     if (status != 'PENDING' && status != 'CONFIRMED') return false;
+    if (checkedInAt != null && checkedInAt!.isNotEmpty) return false;
     final date = appointmentDate;
     if (date == null || timeSlot.isEmpty) return false;
-    final start = DateTime.tryParse(
-      '${date.toIso8601String().substring(0, 10)}T$timeSlot',
+    final rawStart = timeSlot.split(RegExp(r'[\s\-–]+')).first.trim();
+    final parts = rawStart.split(':');
+    if (parts.length < 2) return false;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    final second = parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
+    if (hour == null || minute == null) return false;
+    final startVn = DateTime.utc(
+      date.year,
+      date.month,
+      date.day,
+      hour,
+      minute,
+      second,
     );
-    return start != null && start.isAfter(DateTime.now());
+    final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
+    return startVn.isAfter(nowVn);
   }
 
   String get statusLabel => switch (status) {
@@ -131,6 +147,7 @@ class Appointment {
       status: json['status']?.toString() ?? 'UNKNOWN',
       notes: json['notes']?.toString(),
       userId: (json['userId'] as num?)?.toInt(),
+      checkedInAt: json['checkedInAt']?.toString(),
       items: items
           .map((item) => AppointmentItem.fromJson(item as Map<String, dynamic>))
           .toList(),

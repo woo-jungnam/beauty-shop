@@ -282,7 +282,7 @@ class _AppointmentPaymentSectionState extends State<AppointmentPaymentSection>
                 Text(
                   'Hóa đơn: ${invoice['orderNumber'] ?? invoice['orderId'] ?? ''}',
                 ),
-                Text('Còn phải trả: ${invoice['amountDue']} ₫'),
+                Text('Còn phải trả: ${invoice['amountDue'] ?? 0} ₫'),
                 Text(
                   'Trạng thái thanh toán: ${invoice['paymentStatus'] ?? 'Chưa xác định'}',
                 ),

@@ -60,6 +60,7 @@ export const HomePage = ({ onNavigate }) => {
   const sectionLimits = useHomeSectionLimits(homePageRef);
   const { addItem } = useCustomerCart();
   const [products, setProducts] = useState([]);
+  const [totalProductCount, setTotalProductCount] = useState(null);
   const [spaServices, setSpaServices] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -108,9 +109,18 @@ export const HomePage = ({ onNavigate }) => {
   const [currentFlashTab, setCurrentFlashTab] = useState(0);
   const [isFlashHovered, setIsFlashHovered] = useState(false);
 
+  const activeFlashSlot = useMemo(() => {
+    if (!flashOverview?.slots?.length) return null;
+    return flashOverview.slots.find((s) => s.campaignId === selectedSlotId) || null;
+  }, [flashOverview?.slots, selectedSlotId]);
+
+  const countdownTarget = activeFlashSlot
+    ? (activeFlashSlot.isCurrent ? activeFlashSlot.endsAt : activeFlashSlot.startsAt)
+    : flashOverview?.endsAt;
+
   useEffect(() => {
-    if (!flashOverview?.endsAt) return;
-    const target = new Date(flashOverview.endsAt).getTime();
+    if (!countdownTarget) return;
+    const target = new Date(countdownTarget).getTime();
     const updateCountdown = () => {
       const diff = Math.max(0, target - Date.now());
       const hours = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
@@ -121,7 +131,7 @@ export const HomePage = ({ onNavigate }) => {
     updateCountdown();
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
-  }, [flashOverview?.endsAt]);
+  }, [countdownTarget]);
 
   const allFlashProducts = useMemo(() => {
     if (flashFilterType === 'CAMPAIGN') return campaignFlashProducts;
@@ -185,8 +195,12 @@ export const HomePage = ({ onNavigate }) => {
 
         if (isMounted) {
           if (prodRes.status === 'fulfilled') {
-            const list = prodRes.value?.data?.content || prodRes.value?.content || [];
+            const pageData = prodRes.value?.data || prodRes.value;
+            const list = pageData?.content || [];
             setProducts(list);
+            if (pageData?.totalElements != null) {
+              setTotalProductCount(Number(pageData.totalElements));
+            }
           }
           if (recRes.status === 'fulfilled') {
             const rList = recRes.value?.data || recRes.value || [];
@@ -231,6 +245,17 @@ export const HomePage = ({ onNavigate }) => {
     ])
       .then(([expiringRes, onSaleRes, flashRes]) => {
         if (controller.signal.aborted) return;
+        const allFailed = expiringRes.status === 'rejected'
+          && onSaleRes.status === 'rejected'
+          && flashRes.status === 'rejected';
+        if (allFailed) {
+          setClearanceProducts([]);
+          setCuratedFlashProducts([]);
+          setCampaignFlashProducts([]);
+          setClearanceError('Chưa tải được sản phẩm Flash Sale. Vui lòng thử lại.');
+          return;
+        }
+
         const expiringData = expiringRes.status === 'fulfilled' ? (expiringRes.value?.data ?? expiringRes.value) : [];
         const expiringList = Array.isArray(expiringData) ? expiringData : expiringData?.content || [];
         setClearanceProducts(expiringList);
@@ -273,8 +298,14 @@ export const HomePage = ({ onNavigate }) => {
                 }],
               }));
               setCampaignFlashProducts(mapped);
+            } else {
+              setCampaignFlashProducts([]);
             }
+          } else {
+            setCampaignFlashProducts([]);
           }
+        } else {
+          setCampaignFlashProducts([]);
         }
       })
       .catch(() => {
@@ -354,14 +385,15 @@ export const HomePage = ({ onNavigate }) => {
   };
 
   const dynamicCatalogCategories = useMemo(() => {
-    const list = [{ id: 'ALL', label: `Tất cả sản phẩm (${products.length})` }];
+    const countLabel = totalProductCount ?? products.length;
+    const list = [{ id: 'ALL', label: `Tất cả sản phẩm (${countLabel})` }];
     if (categories.length > 0) {
       categories.slice(0, 7).forEach(cat => {
         list.push({ id: String(cat.id), label: cat.name });
       });
     }
     return list;
-  }, [categories, products.length]);
+  }, [categories, products.length, totalProductCount]);
 
   const categoryProductCounts = useMemo(() => {
     const counts = {};
@@ -447,6 +479,9 @@ export const HomePage = ({ onNavigate }) => {
     return spaServices.filter(s => String(s.categoryId) === String(activeSpaCategory)).slice(0, sectionLimits.spa);
   };
 
+  const hasAnyFlashProducts = campaignFlashProducts.length > 0 || curatedFlashProducts.length > 0 || clearanceProducts.length > 0;
+  const showFlashSection = clearanceLoading || Boolean(clearanceError) || hasAnyFlashProducts;
+
   return (
     <div ref={homePageRef} className="customer-home-page" style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '56px' }}>
 
@@ -500,12 +535,13 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      <section
-        id="flash-sale"
-        className="customer-container"
-        onMouseEnter={() => setIsFlashHovered(true)}
-        onMouseLeave={() => setIsFlashHovered(false)}
-      >
+      {showFlashSection && (
+        <section
+          id="flash-sale"
+          className="customer-container"
+          onMouseEnter={() => setIsFlashHovered(true)}
+          onMouseLeave={() => setIsFlashHovered(false)}
+        >
         <div style={{
           backgroundColor: '#FFFFFF',
           borderRadius: '2px',
@@ -542,7 +578,7 @@ export const HomePage = ({ onNavigate }) => {
                 </h2>
 
                 {/* Real-time Countdown Timer */}
-                {flashOverview?.endsAt && (
+                {countdownTarget && (
                   <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -556,7 +592,9 @@ export const HomePage = ({ onNavigate }) => {
                     color: '#991B1B'
                   }}>
                     <Clock size={13} color="#DC2626" />
-                    <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>Kết thúc trong:</span>
+                    <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>
+                      {activeFlashSlot && !activeFlashSlot.isCurrent ? 'Bắt đầu sau:' : 'Kết thúc trong:'}
+                    </span>
                     <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.hours}</span>
                     <span>:</span>
                     <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.minutes}</span>
@@ -720,6 +758,7 @@ export const HomePage = ({ onNavigate }) => {
                             discountPrice: it.flashPrice,
                             isFeatured: true,
                             onSale: true,
+                            isUpcomingFlash: !s.isCurrent,
                             status: 'ACTIVE',
                             totalStock: it.remainingQuota,
                             totalSold: it.quantitySold,
@@ -818,7 +857,8 @@ export const HomePage = ({ onNavigate }) => {
             HSD là ngày gần nhất của tồn cận hạn tại lúc tải. Số lượng có thể thay đổi; giỏ hàng chưa giữ chỗ hoặc cam kết một lô cụ thể.
           </p>
         </div>
-      </section>
+        </section>
+      )}
 
       <section
         id="categories-section"
@@ -956,7 +996,7 @@ export const HomePage = ({ onNavigate }) => {
                 <div
                   key={`${brand.id}-${idx}`}
                   className="brand-logo-tile brand-partner-box"
-                  onClick={() => onNavigate(`products?brandId=${brand.id}&search=${encodeURIComponent(brand.name)}`)}
+                  onClick={() => onNavigate(`products?brandId=${brand.id}&brandName=${encodeURIComponent(brand.name)}`)}
                   role="button"
                   tabIndex={0}
                   title={brand.name}
@@ -1251,7 +1291,7 @@ export const HomePage = ({ onNavigate }) => {
                     </div>
 
                     <button
-                      onClick={() => onNavigate(`booking?serviceId=${spa.id}`)}
+                      onClick={() => onNavigate(spa.serviceType === 'TREATMENT_COURSE' ? 'treatments' : `booking?serviceId=${spa.id}`)}
                       className="btn-luxury-primary"
                     >
                       <Calendar size={13} />
@@ -1330,7 +1370,7 @@ export const HomePage = ({ onNavigate }) => {
                   onClick={() => {
                     setAllBrandsModalOpen(false);
                     setBrandSearch('');
-                    onNavigate(`products?brandId=${brand.id}&search=${encodeURIComponent(brand.name)}`);
+                    onNavigate(`products?brandId=${brand.id}&brandName=${encodeURIComponent(brand.name)}`);
                   }}
                   style={{
                     padding: '14px 10px',

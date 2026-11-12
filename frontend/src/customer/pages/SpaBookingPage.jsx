@@ -134,7 +134,12 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const [loadingFacilities, setLoadingFacilities] = useState(false);
   const [paymentWaiting, setPaymentWaiting] = useState(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [cancellingPayment, setCancellingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [storeContact, setStoreContact] = useState({
+    address: "123 Đồng Khởi, Quận 1, TP.HCM",
+    hotline: "1800 6324",
+  });
 
   useEffect(() => {
     apiClient
@@ -143,6 +148,18 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       .catch(() =>
         setBookingError("Chưa tải được chính sách cọc. Vui lòng tải lại trước khi đặt."),
       );
+    apiClient
+      .get("/api/v1/system-configs/public")
+      .then((response) => {
+        const cfg = readData(response);
+        if (cfg && typeof cfg === "object") {
+          setStoreContact((prev) => ({
+            address: (typeof cfg["store.address"] === "string" && cfg["store.address"].trim()) || prev.address,
+            hotline: (typeof cfg["store.hotline"] === "string" && cfg["store.hotline"].trim()) || prev.hotline,
+          }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const [bookingResult, setBookingResult] = useState(null);
@@ -177,14 +194,16 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           },
         );
 
+  const restoredBookingRef = useRef(null);
+
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem('spa_pending_booking');
       if (saved) {
         const parsed = JSON.parse(saved);
+        restoredBookingRef.current = parsed;
         if (parsed.selectedDate && parsed.selectedDate >= today) setSelectedDate(parsed.selectedDate);
-        if (parsed.selectedStaff) setSelectedStaff(parsed.selectedStaff);
-        if (parsed.selectedSlot) setSelectedSlot(parsed.selectedSlot);
+        if (parsed.selectedStaff) setSelectedStaff(String(parsed.selectedStaff));
         if (Array.isArray(parsed.skinTags)) setSkinTags(parsed.skinTags);
         if (parsed.note) setContact(c => ({ ...c, note: parsed.note }));
         sessionStorage.removeItem('spa_pending_booking');
@@ -202,6 +221,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         skinTags,
         note: contact.note
       }));
+      sessionStorage.setItem('auth_redirect', 'booking');
     } catch {}
     onNavigate("login");
   };
@@ -232,11 +252,15 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 service.serviceType !== "TREATMENT_COURSE",
             )
           : [];
+        const restoredServiceId = restoredBookingRef.current?.selectedServiceId;
         setServices(list);
         setSelectedService(
           (previous) =>
             list.find(
               (service) => String(service.id) === String(preselectedServiceId),
+            ) ||
+            list.find(
+              (service) => restoredServiceId != null && String(service.id) === String(restoredServiceId),
             ) ||
             list.find((service) => service.id === previous?.id) ||
             list[0] ||
@@ -258,7 +282,10 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     let cancelled = false;
     setStaff([]);
     setStaffError(false);
-    setSelectedStaff("AUTO");
+    const pendingStaff = restoredBookingRef.current?.selectedStaff;
+    if (!pendingStaff) {
+      setSelectedStaff("AUTO");
+    }
     if (!selectedService?.id) {
       setLoadingStaff(false);
       return;
@@ -269,7 +296,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       .then((response) => {
         if (cancelled) return;
         const data = readData(response);
-        setStaff(Array.isArray(data) ? data : data?.content || []);
+        const list = Array.isArray(data) ? data : data?.content || [];
+        setStaff(list);
+        if (pendingStaff && pendingStaff !== "AUTO" && !list.some((p) => String(p.id) === String(pendingStaff))) {
+          setSelectedStaff("AUTO");
+        }
       })
       .catch(() => {
         if (!cancelled) setStaffError(true);
@@ -380,8 +411,14 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           : [];
         let validSlots = rawSlots;
         if (selectedDate === today) {
-          const now = new Date();
-          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          const vnTime = new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Asia/Ho_Chi_Minh",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).format(new Date());
+          const [vnHour, vnMinute] = vnTime.split(":").map(Number);
+          const currentMinutes = (vnHour || 0) * 60 + (vnMinute || 0);
           validSlots = rawSlots.filter((slot) => {
             const parts = slot.split(":");
             return Number(parts[0]) * 60 + Number(parts[1] || 0) > currentMinutes + 15;
@@ -389,6 +426,13 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         }
         setSlots(validSlots);
         setLoadedSlotContext(slotContext);
+        if (restoredBookingRef.current?.selectedSlot) {
+          const pendingSlot = restoredBookingRef.current.selectedSlot;
+          if (validSlots.includes(pendingSlot)) {
+            setSelectedSlot(pendingSlot);
+          }
+          restoredBookingRef.current = null;
+        }
       })
       .catch(() => {
         if (!cancelled) setSlotError(true);
@@ -527,6 +571,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     setSelectedService(service);
     setSelectedStaff("AUTO");
     setSelectedSlot("");
+    setPaymentOption("DEPOSIT_AT_COUNTER");
     setBookingError("");
   };
   const changeDate = (date) => {
@@ -593,7 +638,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
       if (!created?.id)
         throw new Error("Chưa nhận được xác nhận lịch hẹn. Vui lòng thử lại.");
 
-      const isBankPayment = !selectedTicketId && (paymentOption === "PAY_FULL" || depositDueEstimate > 0);
+      const isBankPayment = !selectedTicketId && total > 0 && (paymentOption === "PAY_FULL" || depositDueEstimate > 0);
       const chosenFacility = facilities.find(f => String(f.id) === String(selectedFacilityId))?.name || "Spa tự phân bổ phòng";
 
       const bookingInfo = {
@@ -639,7 +684,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               bookingInfo
             });
           } catch {
-            setBookingResult(bookingInfo);
+            setBookingError(`Lịch hẹn ${bookingInfo.code} đã được tạo nhưng chưa tải được mã VietQR. Vui lòng mở mục Lịch hẹn trong Hồ sơ để hoàn tất thanh toán cọc.`);
           }
         }
       }
@@ -747,9 +792,20 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                if (window.confirm("Bạn có muốn hủy ca đặt lịch này và quay lại không?")) {
+              loading={cancellingPayment}
+              onClick={async () => {
+                if (!window.confirm("Bạn có muốn hủy ca đặt lịch này và quay lại không?")) return;
+                setCancellingPayment(true);
+                setPaymentError("");
+                try {
+                  await apiClient.put(`/api/v1/appointments/${paymentWaiting.appointmentId}/cancel`);
                   setPaymentWaiting(null);
+                  setSelectedSlot("");
+                  setSlotVersion((v) => v + 1);
+                } catch (e) {
+                  setPaymentError(e.message || "Chưa hủy được lịch hẹn. Vui lòng thử lại hoặc kiểm tra trong Hồ sơ.");
+                } finally {
+                  setCancellingPayment(false);
                 }
               }}
             >
@@ -883,6 +939,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 startTime: bookingResult.time,
                 durationMinutes: bookingResult.duration || 60,
                 details: `Mã đặt lịch: ${bookingResult.code}\nChuyên viên: ${bookingResult.staff}\nKhách hàng: ${bookingResult.customer}`,
+                location: storeContact.address,
               })}
               target="_blank"
               rel="noopener noreferrer"
@@ -1309,7 +1366,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                         <small>{person.specialty || "Chuyên viên Spa"}</small>
                         <span className="booking-staff-rating">
                           <Star size={11} fill="#D48B38" stroke="#D48B38" />
-                          <span>{person.rating ? Number(person.rating).toFixed(1) : "5.0"}</span>
+                          <span>{Number(person.rating) > 0 ? Number(person.rating).toFixed(1) : "Mới"}</span>
                           {person.totalReviews ? <small>({person.totalReviews})</small> : null}
                         </span>
                       </span>
@@ -1662,7 +1719,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 <dt>
                   <MapPin size={16} /> Cơ sở Spa
                 </dt>
-                <dd>123 Đồng Khởi, Quận 1, TP.HCM</dd>
+                <dd>{storeContact.address}</dd>
               </div>
             </dl>
             <div className="booking-summary-price">
@@ -1825,8 +1882,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             </div>
             <div className="booking-help">
               <span>Cần hỗ trợ tư vấn liệu trình?</span>
-              <a href="tel:18006324">
-                <Phone size={14} /> 1800 6324
+              <a href={`tel:${storeContact.hotline.replace(/[\s().-]/g, '')}`}>
+                <Phone size={14} /> {storeContact.hotline}
               </a>
             </div>
           </aside>

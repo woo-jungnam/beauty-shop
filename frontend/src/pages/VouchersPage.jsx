@@ -23,6 +23,14 @@ import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { FlashSaleCampaignManager } from './flash-sale/FlashSaleCampaignManager';
 
+const toLocalDatetimeString = (value) => {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 export const VouchersPage = () => {
   const getInitialTab = () => {
     const match = window.location.hash.match(/[?&]tab=([^&]+)/);
@@ -138,8 +146,8 @@ export const VouchersPage = () => {
     setMinOrderAmount('0');
     const now = new Date();
     const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    setStartsAt(now.toISOString().slice(0, 16));
-    setEndsAt(future.toISOString().slice(0, 16));
+    setStartsAt(toLocalDatetimeString(now));
+    setEndsAt(toLocalDatetimeString(future));
     setUsageLimit('100');
     setPerUserLimit('1');
     setActive(true);
@@ -156,8 +164,8 @@ export const VouchersPage = () => {
     setDiscountValue(String(v.discountValue || ''));
     setMaxDiscountAmount(v.maxDiscountAmount ? String(v.maxDiscountAmount) : '');
     setMinOrderAmount(v.minOrderAmount ? String(v.minOrderAmount) : '0');
-    setStartsAt(v.startsAt ? new Date(v.startsAt).toISOString().slice(0, 16) : '');
-    setEndsAt(v.endsAt ? new Date(v.endsAt).toISOString().slice(0, 16) : '');
+    setStartsAt(toLocalDatetimeString(v.startsAt));
+    setEndsAt(toLocalDatetimeString(v.endsAt));
     setUsageLimit(v.usageLimit ? String(v.usageLimit) : '');
     setPerUserLimit(v.perUserLimit ? String(v.perUserLimit) : '1');
     setActive(v.active ?? true);

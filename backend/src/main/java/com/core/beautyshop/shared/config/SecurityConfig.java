@@ -88,7 +88,7 @@ public class SecurityConfig {
                                 "/api/v1/chatbot/health",
                                 "/api/v1/chatbot/openapi.json"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/search-by-image").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/search-by-image", "/api/v1/products/tracking/interaction").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/categories/**",
@@ -98,6 +98,7 @@ public class SecurityConfig {
                                 "/api/v1/spa/services/**",
                                 "/api/v1/spa/business-calendar",
                                 "/api/v1/spa/financial-policy",
+                                "/api/v1/spa/booking-policy",
                                 "/api/v1/spa/treatment-templates",
                                 "/api/v1/spa/treatment-templates/**",
                                 "/api/v1/reviews/**",

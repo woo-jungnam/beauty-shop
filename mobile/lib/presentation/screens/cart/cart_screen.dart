@@ -382,8 +382,20 @@ class _CartScreenState extends State<CartScreen> {
                       child: Row(
                         children: [
                           InkWell(
-                            onTap: () =>
-                                cart.updateQuantity(item.id, item.quantity - 1),
+                            onTap: () async {
+                              final ok = await cart.updateQuantity(
+                                item.id,
+                                item.quantity - 1,
+                              );
+                              if (!ok && context.mounted && cart.errorMessage != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(cart.errorMessage!),
+                                    backgroundColor: AppColors.dealRed,
+                                  ),
+                                );
+                              }
+                            },
                             child: const Padding(
                               padding: EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -408,8 +420,20 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                           ),
                           InkWell(
-                            onTap: () =>
-                                cart.updateQuantity(item.id, item.quantity + 1),
+                            onTap: () async {
+                              final ok = await cart.updateQuantity(
+                                item.id,
+                                item.quantity + 1,
+                              );
+                              if (!ok && context.mounted && cart.errorMessage != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(cart.errorMessage!),
+                                    backgroundColor: AppColors.dealRed,
+                                  ),
+                                );
+                              }
+                            },
                             child: const Padding(
                               padding: EdgeInsets.symmetric(
                                 horizontal: 8,

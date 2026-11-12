@@ -11,6 +11,7 @@ export function OrderLookupPage({ onNavigate }) {
   const [orderNumber, setOrderNumber] = useState(query.get('code') || query.get('orderNumber') || '');
   const [phone, setPhone] = useState(query.get('phone') || '');
   const [opened, setOpened] = useState(query.get('id') || null);
+  const [openedOrder, setOpenedOrder] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +37,7 @@ export function OrderLookupPage({ onNavigate }) {
       const res = await apiClient.get(`/api/v1/orders/lookup?orderNumber=${encodeURIComponent(cleanCode)}&phone=${encodeURIComponent(cleanPhone)}`);
       const data = res?.data || res;
       if (data?.id) {
+        setOpenedOrder(data);
         setOpened(data.id);
       } else {
         setError('Không tìm thấy thông tin đơn hàng khớp với yêu cầu.');
@@ -128,7 +130,7 @@ export function OrderLookupPage({ onNavigate }) {
                     Đơn hàng khách vãng lai
                   </div>
                 </div>
-                <button type="button" className="btn-luxury-outline" style={{ fontSize: '12px', padding: '6px 14px' }} onClick={() => setOpened(row.id)}>
+                <button type="button" className="btn-luxury-outline" style={{ fontSize: '12px', padding: '6px 14px' }} onClick={() => { setOpenedOrder(null); setOpened(row.id); }}>
                   Xem chi tiết
                 </button>
               </article>
@@ -137,7 +139,7 @@ export function OrderLookupPage({ onNavigate }) {
         </div>
       )}
 
-      {opened && <OrderDetailDialog orderId={opened} onClose={() => setOpened(null)} onNavigate={onNavigate} />}
+      {opened && <OrderDetailDialog orderId={opened} initialOrder={openedOrder} onClose={() => { setOpened(null); setOpenedOrder(null); }} onNavigate={onNavigate} />}
     </div>
   );
 }

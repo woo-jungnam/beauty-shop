@@ -811,13 +811,17 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
 
     final displayPrice = p.salePrice ?? p.basePrice;
     final hasDiscount = p.salePrice != null && p.salePrice! < p.basePrice;
+    final canBuy = item.inStock && !p.isOutOfStock;
 
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(productId: p.id),
+            builder: (_) => ProductDetailScreen(
+              productId: p.id,
+              initialVariantId: p.clearanceVariant?.id,
+            ),
           ),
         );
       },
@@ -980,34 +984,47 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
                         ),
                         const SizedBox(width: 4),
                         // Nut gio hang nhanh BeautyShop
-                        InkWell(
-                          onTap: () {
-                            addProductToCart(
-                              context,
-                              productId: p.id,
-                              productName: p.name,
-                              price: displayPrice,
-                              thumbnailUrl: p.thumbnailUrl,
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                                width: 0.8,
+                        if (canBuy)
+                          InkWell(
+                            onTap: () {
+                              addProductToCart(
+                                context,
+                                productId: p.id,
+                                variantId: p.clearanceVariant?.id ?? 0,
+                                variantName:
+                                    p.clearanceVariant?.variantName ?? '',
+                                productName: p.name,
+                                price: displayPrice,
+                                thumbnailUrl: p.thumbnailUrl,
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.3),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.shopping_bag_outlined,
+                                size: 14,
+                                color: AppColors.primary,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.shopping_bag_outlined,
-                              size: 14,
-                              color: AppColors.primary,
+                          )
+                        else
+                          const Text(
+                            'Hết hàng',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ],

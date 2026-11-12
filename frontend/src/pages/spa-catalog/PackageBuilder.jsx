@@ -87,7 +87,7 @@ export const PackageBuilder = ({ packageItem, services, onClose, onSaved }) => {
     setUploadingImage(true);
     setError('');
     try {
-      const res = await uploadFile(ENDPOINTS.ADMIN.MEDIA_UPLOAD, file);
+      const res = await uploadFile(ENDPOINTS.CATALOG.MEDIA_UPLOAD, file);
       const uploadedUrl = res?.url || res?.publicUrl || (typeof res === 'string' ? res : '');
       if (uploadedUrl) {
         update('thumbnailUrl', uploadedUrl);

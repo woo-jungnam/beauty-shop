@@ -41,11 +41,14 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
   int? _ticketId;
   String _paymentOption = 'DEPOSIT_AT_COUNTER';
   String? _policyError;
-  bool get _requiresFinancialAcceptance => [
-    'depositAmount',
-    'cancellationFee',
-    'noShowFee',
-  ].any((key) => (num.tryParse('${_financialPolicy?[key] ?? 0}') ?? 0) > 0);
+  bool _submitting = false;
+  bool get _requiresFinancialAcceptance =>
+      _ticketId == null &&
+      [
+        'depositAmount',
+        'cancellationFee',
+        'noShowFee',
+      ].any((key) => (num.tryParse('${_financialPolicy?[key] ?? 0}') ?? 0) > 0);
 
   Future<void> _loadFinancialPolicy() async {
     try {
@@ -457,7 +460,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
               ),
             const SizedBox(height: 16),
 
-            _buildSectionTitle('4. Ghi chú tình trạng da (tùy chọn):'),
+            _buildSectionTitle('5. Ghi chú tình trạng da (tùy chọn):'),
             TextField(
               controller: _noteController,
               maxLines: 2,
@@ -510,7 +513,9 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: () async {
+                onPressed: _submitting
+                    ? null
+                    : () async {
                   if (_financialPolicy == null ||
                       (_requiresFinancialAcceptance && !_financialAccepted)) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -585,21 +590,28 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     );
                     return;
                   }
-                  final success = await context
-                      .read<SpaProvider>()
-                      .bookAppointment(
-                        serviceId: widget.service.id,
-                        ticketId: selectedTicket,
-                        staffId: _selectedStaffId,
-                        serviceName: widget.service.name,
-                        date: _selectedDate,
-                        timeSlot: _selectedTime,
-                        notes: _noteController.text,
-                        acceptedFinancialPolicy: _financialAccepted,
-                        financialPolicyVersion:
-                            (_financialPolicy!['version'] as num).toInt(),
-                        paymentOption: _ticketId != null ? 'WAIVE_WALK_IN' : _paymentOption,
-                      );
+                  setState(() => _submitting = true);
+                  bool success = false;
+                  try {
+                    success = await context
+                        .read<SpaProvider>()
+                        .bookAppointment(
+                          serviceId: widget.service.id,
+                          ticketId: selectedTicket,
+                          staffId: _selectedStaffId,
+                          serviceName: widget.service.name,
+                          date: _selectedDate,
+                          timeSlot: _selectedTime,
+                          notes: _noteController.text,
+                          acceptedFinancialPolicy: _financialAccepted,
+                          financialPolicyVersion:
+                              (_financialPolicy!['version'] as num).toInt(),
+                          paymentOption:
+                              _ticketId != null ? 'WAIVE_WALK_IN' : _paymentOption,
+                        );
+                  } finally {
+                    if (mounted) setState(() => _submitting = false);
+                  }
 
                   if (!mounted || !context.mounted) return;
                   if (success) {

@@ -615,7 +615,7 @@ Future<AccountMap?> accountForm(
                             return 'Vui lòng nhập số điện thoại';
                           if (entry.key == 'phone' &&
                               text.isNotEmpty &&
-                              !RegExp(r'^0[35789]\d{8}$').hasMatch(text))
+                              !RegExp(r'^(0|\+84)[35789][0-9]{8}$').hasMatch(text))
                             return 'Số điện thoại không hợp lệ';
                           if (entry.key == 'dateOfBirth' &&
                               text.isNotEmpty &&

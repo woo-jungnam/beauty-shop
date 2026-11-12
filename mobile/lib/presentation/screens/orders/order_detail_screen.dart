@@ -8,13 +8,15 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../data/models/order_model.dart';
 import '../../../providers/cart_provider.dart';
+import '../../../providers/order_provider.dart';
 import '../checkout/vietqr_payment_screen.dart';
 import '../spa/spa_tickets_screen.dart';
 import '../treatments/treatment_hub_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
-  const OrderDetailScreen({super.key, required this.orderId});
+  const OrderDetailScreen({super.key, required this.orderId, this.initialRaw});
   final int orderId;
+  final Map<String, dynamic>? initialRaw;
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
@@ -33,6 +35,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   void initState() {
     super.initState();
+    order = widget.initialRaw;
     load();
   }
 
@@ -59,7 +62,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       );
       if (mounted) setState(() => returns = returnResponse.data as List? ?? []);
     } catch (e) {
-      if (mounted) setState(() => error = '$e');
+      if (mounted && order == null) setState(() => error = '$e');
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -310,7 +313,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 onPressed: busy ? null : () => run(reorder),
                 child: const Text('Mua lại theo giá hiện tại'),
               ),
-            if (['PENDING', 'CONFIRMED'].contains(value['status']))
+            if (value['status'] == 'PENDING')
               TextButton(
                 onPressed: busy
                     ? null
@@ -331,12 +334,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ],
                           ),
                         );
-                        if (confirmed == true)
+                        if (confirmed == true) {
                           await run(() async {
                             await api.delete<dynamic>(
                               '/api/v1/orders/${widget.orderId}/cancel',
                             );
                           });
+                          if (mounted) {
+                            try {
+                              await context
+                                  .read<OrderProvider>()
+                                  .fetchOrders();
+                            } catch (_) {}
+                          }
+                        }
                       },
                 child: const Text('Hủy đơn'),
               ),

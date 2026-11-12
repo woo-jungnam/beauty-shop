@@ -26,6 +26,7 @@ import {
   formatDateTime,
   formatDate,
   formatNumber,
+  getVietnamDateString,
   resolveMediaUrl,
 } from '../shared/utils/formatters';
 import { Button } from '../shared/ui/Button';
@@ -68,12 +69,13 @@ const WAREHOUSE_TYPE_MAP = {
 
 const getDaysUntilExpiration = (expDate) => {
   if (!expDate) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(expDate);
-  target.setHours(0, 0, 0, 0);
-  const diffTime = target - today;
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const datePart = String(expDate).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
+  const todayStr = getVietnamDateString();
+  const today = Date.parse(`${todayStr}T00:00:00+07:00`);
+  const target = Date.parse(`${datePart}T00:00:00+07:00`);
+  if (!Number.isFinite(today) || !Number.isFinite(target)) return null;
+  return Math.round((target - today) / 86400000);
 };
 
 const renderExpirationBadge = (expDate) => {
@@ -453,22 +455,37 @@ export const InventoryPage = () => {
 
   const fetchCatalogVariants = async () => {
     try {
-      const res = await apiClient.get('/api/v1/products?size=100');
+      const res = await apiClient.get('/api/v1/products/search?size=100&includeOutOfStock=true');
       const list = res?.data?.content || res?.content || res?.data || (Array.isArray(res) ? res : []);
       const flattened = [];
-      list.forEach(p => {
-        (p.variants || []).forEach(v => {
-          flattened.push({
-            id: v.id,
-            productId: p.id,
-            productName: p.name,
-            variantName: v.variantName || v.volume || 'Tiêu chuẩn',
-            sku: v.sku,
-            price: v.price || p.minPrice || 0,
-            imageUrl: v.imageUrl || p.thumbnailUrl,
+      for (let i = 0; i < list.length; i += 10) {
+        const chunk = list.slice(i, i + 10);
+        const results = await Promise.allSettled(
+          chunk.map(async (p) => {
+            if (Array.isArray(p.variants) && p.variants.length > 0) {
+              return { p, variants: p.variants };
+            }
+            const vRes = await apiClient.get(`/api/v1/products/${p.id}/variants`);
+            const variants = vRes?.data || vRes || [];
+            return { p, variants: Array.isArray(variants) ? variants : [] };
+          })
+        );
+        results.forEach((result) => {
+          if (result.status !== 'fulfilled') return;
+          const { p, variants } = result.value;
+          variants.forEach((v) => {
+            flattened.push({
+              id: v.id,
+              productId: p.id,
+              productName: p.name,
+              variantName: v.variantName || v.volume || 'Tiêu chuẩn',
+              sku: v.sku,
+              price: v.price || p.minPrice || 0,
+              imageUrl: v.imageUrl || p.thumbnailUrl,
+            });
           });
         });
-      });
+      }
       setCatalogVariants(flattened);
       if (flattened.length > 0 && !inboundVariantId) {
         setInboundVariantId(String(flattened[0].id));

@@ -30,6 +30,7 @@ class OrderHistoryScreen extends StatefulWidget {
 class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _lastFetchedTab = -1;
   final List<String> _tabs = [
     'Tất cả',
     'Chờ xử lý',
@@ -50,8 +51,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
+    _lastFetchedTab = widget.initialTabIndex;
     _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
+      if (!_tabController.indexIsChanging &&
+          _tabController.index != _lastFetchedTab) {
+        _lastFetchedTab = _tabController.index;
         if (_tabController.index == 5) {
           _fetchServiceOrders();
         } else {
@@ -191,17 +195,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       ),
       body: Consumer<OrderProvider>(
         builder: (context, orderProvider, _) {
-          if (orderProvider.errorMessage != null)
-            return CatalogState(
-              message: orderProvider.errorMessage!,
-              onRetry: orderProvider.fetchOrders,
-            );
-          if (orderProvider.isLoading && orderProvider.orders.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          }
-
           final allOrders = orderProvider.orders;
 
           return TabBarView(
@@ -209,6 +202,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             children: List.generate(_tabs.length, (tabIdx) {
               if (tabIdx == 5) {
                 return _buildServiceOrdersTab();
+              }
+              if (orderProvider.errorMessage != null) {
+                return CatalogState(
+                  message: orderProvider.errorMessage!,
+                  onRetry: () => orderProvider.fetchOrders(
+                    status: _tabIndexToStatus(tabIdx),
+                  ),
+                );
+              }
+              if (orderProvider.isLoading && allOrders.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                );
               }
               final filtered = _filterOrders(allOrders, tabIdx);
 
@@ -362,7 +368,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     ),
                     Text(
                       AppFormatters.formatCurrency(
-                        item.price * item.quantity,
+                        item.effectiveUnitPrice * item.quantity,
                       ),
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
@@ -439,8 +445,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                         ),
                       ),
                     ),
-                  if (order.status == 'PENDING' ||
-                      order.status == 'CONFIRMED') ...[
+                  if (order.status == 'PENDING') ...[
                     const SizedBox(width: 8),
                     TextButton(
                       onPressed: () async {
@@ -467,7 +472,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                           ),
                         );
                         if (confirm == true) {
-                          await provider.cancelOrder(order.id);
+                          final ok = await provider.cancelOrder(order.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  ok
+                                      ? 'Đã hủy đơn hàng thành công'
+                                      : provider.actionError ??
+                                            'Không thể hủy đơn hàng',
+                                ),
+                                backgroundColor: ok
+                                    ? AppColors.primary
+                                    : AppColors.dealRed,
+                              ),
+                            );
+                          }
                         }
                       },
                       child: const Text(

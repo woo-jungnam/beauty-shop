@@ -11,6 +11,7 @@ class OrderProvider extends ChangeNotifier {
   List<OrderResponse> _orders = [];
   bool _isLoading = false;
   String? _errorMessage;
+  String? _actionError;
   int _page = 0;
   bool _hasMore = false;
   bool get hasMore => _hasMore;
@@ -19,6 +20,7 @@ class OrderProvider extends ChangeNotifier {
   List<OrderResponse> get orders => _orders;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String? get actionError => _actionError;
 
   OrderProvider({ApiClient? apiClient, bool loadOnCreate = true})
     : _apiClient = apiClient ?? ApiClient() {
@@ -31,6 +33,7 @@ class OrderProvider extends ChangeNotifier {
     _page = 0;
     _hasMore = false;
     _errorMessage = null;
+    _actionError = null;
     notifyListeners();
   }
 
@@ -171,23 +174,25 @@ class OrderProvider extends ChangeNotifier {
   }
 
   Future<bool> cancelOrder(int orderId) async {
+    _actionError = null;
     try {
       final response = await _apiClient.delete(
         ApiConstants.orderCancelUrl(orderId),
       );
       if (response.isSuccess) {
-        await fetchOrders();
+        await fetchOrders(status: _currentStatus);
         return true;
       } else {
-        _errorMessage = response.message ?? 'Không thể hủy đơn hàng';
+        _actionError = response.message ?? 'Không thể hủy đơn hàng';
       }
     } catch (e) {
       if (e is ApiException) {
-        _errorMessage = e.message;
+        _actionError = e.message;
       } else {
-        _errorMessage = 'Lỗi kết nối khi hủy đơn hàng';
+        _actionError = 'Lỗi kết nối khi hủy đơn hàng';
       }
     }
+    notifyListeners();
     return false;
   }
 

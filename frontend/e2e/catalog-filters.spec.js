@@ -5,6 +5,10 @@ const categories = [
   { id: 8, name: 'Kem dưỡng', slug: 'kem-duong', children: [] },
 ];
 const brands = [{ id: 5, name: 'Beauty Lab', slug: 'beauty-lab' }, { id: 6, name: 'Skin Lab', slug: 'skin-lab' }];
+const filterOptions = {
+  skinConcerns: [{ id: 10, code: 'ACNE', name: 'Mụn' }, { id: 15, code: 'SENSITIVITY', name: 'Kích ứng & Đỏ rát' }],
+  origins: ['France', 'Korea'],
+};
 const product = { id: 42, name: 'Serum phục hồi B5', minPrice: 250000, brandId: 5, categoryId: 4, thumbnailUrl: '/images/spa/facial-care.jpg' };
 
 async function catalog(page, { pagination = false, failed = false, delayed = false } = {}) {
@@ -18,6 +22,7 @@ async function catalog(page, { pagination = false, failed = false, delayed = fal
     let data = [];
     if (url.pathname === '/api/v1/categories' || url.pathname === '/api/v1/categories/root') data = categories;
     else if (url.pathname === '/api/v1/brands') data = { content: brands, totalPages: 1 };
+    else if (url.pathname === '/api/v1/products/filter-options') data = filterOptions;
     else if (url.pathname === '/api/v1/products/search') {
       requests.push(new URLSearchParams(url.search));
       if (failure) return route.fulfill({ status: 503, json: { message: 'Temporary failure' } });
@@ -164,4 +169,81 @@ test('Header brand and search navigation preserve the catalog category filters',
   await expect(categoryGroup(page).getByRole('checkbox', { name: 'Serum', exact: true })).toBeChecked();
   await expect(brandGroup(page).getByRole('checkbox', { name: 'Skin Lab' })).toBeChecked();
   await expect(page.getByLabel('Từ khóa tìm kiếm', { exact: true })).toHaveValue('B5');
+});
+
+test('Extended beauty filters, custom price range, skin concerns and child categories emit expected parameters', async ({ page }) => {
+  const api = await catalog(page);
+  await page.goto('/#/products');
+  await categoryGroup(page).getByRole('checkbox', { name: 'Serum', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Đang giảm giá / Flash Sale' }).check();
+  await page.getByRole('group', { name: 'Vấn đề da', exact: true }).getByRole('checkbox', { name: 'Mụn' }).check();
+  await page.getByRole('checkbox', { name: 'Không hương liệu' }).check();
+  await page.getByRole('checkbox', { name: 'Không cồn' }).check();
+  await page.getByRole('radio', { name: 'Từ 4★ trở lên' }).check();
+  await page.getByLabel('Giá tối thiểu').fill('150000');
+  await page.getByLabel('Giá tối đa').fill('450000');
+  await page.getByRole('button', { name: 'Áp dụng giá' }).click();
+  await page.getByLabel('Đối tượng sử dụng').selectOption('FEMALE');
+  await page.getByLabel('Xuất xứ').selectOption('Korea');
+  await page.getByLabel('Sắp xếp sản phẩm').selectOption('newest');
+
+  await expect.poll(() => {
+    const params = api.requests.at(-1);
+    return params ? {
+      categories: ids(params, 'categoryIds'),
+      includeChild: params.get('includeChildCategories'),
+      onSale: params.get('onSale'),
+      concerns: ids(params, 'skinConcernIds'),
+      hasFragrance: params.get('hasFragrance'),
+      hasAlcohol: params.get('hasAlcohol'),
+      minRating: params.get('minRating'),
+      minPrice: params.get('minPrice'),
+      maxPrice: params.get('maxPrice'),
+      targetGender: params.get('targetGender'),
+      originCountry: params.get('originCountry'),
+      includeOutOfStock: params.get('includeOutOfStock'),
+      sort: params.get('sort'),
+    } : null;
+  }).toEqual({
+    categories: ['4'],
+    includeChild: 'true',
+    onSale: 'true',
+    concerns: ['10'],
+    hasFragrance: 'false',
+    hasAlcohol: 'false',
+    minRating: '4',
+    minPrice: '150000',
+    maxPrice: '450000',
+    targetGender: 'FEMALE',
+    originCountry: 'Korea',
+    includeOutOfStock: 'true',
+    sort: 'createdAt,desc',
+  });
+
+  await page.reload();
+  await expect(page.getByRole('checkbox', { name: 'Đang giảm giá / Flash Sale' })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Không hương liệu' })).toBeChecked();
+  await expect(page.getByLabel('Giá tối thiểu')).toHaveValue('150000');
+  await expect(page.getByLabel('Giá tối đa')).toHaveValue('450000');
+  await expect(page.getByLabel('Sắp xếp sản phẩm')).toHaveValue('newest');
+});
+
+test('Zero stock card displays Hết hàng badge and hides quick-add purchase button', async ({ page }) => {
+  await page.route('**/fonts.googleapis.com/**', route => route.abort());
+  await page.route('**/fonts.gstatic.com/**', route => route.abort());
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    let data = [];
+    if (url.pathname === '/api/v1/categories' || url.pathname === '/api/v1/categories/root') data = categories;
+    else if (url.pathname === '/api/v1/brands') data = { content: brands, totalPages: 1 };
+    else if (url.pathname === '/api/v1/products/filter-options') data = filterOptions;
+    else if (url.pathname === '/api/v1/products/search') {
+      data = { content: [{ ...product, totalStock: 0 }], totalElements: 1, totalPages: 1 };
+    }
+    await route.fulfill({ json: { success: true, data } });
+  });
+  await page.goto('/#/products');
+  const card = page.locator('.product-card-resolved').first();
+  await expect(card).toContainText('Hết hàng');
+  await expect(card.getByRole('button', { name: `Thêm ${product.name} vào giỏ` })).toHaveCount(0);
 });

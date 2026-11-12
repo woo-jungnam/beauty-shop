@@ -4,7 +4,7 @@ import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Select } from '../../shared/ui/Select';
 import { useAuth } from '../../app/providers/AuthProvider';
-import { formatCurrency, formatDateTime, getOrderStatusBadge, getReturnStatusBadge, getOutreachStatusBadge } from '../../shared/utils/formatters';
+import { formatCurrency, formatDateTime, getOrderStatusBadge, getReturnStatusBadge, getOutreachStatusBadge, getVietnamDateString } from '../../shared/utils/formatters';
 
 const data = response => response?.data ?? response;
 const exclusiveEndDate = key => {
@@ -134,7 +134,7 @@ export function ProcurementOperationsPanel({ orders = [], onChanged }) {
 export function ProfitabilityPanel({ dashboardRange, dashboardRefresh } = {}) {
   const { isAdmin } = useAuth(); const [from, setFrom] = useState(() => dashboardRange?.from || ''), [to, setTo] = useState(() => dashboardRange ? exclusiveEndDate(dashboardRange.to) : ''), [report, setReport] = useState(null), [expenses, setExpenses] = useState([]);
   const [expensePage, setExpensePage] = useState(0), [expensePages, setExpensePages] = useState(1);
-  const [form, setForm] = useState(() => ({ reference: documentRef(), category: 'OPERATING', description: '', amount: '', incurredAt: new Date().toISOString().slice(0, 10) })); const command = useCommand();
+  const [form, setForm] = useState(() => ({ reference: documentRef(), category: 'OPERATING', description: '', amount: '', incurredAt: getVietnamDateString() })); const command = useCommand();
   const loadExpenses = async selectedPage => { const result = data(await apiClient.get(`/api/v1/admin/dashboard/expenses?page=${selectedPage}&size=20&sort=id,desc`)); setExpenses(result.content || []); setExpensePages(result.totalPages || 1); setExpensePage(selectedPage); };
   const load = async (selectedPage = expensePage) => { const params = new URLSearchParams(); if (from) params.set('from', new Date(`${from}T00:00:00+07:00`).toISOString()); if (to) params.set('to', new Date(`${to}T00:00:00+07:00`).toISOString()); const [result] = await Promise.all([apiClient.get(`/api/v1/admin/dashboard/profitability?${params}`), loadExpenses(selectedPage)]); setReport(data(result)); };
   const run = command.run;

@@ -106,6 +106,7 @@ export const AuthProvider = ({ children }) => {
 
     setToken(data.accessToken);
     setUser(sessionUser);
+    window.dispatchEvent(new Event('auth:login'));
     return sessionUser;
   };
 
@@ -129,6 +130,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('beautyshop_admin_user', JSON.stringify(sessionUser));
       setToken(data.accessToken);
       setUser(sessionUser);
+      window.dispatchEvent(new Event('auth:login'));
       return sessionUser;
     }
     return data;
@@ -147,6 +149,7 @@ export const AuthProvider = ({ children }) => {
       delete apiClient.defaults.headers.common.Authorization;
       setToken(null);
       setUser(null);
+      window.dispatchEvent(new Event('auth:logout'));
     }
   };
 

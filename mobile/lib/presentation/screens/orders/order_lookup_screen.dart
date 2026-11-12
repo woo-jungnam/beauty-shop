@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/storage_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -15,7 +14,8 @@ class OrderLookupScreen extends StatefulWidget {
 }
 
 class _OrderLookupScreenState extends State<OrderLookupScreen> {
-  final _idController = TextEditingController();
+  final _orderNumberController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _api = ApiClient();
   bool _loading = false;
   String? _error;
@@ -29,47 +29,58 @@ class _OrderLookupScreenState extends State<OrderLookupScreen> {
 
   @override
   void dispose() {
-    _idController.dispose();
+    _orderNumberController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
-  Future<void> _lookupOrder(int id) async {
+  Future<void> _lookupOrder(String orderNumber, String phone) async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      final response = await _api.get<OrderResponse>(
-        '${ApiConstants.orderDetail}$id',
-        fromJsonT: (json) => OrderResponse.fromJson(json as Map<String, dynamic>),
+      final response = await _api.get<Map<String, dynamic>>(
+        '/api/v1/orders/lookup',
+        queryParameters: {'orderNumber': orderNumber, 'phone': phone},
+        fromJsonT: (json) => Map<String, dynamic>.from(json as Map),
       );
 
       if (!mounted) return;
 
       if (response.isSuccess && response.data != null) {
-        await StorageService.rememberGuestOrder(id);
-        setState(() {
-          _recentOrderIds = StorageService.getGuestOrderIds();
-        });
+        final raw = response.data!;
+        final parsed = OrderResponse.fromJson(raw);
+        if (parsed.id > 0) {
+          await StorageService.rememberGuestOrder(parsed.id);
+          if (mounted) {
+            setState(() {
+              _recentOrderIds = StorageService.getGuestOrderIds();
+            });
+          }
+        }
 
         if (mounted) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => OrderDetailScreen(orderId: id),
+              builder: (_) => OrderDetailScreen(
+                orderId: parsed.id,
+                initialRaw: raw,
+              ),
             ),
           );
         }
       } else {
         setState(() {
-          _error = response.message ?? 'Không tìm thấy thông tin đơn hàng #$id.';
+          _error = response.message ?? 'Không tìm thấy thông tin đơn hàng.';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Không tìm thấy đơn hàng. Vui lòng kiểm tra lại số ID đơn.';
+          _error = 'Không tìm thấy đơn hàng khớp với mã đơn và số điện thoại.';
         });
       }
     } finally {
@@ -80,14 +91,15 @@ class _OrderLookupScreenState extends State<OrderLookupScreen> {
   }
 
   void _submit() {
-    final text = _idController.text.trim();
-    final cleanId = text.replaceAll(RegExp(r'[^0-9]'), '');
-    final id = int.tryParse(cleanId);
-    if (id == null || id <= 0) {
-      setState(() => _error = 'Vui lòng nhập mã số ID đơn hàng hợp lệ.');
+    final orderNumber = _orderNumberController.text.trim();
+    final phone = _phoneController.text.trim();
+    if (orderNumber.isEmpty || phone.isEmpty) {
+      setState(
+        () => _error = 'Vui lòng nhập đầy đủ mã đơn hàng và số điện thoại.',
+      );
       return;
     }
-    _lookupOrder(id);
+    _lookupOrder(orderNumber, phone);
   }
 
   @override
@@ -138,7 +150,7 @@ class _OrderLookupScreenState extends State<OrderLookupScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Nhập số ID đơn hàng từ tin nhắn xác nhận hoặc email',
+                              'Nhập mã đơn hàng và số điện thoại đặt hàng',
                               style: AppTypography.caption,
                             ),
                           ],
@@ -148,12 +160,21 @@ class _OrderLookupScreenState extends State<OrderLookupScreen> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: _idController,
-                    keyboardType: TextInputType.number,
+                    controller: _orderNumberController,
+                    decoration: const InputDecoration(
+                      labelText: 'Mã đơn hàng (ví dụ: ORD-1234ABCD)',
+                      hintText: 'Nhập mã đơn hàng...',
+                      prefixIcon: Icon(Icons.tag),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
-                      labelText: 'Số ID đơn hàng (ví dụ: 1001)',
-                      hintText: 'Nhập số ID đơn hàng...',
-                      prefixIcon: const Icon(Icons.tag),
+                      labelText: 'Số điện thoại đặt hàng',
+                      hintText: 'Nhập số điện thoại...',
+                      prefixIcon: const Icon(Icons.phone_outlined),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.arrow_forward),
                         onPressed: _loading ? null : _submit,

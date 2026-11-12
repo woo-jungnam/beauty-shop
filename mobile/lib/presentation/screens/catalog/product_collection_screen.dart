@@ -294,12 +294,17 @@ class _ProductCollectionScreenState extends State<ProductCollectionScreen> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ProductDetailScreen(productId: product.id),
+                  builder: (_) => ProductDetailScreen(
+                    productId: product.id,
+                    initialVariantId: product.clearanceVariant?.id,
+                  ),
                 ),
               ),
               onAddToCart: () => addProductToCart(
                 context,
                 productId: product.id,
+                variantId: product.clearanceVariant?.id ?? 0,
+                variantName: product.clearanceVariant?.variantName ?? '',
                 productName: product.name,
                 price: product.displayPrice,
                 thumbnailUrl: product.thumbnailUrl,

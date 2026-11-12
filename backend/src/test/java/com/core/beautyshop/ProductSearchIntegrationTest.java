@@ -3,6 +3,8 @@ package com.core.beautyshop;
 import com.core.beautyshop.modules.catalog.domain.*;
 import com.core.beautyshop.modules.catalog.domain.enums.*;
 import com.core.beautyshop.modules.inventory.domain.*;
+import com.core.beautyshop.modules.promotion.domain.*;
+import com.core.beautyshop.modules.promotion.domain.enums.FlashSaleStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -20,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,6 +56,7 @@ class ProductSearchIntegrationTest {
     @Autowired ProductSkinCompatibilityRepository compatibility;
     @Autowired WarehouseRepository warehouses;
     @Autowired WarehouseStockRepository stocks;
+    @Autowired FlashSaleCampaignRepository flashCampaigns;
     String prefix;
     int sequence;
 
@@ -492,5 +497,74 @@ class ProductSearchIntegrationTest {
         Product visible = product("Visible"); Product privateProduct = product("Private"); privateProduct.setStatus(ProductStatus.INACTIVE);
         makeCatalogSellable();
         exactly(page(search().param("status", "INACTIVE")), visible);
+    }
+
+    @Test void includeChildCategoriesExpandsActiveDescendantsOnlyAndKeepsDefaultExact() throws Exception {
+        Category root = category();
+        Category child = category(); child.setParentCategory(root);
+        Category grandChild = category(); grandChild.setParentCategory(child);
+        Category inactiveChild = category(); inactiveChild.setParentCategory(root); inactiveChild.setIsActive(false);
+        Product onRoot = product("Root"); onRoot.setCategories(new ArrayList<>(List.of(root)));
+        Product onChild = product("Child"); onChild.setCategories(new ArrayList<>(List.of(child)));
+        Product onGrand = product("Grand"); onGrand.setCategories(new ArrayList<>(List.of(grandChild)));
+        Product onHidden = product("Hidden"); onHidden.setCategories(new ArrayList<>(List.of(inactiveChild)));
+        makeCatalogSellable();
+        exactly(page(search().param("categoryIds", root.getId().toString())), onRoot);
+        exactly(page(search().param("categoryIds", root.getId().toString()).param("includeChildCategories", "true")), onRoot, onChild, onGrand);
+        exactly(page(search().param("categoryIds", inactiveChild.getId().toString()).param("includeChildCategories", "true")));
+    }
+
+    @Test void onSaleIncludesActiveFlashSaleItemsAndExcludesSoldOutOrEndedCampaigns() throws Exception {
+        Product catalogSale = product("Catalog sale"); available(variant(catalogSale, "200", "150"));
+        Product flashOnly = product("Flash only"); ProductVariant flashSku = variant(flashOnly, "300", null); available(flashSku);
+        Product soldOutFlash = product("Sold out flash"); ProductVariant soldOutSku = variant(soldOutFlash, "300", null); available(soldOutSku);
+        Product endedFlash = product("Ended flash"); ProductVariant endedSku = variant(endedFlash, "300", null); available(endedSku);
+        Instant now = Instant.now();
+        FlashSaleCampaign active = flashCampaigns.saveAndFlush(FlashSaleCampaign.builder()
+                .name(prefix + " Active").startsAt(now.minus(1, ChronoUnit.HOURS)).endsAt(now.plus(1, ChronoUnit.HOURS))
+                .status(FlashSaleStatus.ACTIVE).build());
+        active.getItems().add(FlashSaleItem.builder().campaign(active).productId(flashOnly.getId())
+                .productVariantId(flashSku.getId()).flashPrice(new BigDecimal("199")).quantityQuota(10).quantitySold(2).build());
+        active.getItems().add(FlashSaleItem.builder().campaign(active).productId(soldOutFlash.getId())
+                .productVariantId(soldOutSku.getId()).flashPrice(new BigDecimal("199")).quantityQuota(5).quantitySold(5).build());
+        flashCampaigns.saveAndFlush(active);
+        FlashSaleCampaign ended = flashCampaigns.saveAndFlush(FlashSaleCampaign.builder()
+                .name(prefix + " Ended").startsAt(now.minus(3, ChronoUnit.HOURS)).endsAt(now.minus(1, ChronoUnit.HOURS))
+                .status(FlashSaleStatus.ENDED).build());
+        ended.getItems().add(FlashSaleItem.builder().campaign(ended).productId(endedFlash.getId())
+                .productVariantId(endedSku.getId()).flashPrice(new BigDecimal("199")).quantityQuota(10).quantitySold(0).build());
+        flashCampaigns.saveAndFlush(ended);
+        exactly(page(search().param("onSale", "true")), catalogSale, flashOnly);
+        exactly(page(search().param("onSale", "false")), soldOutFlash, endedFlash);
+    }
+
+    @Test void filterOptionsArePublic() throws Exception {
+        Product inStock = product("In stock"); available(variant(inStock, "120", null));
+        SkinConcern addedConcern = concern();
+        inStock.setOriginCountry("Korea");
+        entities.flush(); entities.clear();
+        String optionsJson = mvc.perform(get("/api/v1/products/filter-options"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        JsonNode optionsData = json.readTree(optionsJson).path("data");
+        List<Long> concernIds = new ArrayList<>();
+        optionsData.path("skinConcerns").forEach(node -> concernIds.add(node.path("id").asLong()));
+        assertTrue(concernIds.contains(addedConcern.getId()));
+        List<String> origins = new ArrayList<>();
+        optionsData.path("origins").forEach(node -> origins.add(node.asText()));
+        assertTrue(origins.contains("Korea"));
+        JsonNode searchRes = page(search());
+        assertEquals(2, searchRes.path("content").get(0).path("totalStock").asInt());
+    }
+
+    @Test void includeOutOfStockShowsUnavailableLastAndPreservesDefaultHiding() throws Exception {
+        Product inStock = product("In stock"); inStock.setTotalSold(1L); available(variant(inStock, "120", null));
+        Product outOfStock = product("Out of stock"); outOfStock.setTotalSold(999L); variant(outOfStock, "150", null);
+        exactly(page(search()), inStock);
+        JsonNode combined = page(search().param("includeOutOfStock", "true").param("sort", "totalSold,desc"));
+        assertEquals(List.of(inStock.getId(), outOfStock.getId()), ids(combined));
+        assertEquals(2, combined.path("content").get(0).path("totalStock").asInt());
+        assertEquals(0, combined.path("content").get(1).path("totalStock").asInt());
+        assertEquals(0, new BigDecimal("150").compareTo(combined.path("content").get(1).path("minPrice").decimalValue()));
     }
 }

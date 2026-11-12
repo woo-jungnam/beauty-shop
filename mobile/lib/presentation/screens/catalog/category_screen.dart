@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
+import 'package:beautyshop_mobile/core/utils/formatters.dart';
 import 'package:beautyshop_mobile/core/utils/image_utils.dart';
 import 'package:beautyshop_mobile/providers/product_provider.dart';
 import 'package:beautyshop_mobile/data/models/product_model.dart';
@@ -76,6 +77,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
           child: TextField(
             controller: _searchController,
             textInputAction: TextInputAction.search,
+            onChanged: (_) => setState(() {}),
             onSubmitted: _onSearch,
             decoration: InputDecoration(
               hintText: 'Tìm kiếm mỹ phẩm, thương hiệu...',
@@ -405,7 +407,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(productId: p.id),
+            builder: (_) => ProductDetailScreen(
+              productId: p.id,
+              initialVariantId: p.clearanceVariant?.id,
+            ),
           ),
         );
       },
@@ -461,12 +466,16 @@ class _CategoryScreenState extends State<CategoryScreen> {
             const SizedBox(height: 3),
             Row(
               children: [
-                Text(
-                  '${(p.displayPrice / 1000).toStringAsFixed(0)}K',
-                  style: const TextStyle(
-                    color: AppColors.dealRed,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
+                Flexible(
+                  child: Text(
+                    AppFormatters.formatCurrency(p.displayPrice),
+                    style: const TextStyle(
+                      color: AppColors.dealRed,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (p.discountPercent > 0) ...[

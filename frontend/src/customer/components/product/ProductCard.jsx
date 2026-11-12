@@ -46,10 +46,16 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
   const price = isClearance ? variantPrice(selectedVariant)
     : knownNumber(selectedVariant?.discountPrice ?? selectedVariant?.price ?? product.minPrice ?? product.basePrice ?? product.price);
   const originalPrice = knownNumber(isClearance ? selectedVariant?.price : selectedVariant?.originalPrice ?? selectedVariant?.price ?? product.originalPrice);
-  const stock = knownCount(selectedVariant?.stockQuantity);
+  const stock = knownCount(selectedVariant?.stockQuantity ?? product.totalStock ?? (isClearance ? product.clearanceStock : null));
   const clearanceStock = knownCount(product.clearanceStock);
   const clearanceDiscount = knownNumber(selectedVariant?.discountPrice);
-  const unavailable = product.status && product.status !== 'ACTIVE' || stock === 0
+  const flashQuota = knownCount(product.flashQuota);
+  const flashSold = knownCount(product.flashSold) ?? 0;
+  const isOutOfStock = stock === 0
+    || (isClearance && clearanceStock === 0)
+    || (flashQuota != null && flashQuota > 0 && flashSold >= flashQuota);
+  const isUpcomingFlash = Boolean(product.isUpcomingFlash);
+  const unavailable = (product.status && product.status !== 'ACTIVE') || isOutOfStock || isUpcomingFlash
     || isClearance && (!selectedVariant || stock == null || clearanceStock == null || clearanceStock === 0
       || clearanceDiscount == null || originalPrice == null || clearanceDiscount >= originalPrice);
   const path = productPath(product, isClearance ? product.clearanceVariant?.id ?? '' : undefined);
@@ -132,9 +138,35 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
             height: '100%',
             objectFit: 'var(--product-card-image-fit, cover)',
             transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-            transform: isHovered ? 'scale(1.06)' : 'scale(1)'
+            transform: isHovered && !isOutOfStock ? 'scale(1.06)' : 'scale(1)',
+            opacity: isOutOfStock ? 0.55 : 1
           }}
         />
+
+        {isOutOfStock && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(15, 23, 42, 0.25)',
+            zIndex: 2,
+            pointerEvents: 'none'
+          }}>
+            <span style={{
+              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+              color: '#FFFFFF',
+              fontSize: '12px',
+              fontWeight: 700,
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              letterSpacing: '0.02em'
+            }}>
+              Hết hàng
+            </span>
+          </div>
+        )}
 
         <div className="product-card-badges" style={{
           position: 'absolute',
@@ -172,7 +204,19 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
               alignItems: 'center',
               gap: '3px'
             }}>
-              HSD: {new Date(product.earliestExpirationDate).toLocaleDateString('vi-VN')}
+              HSD: {new Date(String(product.earliestExpirationDate).length === 10 ? `${product.earliestExpirationDate}T12:00:00+07:00` : product.earliestExpirationDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+            </span>
+          )}
+          {isUpcomingFlash && (
+            <span style={{
+              backgroundColor: '#1E293B',
+              color: '#FFFFFF',
+              fontSize: '9.5px',
+              fontWeight: 800,
+              padding: '2px 6px',
+              borderRadius: '3px',
+            }}>
+              Sắp mở bán
             </span>
           )}
           {product.isFeatured && (
@@ -253,54 +297,56 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           </button>
         )}
 
-        <div className="product-card-quick-add" style={{
-          position: 'absolute',
-          bottom: '10px',
-          left: '10px',
-          right: '10px',
-          display: 'flex',
-          justifyContent: 'center',
-          opacity: isHovered ? 1 : 0,
-          transform: isHovered ? 'translateY(0)' : 'translateY(8px)',
-          transition: 'all 0.25s ease',
-          zIndex: 3
-        }}>
-          <button
-            type="button"
-            onClick={handleQuickAdd}
-            disabled={isAdding || isLoading || unavailable}
-            aria-busy={isAdding}
-            aria-label={`Thêm ${product.name} vào giỏ`}
-            style={{
-              width: '100%',
-              padding: '9px 14px',
-              backgroundColor: justAdded ? '#059669' : 'var(--c-primary, #D45D79)',
-              border: 'none',
-              borderRadius: 'var(--radius-sm, 4px)',
-              color: '#FFFFFF',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 8px rgba(212, 93, 121, 0.25)'
-            }}
-          >
-            {justAdded ? (
-              <>
-                <Check size={14} />
-                <span>Đã thêm vào giỏ!</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={14} color="#FFFFFF" />
-                <span>{unavailable ? 'Hiện không khả dụng' : isAdding ? 'Đang thêm…' : 'Thêm vào giỏ'}</span>
-              </>
-            )}
-          </button>
-        </div>
+        {!unavailable && (
+          <div className="product-card-quick-add" style={{
+            position: 'absolute',
+            bottom: '10px',
+            left: '10px',
+            right: '10px',
+            display: 'flex',
+            justifyContent: 'center',
+            opacity: isHovered ? 1 : 0,
+            transform: isHovered ? 'translateY(0)' : 'translateY(8px)',
+            transition: 'all 0.25s ease',
+            zIndex: 3
+          }}>
+            <button
+              type="button"
+              onClick={handleQuickAdd}
+              disabled={isAdding || isLoading}
+              aria-busy={isAdding}
+              aria-label={`Thêm ${product.name} vào giỏ`}
+              style={{
+                width: '100%',
+                padding: '9px 14px',
+                backgroundColor: justAdded ? '#059669' : 'var(--c-primary, #D45D79)',
+                border: 'none',
+                borderRadius: 'var(--radius-sm, 4px)',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(212, 93, 121, 0.25)'
+              }}
+            >
+              {justAdded ? (
+                <>
+                  <Check size={14} />
+                  <span>Đã thêm vào giỏ!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={14} color="#FFFFFF" />
+                  <span>{isAdding ? 'Đang thêm…' : 'Thêm vào giỏ'}</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="product-card-body" style={{ padding: 'var(--product-card-body-padding, 12px 14px)', display: 'flex', flexDirection: 'column', flex: 1 }}>

@@ -97,6 +97,7 @@ class AuthProvider extends ChangeNotifier {
             );
           } catch (_) {}
         }
+        StorageService.authSessionChanged.value++;
 
         _isLoading = false;
         notifyListeners();
@@ -158,6 +159,17 @@ class AuthProvider extends ChangeNotifier {
         } else {
           await fetchCurrentUser();
         }
+
+        final guestSessionId = StorageService.getGuestSessionId();
+        if (guestSessionId.isNotEmpty) {
+          try {
+            await _apiClient.post(
+              ApiConstants.mergeCart,
+              queryParameters: {'sessionId': guestSessionId},
+            );
+          } catch (_) {}
+        }
+        StorageService.authSessionChanged.value++;
 
         _isLoading = false;
         notifyListeners();

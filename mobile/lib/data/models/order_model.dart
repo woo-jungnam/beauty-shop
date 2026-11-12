@@ -48,6 +48,7 @@ class OrderItem {
   final String variantName;
   final String? thumbnailUrl;
   final double price;
+  final double discount;
   final int quantity;
 
   OrderItem({
@@ -58,8 +59,12 @@ class OrderItem {
     this.variantName = 'Tiêu chuẩn',
     this.thumbnailUrl,
     required this.price,
+    this.discount = 0.0,
     required this.quantity,
   });
+
+  double get effectiveUnitPrice =>
+      (price - discount) > 0 ? (price - discount) : 0.0;
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
@@ -77,6 +82,7 @@ class OrderItem {
             json['image']?.toString(),
       ),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
     );
   }

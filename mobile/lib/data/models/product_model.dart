@@ -18,6 +18,9 @@ class ProductItem {
   final DateTime? earliestExpirationDate;
   final int? daysRemaining;
   final int? clearanceStock;
+  final int? totalStock;
+  final String targetType;
+  final int? durationMinutes;
 
   ProductItem({
     required this.id,
@@ -37,7 +40,16 @@ class ProductItem {
     this.earliestExpirationDate,
     this.daysRemaining,
     this.clearanceStock,
+    this.totalStock,
+    this.targetType = 'PRODUCT',
+    this.durationMinutes,
   });
+
+  bool get isService => targetType.toUpperCase() == 'SERVICE';
+
+  bool get isOutOfStock =>
+      (totalStock != null && totalStock! <= 0) ||
+      (clearanceVariant != null && (clearanceStock ?? 0) <= 0);
 
   int get discountPercent {
     if (salePrice != null &&
@@ -68,27 +80,32 @@ class ProductItem {
             json['clearanceVariant'] as Map<String, dynamic>,
           )
         : null;
-    double? lowestVariantPrice;
+    double? lowestVariantSalePrice;
+    double? lowestVariantBaseForSale;
     if (json['variants'] is List && (json['variants'] as List).isNotEmpty) {
       for (final v in json['variants']) {
-        final vPrice = (v['discountPrice'] ?? v['price']) as num?;
-        if (vPrice != null) {
-          if (lowestVariantPrice == null ||
-              vPrice.toDouble() < lowestVariantPrice) {
-            lowestVariantPrice = vPrice.toDouble();
+        final vBase = (v['price'] as num?)?.toDouble();
+        final vDisc = (v['discountPrice'] as num?)?.toDouble();
+        if (vBase != null &&
+            vDisc != null &&
+            vDisc >= 0 &&
+            vDisc < vBase) {
+          if (lowestVariantSalePrice == null || vDisc < lowestVariantSalePrice) {
+            lowestVariantSalePrice = vDisc;
+            lowestVariantBaseForSale = vBase;
           }
         }
       }
     }
 
-    final baseP =
+    final rawBase =
         clearance?.price ??
         ((json['basePrice'] ?? json['minPrice'] ?? json['price']) as num?)
-            ?.toDouble() ??
-        0.0;
+            ?.toDouble();
+    final baseP = rawBase ?? lowestVariantBaseForSale ?? 0.0;
     final saleP = clearance != null
         ? clearance.discountPrice
-        : (json['salePrice'] as num?)?.toDouble() ?? lowestVariantPrice;
+        : (json['salePrice'] as num?)?.toDouble() ?? lowestVariantSalePrice;
 
     int parseId(dynamic rawId) {
       if (rawId == null) return 0;
@@ -130,6 +147,11 @@ class ProductItem {
       ),
       daysRemaining: (json['daysRemaining'] as num?)?.toInt(),
       clearanceStock: (json['clearanceStock'] as num?)?.toInt(),
+      totalStock: (json['totalStock'] as num?)?.toInt(),
+      targetType:
+          (json['targetType'] ?? json['target_type'])?.toString() ?? 'PRODUCT',
+      durationMinutes: ((json['durationMinutes'] ?? json['duration_minutes']) as num?)
+          ?.toInt(),
     );
   }
 }

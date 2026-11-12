@@ -82,6 +82,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
   const eligibleTickets = tickets.filter(ticket => Number(ticket.remainingByService?.[form.serviceId]) > 0
     && (!ticket.expiryDate || Date.parse(ticket.expiryDate) > Date.now()));
   const checkInAllowed = Boolean(form.staffId) && form.appointmentDate === getVietnamDateString();
+  const willAutoCheckIn = Boolean(form.autoCheckIn && checkInAllowed);
   const submit = async event => {
     event.preventDefault();
     if (submitting.current || createdAppointment || uncertainBooking) return;
@@ -92,7 +93,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
     let bookingAttempted = false;
     try {
       if(!financialPolicy) throw new Error('Cần tải chính sách tài chính trước khi đặt lịch.');
-      if([financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&!financialAccepted&&!form.autoCheckIn)
+      if([financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&!financialAccepted&&!willAutoCheckIn&&!form.ticketId)
         throw new Error('Cần thông báo và ghi nhận khách đồng ý chính sách cọc/phí trước khi đặt.');
       let customerId = form.customerId;
       if (!customerId) {
@@ -103,15 +104,15 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
       bookingAttempted = true;
       appointment = unwrap(await apiClient.post(ENDPOINTS.SPA.BOOK_APPOINTMENT, {
         targetUserId: Number(customerId), appointmentDate: form.appointmentDate, startTime: form.startTime,
-        acceptedFinancialPolicy: financialAccepted || form.autoCheckIn,
+        acceptedFinancialPolicy: financialAccepted || willAutoCheckIn,
         financialPolicyVersion: financialPolicy.version,
-        paymentOption: form.autoCheckIn ? 'WAIVE_WALK_IN' : 'DEPOSIT_AT_COUNTER',
+        paymentOption: willAutoCheckIn ? 'WAIVE_WALK_IN' : 'DEPOSIT_AT_COUNTER',
         notes: `[Tiếp đón tại quầy] ${form.notes.trim()}`.trim(),
         items: [{ serviceId: Number(form.serviceId), ...(form.staffId ? { staffId: Number(form.staffId) } : {}),
           ...(form.facilityId ? { facilityId: Number(form.facilityId) } : {}), ...(form.ticketId ? { ticketId: Number(form.ticketId) } : {}) }],
       }));
       setCreatedAppointment(appointment);
-      if (form.autoCheckIn && checkInAllowed) {
+      if (willAutoCheckIn) {
         if (appointment.status === 'PENDING') {
           await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), {
             status: 'CONFIRMED', staffAssignments: Object.fromEntries((appointment.items || []).map(item => [item.id, Number(form.staffId)])),
@@ -119,7 +120,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
         }
         await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointment.id));
       }
-      onBooked('Đã tạo lịch hẹn' + (form.autoCheckIn && checkInAllowed ? ' và check-in khách.' : ' cho khách.'));
+      onBooked('Đã tạo lịch hẹn' + (willAutoCheckIn ? ' và check-in khách.' : ' cho khách.'));
       onClose();
     } catch (err) {
       if (appointment) {
@@ -135,12 +136,12 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
   return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title="Đón khách tại quầy" className="reception-dialog" presentation="drawer" maxWidth="580px">
     <form onSubmit={submit} className="walkin-form">
       <p className="reception-muted">Tra cứu khách, chọn dịch vụ và chuẩn bị ca chăm sóc.</p>
-      {form.autoCheckIn ? (
+      {willAutoCheckIn ? (
         <div style={{padding: '8px 12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontSize: '12px', marginBottom: '12px', fontWeight: 600}}>
           ✓ Tiếp đón trực tiếp tại quầy: Tự động miễn thu cọc và cho phép check-in ca chăm sóc ngay.
         </div>
       ) : (
-        financialPolicy&&[financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&<label><input type="checkbox" checked={financialAccepted} onChange={e=>setFinancialAccepted(e.target.checked)}/>Đã thông báo và ghi nhận khách đồng ý chính sách {financialPolicy.version}: cọc tối đa {formatCurrency(financialPolicy.depositAmount)}, phí hủy sau hạn {formatCurrency(financialPolicy.cancellationFee)}, phí vắng hẹn {formatCurrency(financialPolicy.noShowFee)}.</label>
+        !form.ticketId && financialPolicy && [financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&<label><input type="checkbox" checked={financialAccepted} onChange={e=>setFinancialAccepted(e.target.checked)}/>Đã thông báo và ghi nhận khách đồng ý chính sách {financialPolicy.version}: cọc tối đa {formatCurrency(financialPolicy.depositAmount)}, phí hủy sau hạn {formatCurrency(financialPolicy.cancellationFee)}, phí vắng hẹn {formatCurrency(financialPolicy.noShowFee)}.</label>
       )}
       {error && <div className="reception-notice error" role="alert">{error}</div>}
       <fieldset disabled={busy || Boolean(createdAppointment) || uncertainBooking}>

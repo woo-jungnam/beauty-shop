@@ -6,6 +6,7 @@ import com.core.beautyshop.modules.catalog.application.dto.request.ProductImageR
 import com.core.beautyshop.modules.catalog.application.dto.request.ProductVariantRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.UpdateProductRequest;
 import com.core.beautyshop.modules.catalog.application.dto.request.ProductSearchRequest;
+import com.core.beautyshop.modules.catalog.application.dto.response.ProductFilterOptionsResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductImageResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductListResponse;
 import com.core.beautyshop.modules.catalog.application.dto.response.ProductResponse;
@@ -87,6 +88,12 @@ public class ProductController {
             @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
         Page<ProductListResponse> page = productService.searchProducts(request, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
+    }
+
+    @Operation(summary = "Lấy tùy chọn bộ lọc công khai cho trang sản phẩm")
+    @GetMapping("/filter-options")
+    public ResponseEntity<ApiResponse<ProductFilterOptionsResponse>> getFilterOptions() {
+        return ResponseEntity.ok(ApiResponse.success(productService.getFilterOptions()));
     }
 
     @Operation(summary = "Lấy danh sách sản phẩm theo danh mục", description = "Lọc danh sách sản phẩm thuộc một danh mục cụ thể.")

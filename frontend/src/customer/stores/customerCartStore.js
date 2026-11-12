@@ -127,6 +127,20 @@ const saveCart = () => {
   notifyListeners();
 };
 
+const applyCartData = (cartData, context = {}) => {
+  memoryState.items = cartData.items.map((ci) => mapBackendItem(ci, context));
+  memoryState.cartId = cartData.id || null;
+  memoryState.membershipTier = cartData.membershipTier || null;
+  memoryState.membershipDiscountPercentage = Number(cartData.membershipDiscountPercentage || 0);
+  memoryState.estimatedMembershipDiscount = Number(cartData.estimatedMembershipDiscount || 0);
+  if (cartData.freeShippingThreshold != null) {
+    memoryState.freeShippingThreshold = Number(cartData.freeShippingThreshold);
+  }
+  if (cartData.defaultShippingFee != null) {
+    memoryState.defaultShippingFee = Number(cartData.defaultShippingFee);
+  }
+};
+
 export const cartActions = {
   fetchCart: async () => {
     if (memoryState.isLoading) return false;
@@ -139,22 +153,13 @@ export const cartActions = {
       if (res?.success !== false && (cartData === null || isEmptyCartEnvelope(res))) {
         memoryState.items = [];
         memoryState.cartId = null;
+        memoryState.estimatedMembershipDiscount = 0;
         memoryState.cartError = '';
         saveCart();
         return true;
       }
       if (res?.success !== false && isValidCart(cartData)) {
-        memoryState.items = cartData.items.map((ci) => mapBackendItem(ci));
-        memoryState.cartId = cartData.id || null;
-        memoryState.membershipTier = cartData.membershipTier || null;
-        memoryState.membershipDiscountPercentage = Number(cartData.membershipDiscountPercentage || 0);
-        memoryState.estimatedMembershipDiscount = Number(cartData.estimatedMembershipDiscount || 0);
-        if (cartData.freeShippingThreshold != null) {
-          memoryState.freeShippingThreshold = Number(cartData.freeShippingThreshold);
-        }
-        if (cartData.defaultShippingFee != null) {
-          memoryState.defaultShippingFee = Number(cartData.defaultShippingFee);
-        }
+        applyCartData(cartData);
         memoryState.cartError = '';
         saveCart();
         return true;
@@ -226,8 +231,7 @@ export const cartActions = {
           || confirmedItem.quantity < minimumQuantity) {
         return fail('Máy chủ chưa xác nhận sản phẩm trong giỏ. Vui lòng kiểm tra giỏ trước khi thử lại.');
       }
-      memoryState.items = cartData.items.map((ci) => mapBackendItem(ci, { variantId, product }));
-      memoryState.cartId = cartData.id || null;
+      applyCartData(cartData, { variantId, product });
       memoryState.cartError = '';
       memoryState.isCartOpen = true;
       saveCart();
@@ -267,8 +271,7 @@ export const cartActions = {
         );
         const cartData = res?.data || res;
         if (cartData && Array.isArray(cartData.items)) {
-          memoryState.items = cartData.items.map((ci) => mapBackendItem(ci));
-          memoryState.cartId = cartData.id || null;
+          applyCartData(cartData);
         }
       } catch (err) {
         console.warn('Failed to update cart item in backend', err);
@@ -290,8 +293,7 @@ export const cartActions = {
         const res = await apiClient.delete(ENDPOINTS.CART.REMOVE_ITEM(backendId, sessionId));
         const cartData = res?.data || res;
         if (cartData && Array.isArray(cartData.items)) {
-          memoryState.items = cartData.items.map((ci) => mapBackendItem(ci));
-          memoryState.cartId = cartData.id || null;
+          applyCartData(cartData);
           saveCart();
         }
       } catch (err) {
@@ -304,6 +306,7 @@ export const cartActions = {
     const sessionId = getGuestSessionId();
     memoryState.items = [];
     memoryState.voucher = null;
+    memoryState.estimatedMembershipDiscount = 0;
     saveCart();
 
     try {
@@ -381,6 +384,27 @@ export const cartActions = {
 
 cartActions.fetchCart();
 cartActions.fetchShippingPolicy();
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:login', () => {
+    const sessionId = getGuestSessionId();
+    apiClient.post(ENDPOINTS.CART.MERGE(sessionId))
+      .catch(() => null)
+      .finally(() => {
+        cartActions.fetchCart();
+      });
+  });
+  window.addEventListener('auth:logout', () => {
+    memoryState.items = [];
+    memoryState.voucher = null;
+    memoryState.cartId = null;
+    memoryState.membershipTier = null;
+    memoryState.membershipDiscountPercentage = 0;
+    memoryState.estimatedMembershipDiscount = 0;
+    memoryState.cartError = '';
+    saveCart();
+  });
+}
 
 export const useCustomerCart = () => {
   const [, setTick] = useState(0);

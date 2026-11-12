@@ -1,6 +1,7 @@
 import '../spa/spa_screen.dart';
 import '../orders/order_detail_screen.dart';
 import '../orders/order_history_screen.dart';
+import '../product_detail/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -348,78 +349,139 @@ class _AiChatbotScreenState extends State<AiChatbotScreen> {
   }
 
   Widget _buildChatProductTile(ProductItem product) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: AppColors.getSurface(context),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primaryLight),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: () {
-                final imgUrl = ImageUtils.resolveUrl(product.thumbnailUrl);
-                return imgUrl != null && imgUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: imgUrl,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) =>
-                            Container(color: AppColors.canvas),
-                      )
-                    : Container(color: AppColors.canvas);
-              }(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  AppFormatters.formatCurrency(product.displayPrice),
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.dealRed,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.add_shopping_cart,
-              size: 18,
-              color: AppColors.primary,
-            ),
-            onPressed: () async {
-              await addProductToCart(
-                context,
+    return InkWell(
+      onTap: () {
+        if (product.isService) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SpaScreen()),
+          );
+        } else if (product.id > 0) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProductDetailScreen(
                 productId: product.id,
-                variantId: 0,
-                productName: product.name,
-                variantName: 'Tiêu chuẩn',
-                price: product.displayPrice,
-                thumbnailUrl: product.thumbnailUrl,
-              );
-            },
-          ),
-        ],
+                initialVariantId: product.clearanceVariant?.id,
+              ),
+            ),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.getSurface(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primaryLight),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: () {
+                  final imgUrl = ImageUtils.resolveUrl(product.thumbnailUrl);
+                  return imgUrl != null && imgUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: imgUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) =>
+                              Container(color: AppColors.canvas),
+                        )
+                      : Container(
+                          color: AppColors.canvas,
+                          child: product.isService
+                              ? const Icon(
+                                  Icons.spa_outlined,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                )
+                              : null,
+                        );
+                }(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    product.isService && (product.durationMinutes ?? 0) > 0
+                        ? '${AppFormatters.formatCurrency(product.displayPrice)} • ${product.durationMinutes} phút'
+                        : AppFormatters.formatCurrency(product.displayPrice),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.dealRed,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (product.isService)
+              IconButton(
+                tooltip: 'Xem dịch vụ Spa',
+                icon: const Icon(
+                  Icons.calendar_month,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SpaScreen()),
+                  );
+                },
+              )
+            else if (!product.isOutOfStock)
+              IconButton(
+                icon: const Icon(
+                  Icons.add_shopping_cart,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+                onPressed: () async {
+                  await addProductToCart(
+                    context,
+                    productId: product.id,
+                    variantId: product.clearanceVariant?.id ?? 0,
+                    productName: product.name,
+                    variantName:
+                        product.clearanceVariant?.variantName ?? 'Tiêu chuẩn',
+                    price: product.displayPrice,
+                    thumbnailUrl: product.thumbnailUrl,
+                  );
+                },
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6),
+                child: Text(
+                  'Hết hàng',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
