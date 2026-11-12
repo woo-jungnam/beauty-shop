@@ -676,6 +676,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
             throw new BusinessException("Chỉ có thể đánh giá cho buổi hẹn đã hoàn thành (COMPLETED)");
         }
+        if (history.existsByAppointmentIdAndAction(appointmentId, "RATE_EXPERIENCE")) {
+            throw new BusinessException("Buổi hẹn này đã được đánh giá");
+        }
         Set<Staff> ratedStaff = appointment.getItems().stream()
                 .map(AppointmentItem::getStaff)
                 .filter(Objects::nonNull)

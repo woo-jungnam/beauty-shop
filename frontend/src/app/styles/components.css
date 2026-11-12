@@ -828,6 +828,76 @@
   animation-delay: 150ms;
 }
 
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body:has(.modal-backdrop.is-open) #root :not(:has(.modal-backdrop.is-open)):not(.modal-backdrop.is-open):not(.modal-backdrop.is-open *) {
+    display: none !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .admin-shell .main-viewport {
+    margin-left: 0 !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .admin-shell .content-container,
+  body:has(.modal-backdrop.is-open) .customer-profile-page {
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .customer-profile-page .profile-layout-container {
+    display: block !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .customer-profile-page .profile-main-content {
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .modal-backdrop.is-open {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .modal-backdrop.is-open .modal-window {
+    max-width: none !important;
+    max-height: none !important;
+    height: auto !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .modal-backdrop.is-open .modal-body {
+    overflow: visible !important;
+    max-height: none !important;
+    padding: 12px 0 !important;
+  }
+
+  body:has(.modal-backdrop.is-open) .modal-backdrop.is-open .modal-close-btn,
+  body:has(.modal-backdrop.is-open) .modal-backdrop.is-open .modal-footer {
+    display: none !important;
+  }
+
+  body:has(.customer-order-success-page):not(:has(.modal-backdrop.is-open)) .storefront-header,
+  body:has(.customer-order-success-page):not(:has(.modal-backdrop.is-open)) footer,
+  body:has(.customer-order-success-page):not(:has(.modal-backdrop.is-open)) .chatbot-floating-toggle,
+  body:has(.customer-order-success-page):not(:has(.modal-backdrop.is-open)) .chatbot-panel {
+    display: none !important;
+  }
+
+  body:has(.customer-order-success-page):not(:has(.modal-backdrop.is-open)) .customer-order-success-page {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}
+
 .anim-stagger-5 {
   animation: dashboardFadeUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   animation-delay: 200ms;

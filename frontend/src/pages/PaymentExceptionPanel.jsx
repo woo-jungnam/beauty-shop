@@ -20,6 +20,9 @@ import { formatCurrency, formatDateTime } from '../shared/utils/formatters';
 
 const unwrap = (response) => response?.data ?? response;
 
+const PAYMENT_STATUS_KEY = 'beautyshop_payment_exception_status';
+const PAYMENT_SYNC_EVENT = 'beautyshop:payment-exceptions-updated';
+
 export function PaymentExceptionPanel({ onChanged }) {
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -29,7 +32,13 @@ export function PaymentExceptionPanel({ onChanged }) {
     }
   });
 
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(() => {
+    try {
+      return sessionStorage.getItem(PAYMENT_STATUS_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
   const [page, setPage] = useState(0);
   const [data, setData] = useState({ content: [], totalPages: 0, totalElements: 0 });
   const [history, setHistory] = useState([]);
@@ -74,6 +83,17 @@ export function PaymentExceptionPanel({ onChanged }) {
     Promise.resolve().then(load);
   }, [load]);
 
+  useEffect(() => {
+    const onSync = () => {
+      try {
+        setStatus(sessionStorage.getItem(PAYMENT_STATUS_KEY) || '');
+      } catch {}
+      load();
+    };
+    window.addEventListener(PAYMENT_SYNC_EVENT, onSync);
+    return () => window.removeEventListener(PAYMENT_SYNC_EVENT, onSync);
+  }, [load]);
+
   const save = async (event) => {
     event.preventDefault();
     setBusy(true);
@@ -86,6 +106,7 @@ export function PaymentExceptionPanel({ onChanged }) {
       });
       setSelected(null);
       await load();
+      window.dispatchEvent(new Event(PAYMENT_SYNC_EVENT));
       await onChanged?.();
     } catch (e) {
       setError(e.message || 'Không ghi nhận được kết quả đối soát');
@@ -159,7 +180,9 @@ export function PaymentExceptionPanel({ onChanged }) {
                 }}
                 value={status}
                 onChange={(e) => {
-                  setStatus(e.target.value);
+                  const next = e.target.value;
+                  try { sessionStorage.setItem(PAYMENT_STATUS_KEY, next); } catch {}
+                  setStatus(next);
                   setPage(0);
                 }}
               >

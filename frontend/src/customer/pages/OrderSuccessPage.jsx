@@ -8,7 +8,8 @@ import {
   Clock,
   Truck,
   Sparkles,
-  QrCode
+  QrCode,
+  Printer
 } from 'lucide-react';
 import { apiClient } from '../../shared/api/client';
 import { getGuestSessionId } from '../../shared/utils/session';
@@ -518,7 +519,12 @@ export const OrderSuccessPage = ({
           </div>
         </div>}
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '14px' }}>
+        <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          {hasVerifiedOrder && (
+            <button type="button" onClick={() => window.print()} className="btn-luxury-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Printer size={15} /> In hóa đơn
+            </button>
+          )}
           <button onClick={() => onNavigate('products')} className="btn-luxury-outline">
             Tiếp Tục Mua Sắm
           </button>

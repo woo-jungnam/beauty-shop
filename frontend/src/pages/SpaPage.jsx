@@ -61,23 +61,29 @@ const slugify = (value) =>
     .replace(/^-|-$/g, '');
 
 export const SpaPage = () => {
-  const { isAdmin }=useAuth();
+  const { isAdmin, isSpaReception } = useAuth();
   const [workspaceId,setWorkspaceId]=useState(null);
   const [settlementTicket, setSettlementTicket] = useState(null);
   const getInitialTab = () => {
+    if (!isSpaReception) return 'appointments';
     const match = window.location.hash.match(/[?&]tab=([^&]+)/);
     return match ? match[1] : 'services';
   };
   const [activeTab, setActiveTabState] = useState(getInitialTab);
 
   const setActiveTab = useCallback((tab) => {
-    setActiveTabState(tab);
+    const next = isSpaReception ? tab : 'appointments';
+    setActiveTabState(next);
     const base = window.location.hash.split('?')[0];
-    window.location.hash = tab === 'services' ? base : `${base}?tab=${tab}`;
-  }, []);
+    window.location.hash = next === 'services' ? base : `${base}?tab=${next}`;
+  }, [isSpaReception]);
 
   useEffect(() => {
     const handleHashSync = () => {
+      if (!isSpaReception) {
+        setActiveTabState('appointments');
+        return;
+      }
       const match = window.location.hash.match(/[?&]tab=([^&]+)/);
       if (match && match[1]) {
         setActiveTabState(match[1]);
@@ -85,9 +91,10 @@ export const SpaPage = () => {
         setActiveTabState('services');
       }
     };
+    handleHashSync();
     window.addEventListener('hashchange', handleHashSync);
     return () => window.removeEventListener('hashchange', handleHashSync);
-  }, []);
+  }, [isSpaReception]);
   const [loading, setLoading] = useState(false);
 
   const [appointments, setAppointments] = useState([]);
@@ -754,7 +761,7 @@ export const SpaPage = () => {
     },
     {
       header: 'Chuyên viên',
-      accessor: (row) => row.items?.map((item) => item.staffName).filter(Boolean).join(', ') || 'Chưa chỉ định',
+      accessor: (row) => row.items?.map((item) => item.staffName).filter((n) => n && n !== 'No preference').join(', ') || 'Chưa chỉ định',
     },
     {
       header: 'Trạng thái',
@@ -778,15 +785,17 @@ export const SpaPage = () => {
       accessor: (row) => (
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <Button variant="outline" size="sm" onClick={()=>setWorkspaceId(row.id)}>Chuẩn bị / thực hiện</Button>
-          {row.status === 'CONFIRMED' && !row.checkedInAt && (
+          {isSpaReception && row.status === 'CONFIRMED' && !row.checkedInAt && (
             <Button variant="outline" size="sm" onClick={() => handleCheckIn(row.id)} icon={UserCheck} title="Check-in khách">
               Check-in
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => handleOpenStatusModal(row)} icon={Edit} title="Cập nhật trạng thái">
-            Cập nhật
-          </Button>
-          {row.status === 'COMPLETED' && (
+          {isSpaReception && (
+            <Button variant="outline" size="sm" onClick={() => handleOpenStatusModal(row)} icon={Edit} title="Cập nhật trạng thái">
+              Cập nhật
+            </Button>
+          )}
+          {isSpaReception && row.status === 'COMPLETED' && (
             <Button variant="primary" size="sm" onClick={() => handleOpenInvoiceModal(row)} icon={Receipt} title="Chốt hóa đơn / Thu tiền">
               Hóa đơn
             </Button>
@@ -980,62 +989,74 @@ export const SpaPage = () => {
         activeTab={activeTab}
         onChange={setActiveTab}
         subtitle="Điều phối lịch hẹn khách hàng, danh mục dịch vụ spa, xếp ca làm việc chuyên viên và vé liệu trình"
-        items={[
-          {
-            id: 'categories',
-            label: 'Danh mục dịch vụ',
-            count: spaCategories.length,
-            icon: FolderTree,
-            description: 'Phân loại các gói chăm sóc da & liệu trình'
-          },
-          {
-            id: 'facilities',
-            label: 'Phòng & Thiết bị',
-            count: facilities.length,
-            icon: Building,
-            description: 'Cơ sở vật chất, phòng trị liệu và máy móc chuyên sâu'
-          },
-          {
-            id: 'preparation',
-            label: 'Biểu mẫu an toàn',
-            count: formTemplates.length,
-            icon: FileText,
-            description: 'Mẫu khảo sát tiền sử da liễu & dị ứng trước liệu trình'
-          },
-          {
-            id: 'services',
-            label: 'Dịch vụ & Gói Liệu trình',
-            icon: Sparkles,
-            description: 'Menu bảng giá dịch vụ và các combo gói chăm sóc'
-          },
-          {
-            id: 'staff',
-            label: 'Chuyên viên & Kỹ năng',
-            count: staffList.length,
-            icon: UserCheck,
-            description: 'Hồ sơ kỹ thuật viên, phân ca trực và chứng chỉ kỹ năng'
-          },
-          {
-            id: 'policy',
-            label: 'Chính sách & Giờ làm việc',
-            icon: Clock,
-            description: 'Giờ mở cửa tuần, ngày nghỉ lễ ngoại lệ và chính sách cọc'
-          },
-          {
-            id: 'appointments',
-            label: 'Lịch hẹn Spa',
-            count: aptTotalElements,
-            icon: CalendarCheck,
-            description: 'Theo dõi tiếp đón, xếp phòng và thực hiện liệu trình'
-          },
-          {
-            id: 'tickets',
-            label: 'Vé dịch vụ & Thẻ Spa',
-            count: tickets.length,
-            icon: Ticket,
-            description: 'Ví thẻ liệu trình điện tử và số buổi còn lại của khách'
-          }
-        ]}
+        items={
+          isSpaReception
+            ? [
+                {
+                  id: 'categories',
+                  label: 'Danh mục dịch vụ',
+                  count: spaCategories.length,
+                  icon: FolderTree,
+                  description: 'Phân loại các gói chăm sóc da & liệu trình'
+                },
+                {
+                  id: 'facilities',
+                  label: 'Phòng & Thiết bị',
+                  count: facilities.length,
+                  icon: Building,
+                  description: 'Cơ sở vật chất, phòng trị liệu và máy móc chuyên sâu'
+                },
+                {
+                  id: 'preparation',
+                  label: 'Biểu mẫu an toàn',
+                  count: formTemplates.length,
+                  icon: FileText,
+                  description: 'Mẫu khảo sát tiền sử da liễu & dị ứng trước liệu trình'
+                },
+                {
+                  id: 'services',
+                  label: 'Dịch vụ & Gói Liệu trình',
+                  icon: Sparkles,
+                  description: 'Menu bảng giá dịch vụ và các combo gói chăm sóc'
+                },
+                {
+                  id: 'staff',
+                  label: 'Chuyên viên & Kỹ năng',
+                  count: staffList.length,
+                  icon: UserCheck,
+                  description: 'Hồ sơ kỹ thuật viên, phân ca trực và chứng chỉ kỹ năng'
+                },
+                {
+                  id: 'policy',
+                  label: 'Chính sách & Giờ làm việc',
+                  icon: Clock,
+                  description: 'Giờ mở cửa tuần, ngày nghỉ lễ ngoại lệ và chính sách cọc'
+                },
+                {
+                  id: 'appointments',
+                  label: 'Lịch hẹn Spa',
+                  count: aptTotalElements,
+                  icon: CalendarCheck,
+                  description: 'Theo dõi tiếp đón, xếp phòng và thực hiện liệu trình'
+                },
+                {
+                  id: 'tickets',
+                  label: 'Vé dịch vụ & Thẻ Spa',
+                  count: tickets.length,
+                  icon: Ticket,
+                  description: 'Ví thẻ liệu trình điện tử và số buổi còn lại của khách'
+                }
+              ]
+            : [
+                {
+                  id: 'appointments',
+                  label: 'Lịch hẹn được phân công',
+                  count: aptTotalElements,
+                  icon: CalendarCheck,
+                  description: 'Danh sách buổi hẹn bạn phụ trách chuẩn bị và thực hiện'
+                }
+              ]
+        }
         actions={
           <>
             {activeTab === 'categories' && (
@@ -1139,10 +1160,12 @@ export const SpaPage = () => {
 
       {activeTab === 'appointments' && (
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '10px 14px', background: 'var(--color-primary-50)', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '13px', flexWrap: 'wrap', gap: '8px' }}>
-            <span>Để tiếp đón khách trực tiếp, xếp phòng và thu ngân hôm nay, mở màn hình <strong>Lễ tân & Thu ngân quầy</strong>.</span>
-            <Button size="sm" variant="outline" onClick={() => { window.location.hash = '#/admin/spa-reception'; }}>Mở quầy Lễ tân</Button>
-          </div>
+          {isSpaReception && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '10px 14px', background: 'var(--color-primary-50)', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '13px', flexWrap: 'wrap', gap: '8px' }}>
+              <span>Để tiếp đón khách trực tiếp, xếp phòng và thu ngân hôm nay, mở màn hình <strong>Lễ tân & Thu ngân quầy</strong>.</span>
+              <Button size="sm" variant="outline" onClick={() => { window.location.hash = '#/admin/spa-reception'; }}>Mở quầy Lễ tân</Button>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
             <Select
               aria-label="Lọc trạng thái lịch hẹn"

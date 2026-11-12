@@ -22,7 +22,8 @@ import {
   ArrowRight,
   Info,
   ShieldCheck,
-  XCircle
+  XCircle,
+  Printer
 } from 'lucide-react';
 import { apiClient } from '../../../shared/api/client';
 import { useAuth } from '../../../app/providers/AuthProvider';
@@ -845,7 +846,19 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+          {order && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => window.print()}
+              className="btn-luxury-outline"
+              style={{ padding: '6px 14px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <Printer size={13} />
+              In hóa đơn
+            </button>
+          )}
           <button
             disabled={busy}
             onClick={load}
@@ -950,6 +963,11 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                 <div style={{ color: '#4B5563', lineHeight: 1.5, marginTop: 2 }}>
                   {order.shippingAddress || 'Chưa cung cấp địa chỉ'}
                 </div>
+                {order.notes && (
+                  <div style={{ color: '#6B7280', fontSize: 12, fontStyle: 'italic' }}>
+                    Ghi chú: {order.notes}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1229,7 +1247,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
               </div>
               {order.refundedAmount != null && Number(order.refundedAmount) > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', minWidth: 260, color: '#DC2626', fontSize: 12 }}>
-                  <span>Đã hoàn tiền:</span>
+                  <span>Đã hoàn tiền{order.refundReference ? ` (${order.refundReference})` : ''}:</span>
                   <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>-{money(order.refundedAmount)}</span>
                 </div>
               )}
@@ -1242,7 +1260,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
             )}
 
             {/* Action Buttons */}
-            <div className="account-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4, alignItems: 'center' }}>
+            <div className="account-actions no-print" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4, alignItems: 'center' }}>
               {order.status === 'PENDING' && isAuthenticated && order.userId != null && (
                 <button
                   type="button"
@@ -1294,7 +1312,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
             </div>
 
             {/* Status Timeline */}
-            <details style={{ backgroundColor: '#F9FAFB', padding: '12px 16px', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+            <details className="no-print" style={{ backgroundColor: '#F9FAFB', padding: '12px 16px', borderRadius: 8, border: '1px solid #E5E7EB' }}>
               <summary style={{ fontWeight: 600, cursor: 'pointer', color: '#374151', fontSize: 13 }}>
                 Lịch sử trạng thái đơn hàng ({(order.statusHistories || []).length})
               </summary>
@@ -1315,7 +1333,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
             </details>
 
             {/* Returns & Refund Section */}
-            <section className="account-stack" style={{ gap: 12 }}>
+            <section className="account-stack no-print" style={{ gap: 12 }}>
               <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#374151' }}>
                 Yêu cầu đổi trả ({returns.length})
               </h4>

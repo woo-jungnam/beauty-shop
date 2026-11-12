@@ -15,8 +15,8 @@
   --ed-control-border: #9A8882;
   --ed-sans: 'Be Vietnam Pro', 'Inter', 'Plus Jakarta Sans', sans-serif;
   --ed-shadow: 0 8px 28px -12px rgb(78 16 26 / 10%);
-  --ed-padding: clamp(24px, 2vw, 32px);
-  --ed-gap: 24px;
+  --ed-padding: clamp(20px, 1.8vw, 26px);
+  --ed-gap: 20px;
   --c-primary: var(--ed-wine);
   --c-primary-hover: var(--ed-wine-dark);
   --c-primary-dark: var(--ed-wine-dark);
@@ -38,12 +38,12 @@
   --font-sans: var(--ed-sans);
   background: var(--ed-bg);
   color: var(--ed-charcoal);
-  font: 500 16px/1.65 var(--ed-sans);
-  padding: 32px clamp(32px, 3vw, 56px) 56px;
+  font: 500 15px/1.6 var(--ed-sans);
+  padding: 24px clamp(20px, 2.5vw, 40px) 48px;
   overflow-wrap: anywhere;
 }
 
-.customer-profile-page .profile-shell { width: 100%; min-width: 0; margin-inline: auto; }
+.customer-profile-page .profile-shell { width: 100%; max-width: 1360px; min-width: 0; margin-inline: auto; }
 .customer-app .customer-profile-page :where(h1, h2, h3, h4) {
   font-family: var(--ed-sans);
   font-weight: 700;
@@ -53,8 +53,8 @@
   margin: 0 0 12px;
 }
 /* The storefront's legacy profile h1 rule is also important. */
-.customer-app .customer-profile-page h1 { color: var(--ed-charcoal) !important; font-size: clamp(32px, 2.4vw, 40px); }
-.customer-profile-page :where(h2, h3, h4) { font-size: clamp(20px, 1.5vw, 24px); }
+.customer-app .customer-profile-page h1 { color: var(--ed-charcoal) !important; font-size: clamp(24px, 2vw, 30px); }
+.customer-profile-page :where(h2, h3, h4) { font-size: clamp(18px, 1.3vw, 21px); }
 .customer-app .customer-profile-page p { font: inherit; color: var(--ed-charcoal-muted); margin: 0 0 16px; }
 .customer-profile-page svg { flex-shrink: 0; }
 .customer-profile-page :where(button, a, input, select, textarea) { scroll-margin-block-start: calc(var(--customer-header-height, 162px) + 20px); }
@@ -71,11 +71,11 @@
   flex-wrap: wrap;
   gap: 12px 20px;
 }
-.customer-profile-page .profile-toolbar { margin-bottom: 24px; }
+.customer-profile-page .profile-toolbar { margin-bottom: 20px; }
 .customer-profile-page .profile-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; font-size: 13px; color: var(--ed-charcoal-subtle); }
 .customer-profile-page .profile-breadcrumb strong { color: var(--ed-wine); }
 .customer-profile-page .profile-breadcrumb button { border: 0; padding: 6px 0; min-height: 44px; background: none; color: inherit; font-size: inherit; cursor: pointer; }
-.customer-profile-page .profile-layout-container { display: grid; grid-template-columns: clamp(300px, 21vw, 340px) minmax(0, 1fr); align-items: start; gap: 28px; }
+.customer-profile-page .profile-layout-container { display: grid; grid-template-columns: clamp(272px, 21vw, 316px) minmax(0, 1fr); align-items: start; gap: 24px; }
 .customer-profile-page .profile-sidebar { display: grid; min-width: 0; border: 1px solid var(--ed-border); border-radius: 20px; background: var(--ed-card); box-shadow: var(--ed-shadow); overflow: hidden; }
 .customer-profile-page .profile-main-content { min-width: 0; container: profile-content / inline-size; border: 1px solid var(--ed-border); border-radius: 20px; background: var(--ed-card); box-shadow: var(--ed-shadow); overflow: hidden; }
 .customer-profile-page .profile-overview { display: grid; }
@@ -100,12 +100,12 @@
 .customer-profile-page .profile-danger { color: #991B1B; }
 
 /* Membership and navigation. No sticky container: all menu items remain reachable. */
-.customer-profile-page .profile-vip-card { padding: 28px 24px; border-bottom: 1px solid var(--ed-border); color: var(--ed-charcoal); }
-.customer-profile-page .profile-vip-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-.customer-profile-page .profile-vip-avatar { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 16px; flex-shrink: 0; background: var(--ed-wine-light); color: var(--ed-wine); font: 700 30px var(--ed-sans); overflow: hidden; }
+.customer-profile-page .profile-vip-card { padding: 22px 20px; border-bottom: 1px solid var(--ed-border); color: var(--ed-charcoal); }
+.customer-profile-page .profile-vip-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.customer-profile-page .profile-vip-avatar { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 14px; flex-shrink: 0; background: var(--ed-wine-light); color: var(--ed-wine); font: 700 24px var(--ed-sans); overflow: hidden; }
 .customer-profile-page .profile-vip-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .customer-profile-page .profile-vip-identity { min-width: 0; }
-.customer-profile-page .profile-vip-identity h3 { color: inherit; font-size: 22px; margin-bottom: 4px; }
+.customer-profile-page .profile-vip-identity h3 { color: inherit; font-size: 19px; margin-bottom: 2px; }
 .customer-profile-page .profile-vip-username { font-size: 13px; color: var(--ed-charcoal-subtle); }
 .customer-profile-page .profile-membership { margin-top: 6px; color: var(--ed-wine); font-size: 14px; font-weight: 600; }
 .customer-profile-page .profile-vip-points-box { padding-block: 16px; border-block: 1px solid var(--ed-border); margin-bottom: 18px; }
@@ -145,22 +145,22 @@
 .customer-profile-page .profile-main-detail { padding: var(--ed-padding); }
 .customer-profile-page .profile-main-detail .account-card { border: 0; border-bottom: 1px solid var(--ed-border); border-radius: 0; box-shadow: none; padding: 24px 0; }
 .customer-profile-page .profile-main-detail .account-card:last-child { border-bottom: 0; }
-.customer-profile-page .bento-kpi-card { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-height: 170px; padding: 24px; }
+.customer-profile-page .bento-kpi-card { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-height: 132px; padding: 20px; }
 .customer-profile-page .bento-kpi-label { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; color: var(--ed-charcoal-muted); }
-.customer-profile-page .bento-kpi-value { font: 600 clamp(30px, 2.4vw, 38px)/1.3 var(--ed-sans); color: var(--ed-charcoal); letter-spacing: -.03em; margin-bottom: 10px; }
-.customer-profile-page .bento-kpi-currency { font-size: 30px; }
+.customer-profile-page .bento-kpi-value { font: 600 clamp(24px, 2vw, 32px)/1.25 var(--ed-sans); color: var(--ed-charcoal); letter-spacing: -.03em; margin-bottom: 6px; }
+.customer-profile-page .bento-kpi-currency { font-size: clamp(22px, 1.7vw, 26px); }
 .customer-profile-page .bento-kpi-sub { font-size: 13px; color: var(--ed-charcoal-subtle); }
 .customer-profile-page :where(.bento-ticket-widget, .bento-order-card, .bento-bottom-card) { display: flex; flex-direction: column; justify-content: space-between; }
 .customer-profile-page .bento-ticket-widget { overflow: hidden; }
 .customer-profile-page .bento-ticket-header,
-.customer-profile-page .bento-ticket-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 24px var(--ed-padding); }
+.customer-profile-page .bento-ticket-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; padding: 18px var(--ed-padding); }
 .customer-profile-page .bento-ticket-header { border-bottom: 1px solid var(--ed-border); }
 .customer-profile-page .bento-ticket-footer { border-top: 1px solid var(--ed-border); }
-.customer-profile-page :is(.bento-ticket-header, .profile-card-heading) h2 { margin: 0; font-size: 22px; }
-.customer-profile-page .bento-ticket-body { display: grid; grid-template-columns: 104px minmax(0, 1fr); align-items: center; gap: 24px; padding: var(--ed-padding); flex: 1; }
-.customer-profile-page .bento-ticket-date-badge { padding: 18px 12px; border: 1px solid var(--ed-border); border-radius: 18px; background: var(--ed-champagne-rose); text-align: center; }
-.customer-profile-page .bento-ticket-date-month { font-size: 12px; font-weight: 700; color: var(--ed-wine); }
-.customer-profile-page .bento-ticket-date-day { font: 600 48px/1.2 var(--ed-sans); color: var(--ed-charcoal); margin-block: 6px; }
+.customer-profile-page :is(.bento-ticket-header, .profile-card-heading) h2 { margin: 0; font-size: 20px; }
+.customer-profile-page .bento-ticket-body { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 20px; padding: var(--ed-padding); flex: 1; }
+.customer-profile-page .bento-ticket-date-badge { padding: 14px 10px; border: 1px solid var(--ed-border); border-radius: 16px; background: var(--ed-champagne-rose); text-align: center; }
+.customer-profile-page .bento-ticket-date-month { font-size: 11px; font-weight: 700; color: var(--ed-wine); }
+.customer-profile-page .bento-ticket-date-day { font: 600 38px/1.15 var(--ed-sans); color: var(--ed-charcoal); margin-block: 4px; }
 .customer-profile-page .bento-ticket-date-time { font-size: 14px; font-weight: 600; color: var(--ed-charcoal-muted); }
 .customer-profile-page .bento-ticket-body h3 { margin-top: 8px; }
 .customer-profile-page .profile-order-code { margin-top: 4px; font: 600 18px/1.6 var(--ed-sans); }
@@ -200,7 +200,9 @@
 .customer-profile-page .profile-appointment-card > div { min-width: 0; }
 .customer-profile-page .profile-appointment-card .account-actions { margin: 0; }
 .customer-profile-page .account-card { color: var(--ed-charcoal); }
-.customer-profile-page .account-form { gap: 18px; }
+.customer-profile-page .account-form { gap: 16px; }
+.customer-profile-page .account-form > :is(label, p) { max-width: 640px; }
+.customer-profile-page .account-form > button { justify-self: start; }
 .customer-profile-page .account-form label { font-size: 15px; }
 .customer-profile-page .account-form :is(input, select, textarea) { min-height: 48px; padding: 12px 14px; border: 1px solid var(--ed-control-border); background: var(--ed-card); color: var(--ed-charcoal); font: inherit; font-size: 16px; border-radius: 10px; }
 .customer-profile-page .account-form input[type=checkbox] { min-height: 24px; width: 24px; accent-color: var(--ed-wine); }
@@ -224,20 +226,20 @@
   .customer-profile-page .bento-kpi-card:nth-child(even) { border-left: 1px solid var(--ed-border); }
   .customer-profile-page .bento-kpi-card:nth-child(n + 3) { border-top: 1px solid var(--ed-border); }
 }
-@container profile-content (min-width: 720px) {
+@container profile-content (min-width: 680px) {
   .customer-profile-page .bento-bottom-row { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
   .customer-profile-page .profile-care-card { border-top: 0; border-left: 1px solid var(--ed-border); }
 }
-@container profile-content (min-width: 1000px) {
+@container profile-content (min-width: 860px) {
   .customer-profile-page .bento-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .customer-profile-page .bento-kpi-card:nth-child(n + 2) { border-top: 0; border-left: 1px solid var(--ed-border); }
-  .customer-profile-page .bento-asymmetric-row { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+  .customer-profile-page .bento-asymmetric-row { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
   .customer-profile-page .bento-order-card { border-top: 0; border-left: 1px solid var(--ed-border); }
 }
 @container profile-content (max-width: 599px) {
   .customer-profile-page .bento-ticket-body { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .customer-profile-page .bento-ticket-date-badge { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; }
-  .customer-profile-page .bento-ticket-date-day { font-size: 36px; margin: 0; }
+  .customer-profile-page .bento-ticket-date-day { font-size: 32px; margin: 0; }
   .customer-profile-page .bento-ticket-footer .profile-actions { width: 100%; }
   .customer-profile-page .bento-ticket-footer .profile-actions > * { flex: 1 1 140px; }
 }
@@ -249,19 +251,25 @@
   .customer-profile-page .profile-nav-footer { grid-column: 1 / -1; }
 }
 @media (min-width: 900px) and (max-width: 1199px) {
-  .customer-profile-page .profile-sidebar { grid-template-columns: 320px minmax(0, 1fr); align-items: stretch; }
+  .customer-profile-page .profile-sidebar { grid-template-columns: 300px minmax(0, 1fr); align-items: stretch; }
   .customer-profile-page .profile-vip-card { border-bottom: 0; border-right: 1px solid var(--ed-border); }
 }
 @media (max-width: 767px) {
-  .customer-profile-page { --ed-padding: 20px; --ed-gap: 20px; padding: 24px 16px 40px; }
+  .customer-profile-page { --ed-padding: 18px; --ed-gap: 18px; padding: 20px 16px 36px; }
   .customer-profile-page .profile-toolbar { gap: 12px; }
-  .customer-profile-page .profile-nav-card { grid-template-columns: minmax(0, 1fr); }
-  .customer-profile-page .profile-vip-card { padding: 24px; }
-  .customer-profile-page .bento-kpi-card { min-height: 156px; }
+  .customer-profile-page .profile-vip-card { padding: 18px 16px; }
+  .customer-profile-page .profile-vip-header { margin-bottom: 14px; }
+  .customer-profile-page .profile-vip-avatar { width: 52px; height: 52px; font-size: 20px; }
+  .customer-profile-page .profile-nav-card { display: flex; overflow-x: auto; gap: 8px; padding: 12px 16px; scrollbar-width: thin; }
+  .customer-profile-page .profile-nav-group,
+  .customer-profile-page .profile-nav-footer { display: contents; }
+  .customer-profile-page .profile-nav-section-title { display: none; }
+  .customer-profile-page .profile-nav-item { flex: 0 0 auto; width: auto; min-height: 44px; padding: 8px 14px; border: 1px solid var(--ed-border); border-radius: 999px; font-size: 13.5px; white-space: nowrap; }
+  .customer-profile-page .bento-kpi-card { min-height: 124px; }
   .customer-profile-page .profile-tab-heading { align-items: flex-start; }
   .customer-profile-page .profile-actions > * { flex: 1 1 auto; }
-  .customer-profile-page .profile-card-heading { gap: 16px; }
-  .customer-profile-page .profile-empty-state { padding: 28px 20px; }
+  .customer-profile-page .profile-card-heading { gap: 14px; }
+  .customer-profile-page .profile-empty-state { padding: 24px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .customer-profile-page :is(button, a, .spin) { transition: none; animation: none; }

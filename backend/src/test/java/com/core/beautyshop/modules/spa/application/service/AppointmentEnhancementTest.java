@@ -210,5 +210,31 @@ class AppointmentEnhancementTest {
 
         org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
+
+    @Test
+    void rateAppointmentRejectsDuplicateReview() {
+        Long appointmentId = 102L;
+        Long customerId = 99L;
+        com.core.beautyshop.shared.security.services.UserDetailsImpl userPrincipal =
+                new com.core.beautyshop.shared.security.services.UserDetailsImpl(customerId, "customer", "customer@example.com", "pass", List.of(), 0, null);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(userPrincipal, null, List.of()));
+
+        Appointment appointment = Appointment.builder()
+                .userId(customerId)
+                .status(AppointmentStatus.COMPLETED)
+                .items(List.of())
+                .build();
+        appointment.setId(appointmentId);
+
+        when(appointmentRepository.findByIdForUpdate(appointmentId)).thenReturn(Optional.of(appointment));
+        when(history.existsByAppointmentIdAndAction(appointmentId, "RATE_EXPERIENCE")).thenReturn(true);
+
+        assertThrows(BusinessException.class, () -> appointmentService.rateAppointment(appointmentId, 5, "Lần 2"));
+        verify(staffRepository, never()).save(any());
+        verify(history, never()).save(any());
+
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
 }
 

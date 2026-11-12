@@ -194,24 +194,31 @@ export const ADMIN_SECTIONS = [
 ];
 
 const TAB_PERMISSIONS = { dashboard: 'REPORTS', orders: 'ORDERS', products: 'CATALOG', inventory: 'INVENTORY', procurement: 'PROCUREMENT',
-  'spa-reception': 'SPA_RECEPTION', spa: 'SPA_RECEPTION', treatments: ['SPA_RECEPTION', 'SPA_EXECUTION'], crm: 'CRM', vouchers: 'CATALOG', reviews: 'CATALOG' };
+  'spa-reception': 'SPA_RECEPTION', spa: ['SPA_RECEPTION', 'SPA_EXECUTION'], treatments: ['SPA_RECEPTION', 'SPA_EXECUTION'], crm: 'CRM', vouchers: 'CATALOG', reviews: 'CATALOG' };
 
 export const getAdminSections = (roles = [], permissions = []) => {
   const isAdmin = roles.includes("ROLE_ADMIN") || roles.includes("ADMIN");
   const isStaff = roles.includes("ROLE_STAFF") || roles.includes("STAFF");
   const permList = Array.isArray(permissions) ? permissions : [];
+  const hasReception = isAdmin || permList.includes("SPA_RECEPTION");
   return ADMIN_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => {
-      if (isAdmin) return true;
-      if (!isStaff) return false;
-      if (!item.role) return false;
-      const required = TAB_PERMISSIONS[item.id];
-      if (!required) return true;
-      return Array.isArray(required)
-        ? required.some((p) => permList.includes(p))
-        : permList.includes(required);
-    }),
+    items: section.items
+      .filter((item) => {
+        if (isAdmin) return true;
+        if (!isStaff) return false;
+        if (!item.role) return false;
+        const required = TAB_PERMISSIONS[item.id];
+        if (!required) return true;
+        return Array.isArray(required)
+          ? required.some((p) => permList.includes(p))
+          : permList.includes(required);
+      })
+      .map((item) =>
+        item.id === "spa" && !hasReception
+          ? { ...item, label: "Lịch hẹn của tôi", subItems: [{ id: "appointments", label: "Lịch hẹn được phân công" }] }
+          : item
+      ),
   })).filter((section) => section.items.length > 0);
 };
 

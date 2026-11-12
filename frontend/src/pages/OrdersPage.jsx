@@ -258,7 +258,7 @@ export const OrdersPage = () => {
   const handleOpenRefundModal = (order) => {
     setSelectedOrder(order);
     setRefundAmount(String(Math.max(0, Number(order.paidAmount || 0) - Number(order.refundedAmount || 0))));
-    setRefundReference(`REF-${order.orderCode || order.id}-${Date.now().toString().slice(-6)}`);
+    setRefundReference(`REF-${order.orderNumber || order.orderCode || order.id}-${Date.now().toString().slice(-6)}`);
     setRefundReason('Hoàn tiền theo yêu cầu hủy / trả hàng');
     setErrorMessage('');
     setRefundModalOpen(true);
@@ -288,7 +288,7 @@ export const OrdersPage = () => {
   const handleConfirmPayment = (order) => {
     askConfirm({
       title: 'Xác nhận thanh toán đơn hàng',
-      message: `Đánh dấu đơn hàng ${order.orderCode || '#' + order.id} đã thanh toán (PAID)?`,
+      message: `Đánh dấu đơn hàng ${order.orderNumber || order.orderCode || '#' + order.id} đã thanh toán (PAID)?`,
       detail: 'Hệ thống sẽ cập nhật trạng thái thanh toán sang Đã thanh toán và kích hoạt quy trình chuẩn bị giao hàng hoặc cấp phát vé liệu trình tương ứng.',
       isPermanent: false,
       confirmText: 'Xác nhận PAID',
@@ -312,7 +312,7 @@ export const OrdersPage = () => {
       header: 'Mã đơn / ID',
       accessor: (row) => (
         <div>
-          <div style={{ fontWeight: 700 }}>{row.orderCode || row.orderNumber || `#${row.id}`}</div>
+          <div style={{ fontWeight: 700 }}>{row.orderNumber || row.orderCode || `#${row.id}`}</div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {row.id}</div>
         </div>
       ),
@@ -996,7 +996,7 @@ export const OrdersPage = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>Loại đơn hàng:</span>
                   <Badge variant={getOrderTypeBadge(selectedOrder).variant} size="sm">
-                    {getOrderTypeBadge(selectedOrder).label}
+                    {getOrderTypeBadge(selectedOrder).text}
                   </Badge>
                   {isSpaVisitOrder && selectedOrder.appointmentId && (
                     <span style={{ fontSize: '12px', color: '#6B7280' }}>
@@ -1007,10 +1007,10 @@ export const OrdersPage = () => {
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>Trạng thái:</span>
                   <Badge variant={getOrderStatusBadge(selectedOrder.status).variant} size="sm">
-                    {getOrderStatusBadge(selectedOrder.status).label}
+                    {getOrderStatusBadge(selectedOrder.status).text}
                   </Badge>
                   <Badge variant={getPaymentStatusBadge(selectedOrder.paymentStatus).variant} size="sm">
-                    {getPaymentStatusBadge(selectedOrder.paymentStatus).label}
+                    {getPaymentStatusBadge(selectedOrder.paymentStatus).text}
                   </Badge>
                 </div>
               </div>
@@ -1101,6 +1101,7 @@ export const OrdersPage = () => {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="no-print"
                             onClick={() => handleConfirmPayment(selectedOrder)}
                             style={{ fontSize: '11px', padding: '2px 8px', height: '24px' }}
                           >
@@ -1420,7 +1421,7 @@ export const OrdersPage = () => {
                     </div>
                     {selectedOrder.refundedAmount != null && Number(selectedOrder.refundedAmount) > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: '12.5px', color: '#DC2626' }}>
-                        <span>Đã hoàn tiền:</span>
+                        <span>Đã hoàn tiền{selectedOrder.refundReference ? ` (${selectedOrder.refundReference})` : ''}:</span>
                         <span style={{ fontWeight: 600 }}>-{formatCurrency(selectedOrder.refundedAmount)}</span>
                       </div>
                     )}
@@ -1446,6 +1447,27 @@ export const OrdersPage = () => {
                   </div>
                 </div>
               </div>
+
+              {(selectedOrder.statusHistories || []).length > 0 && (
+                <details className="no-print" style={{ background: '#F8FAFC', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '10px 14px' }}>
+                  <summary style={{ fontWeight: 600, fontSize: '12.5px', cursor: 'pointer', color: '#334155' }}>
+                    Lịch sử trạng thái đơn hàng ({selectedOrder.statusHistories.length})
+                  </summary>
+                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedOrder.statusHistories.map((h, idx) => (
+                      <div key={h.id || idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px', padding: '6px 8px', background: '#FFFFFF', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                        <div>
+                          <strong>{getOrderStatusBadge(h.status || h.toStatus).text}</strong>
+                          {h.notes && <span style={{ color: '#475569', marginLeft: '6px' }}>· {h.notes}</span>}
+                        </div>
+                        <span style={{ color: '#64748B', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                          {h.createdAt && formatDateTime(h.createdAt)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           );
         })()}
@@ -1454,7 +1476,7 @@ export const OrdersPage = () => {
       <Modal
         isOpen={statusModalOpen}
         onClose={() => setStatusModalOpen(false)}
-        title={`Cập nhật trạng thái đơn: ${selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
+        title={`Cập nhật trạng thái đơn: ${selectedOrder?.orderNumber || selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
         footer={
           <>
             <Button variant="outline" onClick={() => setStatusModalOpen(false)}>
@@ -1556,7 +1578,7 @@ export const OrdersPage = () => {
       <Modal
         isOpen={refundModalOpen}
         onClose={() => setRefundModalOpen(false)}
-        title={`Xác nhận hoàn tiền cho đơn: ${selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
+        title={`Xác nhận hoàn tiền cho đơn: ${selectedOrder?.orderNumber || selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
         footer={
           <>
             <Button variant="outline" onClick={() => setRefundModalOpen(false)}>

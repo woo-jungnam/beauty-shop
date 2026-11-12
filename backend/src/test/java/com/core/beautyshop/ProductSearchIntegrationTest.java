@@ -567,4 +567,15 @@ class ProductSearchIntegrationTest {
         assertEquals(0, combined.path("content").get(1).path("totalStock").asInt());
         assertEquals(0, new BigDecimal("150").compareTo(combined.path("content").get(1).path("minPrice").decimalValue()));
     }
+
+    @Test void discountedProductListIncludesOriginalPriceAndRegularProductOmitsIt() throws Exception {
+        Product discounted = product("Discounted"); available(variant(discounted, "480000", "380000"));
+        Product regular = product("Regular"); available(variant(regular, "300000", null));
+        JsonNode saleRes = page(search().param("onSale", "true"));
+        assertEquals(0, new BigDecimal("380000").compareTo(saleRes.path("content").get(0).path("minPrice").decimalValue()));
+        assertEquals(0, new BigDecimal("480000").compareTo(saleRes.path("content").get(0).path("originalPrice").decimalValue()));
+        JsonNode regularRes = page(search().param("onSale", "false"));
+        assertEquals(0, new BigDecimal("300000").compareTo(regularRes.path("content").get(0).path("minPrice").decimalValue()));
+        assertTrue(regularRes.path("content").get(0).path("originalPrice").isNull());
+    }
 }

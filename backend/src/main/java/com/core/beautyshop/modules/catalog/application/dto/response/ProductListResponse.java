@@ -43,6 +43,9 @@ public class ProductListResponse implements Serializable {
     @Schema(description = "Giá hiệu lực lớn nhất của cùng tập SKU đủ điều kiện như minPrice (VND); clearance bằng minPrice, không dùng để giấu giá gốc.", example = "480000")
     private BigDecimal maxPrice;
 
+    @Schema(description = "Giá gốc trước giảm của biến thể đại diện cho minPrice (VND); null nếu không giảm giá", example = "480000")
+    private BigDecimal originalPrice;
+
     @Schema(description = "Trạng thái hiển thị", example = "ACTIVE")
     private ProductStatus status;
 

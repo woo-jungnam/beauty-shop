@@ -825,6 +825,7 @@ public class ProductServiceImpl implements ProductService {
                 .thumbnailUrl(product.getThumbnailUrl())
                 .minPrice(variant.getDiscountPrice())
                 .maxPrice(variant.getDiscountPrice())
+                .originalPrice(variant.getPrice())
                 .status(product.getStatus())
                 .isFeatured(product.getIsFeatured())
                 .averageRating(product.getAverageRating())

@@ -69,7 +69,7 @@ export function AccountSettings({ profile, onSaved }) {
         <h3>Thông tin cá nhân</h3>
         <label>Họ và tên *<input required maxLength={100} value={form.fullName} onChange={event => setForm({ ...form, fullName: event.target.value })} /></label>
         <label>Số điện thoại<input type="tel" placeholder="0987654321 hoặc +84987654321" pattern="(0|\\+84)[35789][0-9]{8}" value={form.phone} onChange={event => setForm({ ...form, phone: event.target.value })} /></label>
-        <label>Ngày sinh<input type="date" max={getVietnamDateString()} value={form.dateOfBirth} onChange={event => setForm({ ...form, dateOfBirth: event.target.value })} /></label>
+        <label>Ngày sinh<input type="date" max={new Date(Date.parse(`${getVietnamDateString()}T12:00:00+07:00`) - 86400000).toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={event => setForm({ ...form, dateOfBirth: event.target.value })} /></label>
         <label>Giới tính
           <select value={form.gender} onChange={event => setForm({ ...form, gender: event.target.value })}>
             <option value="">Chưa cung cấp</option>

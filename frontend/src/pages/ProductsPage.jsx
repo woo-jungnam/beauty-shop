@@ -430,12 +430,7 @@ export const ProductsPage = () => {
     setProductModalOpen(true);
 
     try {
-      let res;
-      try {
-        res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(p.id));
-      } catch {
-        res = await apiClient.get(`/api/v1/products/${p.id}`);
-      }
+      const res = await apiClient.get(ENDPOINTS.CATALOG.PRODUCT_DETAIL(p.id));
       const detail = res?.data || res;
       if (detail && detail.id) {
         setEditingProduct(detail);
@@ -541,11 +536,7 @@ export const ProductsPage = () => {
       };
 
       if (editingProduct && editingProduct.id) {
-        try {
-          await apiClient.put(ENDPOINTS.CATALOG.PRODUCT_DETAIL(editingProduct.id), payload);
-        } catch {
-          await apiClient.put(`/api/v1/products/${editingProduct.id}`, payload);
-        }
+        await apiClient.put(ENDPOINTS.CATALOG.PRODUCT_DETAIL(editingProduct.id), payload);
       } else {
         const createPayload = {
           ...payload,

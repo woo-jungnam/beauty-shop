@@ -380,7 +380,7 @@ public class ProductSearchRepository {
                 .toList();
         if (productIds.isEmpty()) return;
         List<Object[]> variantRows = entityManager.createQuery(
-                        "SELECT v.id, v.product.id FROM ProductVariant v WHERE v.product.id IN :productIds AND v.isDeleted = false AND v.isActive = true",
+                        "SELECT v.id, v.product.id, v.price, v.originalPrice, v.discountPrice FROM ProductVariant v WHERE v.product.id IN :productIds AND v.isDeleted = false AND v.isActive = true",
                         Object[].class)
                 .setParameter("productIds", productIds)
                 .getResultList();
@@ -391,12 +391,36 @@ public class ProductSearchRepository {
         List<Long> variantIds = variantRows.stream().map(r -> (Long) r[0]).toList();
         Map<Long, Integer> stockByVariant = inventoryFacade.getAvailableQuantities(variantIds);
         Map<Long, Integer> stockByProduct = new HashMap<>();
+        Map<Long, List<Object[]>> rowsByProduct = new HashMap<>();
         for (Object[] row : variantRows) {
             Long variantId = (Long) row[0];
             Long productId = (Long) row[1];
             stockByProduct.merge(productId, stockByVariant.getOrDefault(variantId, 0), Integer::sum);
+            rowsByProduct.computeIfAbsent(productId, k -> new ArrayList<>()).add(row);
         }
-        items.forEach(item -> item.setTotalStock(stockByProduct.getOrDefault(item.getId(), 0)));
+        items.forEach(item -> {
+            int total = stockByProduct.getOrDefault(item.getId(), 0);
+            item.setTotalStock(total);
+            BigDecimal minPrice = item.getMinPrice();
+            if (minPrice == null) return;
+            List<Object[]> rows = rowsByProduct.getOrDefault(item.getId(), List.of());
+            BigDecimal matchedOriginal = null;
+            for (Object[] row : rows) {
+                Long variantId = (Long) row[0];
+                if (total > 0 && stockByVariant.getOrDefault(variantId, 0) <= 0) continue;
+                BigDecimal price = (BigDecimal) row[2];
+                BigDecimal variantOriginal = (BigDecimal) row[3];
+                BigDecimal discountPrice = (BigDecimal) row[4];
+                BigDecimal effective = discountPrice != null ? discountPrice : price;
+                if (effective == null || effective.compareTo(minPrice) != 0) continue;
+                BigDecimal candidate = (variantOriginal != null && price != null && variantOriginal.compareTo(price) > 0) ? variantOriginal : price;
+                if (candidate != null && candidate.compareTo(minPrice) > 0
+                        && (matchedOriginal == null || candidate.compareTo(matchedOriginal) > 0)) {
+                    matchedOriginal = candidate;
+                }
+            }
+            if (matchedOriginal != null) item.setOriginalPrice(matchedOriginal);
+        });
     }
 
     private boolean present(Collection<?> values) { return values != null && !values.isEmpty(); }

@@ -27,6 +27,13 @@ assert.equal(
   false
 );
 
+// 3b. SPA_EXECUTION staff gets assigned appointments tab without reception-only sub-items
+const therapistSpaItem = getAdminSections(['ROLE_STAFF'], ['SPA_EXECUTION'])
+  .flatMap((s) => s.items)
+  .find((i) => i.id === 'spa');
+assert.ok(therapistSpaItem);
+assert.deepEqual(therapistSpaItem.subItems.map((sub) => sub.id), ['appointments']);
+
 // 4. Local datetime formatter stays consistent with local components (no UTC shift)
 const toLocalDatetimeString = (value) => {
   const d = value instanceof Date ? value : new Date(value);

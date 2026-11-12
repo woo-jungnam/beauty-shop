@@ -48,9 +48,27 @@ const getOrderStepIndex = (status) => {
   return 1;
 };
 
+const TAB_TITLES = {
+  overview: 'Tổng quan tài khoản',
+  orders: 'Đơn hàng mua sắm',
+  tickets: 'Ví vé liệu trình Spa',
+  appointments: 'Lịch hẹn chăm sóc da',
+  skin: 'Hồ sơ phân tích làn da',
+  settings: 'Cài đặt tài khoản & Bảo mật',
+  addresses: 'Sổ địa chỉ giao nhận',
+  wishlist: 'Bộ sưu tập yêu thích',
+  notifications: 'Thông báo & Khuyến mãi'
+};
+
+const normalizeTab = (tab) => (Object.hasOwn(TAB_TITLES, tab) ? tab : 'overview');
+
+const formatAptDate = (dateStr) =>
+  dateStr ? String(dateStr).replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1') : '';
+
 export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => {
   const { user, isAuthenticated, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(() => normalizeTab(initialTab));
+  const [refreshTick, setRefreshTick] = useState(0);
   const [profile, setProfile] = useState(user);
   const [spaTickets, setSpaTickets] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -118,9 +136,13 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!initialTab) return;
-    setActiveTab(initialTab);
+    setActiveTab(normalizeTab(initialTab));
   }, [initialTab]);
+
+  const handleManualRefresh = () => {
+    setRefreshTick((tick) => tick + 1);
+    loadData();
+  };
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -226,7 +248,11 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   const latestOrder = orders[0];
   const orderStepIndex = getOrderStepIndex(latestOrder?.status);
 
-  const activeTickets = spaTickets.filter((t) => (t.remainingSessions == null || t.remainingSessions > 0) && t.status !== 'EXPIRED' && t.status !== 'REVOKED');
+  const activeTickets = spaTickets.filter((t) =>
+    (t.remainingSessions == null || t.remainingSessions > 0) &&
+    !['EXPIRED', 'REVOKED', 'COMPLETED', 'USED', 'CANCELLED'].includes(t.status) &&
+    (!t.expiryDate || Date.parse(t.expiryDate) > Date.now())
+  );
 
   const navSections = [
     { title: '', items: [{ id: 'overview', label: 'Bảng điều khiển', icon: LayoutDashboard }] },
@@ -255,17 +281,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
     }
   ];
 
-  const currentTabTitle = {
-    overview: 'Tổng quan tài khoản',
-    orders: 'Đơn hàng mua sắm',
-    tickets: 'Ví vé liệu trình Spa',
-    appointments: 'Lịch hẹn chăm sóc da',
-    skin: 'Hồ sơ phân tích làn da',
-    settings: 'Cài đặt tài khoản & Bảo mật',
-    addresses: 'Sổ địa chỉ giao nhận',
-    wishlist: 'Bộ sưu tập yêu thích',
-    notifications: 'Thông báo & Khuyến mãi'
-  }[activeTab] || 'Tài khoản của tôi';
+  const currentTabTitle = TAB_TITLES[activeTab] || 'Tài khoản của tôi';
 
   return (
     <div className="customer-profile-page">
@@ -277,7 +293,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
             <strong>Tài khoản của tôi</strong>
             {activeTab !== 'overview' && <><span aria-hidden="true">/</span><span>{currentTabTitle}</span></>}
           </nav>
-          <button onClick={loadData} disabled={loading} className="btn-editorial-outline" title="Làm mới dữ liệu">
+          <button onClick={handleManualRefresh} disabled={loading} className="btn-editorial-outline" title="Làm mới dữ liệu">
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             {loading ? 'Đang đồng bộ...' : 'Làm mới'}
           </button>
@@ -424,18 +440,18 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                         <div className="bento-ticket-footer">
                           <div className="profile-reference">Mã lịch hẹn: <strong>SPA-APT-#{upcomingAppointment.id}</strong></div>
                           <div className="profile-actions">
-                            {buildGoogleCalendarUrl({
+                            {['PENDING', 'CONFIRMED'].includes(upcomingAppointment.status) && buildGoogleCalendarUrl({
                               title: `Lịch hẹn Spa: ${upcomingAppointment.items?.[0]?.serviceName || 'Chăm sóc da'}`,
                               date: upcomingAppointment.appointmentDate,
                               startTime: upcomingAppointment.startTime,
-                              details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${upcomingAppointment.items[0].staffName}` : ''}`,
+                              details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${displayStaffName(upcomingAppointment.items[0].staffName)}` : ''}`,
                             }) && (
                               <a
                                 href={buildGoogleCalendarUrl({
                                   title: `Lịch hẹn Spa: ${upcomingAppointment.items?.[0]?.serviceName || 'Chăm sóc da'}`,
                                   date: upcomingAppointment.appointmentDate,
                                   startTime: upcomingAppointment.startTime,
-                                  details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${upcomingAppointment.items[0].staffName}` : ''}`,
+                                  details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${displayStaffName(upcomingAppointment.items[0].staffName)}` : ''}`,
                                 })}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -592,7 +608,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                       <div>
                         <div className="profile-metadata"><strong className="profile-reference">SPA-APT-#{apt.id}</strong><span className="profile-status-badge">{getAppointmentStatusText(apt.status, apt.checkedInAt)}</span></div>
                         <div className="profile-metadata">
-                          <span className="profile-icon-label"><Calendar size={18} /><strong>{apt.appointmentDate}</strong></span>
+                          <span className="profile-icon-label"><Calendar size={18} /><strong>{formatAptDate(apt.appointmentDate)}</strong></span>
                           <span className="profile-icon-label"><Clock size={18} /><span>{apt.startTime ? String(apt.startTime).slice(0, 5) : ''} - {apt.endTime ? String(apt.endTime).slice(0, 5) : ''}</span></span>
                         </div>
                         <h3>{apt.items && apt.items.length > 0 ? apt.items.map((it) => it.serviceName || `Dịch vụ #${it.serviceId}`).join(', ') : 'Dịch vụ Chăm Sóc Da Spa'}</h3>
@@ -606,7 +622,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                               title: `Lịch hẹn Spa: ${apt.items?.[0]?.serviceName || 'Chăm sóc da'}`,
                               date: apt.appointmentDate,
                               startTime: apt.startTime,
-                              details: `Mã lịch hẹn: SPA-APT-#${apt.id}${apt.items?.[0]?.staffName ? `\nKTV: ${apt.items[0].staffName}` : ''}`,
+                              details: `Mã lịch hẹn: SPA-APT-#${apt.id}${apt.items?.[0]?.staffName ? `\nKTV: ${displayStaffName(apt.items[0].staffName)}` : ''}`,
                             })}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -625,12 +641,12 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
               </div>
             )}
 
-            {activeTab === 'orders' && <OrderWorkspace onNavigate={onNavigate} initialOrderId={params.get('order')} onOrderChanged={loadData} />}
-            {activeTab === 'skin' && <SkinProfile />}
+            {activeTab === 'orders' && <OrderWorkspace key={refreshTick} onNavigate={onNavigate} initialOrderId={params.get('order')} onOrderChanged={loadData} />}
+            {activeTab === 'skin' && <SkinProfile key={refreshTick} />}
             {activeTab === 'settings' && <AccountSettings profile={displayUser} onSaved={loadData} />}
-            {activeTab === 'addresses' && <AddressBook />}
-            {activeTab === 'wishlist' && <WishlistPage onNavigate={onNavigate} />}
-            {activeTab === 'notifications' && <NotificationInbox onNavigate={onNavigate} />}
+            {activeTab === 'addresses' && <AddressBook key={refreshTick} />}
+            {activeTab === 'wishlist' && <WishlistPage key={refreshTick} onNavigate={onNavigate} />}
+            {activeTab === 'notifications' && <NotificationInbox key={refreshTick} onNavigate={onNavigate} />}
           </div>
         </div>
       </div>
