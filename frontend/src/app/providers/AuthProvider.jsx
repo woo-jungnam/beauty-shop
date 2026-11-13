@@ -46,15 +46,18 @@ export const AuthProvider = ({ children }) => {
           const profile = res.data || res;
           setUser(profile);
           localStorage.setItem('beautyshop_admin_user', JSON.stringify(profile));
-        } catch {
+        } catch (err) {
           if (!active) return;
-          const currentToken = localStorage.getItem('beautyshop_admin_token');
-          if (currentToken !== token) { setToken(currentToken); return; }
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem('beautyshop_admin_token');
-          localStorage.removeItem('beautyshop_admin_refresh_token');
-          localStorage.removeItem('beautyshop_admin_user');
+          const status = err?.response?.status;
+          if (status === 401) {
+            const currentToken = localStorage.getItem('beautyshop_admin_token');
+            if (currentToken !== token) { setToken(currentToken); return; }
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('beautyshop_admin_token');
+            localStorage.removeItem('beautyshop_admin_refresh_token');
+            localStorage.removeItem('beautyshop_admin_user');
+          }
         }
       } else {
         setUser(null);

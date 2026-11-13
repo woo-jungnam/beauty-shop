@@ -407,9 +407,9 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
                     <div className="bento-kpi-label">Vé liệu trình</div>
                     <div><div className="bento-kpi-value">{spaTickets.length.toString().padStart(2, '0')}</div><div className="bento-kpi-sub">{activeTickets.length} vé còn hiệu lực</div></div>
                   </div>
-                  <div className="bento-kpi-card">
+                  <div className="bento-kpi-card" title="Tỷ lệ tích điểm: 10.000 đ tiền hàng = 1 điểm (áp dụng khi đơn hàng giao thành công hoặc thanh toán gói Spa)">
                     <div className="bento-kpi-label">Điểm tích lũy</div>
-                    <div><div className="bento-kpi-value">{loyaltyPoints != null ? loyaltyPoints.toLocaleString('vi-VN') : '0'}</div><div className="bento-kpi-sub">{getTierText(membershipTier)}</div></div>
+                    <div><div className="bento-kpi-value">{loyaltyPoints != null ? loyaltyPoints.toLocaleString('vi-VN') : '0'}</div><div className="bento-kpi-sub">{getTierText(membershipTier)} (10.000 đ = 1 điểm)</div></div>
                   </div>
                 </div>
 

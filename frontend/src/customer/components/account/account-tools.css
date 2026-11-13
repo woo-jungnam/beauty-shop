@@ -15,7 +15,7 @@
   --ed-control-border: #9A8882;
   --ed-sans: 'Be Vietnam Pro', 'Inter', 'Plus Jakarta Sans', sans-serif;
   --ed-shadow: 0 8px 28px -12px rgb(78 16 26 / 10%);
-  --ed-padding: clamp(20px, 1.8vw, 26px);
+  --ed-padding: clamp(20px, 2vw, 32px);
   --ed-gap: 20px;
   --c-primary: var(--ed-wine);
   --c-primary-hover: var(--ed-wine-dark);
@@ -39,11 +39,11 @@
   background: var(--ed-bg);
   color: var(--ed-charcoal);
   font: 500 15px/1.6 var(--ed-sans);
-  padding: 24px clamp(20px, 2.5vw, 40px) 48px;
+  padding: 24px clamp(16px, 2.5vw, 48px) 56px;
   overflow-wrap: anywhere;
 }
 
-.customer-profile-page .profile-shell { width: 100%; max-width: 1360px; min-width: 0; margin-inline: auto; }
+.customer-profile-page .profile-shell { width: 100%; max-width: 100%; min-width: 0; margin-inline: auto; }
 .customer-app .customer-profile-page :where(h1, h2, h3, h4) {
   font-family: var(--ed-sans);
   font-weight: 700;
@@ -75,7 +75,7 @@
 .customer-profile-page .profile-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; font-size: 13px; color: var(--ed-charcoal-subtle); }
 .customer-profile-page .profile-breadcrumb strong { color: var(--ed-wine); }
 .customer-profile-page .profile-breadcrumb button { border: 0; padding: 6px 0; min-height: 44px; background: none; color: inherit; font-size: inherit; cursor: pointer; }
-.customer-profile-page .profile-layout-container { display: grid; grid-template-columns: clamp(272px, 21vw, 316px) minmax(0, 1fr); align-items: start; gap: 24px; }
+.customer-profile-page .profile-layout-container { display: grid; grid-template-columns: clamp(270px, 18vw, 320px) minmax(0, 1fr); align-items: start; gap: clamp(20px, 2vw, 32px); }
 .customer-profile-page .profile-sidebar { display: grid; min-width: 0; border: 1px solid var(--ed-border); border-radius: 20px; background: var(--ed-card); box-shadow: var(--ed-shadow); overflow: hidden; }
 .customer-profile-page .profile-main-content { min-width: 0; container: profile-content / inline-size; border: 1px solid var(--ed-border); border-radius: 20px; background: var(--ed-card); box-shadow: var(--ed-shadow); overflow: hidden; }
 .customer-profile-page .profile-overview { display: grid; }

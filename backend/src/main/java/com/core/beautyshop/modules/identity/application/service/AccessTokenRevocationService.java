@@ -20,9 +20,8 @@ public class AccessTokenRevocationService implements AccessTokenRevocationChecke
         if (userId == null || tokenVersion == null) {
             return false;
         }
-        return tokenVersionCache.findCurrentVersion(userId)
-                .map(currentVersion -> currentVersion.equals(tokenVersion))
-                .orElse(false);
+        Integer currentVersion = tokenVersionCache.findCurrentVersion(userId);
+        return currentVersion != null && currentVersion.equals(tokenVersion);
     }
 
     @Override

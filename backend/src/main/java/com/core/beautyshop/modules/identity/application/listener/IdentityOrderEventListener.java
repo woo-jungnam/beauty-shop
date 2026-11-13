@@ -26,7 +26,7 @@ public class IdentityOrderEventListener {
         loyalty.reconcile(event.orderId(),event.userId(),event.eligibleAmount());
     }
     @EventListener public void paidVisit(OrderEvents.OrderPaidEvent event){
-        if(event.getUserId()==null || event.getServicePackageId()!=null)return;
+        if(event.getUserId()==null)return;
         loyalty.reconcile(event.getOrderId(),event.getUserId(),event.getTotalAmount());
     }
 }

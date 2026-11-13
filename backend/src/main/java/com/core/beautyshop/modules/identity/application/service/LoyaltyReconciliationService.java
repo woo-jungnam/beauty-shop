@@ -25,7 +25,7 @@ public class LoyaltyReconciliationService {
             (rs,n)->new Spend(rs.getObject("user_id")==null?null:rs.getLong("user_id"),rs.getBigDecimal("total_amount"),rs.getBigDecimal("paid_amount").subtract(rs.getBigDecimal("refunded_amount")).max(BigDecimal.ZERO),rs.getBigDecimal("shipping_fee"),rs.getString("status"),rs.getObject("service_package_id")!=null,rs.getObject("appointment_id")!=null),orderId);
         if(rows.isEmpty()||!userId.equals(rows.getFirst().owner()))return;
         Spend spend=rows.getFirst();
-        boolean eligibleState=spend.packageOrder() ? !"CANCELLED".equals(spend.status()) : spend.visit() ? "COMPLETED".equals(spend.status()) : "DELIVERED".equals(spend.status());
+        boolean eligibleState=spend.packageOrder() ? !"CANCELLED".equals(spend.status()) : spend.visit() ? "COMPLETED".equals(spend.status()) : ("DELIVERED".equals(spend.status()) || "COMPLETED".equals(spend.status()));
         BigDecimal base=requested==null?spend.total():requested.max(BigDecimal.ZERO);
         if(!spend.packageOrder()&&!spend.visit())base=base.subtract(spend.shipping()).max(BigDecimal.ZERO);
         BigDecimal returned = spend.packageOrder() || spend.visit() ? BigDecimal.ZERO : jdbc.queryForObject(

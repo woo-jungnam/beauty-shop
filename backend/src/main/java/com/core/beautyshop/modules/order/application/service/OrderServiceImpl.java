@@ -408,7 +408,7 @@ public class OrderServiceImpl implements OrderService {
             publishOrderCancelledEvent(order);
         }
 
-        if (newStatus == OrderStatus.DELIVERED && previousStatus != OrderStatus.DELIVERED) {
+        if ((newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.COMPLETED) && previousStatus != OrderStatus.DELIVERED && previousStatus != OrderStatus.COMPLETED) {
             publishOrderDeliveredEvent(order);
         }
 

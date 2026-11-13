@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Lock,
@@ -21,6 +21,14 @@ import { getAdminSections } from '../app/adminNavigation';
 import { Button } from '../shared/ui/Button';
 import '../customer/styles/customer-auth.css';
 
+const getAuthErrorMessage = (err, fallback) => {
+  const data = err?.response?.data;
+  if (Array.isArray(data?.errors) && data.errors.length > 0) {
+    return data.errors.map((e) => e.message || `${e.field}: không hợp lệ`).filter(Boolean).join('. ');
+  }
+  return data?.message || err?.message || fallback;
+};
+
 const consumeCustomerRedirect = () => {
   try {
     const target = sessionStorage.getItem('auth_redirect');
@@ -33,10 +41,23 @@ const consumeCustomerRedirect = () => {
 };
 
 export const LoginPage = () => {
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated, isOperator, isAdmin } = useAuth();
   const route = window.location.hash.replace(/^#\/?/, '');
   const isAdminRoute = route.startsWith('admin') ||
     ['dashboard', 'inventory', 'procurement', 'crm', 'operations', 'vouchers', 'reviews', 'users', 'spa-reception', 'treatments', 'orders', 'products', 'spa', 'staff'].includes(route);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (isAdmin) {
+        window.location.hash = '#/admin/dashboard';
+      } else if (isOperator) {
+        window.location.hash = '#/admin';
+      } else {
+        window.location.hash = consumeCustomerRedirect();
+      }
+    }
+  }, [isAuthenticated, isAdmin, isOperator]);
+
   const [authMode, setAuthMode] = useState('login');
 
   const [username, setUsername] = useState('');
@@ -48,6 +69,9 @@ export const LoginPage = () => {
   const [regPhone, setRegPhone] = useState('');
   const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirm, setShowRegConfirm] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -57,31 +81,56 @@ export const LoginPage = () => {
     setError(null);
 
     if (authMode === 'register' && !isAdminRoute) {
-      if (!regFullName.trim() || !regEmail.trim() || !regUsername.trim() || !regPassword.trim()) {
+      const cleanName = regFullName.trim();
+      const cleanEmail = regEmail.trim();
+      const cleanUsername = regUsername.trim();
+      const cleanPhone = regPhone.trim();
+
+      if (!cleanName || !cleanEmail || !cleanUsername || !regPassword || !regConfirmPassword) {
         setError('Vui lòng điền đầy đủ các thông tin bắt buộc.');
         return;
       }
-      if (regPassword.length < 6) {
-        setError('Mật khẩu bảo mật phải có tối thiểu 6 ký tự.');
+      if (cleanName.length > 100) {
+        setError('Họ và tên không được vượt quá 100 ký tự.');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        setError('Định dạng email không hợp lệ (ví dụ: customer@example.com).');
+        return;
+      }
+      if (cleanUsername.length < 3 || cleanUsername.length > 50) {
+        setError('Tên tài khoản phải từ 3 đến 50 ký tự.');
+        return;
+      }
+      if (cleanUsername.includes('@') || /\s/.test(cleanUsername)) {
+        setError('Tên tài khoản không được chứa ký tự @ hoặc khoảng trắng.');
+        return;
+      }
+      if (cleanPhone && !/^0[35789]\d{8}$/.test(cleanPhone)) {
+        setError('Số điện thoại không hợp lệ. Vui lòng nhập số di động Việt Nam 10 chữ số (ví dụ: 0912345678).');
+        return;
+      }
+      if (regPassword.length < 6 || regPassword.length > 100) {
+        setError('Mật khẩu bảo mật phải từ 6 đến 100 ký tự.');
+        return;
+      }
+      if (regPassword !== regConfirmPassword) {
+        setError('Mật khẩu xác nhận không khớp. Vui lòng nhập lại.');
         return;
       }
 
       setLoading(true);
       try {
         await register({
-          fullName: regFullName.trim(),
-          email: regEmail.trim(),
-          phone: regPhone.trim() || undefined,
-          username: regUsername.trim(),
+          fullName: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone || undefined,
+          username: cleanUsername,
           password: regPassword,
         });
         window.location.hash = consumeCustomerRedirect();
       } catch (err) {
-        const errorMsg =
-          err.response?.data?.message ||
-          err.message ||
-          'Đăng ký thất bại. Vui lòng thử lại với email/username khác.';
-        setError(errorMsg);
+        setError(getAuthErrorMessage(err, 'Đăng ký thất bại. Vui lòng thử lại với email/username khác.'));
       } finally {
         setLoading(false);
       }
@@ -110,11 +159,7 @@ export const LoginPage = () => {
         window.location.hash = consumeCustomerRedirect();
       }
     } catch (err) {
-      const errorMsg =
-        err.response?.data?.message ||
-        err.message ||
-        'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
-      setError(errorMsg);
+      setError(getAuthErrorMessage(err, 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.'));
     } finally {
       setLoading(false);
     }
@@ -795,6 +840,7 @@ export const LoginPage = () => {
                       type="text"
                       id="customer-auth-regFullName"
                       autoComplete="name"
+                      maxLength={100}
                       value={regFullName}
                       onChange={(e) => setRegFullName(e.target.value)}
                       placeholder="Nguyễn Văn A"
@@ -834,6 +880,7 @@ export const LoginPage = () => {
                         type="email"
                         id="customer-auth-regEmail"
                         autoComplete="email"
+                        maxLength={100}
                         value={regEmail}
                         onChange={(e) => setRegEmail(e.target.value)}
                         placeholder="email@domain.com"
@@ -861,8 +908,10 @@ export const LoginPage = () => {
                         type="tel"
                         id="customer-auth-regPhone"
                         autoComplete="tel"
+                        maxLength={10}
+                        pattern="0[35789][0-9]{8}"
                         value={regPhone}
-                        onChange={(e) => setRegPhone(e.target.value)}
+                        onChange={(e) => setRegPhone(e.target.value.replace(/[^\d]/g, ''))}
                         placeholder="0912345678"
                         style={{
                           width: '100%',
@@ -878,22 +927,25 @@ export const LoginPage = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
-                  <div>
-                    <label htmlFor="customer-auth-regUsername" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
-                      Tên tài khoản *
-                    </label>
+                <div style={{ marginBottom: '12px' }}>
+                  <label htmlFor="customer-auth-regUsername" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                    Tên tài khoản (Username) *
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <User size={13} style={{ position: 'absolute', left: '12px', color: '#9CA3AF', pointerEvents: 'none' }} />
                     <input
                       type="text"
                       id="customer-auth-regUsername"
                       autoComplete="username"
                       value={regUsername}
-                      onChange={(e) => setRegUsername(e.target.value)}
-                      placeholder="nguyena"
+                      onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                      placeholder="Từ 3–50 ký tự, không chứa @"
+                      minLength={3}
+                      maxLength={50}
                       required
                       style={{
                         width: '100%',
-                        padding: '10px 12px',
+                        padding: '10px 12px 10px 36px',
                         fontSize: '13px',
                         backgroundColor: '#FAF7F8',
                         border: '1px solid #F0DEE3',
@@ -902,29 +954,99 @@ export const LoginPage = () => {
                       }}
                     />
                   </div>
+                </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
                   <div>
                     <label htmlFor="customer-auth-regPassword" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                       Mật khẩu *
                     </label>
-                    <input
-                      type="password"
-                      id="customer-auth-regPassword"
-                      autoComplete="new-password"
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      placeholder="Tối thiểu 6 ký tự"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: '13px',
-                        backgroundColor: '#FAF7F8',
-                        border: '1px solid #F0DEE3',
-                        borderRadius: '10px',
-                        outline: 'none'
-                      }}
-                    />
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showRegPassword ? 'text' : 'password'}
+                        id="customer-auth-regPassword"
+                        autoComplete="new-password"
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        placeholder="Tối thiểu 6 ký tự"
+                        minLength={6}
+                        maxLength={100}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '10px 32px 10px 12px',
+                          fontSize: '13px',
+                          backgroundColor: '#FAF7F8',
+                          border: '1px solid #F0DEE3',
+                          borderRadius: '10px',
+                          outline: 'none'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPassword(prev => !prev)}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          background: 'none',
+                          border: 'none',
+                          color: '#9CA3AF',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        aria-label={showRegPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                      >
+                        {showRegPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="customer-auth-regConfirm" style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                      Xác nhận mật khẩu *
+                    </label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showRegConfirm ? 'text' : 'password'}
+                        id="customer-auth-regConfirm"
+                        autoComplete="new-password"
+                        value={regConfirmPassword}
+                        onChange={(e) => setRegConfirmPassword(e.target.value)}
+                        placeholder="Nhập lại mật khẩu"
+                        minLength={6}
+                        maxLength={100}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '10px 32px 10px 12px',
+                          fontSize: '13px',
+                          backgroundColor: '#FAF7F8',
+                          border: regConfirmPassword && regPassword !== regConfirmPassword ? '1px solid #FCA5A5' : '1px solid #F0DEE3',
+                          borderRadius: '10px',
+                          outline: 'none'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegConfirm(prev => !prev)}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          background: 'none',
+                          border: 'none',
+                          color: '#9CA3AF',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        aria-label={showRegConfirm ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                      >
+                        {showRegConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 

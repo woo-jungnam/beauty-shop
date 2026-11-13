@@ -17,8 +17,8 @@ public class TokenVersionCache {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "token_versions", key = "#userId", unless = "#result == null")
-    public Optional<Integer> findCurrentVersion(Long userId) {
-        return userRepository.findTokenVersionById(userId);
+    public Integer findCurrentVersion(Long userId) {
+        return userRepository.findTokenVersionById(userId).orElse(null);
     }
 
     @CachePut(value = "token_versions", key = "#userId")
