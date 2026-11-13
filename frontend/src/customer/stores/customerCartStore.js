@@ -256,6 +256,7 @@ export const cartActions = {
     const sessionId = getGuestSessionId();
     const item = memoryState.items.find((i) => i.itemId === String(itemId));
     const backendId = item?.backendId || (isNaN(Number(itemId)) ? null : itemId);
+    const prevQty = item?.quantity ?? 1;
 
     if (item) {
       item.quantity = qty;
@@ -267,14 +268,19 @@ export const cartActions = {
         const res = await apiClient.put(
           ENDPOINTS.CART.UPDATE_ITEM(backendId, sessionId),
           null,
-          { params: { quantity: qty, sessionId } }
+          { params: { quantity: qty } }
         );
         const cartData = res?.data || res;
         if (cartData && Array.isArray(cartData.items)) {
           applyCartData(cartData);
         }
+        memoryState.cartError = '';
       } catch (err) {
-        console.warn('Failed to update cart item in backend', err);
+        if (item) {
+          item.quantity = prevQty;
+          notifyListeners();
+        }
+        memoryState.cartError = cartErrorMessage(err, 'Không thể cập nhật số lượng sản phẩm.');
       }
     }
     saveCart();

@@ -196,7 +196,7 @@ export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => 
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const membershipTier = typeof displayUser.membershipTier === 'string' ? displayUser.membershipTier.trim() : '';
   const totalSpent = statistics?.netSpent;
-  const deliveredOrders = orders.filter((order) => order.status === 'DELIVERED').length;
+  const deliveredOrders = orders.filter((order) => order.status === 'DELIVERED' || order.status === 'COMPLETED').length;
   const nextTierPoints = { MEMBER: 1000, SILVER: 5000, GOLD: 10000 }[membershipTier] ?? null;
   const nextTierName = { MEMBER: 'HẠNG BẠC', SILVER: 'HẠNG VÀNG', GOLD: 'HẠNG BẠCH KIM' }[membershipTier] ?? 'HẠNG VIP';
   const isHighestTier = membershipTier === 'PLATINUM' || membershipTier === 'DIAMOND';

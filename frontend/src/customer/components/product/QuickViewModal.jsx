@@ -13,7 +13,7 @@ const formatCurrency = (val) => {
 };
 
 export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
-  const { addItem, isLoading } = useCustomerCart();
+  const { addItem, isLoading, cartError, clearCartError } = useCustomerCart();
   const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -30,7 +30,11 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
   useCustomerDialog(isOpen && !!activeProduct, dialogRef, onClose);
 
   useEffect(() => {
-    if (!isOpen || !product?.id) return;
+    if (!isOpen || !product?.id) {
+      clearCartError();
+      return;
+    }
+    clearCartError();
     setActiveProduct(product);
     const retry = retrySelection.current;
     const requestedId = retry?.productId === product.id ? retry.variantId
@@ -378,6 +382,11 @@ export const QuickViewModal = ({ product, isOpen, onClose, onNavigate }) => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {cartError && (
+              <div role="alert" style={{ color: 'var(--c-danger-red, #dc2626)', fontSize: '12px', padding: '8px 12px', backgroundColor: '#FEF2F2', borderRadius: '4px', border: '1px solid #FECACA', lineHeight: 1.4 }}>
+                {cartError}
+              </div>
+            )}
             <button
               type="button"
               onClick={handleAddToCart}

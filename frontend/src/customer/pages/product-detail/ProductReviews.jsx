@@ -165,7 +165,7 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
           if (controller.signal.aborted) return;
           const result = readPage(response, page, ORDER_PAGE_SIZE);
           orders.push(...result.rows.filter((order) => order.status === 'DELIVERED'
-            && (order.items ?? []).some((item) => variantIds.has(Number(item.variantId)))));
+            && (order.items ?? []).some((item) => Number(item.productId) === Number(productId) || variantIds.has(Number(item.variantId)))));
           hasMore = result.hasMore;
           page += 1;
         }

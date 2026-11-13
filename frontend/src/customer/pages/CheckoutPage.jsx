@@ -253,7 +253,7 @@ export const CheckoutPage = ({ onNavigate }) => {
       const orderId = orderData.id || '';
       const orderCode = orderData.orderNumber || `BS-${orderId}`;
       const method = orderData.paymentMethod || formData.paymentMethod;
-      const amount = orderData.totalAmount || totalAmount;
+      const amount = orderData.totalAmount || finalTotalAmount;
 
       onNavigate(`order-success?id=${orderId}&code=${orderCode}&method=${method}&amount=${amount}`);
     } catch (err) {
