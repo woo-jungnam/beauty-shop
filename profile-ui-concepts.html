@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản Mẫu UI Hồ Sơ Cá Nhân - Kiến Trúc Liền Khối Đen Trắng Hồng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* RESET & MONOLITHIC TOKENS */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --pf-canvas: #FAF7F8;
+      --pf-surface: #FFFFFF;
+      --pf-card: #FFFFFF;
+      --pf-subtle: #F7F8FA;
+      --pf-noir: #0C0D13;
+      --pf-noir-elevated: #151824;
+      --pf-text-noir: #1F2937;
+      --pf-text-white: #FFFFFF;
+      --pf-text-muted: #5A5F70;
+      --pf-text-dim: #8B90A2;
+      --pf-border: #F0DEE3;
+      --pf-border-dark: #222634;
+      --pf-border-hover: #AD3F61;
+      --pf-pink: #8C2A47;
+      --pf-pink-light: #AD3F61;
+      --pf-pink-soft: #FFF0F3;
+      --pf-pink-glow: rgba(140, 42, 71, 0.18);
+      --pf-green: #16A34A;
+      --pf-green-soft: rgba(22, 163, 74, 0.10);
+      /* BO GÓC ÍT LẠI - SẮC SẢO CHUẨN LIỀN KHỐI BEAUTYSHOP */
+      --pf-radius: 4px;
+      --pf-radius-sm: 2px;
+      --pf-shadow: 0 4px 16px rgba(12, 13, 19, 0.04);
+      --pf-shadow-hover: 0 8px 24px rgba(140, 42, 71, 0.08);
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--pf-canvas);
+      color: var(--pf-text-noir);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding-bottom: 60px;
+      overflow-x: hidden;
+    }
+
+    /* TOP DOCK CONTROLLER */
+    .concept-dock {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(12, 13, 19, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--pf-border-dark);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: #FFFFFF;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .concept-dock-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .concept-logo-pill {
+      background: var(--pf-pink);
+      color: #FFFFFF;
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: var(--pf-radius-sm);
+    }
+
+    .concept-dock-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .concept-dock-title span {
+      color: var(--pf-text-dim);
+      font-weight: 400;
+      font-size: 12.5px;
+    }
+
+    .concept-dock-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .concept-control-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #FFFFFF;
+      padding: 8px 16px;
+      border-radius: var(--pf-radius);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .concept-control-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .concept-control-btn.is-highlight {
+      background: rgba(225, 72, 127, 0.22);
+      border-color: var(--pf-pink);
+      color: #FF87B4;
+    }
+
+    /* FULL VIEW BODY CONTAINER - KÍCH THƯỚC TỔNG THỂ TO HƠN */
+    .profile-full-canvas {
+      width: 100%;
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: 24px clamp(16px, 2.5vw, 40px);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* 1. HERO BAR - LIỀN KHỐI BEAUTYSHOP CLUB STYLE */
+    .pf-hero-card {
+      background: var(--pf-surface);
+      color: var(--pf-text-noir);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      padding: 24px 32px;
+      display: grid;
+      grid-template-columns: 1.45fr 1fr 1.5fr auto;
+      align-items: center;
+      gap: 24px;
+      box-shadow: var(--pf-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pf-hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--pf-pink) 0%, var(--pf-pink-light) 100%);
+    }
+
+    .pf-hero-identity {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .pf-hero-avatar-box {
+      width: 72px;
+      height: 72px;
+      border-radius: var(--pf-radius);
+      background: var(--pf-noir-elevated);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      padding: 2px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .pf-hero-avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--pf-radius-sm);
+      object-fit: cover;
+      background: var(--pf-noir-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--pf-text-white);
+      font-weight: 800;
+      font-size: 24px;
+    }
+
+    .pf-hero-avatar-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 22px;
+      height: 22px;
+      background: var(--pf-pink);
+      border: 2px solid #FFFFFF;
+      border-radius: var(--pf-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+    }
+
+    .pf-hero-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pf-hero-name {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--pf-text-white);
+      line-height: 1.2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pf-hero-phone {
+      font-size: 13.5px;
+      color: var(--pf-text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pf-hero-tags-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 3px;
+    }
+
+    .pf-tier-tag {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: var(--pf-radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pf-tier-tag-black {
+      background: var(--pf-border);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .pf-tier-tag-pink {
+      background: rgba(225, 72, 127, 0.18);
+      color: #FF87B4;
+      border: 1px solid rgba(225, 72, 127, 0.4);
+    }
+
+    .pf-hero-update-text {
+      font-size: 11.5px;
+      color: var(--pf-text-dim);
+      margin-top: 3px;
+    }
+
+    /* Orders Metric */
+    .pf-hero-metric-cell {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      border-left: 1px solid var(--pf-border);
+    }
+
+    .pf-hero-metric-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--pf-radius);
+      background: #FFF0F3;
+      color: var(--pf-pink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid var(--pf-border);
+    }
+
+    .pf-hero-metric-val {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--pf-text-white);
+      line-height: 1.1;
+    }
+
+    .pf-hero-metric-label {
+      font-size: 13px;
+      color: var(--pf-text-dim);
+      margin-top: 3px;
+    }
+
+    /* Spending & Progress */
+    .pf-hero-spending-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 20px;
+      border-left: 1px solid var(--pf-border);
+    }
+
+    .pf-hero-spending-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .pf-hero-spending-amount {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--pf-pink);
+      letter-spacing: -0.5px;
+    }
+
+    .pf-hero-spending-period {
+      font-size: 12px;
+      color: var(--pf-text-dim);
+      background: var(--pf-canvas);
+      border: 1px solid var(--pf-border);
+      color: var(--pf-text-muted);
+      padding: 2px 8px;
+      border-radius: var(--pf-radius-sm);
+    }
+
+    .pf-hero-progress-track {
+      width: 100%;
+      height: 8px;
+      background: var(--pf-border);
+      border-radius: var(--pf-radius-sm);
+      overflow: hidden;
+    }
+
+    .pf-hero-progress-fill {
+      height: 100%;
+      width: 78%;
+      background: linear-gradient(90deg, var(--pf-pink) 0%, var(--pf-pink-light) 100%);
+      border-radius: var(--pf-radius-sm);
+      transition: width 0.8s ease;
+    }
+
+    .pf-hero-spending-note {
+      font-size: 12px;
+      color: var(--pf-text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pf-hero-spending-note strong {
+      color: var(--pf-text-white);
+    }
+
+    /* Channel / Switcher */
+    .pf-hero-channel-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      border-left: 1px solid var(--pf-border);
+      padding-left: 20px;
+    }
+
+    .pf-channel-label {
+      font-size: 11px;
+      color: var(--pf-text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+    }
+
+    .pf-channel-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 7px 14px;
+      border-radius: var(--pf-radius);
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--pf-text-white);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .pf-channel-pill:hover {
+      border-color: var(--pf-pink);
+      background: rgba(225, 72, 127, 0.12);
+    }
+
+    .pf-channel-logo {
+      width: 22px;
+      height: 22px;
+      background: var(--pf-pink);
+      color: #FFFFFF;
+      border-radius: var(--pf-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .pf-channel-url {
+      font-size: 12px;
+      color: var(--pf-pink);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pf-channel-url:hover {
+      text-decoration: underline;
+    }
+
+    /* 2. QUICK-ACTION CHIPS */
+    .pf-quick-chips-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 4px 0;
+      scrollbar-width: none;
+    }
+
+    .pf-quick-chips-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .pf-quick-chip {
+      background: var(--pf-surface);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      padding: 10px 18px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--pf-text-noir);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+      flex-shrink: 0;
+    }
+
+    .pf-quick-chip svg {
+      color: var(--pf-pink);
+      transition: transform 0.2s;
+    }
+
+    .pf-quick-chip:hover {
+      border-color: var(--pf-pink);
+      background: var(--pf-pink-soft);
+      color: var(--pf-pink);
+      transform: translateY(-1px);
+    }
+
+    .pf-quick-chip:hover svg {
+      transform: scale(1.1);
+    }
+
+    .pf-quick-chip.is-active {
+      background: var(--pf-noir);
+      color: #FFFFFF;
+      border-color: var(--pf-noir);
+      box-shadow: 0 4px 12px rgba(12, 13, 19, 0.15);
+    }
+
+    .pf-quick-chip.is-active svg {
+      color: var(--pf-pink);
+    }
+
+    /* 3. 2-COLUMN WORKSPACE */
+    .pf-workspace-layout {
+      display: grid;
+      grid-template-columns: var(--pf-sidebar-w, 280px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      transition: grid-template-columns 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pf-workspace-layout.is-collapsed {
+      --pf-sidebar-w: 76px;
+    }
+
+    .pf-sidebar {
+      background: var(--pf-surface);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      padding: 14px 10px;
+      box-shadow: var(--pf-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: sticky;
+      top: 76px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pf-sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px 14px 12px;
+      border-bottom: 1px solid var(--pf-border);
+      margin-bottom: 6px;
+    }
+
+    .pf-sidebar-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--pf-text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: opacity 0.2s;
+    }
+
+    .pf-workspace-layout.is-collapsed .pf-sidebar-title {
+      opacity: 0;
+      width: 0;
+      display: none;
+    }
+
+    .pf-sidebar-toggle-btn {
+      background: var(--pf-subtle);
+      border: 1px solid var(--pf-border);
+      color: var(--pf-text-muted);
+      width: 34px;
+      height: 34px;
+      border-radius: var(--pf-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .pf-sidebar-toggle-btn:hover {
+      background: var(--pf-pink-soft);
+      color: var(--pf-pink);
+      border-color: var(--pf-pink);
+    }
+
+    .pf-sidebar-nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .pf-sidebar-nav-item {
+      position: relative;
+    }
+
+    .pf-sidebar-btn {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 12px 16px;
+      border-radius: var(--pf-radius);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--pf-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .pf-sidebar-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: var(--pf-text-dim);
+      transition: all 0.2s;
+    }
+
+    .pf-sidebar-btn span.pf-label {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: opacity 0.2s;
+    }
+
+    .pf-sidebar-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--pf-pink-soft);
+      color: var(--pf-pink);
+      padding: 2px 8px;
+      border-radius: var(--pf-radius-sm);
+    }
+
+    .pf-sidebar-btn:hover {
+      background: var(--pf-subtle);
+      color: var(--pf-text-noir);
+    }
+
+    .pf-sidebar-btn:hover svg {
+      color: var(--pf-pink);
+      transform: scale(1.1);
+    }
+
+    .pf-sidebar-btn.is-active {
+      background: #FFF0F3;
+      color: #8C2A47;
+      font-weight: 800;
+    }
+
+    .pf-sidebar-btn.is-active svg {
+      color: var(--pf-pink);
+    }
+
+    .pf-sidebar-btn.is-active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 4px;
+      background: var(--pf-pink);
+      border-radius: 0 var(--pf-radius-sm) var(--pf-radius-sm) 0;
+    }
+
+    .pf-workspace-layout.is-collapsed .pf-sidebar-btn {
+      padding: 12px;
+      justify-content: center;
+    }
+
+    .pf-workspace-layout.is-collapsed .pf-sidebar-btn span.pf-label,
+    .pf-workspace-layout.is-collapsed .pf-sidebar-badge {
+      display: none;
+    }
+
+    .pf-workspace-layout.is-collapsed .pf-sidebar-btn:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 100%;
+      margin-left: 12px;
+      background: var(--pf-noir);
+      color: #FFFFFF;
+      padding: 6px 12px;
+      border-radius: var(--pf-radius);
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 100;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--pf-border-dark);
+      pointer-events: none;
+    }
+
+    .pf-sidebar-divider {
+      height: 1px;
+      background: var(--pf-border);
+      margin: 10px 8px;
+    }
+
+    .pf-sidebar-danger {
+      color: #DC2626 !important;
+    }
+
+    .pf-sidebar-danger svg {
+      color: #DC2626 !important;
+    }
+
+    .pf-sidebar-danger:hover {
+      background: rgba(220, 38, 38, 0.08) !important;
+    }
+
+    /* 4. CONTENT WORKSPACE CANVAS */
+    .pf-content-canvas {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .pf-tab-action-header {
+      background: var(--pf-surface);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      padding: 18px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--pf-shadow);
+      gap: 16px;
+    }
+
+    .pf-tab-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pf-tab-main-heading {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--pf-text-noir);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pf-tab-sub-heading {
+      font-size: 13.5px;
+      color: var(--pf-text-muted);
+    }
+
+    .pf-tab-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pf-btn-outline {
+      background: transparent;
+      border: 1px solid var(--pf-border);
+      color: var(--pf-text-noir);
+      padding: 9px 18px;
+      border-radius: var(--pf-radius);
+      font-size: 13.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pf-btn-outline:hover {
+      border-color: var(--pf-pink);
+      color: var(--pf-pink);
+      background: var(--pf-pink-soft);
+    }
+
+    .pf-btn-primary {
+      background: var(--pf-pink);
+      border: 1px solid var(--pf-pink);
+      color: #FFFFFF;
+      padding: 9px 20px;
+      border-radius: var(--pf-radius);
+      font-size: 13.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px var(--pf-pink-glow);
+    }
+
+    .pf-btn-primary:hover {
+      background: #C7386D;
+      border-color: #C7386D;
+      transform: translateY(-1px);
+    }
+
+    /* SKELETON SHIMMER LOADER */
+    .pf-skeleton-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      animation: pfTabFadeIn 0.2s ease forwards;
+    }
+
+    .pf-shimmer {
+      background: linear-gradient(90deg, #F0F2F6 0%, #FDEBF2 50%, #F0F2F6 100%);
+      background-size: 200% 100%;
+      animation: pfShimmerSweep 1.5s infinite;
+      border-radius: var(--pf-radius);
+    }
+
+    @keyframes pfShimmerSweep {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .pf-tab-body {
+      animation: pfTabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes pfTabFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 5. BENTO GRID - BEAUTYSHOP OVERVIEW */
+    .pf-bento-grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1.05fr;
+      gap: 20px;
+    }
+
+    .pf-bento-card {
+      background: var(--pf-surface);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      box-shadow: var(--pf-shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pf-bento-card:hover {
+      border-color: var(--pf-border-hover);
+      box-shadow: var(--pf-shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .pf-bento-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--pf-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .pf-bento-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--pf-text-noir);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pf-bento-title svg {
+      color: var(--pf-pink);
+    }
+
+    .pf-bento-body {
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .pf-bento-footer {
+      padding: 14px 24px;
+      background: var(--pf-subtle);
+      border-top: 1px solid var(--pf-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Order Item In Bento */
+    .pf-order-snippet {
+      display: flex;
+      gap: 16px;
+      padding: 14px 16px;
+      background: var(--pf-subtle);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      transition: border-color 0.2s;
+    }
+
+    .pf-order-snippet:hover {
+      border-color: var(--pf-pink);
+    }
+
+    .pf-order-thumb {
+      width: 76px;
+      height: 76px;
+      border-radius: var(--pf-radius-sm);
+      background: #FFFFFF;
+      border: 1px solid var(--pf-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .pf-order-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .pf-order-meta {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .pf-order-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .pf-order-code {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--pf-text-noir);
+    }
+
+    .pf-status-badge-green {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: var(--pf-radius-sm);
+      background: var(--pf-green-soft);
+      color: var(--pf-green);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pf-order-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--pf-text-noir);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pf-order-bot-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pf-order-price {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--pf-pink);
+    }
+
+    .pf-order-link {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--pf-pink);
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pf-order-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Voucher Cards */
+    .pf-voucher-item {
+      background: var(--pf-subtle);
+      border: 1px dashed var(--pf-border);
+      border-radius: var(--pf-radius);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      transition: all 0.2s;
+    }
+
+    .pf-voucher-item:hover {
+      border-color: var(--pf-pink);
+      background: var(--pf-pink-soft);
+    }
+
+    .pf-voucher-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .pf-voucher-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--pf-pink);
+      background: #FFFFFF;
+      border: 1px solid rgba(225, 72, 127, 0.3);
+      padding: 2px 7px;
+      border-radius: var(--pf-radius-sm);
+      width: fit-content;
+    }
+
+    .pf-voucher-desc {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--pf-text-noir);
+    }
+
+    .pf-voucher-date {
+      font-size: 11.5px;
+      color: var(--pf-text-dim);
+    }
+
+    /* Treatment */
+    .pf-treatment-card {
+      background: var(--pf-subtle);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pf-treatment-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .pf-treatment-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--pf-text-noir);
+    }
+
+    .pf-pill-pink {
+      font-size: 11.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: var(--pf-radius-sm);
+      background: var(--pf-pink-soft);
+      color: var(--pf-pink);
+    }
+
+    .pf-facts-3col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid var(--pf-border);
+      border-bottom: 1px solid var(--pf-border);
+    }
+
+    .pf-fact-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pf-fact-lbl {
+      font-size: 11.5px;
+      color: var(--pf-text-dim);
+    }
+
+    .pf-fact-val {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--pf-text-noir);
+    }
+
+    /* Stats Row */
+    .pf-stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .pf-stat-box {
+      background: var(--pf-surface);
+      border: 1px solid var(--pf-border);
+      border-radius: var(--pf-radius);
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: var(--pf-shadow);
+    }
+
+    .pf-stat-lbl {
+      font-size: 12.5px;
+      color: var(--pf-text-muted);
+      font-weight: 600;
+    }
+
+    .pf-stat-val {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--pf-text-noir);
+    }
+
+    .pf-stat-val.is-pink {
+      color: var(--pf-pink);
+    }
+
+    @media (max-width: 1024px) {
+      .pf-workspace-layout {
+        grid-template-columns: 1fr !important;
+      }
+      .pf-bento-grid {
+        grid-template-columns: 1fr;
+      }
+      .pf-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP LIVE CONTROLLER BAR -->
+  <aside class="concept-dock" aria-label="Thanh điều khiển">
+    <div class="concept-dock-brand">
+      <div class="concept-logo-pill">BeautyShop</div>
+      <div class="concept-dock-title">
+        UI Hồ Sơ Cá Nhân
+        <span>- Bố Cục Thành Viên BeautyShop (Đen • Trắng • Hồng)</span>
+      </div>
+    </div>
+
+    <div class="concept-dock-actions">
+      <!-- SIDEBAR TOGGLE BUTTON -->
+      <button type="button" class="concept-control-btn" onclick="toggleSidebar()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="1"/><path d="M9 3v18"/></svg>
+        <span id="dock-toggle-text">Thu Gọn Menu</span>
+      </button>
+
+      <!-- SIMULATE LOADING BUTTON -->
+      <button type="button" class="concept-control-btn is-highlight" onclick="simulateLoading()">
+        <svg id="shimmer-spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+        <span>Test Loading Shimmer</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- FULL VIEW BODY CONTAINER -->
+  <main class="profile-full-canvas">
+
+    <!-- 1. HERO BAR - LIỀN KHỐI BEAUTYSHOP CLUB STYLE -->
+    <header class="pf-hero-card">
+      <!-- Cột 1: Thông tin người dùng & Hạng -->
+      <div class="pf-hero-identity">
+        <div class="pf-hero-avatar-box">
+          <div class="pf-hero-avatar-img">NN</div>
+          <div class="pf-hero-avatar-badge" title="Tài khoản đã xác thực">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+        <div class="pf-hero-meta">
+          <h1 class="pf-hero-name">
+            <span>Nguyễn Nam</span>
+          </h1>
+          <div class="pf-hero-phone">
+            <span>090*****50</span>
+          </div>
+          <div class="pf-hero-tags-row">
+            <span class="pf-tier-tag pf-tier-tag-black">VIP DIAMOND</span>
+            <span class="pf-tier-tag pf-tier-tag-pink">BEAUTYSHOP CLUB</span>
+          </div>
+          <div class="pf-hero-update-text">
+            Cập nhật xét hạng sau: 01/01/2027
+          </div>
+        </div>
+      </div>
+
+      <!-- Cột 2: Đơn hàng đã mua -->
+      <div class="pf-hero-metric-cell">
+        <div class="pf-hero-metric-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        </div>
+        <div>
+          <div class="pf-hero-metric-val">14</div>
+          <div class="pf-hero-metric-label">Tổng số đơn hàng đã mua</div>
+        </div>
+      </div>
+
+      <!-- Cột 3: Tổng tích lũy & Tiến trình thăng hạng -->
+      <div class="pf-hero-spending-cell">
+        <div class="pf-hero-spending-header">
+          <span class="pf-hero-spending-amount">12.850.000đ</span>
+          <span class="pf-hero-spending-period">Từ 01/01/2026</span>
+        </div>
+        <div class="pf-hero-progress-track">
+          <div class="pf-hero-progress-fill" style="width: 78%;"></div>
+        </div>
+        <div class="pf-hero-spending-note">
+          <span>Tiến độ: <strong>78%</strong></span>
+          <span>Cần chi tiêu thêm <strong>2.150.000đ</strong> lên Hạng Elite</span>
+        </div>
+      </div>
+
+      <!-- Cột 4: Kênh thành viên & Switcher -->
+      <div class="pf-hero-channel-cell">
+        <div class="pf-channel-label">Bạn đang ở kênh thành viên</div>
+        <div class="pf-channel-pill" title="Hệ thống cửa hàng & Spa BeautyShop">
+          <div class="pf-channel-logo">BS</div>
+          <span>BeautyShop VN</span>
+        </div>
+        <a href="#storefront" class="pf-channel-url">
+          <span>beautyshop.vn</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+      </div>
+    </header>
+
+    <!-- 2. QUICK-ACTION CHIPS -->
+    <nav class="pf-quick-chips-bar" aria-label="Thao tác nhanh hồ sơ">
+      <button type="button" class="pf-quick-chip is-active" onclick="switchActiveTab('overview')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+        <span>Tổng quan</span>
+      </button>
+      <button type="button" class="pf-quick-chip" onclick="switchActiveTab('orders')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/></svg>
+        <span>Lịch sử mua hàng (14)</span>
+      </button>
+      <button type="button" class="pf-quick-chip" onclick="switchActiveTab('treatments')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Liệu trình & Vé Spa (3)</span>
+      </button>
+      <button type="button" class="pf-quick-chip" onclick="switchActiveTab('vouchers')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+        <span>Mã giảm giá (5)</span>
+      </button>
+      <button type="button" class="pf-quick-chip" onclick="switchActiveTab('skin')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        <span>Hồ sơ da & Phác đồ</span>
+      </button>
+      <button type="button" class="pf-quick-chip" onclick="switchActiveTab('addresses')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>Sổ địa chỉ</span>
+      </button>
+      <button type="button" class="pf-quick-chip" onclick="switchActiveTab('settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Liên kết & Bảo mật</span>
+      </button>
+    </nav>
+
+    <!-- 3. 2-COLUMN WORKSPACE WITH COLLAPSIBLE SIDEBAR -->
+    <section class="pf-workspace-layout" id="workspace-container">
+
+      <!-- LEFT SIDEBAR MENU -->
+      <aside class="pf-sidebar" aria-label="Menu tài khoản">
+        <div class="pf-sidebar-header">
+          <span class="pf-sidebar-title">Menu Thành Viên</span>
+          <button
+            type="button"
+            class="pf-sidebar-toggle-btn"
+            title="Đóng / Mở Menu"
+            onclick="toggleSidebar()"
+          >
+            <svg id="sidebar-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+        </div>
+
+        <ul class="pf-sidebar-nav-list">
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn is-active"
+              data-tab="overview"
+              data-tooltip="Tổng quan"
+              onclick="switchActiveTab('overview')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span class="pf-label">Tổng quan</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tab="orders"
+              data-tooltip="Lịch sử mua hàng"
+              onclick="switchActiveTab('orders')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              <span class="pf-label">Lịch sử mua hàng</span>
+              <span class="pf-sidebar-badge">14</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tab="treatments"
+              data-tooltip="Liệu trình & Vé Spa"
+              onclick="switchActiveTab('treatments')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span class="pf-label">Liệu trình & Vé Spa</span>
+              <span class="pf-sidebar-badge">3</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tab="vouchers"
+              data-tooltip="Ưu đãi & Voucher"
+              onclick="switchActiveTab('vouchers')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+              <span class="pf-label">Ưu đãi & Voucher</span>
+              <span class="pf-sidebar-badge">5</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tab="skin"
+              data-tooltip="Hồ sơ da & Phác đồ"
+              onclick="switchActiveTab('skin')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              <span class="pf-label">Hồ sơ da & Phác đồ</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tab="addresses"
+              data-tooltip="Sổ địa chỉ"
+              onclick="switchActiveTab('addresses')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span class="pf-label">Sổ địa chỉ</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tab="settings"
+              data-tooltip="Thông tin & Bảo mật"
+              onclick="switchActiveTab('settings')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span class="pf-label">Thông tin & Bảo mật</span>
+            </button>
+          </li>
+
+          <div class="pf-sidebar-divider"></div>
+
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tooltip="Hệ thống chi nhánh"
+              onclick="alert('Đang mở bản đồ 12 chi nhánh BeautyShop')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span class="pf-label">Hệ thống chi nhánh</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn"
+              data-tooltip="Chính sách bảo hành"
+              onclick="alert('Mở tài liệu cam kết chất lượng mỹ phẩm & dịch vụ Spa')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span class="pf-label">Chính sách cam kết</span>
+            </button>
+          </li>
+          <li class="pf-sidebar-nav-item">
+            <button
+              type="button"
+              class="pf-sidebar-btn pf-sidebar-danger"
+              data-tooltip="Đăng xuất"
+              onclick="alert('Bạn đã nhấp đăng xuất an toàn')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span class="pf-label">Đăng xuất</span>
+            </button>
+          </li>
+        </ul>
+      </aside>
+
+      <!-- RIGHT CONTENT CANVAS -->
+      <section class="pf-content-canvas">
+
+        <!-- TAB ACTION HEADER -->
+        <header class="pf-tab-action-header">
+          <div class="pf-tab-title-group">
+            <h2 class="pf-tab-main-heading" id="display-tab-title">
+              <span>Tổng quan tài khoản</span>
+            </h2>
+            <p class="pf-tab-sub-heading" id="display-tab-sub">
+              Tổng hợp đơn hàng gần đây, ưu đãi và gói liệu trình bảo hành cam kết.
+            </p>
+          </div>
+
+          <div class="pf-tab-actions-group">
+            <button type="button" class="pf-btn-outline" onclick="simulateLoading()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+              <span>Làm mới</span>
+            </button>
+            <button type="button" class="pf-btn-primary" onclick="alert('Mở cổng đặt lịch hẹn Spa')">
+              <span>Đặt Lịch Hẹn Spa</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- SKELETON SHIMMER LOADER -->
+        <div class="pf-skeleton-panel" id="loading-skeleton" style="display: none;">
+          <div class="pf-shimmer" style="height: 120px; width: 100%;"></div>
+          <div style="display: grid; grid-template-columns: 1.55fr 1.05fr; gap: 20px;">
+            <div class="pf-shimmer" style="height: 220px;"></div>
+            <div class="pf-shimmer" style="height: 220px;"></div>
+          </div>
+          <div class="pf-shimmer" style="height: 140px; width: 100%;"></div>
+        </div>
+
+        <!-- TAB CONTENT BODY -->
+        <div class="pf-tab-body" id="tab-content-container">
+
+          <!-- TAB 1: OVERVIEW BENTO GRID -->
+          <div class="tab-pane-view" id="view-overview">
+            <div class="pf-bento-grid">
+
+              <!-- CARD 1: ĐƠN HÀNG GẦN ĐÂY -->
+              <article class="pf-bento-card">
+                <header class="pf-bento-header">
+                  <h3 class="pf-bento-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    <span>Đơn hàng gần đây</span>
+                  </h3>
+                  <span class="pf-status-badge-green">ĐÃ GIAO THÀNH CÔNG</span>
+                </header>
+                <div class="pf-bento-body">
+                  <div class="pf-order-snippet">
+                    <div class="pf-order-thumb">
+                      <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=150&auto=format&fit=crop&q=80" alt="Mỹ phẩm">
+                    </div>
+                    <div class="pf-order-meta">
+                      <div class="pf-order-top-row">
+                        <span class="pf-order-code">Đơn hàng: #BS2026111395</span>
+                        <span style="font-size: 12px; color: var(--pf-text-dim);">13/11/2026</span>
+                      </div>
+                      <div class="pf-order-name">TINH CHẤT PHỤC HỒI CHUYÊN SÂU ADVANCED NIGHT PEPTIDE 50ML</div>
+                      <div class="pf-order-bot-row">
+                        <span class="pf-order-price">2.450.000đ</span>
+                        <button type="button" class="pf-order-link" onclick="switchActiveTab('orders')">
+                          <span>Xem chi tiết</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="pf-order-snippet">
+                    <div class="pf-order-thumb">
+                      <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=150&auto=format&fit=crop&q=80" alt="Kem dưỡng">
+                    </div>
+                    <div class="pf-order-meta">
+                      <div class="pf-order-top-row">
+                        <span class="pf-order-code">Đơn hàng: #BS2026110821</span>
+                        <span style="font-size: 12px; color: var(--pf-text-dim);">08/11/2026</span>
+                      </div>
+                      <div class="pf-order-name">KEM DƯỠNG TRẺ HÓA TẾ BÀO GỐC ROSE CAVIAR ESSENCE 60G</div>
+                      <div class="pf-order-bot-row">
+                        <span class="pf-order-price">1.890.000đ</span>
+                        <button type="button" class="pf-order-link" onclick="switchActiveTab('orders')">
+                          <span>Xem chi tiết</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <footer class="pf-bento-footer">
+                  <span style="font-size: 13px; color: var(--pf-text-dim);">Vận chuyển hỏa tốc nội thành TP.HCM</span>
+                  <button type="button" class="pf-btn-outline" style="padding: 6px 14px; font-size: 12.5px;" onclick="switchActiveTab('orders')">Toàn bộ 14 đơn hàng</button>
+                </footer>
+              </article>
+
+              <!-- CARD 2: ƯU ĐÃI CỦA BẠN (VOUCHERS) -->
+              <article class="pf-bento-card">
+                <header class="pf-bento-header">
+                  <h3 class="pf-bento-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+                    <span>Ưu đãi của bạn</span>
+                  </h3>
+                  <span class="pf-tier-tag pf-tier-tag-pink">5 MÃ KHẢ DỤNG</span>
+                </header>
+                <div class="pf-bento-body">
+                  <div class="pf-voucher-item">
+                    <div class="pf-voucher-meta">
+                      <span class="pf-voucher-badge">BS-VIP300K</span>
+                      <div class="pf-voucher-desc">Giảm 300.000đ khi đặt lịch Spa từ 1.500.000đ</div>
+                      <div class="pf-voucher-date">HSD: 30/11/2026 • Áp dụng toàn hệ thống</div>
+                    </div>
+                    <button type="button" class="pf-btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="alert('Đã lưu mã giảm giá!')">Dùng Ngay</button>
+                  </div>
+
+                  <div class="pf-voucher-item">
+                    <div class="pf-voucher-meta">
+                      <span class="pf-voucher-badge">BS-FREESHIP</span>
+                      <div class="pf-voucher-desc">Miễn phí giao hàng hỏa tốc nội thành</div>
+                      <div class="pf-voucher-date">HSD: 31/12/2026 • Áp dụng mọi đơn mỹ phẩm</div>
+                    </div>
+                    <button type="button" class="pf-btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="alert('Mã Freeship đã sẵn sàng!')">Dùng Ngay</button>
+                  </div>
+                </div>
+                <footer class="pf-bento-footer">
+                  <span style="font-size: 12.5px; color: var(--pf-text-dim);">Tự động áp dụng mã tốt nhất khi thanh toán</span>
+                  <button type="button" class="pf-order-link" onclick="switchActiveTab('vouchers')">Xem tất cả ưu đãi</button>
+                </footer>
+              </article>
+
+              <!-- CARD 3: GÓI CAM KẾT & LIỆU TRÌNH SPA -->
+              <article class="pf-bento-card">
+                <header class="pf-bento-header">
+                  <h3 class="pf-bento-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Gói cam kết & Liệu trình Spa</span>
+                  </h3>
+                  <span class="pf-pill-pink">CÒN 3/5 BUỔI</span>
+                </header>
+                <div class="pf-bento-body">
+                  <div class="pf-treatment-card">
+                    <div class="pf-treatment-row">
+                      <span class="pf-treatment-title">Liệu Trình Tái Tạo Da Chuyên Sâu Bio-Peel 5 Buổi</span>
+                      <span style="font-size: 12px; color: var(--pf-text-dim);">Vé #SPA-TK-882</span>
+                    </div>
+                    <div class="pf-facts-3col">
+                      <div class="pf-fact-cell">
+                        <span class="pf-fact-lbl">Còn lại</span>
+                        <span class="pf-fact-val" style="color: var(--pf-pink);">3 buổi</span>
+                      </div>
+                      <div class="pf-fact-cell">
+                        <span class="pf-fact-lbl">Đã thực hiện</span>
+                        <span class="pf-fact-val">2 buổi</span>
+                      </div>
+                      <div class="pf-fact-cell">
+                        <span class="pf-fact-lbl">Hạn dùng</span>
+                        <span class="pf-fact-val">15/03/2027</span>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+                      <span style="color: var(--pf-text-muted);">Master Lan Anh phụ trách • Chi nhánh Quận 1</span>
+                      <button type="button" class="pf-btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="switchActiveTab('treatments')">Đặt Lịch Bằng Vé</button>
+                    </div>
+                  </div>
+                </div>
+                <footer class="pf-bento-footer">
+                  <span style="font-size: 12.5px; color: var(--pf-text-dim);">Cam kết hoàn tiền 100% nếu không cải thiện liệu trình</span>
+                  <button type="button" class="pf-btn-outline" style="padding: 6px 14px; font-size: 12.5px;" onclick="switchActiveTab('treatments')">Quản lý ví vé (3)</button>
+                </footer>
+              </article>
+
+              <!-- CARD 4: LỊCH HẸN SẮP TỚI -->
+              <article class="pf-bento-card">
+                <header class="pf-bento-header">
+                  <h3 class="pf-bento-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span>Lịch hẹn sắp tới</span>
+                  </h3>
+                  <span class="pf-status-badge-green">ĐÃ XÁC NHẬN</span>
+                </header>
+                <div class="pf-bento-body">
+                  <div class="pf-treatment-card">
+                    <div class="pf-treatment-row">
+                      <span class="pf-treatment-title">Thứ 7, 21/11/2026 • 14:30</span>
+                      <span style="font-size: 12px; color: var(--pf-text-dim);">SPA-APT-#402</span>
+                    </div>
+                    <p style="font-size: 13.5px; color: var(--pf-text-noir); font-weight: 600;">Liệu trình Tái tạo màng Lipid Bio-Peel Nano Buổi 3</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                      <span style="font-size: 12.5px; color: var(--pf-text-muted);">Phòng VIP 02 • Master Lan Anh</span>
+                      <button type="button" class="pf-btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="alert('Mở chi tiết lịch hẹn')">Chi Tiết Lịch</button>
+                    </div>
+                  </div>
+                </div>
+                <footer class="pf-bento-footer">
+                  <span style="font-size: 12.5px; color: var(--pf-text-dim);">Nhắc hẹn tự động qua tin nhắn và Zalo trước 2 giờ</span>
+                  <button type="button" class="pf-btn-outline" style="padding: 6px 14px; font-size: 12.5px;" onclick="alert('Đã đồng bộ Google Calendar')">Lưu Vào Lịch</button>
+                </footer>
+              </article>
+
+            </div>
+
+            <!-- FINANCIAL & ORDER STATISTICS ROW -->
+            <div class="pf-stats-row" aria-label="Thống kê giao dịch tài khoản">
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Tổng giao dịch tích lũy</span>
+                <span class="pf-stat-val">14 đơn</span>
+              </div>
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Đã thanh toán thực tế</span>
+                <span class="pf-stat-val is-pink">12.850.000đ</span>
+              </div>
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Đã hoàn tiền</span>
+                <span class="pf-stat-val">0đ</span>
+              </div>
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Chi tiêu thực trả</span>
+                <span class="pf-stat-val">12.850.000đ</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: ORDERS -->
+          <div class="tab-pane-view" id="view-orders" style="display: none;">
+            <div class="pf-bento-card" style="padding: 24px;">
+              <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Danh Sách Đơn Mua Sắm Gần Đây</h3>
+              <div class="pf-order-snippet" style="margin-bottom: 14px;">
+                <div class="pf-order-thumb">
+                  <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=150&auto=format&fit=crop&q=80" alt="Mỹ phẩm">
+                </div>
+                <div class="pf-order-meta">
+                  <div class="pf-order-top-row">
+                    <span class="pf-order-code">Đơn hàng #BS2026111395</span>
+                    <span class="pf-status-badge-green">ĐÃ GIAO HÀNG</span>
+                  </div>
+                  <div class="pf-order-name">TINH CHẤT PHỤC HỒI CHUYÊN SÂU ADVANCED NIGHT PEPTIDE 50ML</div>
+                  <div class="pf-order-bot-row">
+                    <span class="pf-order-price">2.450.000đ</span>
+                    <button type="button" class="pf-btn-primary" style="padding: 6px 14px; font-size: 12px;">Mua Lại Đơn Này</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pf-order-snippet">
+                <div class="pf-order-thumb">
+                  <img src="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=150&auto=format&fit=crop&q=80" alt="Mỹ phẩm">
+                </div>
+                <div class="pf-order-meta">
+                  <div class="pf-order-top-row">
+                    <span class="pf-order-code">Đơn hàng #BS2026110821</span>
+                    <span class="pf-status-badge-green">ĐÃ GIAO HÀNG</span>
+                  </div>
+                  <div class="pf-order-name">KEM DƯỠNG TRẺ HÓA TẾ BÀO GỐC ROSE CAVIAR ESSENCE 60G</div>
+                  <div class="pf-order-bot-row">
+                    <span class="pf-order-price">1.890.000đ</span>
+                    <button type="button" class="pf-btn-outline" style="padding: 6px 14px; font-size: 12px;">Xem Hóa Đơn</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: TREATMENTS -->
+          <div class="tab-pane-view" id="view-treatments" style="display: none;">
+            <div class="pf-bento-grid" style="grid-template-columns: 1fr 1fr;">
+              <div class="pf-bento-card" style="padding: 24px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: var(--pf-pink); margin-bottom: 8px;">Gói Bio-Peel Tái Tạo Da Chuyên Sâu</h3>
+                <p style="font-size: 13.5px; color: var(--pf-text-muted); margin-bottom: 16px;">Liệu trình phục hồi màng lipid đa tầng. Đã thực hiện 2/5 buổi.</p>
+                <button type="button" class="pf-btn-primary">Đặt Buổi Tiếp Theo</button>
+              </div>
+              <div class="pf-bento-card" style="padding: 24px;">
+                <h3 style="font-size: 16px; font-weight: 800; color: var(--pf-text-noir); margin-bottom: 8px;">Gói Điện Di C Tươi Dưỡng Sáng</h3>
+                <p style="font-size: 13.5px; color: var(--pf-text-muted); margin-bottom: 16px;">Hoàn tất 3/3 buổi. Đánh giá kết quả: 5.0 sao.</p>
+                <button type="button" class="pf-btn-outline">Khám Phá Gói Mới</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 4: VOUCHERS -->
+          <div class="tab-pane-view" id="view-vouchers" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="pf-voucher-item" style="padding: 20px;">
+                <div class="pf-voucher-meta">
+                  <span class="pf-voucher-badge">BS-VIP300K</span>
+                  <div class="pf-voucher-desc" style="font-size: 15px;">Giảm 300.000đ khi đặt lịch Spa từ 1.500.000đ</div>
+                  <div class="pf-voucher-date">HSD: 30/11/2026 • Áp dụng toàn hệ thống</div>
+                </div>
+                <button type="button" class="pf-btn-primary">Sao Chép Mã</button>
+              </div>
+              <div class="pf-voucher-item" style="padding: 20px;">
+                <div class="pf-voucher-meta">
+                  <span class="pf-voucher-badge">BS-FREESHIP</span>
+                  <div class="pf-voucher-desc" style="font-size: 15px;">Miễn phí giao hàng hỏa tốc nội thành</div>
+                  <div class="pf-voucher-date">HSD: 31/12/2026 • Áp dụng mọi đơn mỹ phẩm</div>
+                </div>
+                <button type="button" class="pf-btn-primary">Sao Chép Mã</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 5: SKIN -->
+          <div class="tab-pane-view" id="view-skin" style="display: none;">
+            <div class="pf-stats-row" style="margin-top: 0;">
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Loại da nhận diện</span>
+                <span class="pf-stat-val" style="font-size: 20px;">Hỗn Hợp Dầu</span>
+              </div>
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Độ ẩm biểu bì</span>
+                <span class="pf-stat-val is-pink">74%</span>
+              </div>
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Mức độ nhạy cảm</span>
+                <span class="pf-stat-val">Thấp</span>
+              </div>
+              <div class="pf-stat-box">
+                <span class="pf-stat-lbl">Sắc tố melanin</span>
+                <span class="pf-stat-val">Cải Thiện +35%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 6: ADDRESSES -->
+          <div class="tab-pane-view" id="view-addresses" style="display: none;">
+            <div class="pf-bento-card" style="padding: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong style="font-size: 15px;">Nguyễn Nam (Địa chỉ chính)</strong>
+                <span class="pf-tier-tag pf-tier-tag-pink">MẶC ĐỊNH</span>
+              </div>
+              <p style="font-size: 13.5px; color: var(--pf-text-muted);">Số 124 Đường Pasteur, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh</p>
+              <p style="font-size: 13.5px; color: var(--pf-text-muted); margin-top: 4px;">Điện thoại: 090*****50</p>
+            </div>
+          </div>
+
+          <!-- TAB 7: SETTINGS -->
+          <div class="tab-pane-view" id="view-settings" style="display: none;">
+            <div class="pf-bento-card" style="padding: 24px;">
+              <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;">Bảo Mật & Thông Tin Đăng Nhập</h3>
+              <div style="display: flex; gap: 12px;">
+                <button type="button" class="pf-btn-primary">Đổi Mật Khẩu</button>
+                <button type="button" class="pf-btn-outline">Kích Hoạt Xác Thực 2FA</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+    </section>
+
+  </main>
+
+  <script>
+    let isCollapsed = false;
+
+    function toggleSidebar() {
+      const layout = document.getElementById('workspace-container');
+      const icon = document.getElementById('sidebar-icon');
+      const toggleText = document.getElementById('dock-toggle-text');
+
+      isCollapsed = !isCollapsed;
+      layout.classList.toggle('is-collapsed', isCollapsed);
+
+      if (isCollapsed) {
+        icon.innerHTML = '<path d="m9 18 6-6-6-6"/>';
+        toggleText.textContent = 'Mở Rộng Menu';
+      } else {
+        icon.innerHTML = '<path d="m15 18-6-6 6-6"/>';
+        toggleText.textContent = 'Thu Gọn Menu';
+      }
+    }
+
+    const tabDescriptions = {
+      overview: { title: 'Tổng quan tài khoản', sub: 'Tổng hợp đơn hàng gần đây, ưu đãi và gói liệu trình bảo hành cam kết.' },
+      orders: { title: 'Lịch sử mua hàng', sub: 'Lịch sử đơn mua sắm mỹ phẩm, mã vận đơn và hóa đơn thanh toán.' },
+      treatments: { title: 'Liệu trình & Vé Spa', sub: 'Ví vé điện tử gói liệu trình và suất chăm sóc da đã thanh toán.' },
+      vouchers: { title: 'Ưu đãi & Voucher', sub: 'Kho mã giảm giá chiết khấu thành viên và freeship toàn quốc.' },
+      skin: { title: 'Hồ sơ da & Phác đồ', sub: 'Hồ sơ soi da phân tích chỉ số độ ẩm, sắc tố và phác đồ điều trị.' },
+      addresses: { title: 'Sổ địa chỉ', sub: 'Danh bạ sổ địa chỉ giao nhận mỹ phẩm hỏa tốc.' },
+      settings: { title: 'Thông tin & Bảo mật', sub: 'Quản lý thông tin tài khoản, mật khẩu và xác thực bảo mật 2 lớp.' },
+    };
+
+    function switchActiveTab(tabKey) {
+      // Sidebar button
+      document.querySelectorAll('.pf-sidebar-btn').forEach(btn => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-tab') === tabKey);
+      });
+
+      // Quick chips
+      document.querySelectorAll('.pf-quick-chip').forEach(chip => {
+        const text = chip.innerText.toLowerCase();
+        chip.classList.toggle('is-active', 
+          (tabKey === 'overview' && text.includes('tổng quan')) ||
+          (tabKey === 'orders' && text.includes('lịch sử')) ||
+          (tabKey === 'treatments' && text.includes('liệu trình')) ||
+          (tabKey === 'vouchers' && text.includes('mã giảm')) ||
+          (tabKey === 'skin' && text.includes('hồ sơ da')) ||
+          (tabKey === 'addresses' && text.includes('sổ địa chỉ')) ||
+          (tabKey === 'settings' && text.includes('liên kết'))
+        );
+      });
+
+      // Header title & sub
+      if (tabDescriptions[tabKey]) {
+        document.getElementById('display-tab-title').textContent = tabDescriptions[tabKey].title;
+        document.getElementById('display-tab-sub').textContent = tabDescriptions[tabKey].sub;
+      }
+
+      // Hide all panes & show active
+      document.querySelectorAll('.tab-pane-view').forEach(view => view.style.display = 'none');
+      const target = document.getElementById(`view-${tabKey}`);
+      if (target) {
+        target.style.display = 'block';
+      }
+    }
+
+    function simulateLoading() {
+      const container = document.getElementById('tab-content-container');
+      const skeleton = document.getElementById('loading-skeleton');
+      const icon = document.getElementById('shimmer-spin-icon');
+
+      icon.style.animation = 'spin 0.8s linear infinite';
+      container.style.display = 'none';
+      skeleton.style.display = 'flex';
+
+      setTimeout(() => {
+        skeleton.style.display = 'none';
+        container.style.display = 'block';
+        icon.style.animation = 'none';
+      }, 700);
+    }
+  </script>
+</body>
+</html>

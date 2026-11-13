@@ -1,0 +1,1120 @@
+/* ==========================================================================
+   BEAUTYSHOP CUSTOMER PROFILE - MONOLITHIC SYSTEM HARMONY
+   Colors strictly mapped to BeautyShop Customer Design Tokens:
+   - Primary Wine / Berry: #8C2A47 (Deep Velvet Berry / Announcement Wine)
+   - Secondary Rose: #AD3F61 (Blush Rose Accent)
+   - Rose Light: #FFF0F3 (Soft Milk Blush / Active Highlight)
+   - Canvas: #FAF7F8 (System Storefront Canvas)
+   - Surface: #FFFFFF (Pure Crisp White Cards)
+   - Border: #F0DEE3 (System Rose-Tinted Structural Border)
+   - Text Main: #1F2937 (High-Contrast Charcoal Text)
+   - Text Muted: #4B5563 / #6B7280
+   - Sharp Architectural Corners: border-radius: 4px / 2px
+   ========================================================================== */
+
+.customer-profile-page {
+  /* System Brand Tokens */
+  --pf-canvas: #FAF7F8;
+  --pf-surface: #FFFFFF;
+  --pf-card: #FFFFFF;
+  --pf-subtle: #FAF5F7;
+  --pf-brand-wine: #8C2A47;
+  --pf-brand-wine-dark: #6F1D34;
+  --pf-brand-rose: #AD3F61;
+  --pf-brand-rose-light: #FFF0F3;
+  --pf-brand-rose-soft: rgba(173, 63, 97, 0.08);
+  --pf-brand-glow: rgba(140, 42, 71, 0.18);
+  --pf-text-main: #1F2937;
+  --pf-text-secondary: #374151;
+  --pf-text-muted: #4B5563;
+  --pf-text-dim: #6B7280;
+  --pf-border: #F0DEE3;
+  --pf-border-hover: #AD3F61;
+  --pf-green: #059669;
+  --pf-green-bg: #ECFDF5;
+  --pf-green-border: #A7F3D0;
+  --pf-radius: 4px;
+  --pf-radius-sm: 2px;
+  --pf-shadow: 0 2px 8px rgba(140, 42, 71, 0.04);
+  --pf-shadow-hover: 0 8px 24px rgba(140, 42, 71, 0.08);
+
+  background-color: var(--pf-canvas);
+  color: var(--pf-text-main);
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 24px clamp(16px, 2.5vw, 40px) 64px;
+  font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-wrap: anywhere;
+}
+
+/* Full View Body Shell */
+.customer-profile-page .profile-shell {
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ==========================================================================
+   1. HERO BAR - BEAUTYSHOP MEMBER CLUB (CLEAN MONOLITHIC WHITE SURFACE)
+   ========================================================================== */
+.pf-hero-card {
+  background: var(--pf-surface);
+  color: var(--pf-text-main);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 24px 32px;
+  display: grid;
+  grid-template-columns: 1.45fr 1fr 1.5fr auto;
+  align-items: center;
+  gap: 24px;
+  box-shadow: var(--pf-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Left Accent Line with Brand Gradient */
+.pf-hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--pf-brand-wine) 0%, var(--pf-brand-rose) 100%);
+}
+
+/* Identity Column */
+.pf-hero-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.pf-hero-avatar-box {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--pf-radius);
+  background: var(--pf-brand-rose-light);
+  border: 2px solid var(--pf-border);
+  padding: 2px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.pf-hero-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--pf-radius-sm);
+  object-fit: cover;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pf-brand-wine);
+  font-weight: 800;
+  font-size: 26px;
+  border: 1px solid var(--pf-border);
+}
+
+.pf-hero-avatar-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 22px;
+  height: 22px;
+  background: var(--pf-brand-wine);
+  border: 2px solid #FFFFFF;
+  border-radius: var(--pf-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+}
+
+.pf-hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pf-hero-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--pf-text-main);
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pf-hero-phone {
+  font-size: 13.5px;
+  color: var(--pf-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-hero-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.pf-tier-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--pf-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pf-tier-tag-black {
+  background: var(--pf-text-main);
+  color: #FFFFFF;
+  border: 1px solid var(--pf-text-main);
+}
+
+.pf-tier-tag-pink {
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+  border: 1px solid var(--pf-border);
+}
+
+.pf-hero-update-text {
+  font-size: 11.5px;
+  color: var(--pf-text-dim);
+  margin-top: 3px;
+}
+
+/* Orders Metric Column */
+.pf-hero-metric-cell {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  border-left: 1px solid var(--pf-border);
+}
+
+.pf-hero-metric-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--pf-radius);
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--pf-border);
+}
+
+.pf-hero-metric-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--pf-text-main);
+  line-height: 1.1;
+}
+
+.pf-hero-metric-label {
+  font-size: 13px;
+  color: var(--pf-text-muted);
+  margin-top: 3px;
+}
+
+/* Spending & Progress Column */
+.pf-hero-spending-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 20px;
+  border-left: 1px solid var(--pf-border);
+}
+
+.pf-hero-spending-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pf-hero-spending-amount {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--pf-brand-wine);
+  letter-spacing: -0.5px;
+}
+
+.pf-hero-spending-period {
+  font-size: 12px;
+  color: var(--pf-text-muted);
+  background: var(--pf-canvas);
+  border: 1px solid var(--pf-border);
+  padding: 2px 8px;
+  border-radius: var(--pf-radius-sm);
+}
+
+.pf-hero-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--pf-border);
+  border-radius: var(--pf-radius-sm);
+  overflow: hidden;
+}
+
+.pf-hero-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pf-brand-rose) 0%, var(--pf-brand-wine) 100%);
+  border-radius: var(--pf-radius-sm);
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pf-hero-spending-note {
+  font-size: 12px;
+  color: var(--pf-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pf-hero-spending-note strong {
+  color: var(--pf-brand-wine);
+}
+
+/* Channel & Link Column */
+.pf-hero-channel-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  border-left: 1px solid var(--pf-border);
+  padding-left: 20px;
+}
+
+.pf-channel-label {
+  font-size: 11px;
+  color: var(--pf-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+}
+
+.pf-channel-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--pf-canvas);
+  border: 1px solid var(--pf-border);
+  padding: 7px 14px;
+  border-radius: var(--pf-radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--pf-text-main);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pf-channel-pill:hover {
+  border-color: var(--pf-brand-wine);
+  background: var(--pf-brand-rose-light);
+}
+
+.pf-channel-logo {
+  width: 24px;
+  height: 24px;
+  background: var(--pf-brand-wine);
+  color: #FFFFFF;
+  border-radius: var(--pf-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pf-channel-url {
+  font-size: 12px;
+  color: var(--pf-brand-wine);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.pf-channel-url:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Hero */
+@media (max-width: 1280px) {
+  .pf-hero-card {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .pf-hero-channel-cell {
+    grid-column: span 2;
+    align-items: flex-start;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--pf-border);
+    padding-top: 16px;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .pf-hero-card {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  .pf-hero-metric-cell, .pf-hero-spending-cell {
+    border-left: none;
+    border-top: 1px solid var(--pf-border);
+    padding: 16px 0 0 0;
+  }
+  .pf-hero-channel-cell {
+    grid-column: span 1;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ==========================================================================
+   2. HORIZONTAL QUICK-ACTION CHIPS (MONOLITHIC HARMONY)
+   ========================================================================== */
+.pf-quick-chips-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.pf-quick-chips-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.pf-quick-chip {
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--pf-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(140, 42, 71, 0.03);
+  flex-shrink: 0;
+}
+
+.pf-quick-chip svg {
+  color: var(--pf-brand-rose);
+  transition: transform 0.2s;
+}
+
+.pf-quick-chip:hover {
+  border-color: var(--pf-brand-wine);
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+  transform: translateY(-1px);
+}
+
+.pf-quick-chip:hover svg {
+  transform: scale(1.1);
+  color: var(--pf-brand-wine);
+}
+
+/* Active Chip matches Announcement Wine */
+.pf-quick-chip.is-active {
+  background: var(--pf-brand-wine);
+  color: #FFFFFF;
+  border-color: var(--pf-brand-wine);
+  box-shadow: 0 4px 14px rgba(140, 42, 71, 0.22);
+}
+
+.pf-quick-chip.is-active svg {
+  color: #FFFFFF;
+}
+
+/* ==========================================================================
+   3. 2-COLUMN WORKSPACE WITH COLLAPSIBLE SIDEBAR & DYNAMIC CANVAS
+   ========================================================================== */
+.pf-workspace-layout {
+  display: grid;
+  grid-template-columns: var(--pf-sidebar-w, 280px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  transition: grid-template-columns 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pf-workspace-layout.is-collapsed {
+  --pf-sidebar-w: 76px;
+}
+
+/* SIDEBAR */
+.pf-sidebar {
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 14px 10px;
+  box-shadow: var(--pf-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 24px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pf-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 14px 12px;
+  border-bottom: 1px solid var(--pf-border);
+  margin-bottom: 6px;
+}
+
+.pf-sidebar-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--pf-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.2s;
+}
+
+.pf-workspace-layout.is-collapsed .pf-sidebar-title {
+  opacity: 0;
+  width: 0;
+  display: none;
+}
+
+.pf-sidebar-toggle-btn {
+  background: var(--pf-canvas);
+  border: 1px solid var(--pf-border);
+  color: var(--pf-text-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--pf-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.pf-sidebar-toggle-btn:hover {
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+  border-color: var(--pf-brand-wine);
+}
+
+.pf-sidebar-nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.pf-sidebar-nav-item {
+  position: relative;
+}
+
+.pf-sidebar-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 12px 16px;
+  border-radius: var(--pf-radius);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pf-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.pf-sidebar-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--pf-text-dim);
+  transition: all 0.2s;
+}
+
+.pf-sidebar-btn span.pf-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.2s;
+}
+
+.pf-sidebar-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+  padding: 2px 8px;
+  border-radius: var(--pf-radius-sm);
+  border: 1px solid var(--pf-border);
+}
+
+.pf-sidebar-btn:hover {
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+}
+
+.pf-sidebar-btn:hover svg {
+  color: var(--pf-brand-wine);
+  transform: scale(1.1);
+}
+
+/* Active Nav Item - CellphoneS style with Brand Wine */
+.pf-sidebar-btn.is-active {
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+  font-weight: 800;
+}
+
+.pf-sidebar-btn.is-active svg {
+  color: var(--pf-brand-wine);
+}
+
+.pf-sidebar-btn.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  background: var(--pf-brand-wine);
+  border-radius: 0 var(--pf-radius-sm) var(--pf-radius-sm) 0;
+}
+
+/* Collapsed Sidebar Mode */
+.pf-workspace-layout.is-collapsed .pf-sidebar-btn {
+  padding: 12px;
+  justify-content: center;
+}
+
+.pf-workspace-layout.is-collapsed .pf-sidebar-btn span.pf-label,
+.pf-workspace-layout.is-collapsed .pf-sidebar-badge {
+  display: none;
+}
+
+.pf-workspace-layout.is-collapsed .pf-sidebar-btn:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 100%;
+  margin-left: 12px;
+  background: var(--pf-text-main);
+  color: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: var(--pf-radius);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.pf-sidebar-divider {
+  height: 1px;
+  background: var(--pf-border);
+  margin: 10px 8px;
+}
+
+.pf-sidebar-danger {
+  color: #DC2626 !important;
+}
+
+.pf-sidebar-danger svg {
+  color: #DC2626 !important;
+}
+
+.pf-sidebar-danger:hover {
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+
+/* ==========================================================================
+   4. CONTENT WORKSPACE CANVAS
+   ========================================================================== */
+.pf-content-canvas {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Top Tab Action Header */
+.pf-tab-action-header {
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 18px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--pf-shadow);
+  gap: 16px;
+}
+
+.pf-tab-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pf-tab-main-heading {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--pf-text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pf-tab-sub-heading {
+  font-size: 13.5px;
+  color: var(--pf-text-muted);
+}
+
+.pf-tab-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pf-btn-outline {
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: var(--pf-text-main);
+  padding: 9px 18px;
+  border-radius: var(--pf-radius);
+  font-size: 13.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pf-btn-outline:hover {
+  border-color: var(--pf-brand-wine);
+  color: var(--pf-brand-wine);
+  background: var(--pf-brand-rose-light);
+}
+
+.pf-btn-primary {
+  background: var(--pf-brand-wine);
+  border: 1px solid var(--pf-brand-wine);
+  color: #FFFFFF;
+  padding: 9px 20px;
+  border-radius: var(--pf-radius);
+  font-size: 13.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px var(--pf-brand-glow);
+}
+
+.pf-btn-primary:hover {
+  background: var(--pf-brand-wine-dark);
+  border-color: var(--pf-brand-wine-dark);
+  transform: translateY(-1px);
+}
+
+/* SKELETON SHIMMER LOADER */
+.pf-skeleton-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: pfTabFadeIn 0.2s ease forwards;
+}
+
+.pf-shimmer {
+  background: linear-gradient(90deg, #F5EDF0 0%, #FFF0F3 50%, #F5EDF0 100%);
+  background-size: 200% 100%;
+  animation: pfShimmerSweep 1.5s infinite;
+  border-radius: var(--pf-radius);
+}
+
+@keyframes pfShimmerSweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Tab Transition Animation */
+.pf-tab-body {
+  animation: pfTabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pfTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   5. BENTO GRID - BEAUTYSHOP OVERVIEW LAYOUT
+   ========================================================================== */
+.pf-bento-grid {
+  display: grid;
+  grid-template-columns: 1.55fr 1.05fr;
+  gap: 20px;
+}
+
+.pf-bento-card {
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pf-bento-card:hover {
+  border-color: var(--pf-border-hover);
+  box-shadow: var(--pf-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.pf-bento-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--pf-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pf-bento-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--pf-text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pf-bento-title svg {
+  color: var(--pf-brand-wine);
+}
+
+.pf-bento-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.pf-bento-footer {
+  padding: 14px 24px;
+  background: var(--pf-subtle);
+  border-top: 1px solid var(--pf-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Order Item In Bento */
+.pf-order-snippet {
+  display: flex;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--pf-canvas);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  transition: border-color 0.2s;
+}
+
+.pf-order-snippet:hover {
+  border-color: var(--pf-brand-wine);
+}
+
+.pf-order-thumb {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--pf-radius-sm);
+  background: #FFFFFF;
+  border: 1px solid var(--pf-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.pf-order-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pf-order-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.pf-order-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pf-order-code {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--pf-text-main);
+}
+
+.pf-status-badge-green {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-green-bg);
+  color: var(--pf-green);
+  border: 1px solid var(--pf-green-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-order-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pf-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-order-bot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pf-order-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--pf-brand-wine);
+}
+
+.pf-order-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pf-brand-wine);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-order-link:hover {
+  text-decoration: underline;
+}
+
+/* Voucher Cards in Bento */
+.pf-voucher-item {
+  background: var(--pf-canvas);
+  border: 1px dashed var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  transition: all 0.2s;
+}
+
+.pf-voucher-item:hover {
+  border-color: var(--pf-brand-wine);
+  background: var(--pf-brand-rose-light);
+}
+
+.pf-voucher-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pf-voucher-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--pf-brand-wine);
+  background: #FFFFFF;
+  border: 1px solid var(--pf-border);
+  padding: 2px 7px;
+  border-radius: var(--pf-radius-sm);
+  width: fit-content;
+}
+
+.pf-voucher-desc {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--pf-text-main);
+}
+
+.pf-voucher-date {
+  font-size: 11.5px;
+  color: var(--pf-text-dim);
+}
+
+/* Treatment In Bento */
+.pf-treatment-card {
+  background: var(--pf-canvas);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-treatment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pf-treatment-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--pf-text-main);
+}
+
+.pf-pill-pink {
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-brand-rose-light);
+  color: var(--pf-brand-wine);
+  border: 1px solid var(--pf-border);
+}
+
+.pf-facts-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--pf-border);
+  border-bottom: 1px solid var(--pf-border);
+}
+
+.pf-fact-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pf-fact-lbl {
+  font-size: 11.5px;
+  color: var(--pf-text-dim);
+}
+
+.pf-fact-val {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--pf-text-main);
+}
+
+/* Statistics Row Below Bento */
+.pf-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.pf-stat-box {
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--pf-shadow);
+}
+
+.pf-stat-lbl {
+  font-size: 12.5px;
+  color: var(--pf-text-muted);
+  font-weight: 600;
+}
+
+.pf-stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--pf-text-main);
+}
+
+.pf-stat-val.is-pink {
+  color: var(--pf-brand-wine);
+}
+
+@media (max-width: 1024px) {
+  .pf-workspace-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .pf-bento-grid {
+    grid-template-columns: 1fr;
+  }
+  .pf-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
