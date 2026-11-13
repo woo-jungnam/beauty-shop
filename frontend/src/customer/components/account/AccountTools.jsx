@@ -250,7 +250,7 @@ export function NotificationInbox({ onNavigate }) {
       {vouchers.length > 0 && (
         <section className="account-card" style={{ border: '1px solid #FBCFE8', backgroundColor: '#FDF2F8', padding: '16px 20px', borderRadius: 8 }}>
           <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#9D174D', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>🎁</span> Mã ưu đãi & Khuyến mãi hiện có cho bạn ({vouchers.length})
+            Mã ưu đãi & Khuyến mãi hiện có cho bạn ({vouchers.length})
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
             {vouchers.map(v => {

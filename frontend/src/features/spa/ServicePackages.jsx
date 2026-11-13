@@ -184,8 +184,15 @@ export const ServicePackages = ({ onNavigate }) => {
                 (sum, item) => sum + (item.quantity || 0),
                 0
               );
+              const userTierPercent = {
+                SILVER: 5,
+                GOLD: 10,
+                PLATINUM: 15,
+              }[user?.membershipTier] || 0;
+              const userDiscount = userTierPercent > 0 ? Math.round(pack.price * (userTierPercent / 100)) : 0;
+              const userPrice = Math.max(0, pack.price - userDiscount);
               const perSession =
-                totalSessions > 0 ? Math.round(pack.price / totalSessions) : null;
+                totalSessions > 0 ? Math.round(userPrice / totalSessions) : null;
               const cardImage = pack.thumbnailUrl
                 ? resolveMediaUrl(pack.thumbnailUrl)
                 : index % 2 === 0
@@ -268,11 +275,16 @@ export const ServicePackages = ({ onNavigate }) => {
                               fontWeight: 600
                             }}
                           >
-                            Giá trọn gói
+                            {userDiscount > 0 ? `Giá ưu đãi ${user?.membershipTier}` : 'Giá trọn gói'}
                           </small>
-                          <strong className="spa-package-price">
-                            {money(pack.price)}
-                          </strong>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                            <strong className="spa-package-price">
+                              {money(userPrice)}
+                            </strong>
+                            {userDiscount > 0 && (
+                              <del style={{ fontSize: 12, color: '#9CA3AF' }}>{money(pack.price)}</del>
+                            )}
+                          </div>
                         </div>
                         {perSession && (
                           <span className="spa-package-per-session">
@@ -388,6 +400,7 @@ export const ServicePackages = ({ onNavigate }) => {
         <PackagePurchase
           key={selected.id}
           pack={selected}
+          user={user}
           authenticated={isAuthenticated}
           onNavigate={onNavigate}
           onClose={() => setSelected(null)}
@@ -397,12 +410,21 @@ export const ServicePackages = ({ onNavigate }) => {
   );
 };
 
-const PackagePurchase = ({ pack, authenticated, onNavigate, onClose }) => {
+const PackagePurchase = ({ pack, user, authenticated, onNavigate, onClose }) => {
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const key = useRef(pack.purchaseKey);
   const lock = useRef(false);
+  const tierPercent = {
+    SILVER: 5,
+    GOLD: 10,
+    PLATINUM: 15,
+  }[user?.membershipTier] || 0;
+  const membershipDiscount = tierPercent > 0 && pack.price > 0
+    ? Math.round(pack.price * (tierPercent / 100))
+    : 0;
+  const finalPrice = Math.max(0, pack.price - membershipDiscount);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -463,7 +485,23 @@ const PackagePurchase = ({ pack, authenticated, onNavigate, onClose }) => {
                 {pack.name}
               </h3>
             </div>
-            <strong>{money(pack.price)}</strong>
+            <div style={{ textAlign: 'right' }}>
+              {membershipDiscount > 0 ? (
+                <>
+                  <del style={{ display: 'block', fontSize: '13px', color: '#9CA3AF' }}>
+                    {money(pack.price)}
+                  </del>
+                  <div style={{ fontSize: '11px', color: 'var(--c-safe-green, #059669)', fontWeight: 600 }}>
+                    Ưu đãi {user?.membershipTier} (−{tierPercent}%)
+                  </div>
+                  <strong style={{ fontSize: '18px', color: 'var(--c-primary-dark, #721B29)' }}>
+                    {money(finalPrice)}
+                  </strong>
+                </>
+              ) : (
+                <strong>{money(pack.price)}</strong>
+              )}
+            </div>
           </div>
           <p className="spa-purchase-validity-text">
             <Clock

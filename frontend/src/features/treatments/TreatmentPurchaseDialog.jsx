@@ -1,10 +1,12 @@
 import React, { useRef, useState } from 'react';
+import { useAuth } from '../../app/providers/AuthProvider';
 import { Modal } from '../../shared/ui/Modal';
 import { Button } from '../../shared/ui/Button';
 import { errorMessage, idempotencyKey, money, treatmentApi } from './treatmentApi';
 import { openTreatmentPayment } from './paymentNavigation';
 
 export const TreatmentPurchaseDialog = ({ template, onClose, onPurchased }) => {
+  const { user } = useAuth();
   const [accepted, setAccepted] = useState(false);
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -13,6 +15,15 @@ export const TreatmentPurchaseDialog = ({ template, onClose, onPurchased }) => {
   const key = useRef(idempotencyKey());
   const payload = useRef(null);
   const lock = useRef(false);
+  const tierPercent = {
+    SILVER: 5,
+    GOLD: 10,
+    PLATINUM: 15,
+  }[user?.membershipTier] || 0;
+  const membershipDiscount = tierPercent > 0 && template.price > 0
+    ? Math.round(template.price * (tierPercent / 100))
+    : 0;
+  const finalPrice = Math.max(0, template.price - membershipDiscount);
   const submit = async event => {
     event.preventDefault(); if (!accepted || lock.current) return;
     lock.current = true; setBusy(true); setError('');
@@ -26,7 +37,22 @@ export const TreatmentPurchaseDialog = ({ template, onClose, onPurchased }) => {
     finally { lock.current = false; setBusy(false); }
   };
   return <Modal isOpen title={`Đăng ký ${template.name}`} onClose={() => { if (!busy) onClose(); }} className="treatment-dialog" maxWidth="760px"><form className="treatment-form" onSubmit={submit}>
-    <div className="treatment-card-heading"><span className="treatment-badge">Phiên bản {template.versionNumber}</span><strong className="treatment-price">{money(template.price)}</strong></div><p>{template.description}</p><p>{template.sessions?.length || 0} buổi · Hiệu lực {template.validityDays} ngày từ khi thanh toán</p>
+    <div className="treatment-card-heading">
+      <span className="treatment-badge">Phiên bản {template.versionNumber}</span>
+      <div style={{ textAlign: 'right' }}>
+        {membershipDiscount > 0 ? (
+          <>
+            <del style={{ display: 'block', fontSize: '13px', color: '#9CA3AF' }}>{money(template.price)}</del>
+            <div style={{ fontSize: '11px', color: 'var(--c-safe-green, #059669)', fontWeight: 600 }}>
+              Ưu đãi {user?.membershipTier} (−{tierPercent}%)
+            </div>
+            <strong className="treatment-price">{money(finalPrice)}</strong>
+          </>
+        ) : (
+          <strong className="treatment-price">{money(template.price)}</strong>
+        )}
+      </div>
+    </div><p>{template.description}</p><p>{template.sessions?.length || 0} buổi · Hiệu lực {template.validityDays} ngày từ khi thanh toán</p>
     <ol className="treatment-mini-sessions">{(template.sessions || []).map(session => <li key={session.sequence}><strong>{session.title}</strong><small>{(session.items || []).map(item => item.serviceName || `Dịch vụ #${item.serviceId}`).join(', ')} · {session.required ? 'Bắt buộc' : 'Tùy chọn'} · Cách buổi trước tối thiểu {session.minGapDays || 0} ngày{session.maxGapDays != null ? `, tối đa ${session.maxGapDays} ngày` : ''}</small></li>)}</ol>
     <div className="treatment-form-session"><strong>Điều khoản mua và sử dụng</strong><p style={{ whiteSpace: 'pre-wrap' }}>{template.terms}</p></div>
     <p className="treatment-notice warning">Thanh toán toàn bộ trước khi mở quyền sử dụng. Nhân viên tiếp nhận và điều chỉnh khi cần; mọi thay đổi cam kết cần bạn xác nhận.</p>

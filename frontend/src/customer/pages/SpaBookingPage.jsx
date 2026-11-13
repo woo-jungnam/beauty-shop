@@ -182,9 +182,19 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const currentStep = !selectedService ? 1 : !validSlot ? 2 : 3;
   const servicePrice =
     selectedService?.basePrice ?? selectedService?.price ?? 0;
-  const total = selectedTicketId ? 0 : servicePrice;
+  const tierDiscountPercent = {
+    SILVER: 5,
+    GOLD: 10,
+    PLATINUM: 15,
+  }[user?.membershipTier] || 0;
+  const membershipDiscount =
+    !selectedTicketId && tierDiscountPercent > 0 && servicePrice > 0
+      ? Math.round(servicePrice * (tierDiscountPercent / 100))
+      : 0;
+  const netServicePrice = Math.max(0, servicePrice - membershipDiscount);
+  const total = selectedTicketId ? 0 : netServicePrice;
   const depositDueEstimate = Math.min(Number(financialPolicy?.depositAmount || 0), total);
-  const remainingAtCounter = Math.max(0, total - depositDueEstimate);
+  const remainingAtCounter = Math.max(0, total - (paymentOption === "PAY_FULL" ? total : depositDueEstimate));
   const selectedStaffName =
     selectedStaff === "AUTO"
       ? "Spa sắp xếp chuyên viên"
@@ -654,7 +664,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         price: total,
         ticketId: selectedTicketId,
         paymentOption: selectedTicketId ? "TICKET" : paymentOption,
-        depositEstimate: Math.min(Number(financialPolicy?.depositAmount || 0), total),
+        depositEstimate: paymentOption === "PAY_FULL" ? total : Math.min(Number(financialPolicy?.depositAmount || 0), total),
+        membershipDiscount,
         customer: created.customerName || contact.fullName,
         phone: created.customerPhone || contact.phone,
       };
@@ -1733,6 +1744,12 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 <div className="booking-ticket-discount">
                   <span>Áp dụng vé #{selectedTicketId}</span>
                   <span>−{formatCurrency(servicePrice)}</span>
+                </div>
+              )}
+              {!selectedTicketId && membershipDiscount > 0 && (
+                <div className="booking-ticket-discount" style={{ color: "var(--c-safe-green, #059669)", display: "flex", justifyContent: "space-between", fontSize: "12.5px" }}>
+                  <span>Ưu đãi hạng {user?.membershipTier} (−{tierDiscountPercent}%)</span>
+                  <span style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>−{formatCurrency(membershipDiscount)}</span>
                 </div>
               )}
               <div className="booking-total">

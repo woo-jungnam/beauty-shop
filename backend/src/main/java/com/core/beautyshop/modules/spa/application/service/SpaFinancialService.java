@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.spa.application.service;
 
+import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
@@ -23,6 +24,8 @@ import java.util.*;
 public class SpaFinancialService implements SpaDepositFacade {
  @Autowired
  private PaymentFacade payments;
+ @Autowired(required = false)
+ private IdentityFacade identityFacade;
  private final JdbcTemplate jdbc;
  private final EntityManager em;
  private final SpaAccessService access;
@@ -57,7 +60,15 @@ public class SpaFinancialService implements SpaDepositFacade {
    if("WAIVE_WALK_IN".equalsIgnoreCase(paymentOption) && canManage) {
     depositReq=BigDecimal.ZERO;
    } else if("PAY_FULL".equalsIgnoreCase(paymentOption)) {
-    depositReq=payable;
+    BigDecimal discount = BigDecimal.ZERO;
+    if (appointment.getUserId() != null && identityFacade != null) {
+     var userSummary = identityFacade.getUserSummaryById(appointment.getUserId());
+     Integer discountPercentage = userSummary != null ? userSummary.getMembershipDiscountPercentage() : null;
+     if (discountPercentage != null && discountPercentage > 0) {
+      discount = payable.multiply(BigDecimal.valueOf(discountPercentage)).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+     }
+    }
+    depositReq = payable.subtract(discount).max(BigDecimal.ZERO);
    } else {
     depositReq=p.depositAmount().min(payable);
    }

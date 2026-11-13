@@ -172,7 +172,17 @@ export const SpaVisitCheckout = ({ appointment, onUpdated }) => {
       ) : <>
         <div className="checkout-invoice-heading"><span>Hóa đơn <strong>{invoice.orderNumber}</strong></span><span role="status" className={`checkout-payment-state ${paid ? 'paid' : ''}`}>{paid ? 'Thanh toán hoàn tất' : `Trạng thái: ${getPaymentStatusBadge(invoice.paymentStatus).text}`}</span></div>
         <ul className="checkout-service-lines">{(invoice.items || []).map(item => <li key={item.appointmentItemId}><span>{item.serviceName}</span><strong>{formatCurrency(item.unitPrice)}</strong></li>)}</ul>
-        <div className="checkout-totals"><div><span>Tổng tiền</span><strong>{formatCurrency(invoice.totalAmount)}</strong></div><div><span>Đã thu</span><strong>{formatCurrency(invoice.paidAmount)}</strong></div><div className="amount-due"><span>Còn cần thu</span><strong>{formatCurrency(invoice.amountDue)}</strong></div></div>
+        <div className="checkout-totals">
+          {Number(invoice.subTotal) > Number(invoice.totalAmount) && (
+            <div style={{ color: '#059669' }}>
+              <span>Ưu đãi thành viên</span>
+              <strong>−{formatCurrency(Number(invoice.subTotal) - Number(invoice.totalAmount))}</strong>
+            </div>
+          )}
+          <div><span>Tổng tiền</span><strong>{formatCurrency(invoice.totalAmount)}</strong></div>
+          <div><span>Đã thu</span><strong>{formatCurrency(invoice.paidAmount)}</strong></div>
+          <div className="amount-due"><span>Còn cần thu</span><strong>{formatCurrency(invoice.amountDue)}</strong></div>
+        </div>
         {pendingBank && instruction && <BankPaymentInstruction instruction={instruction} label="Mã VietQR thanh toán hóa đơn Spa" />}
         <Button type="button" variant="outline" onClick={refresh} loading={busy}>Kiểm tra thanh toán</Button>
         {canCollect && <form onSubmit={collectCash} className="checkout-cash-form">
