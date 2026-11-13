@@ -43,13 +43,15 @@ public class IdentityFacadeImpl implements IdentityFacade {
         if (!existing.isEmpty()) {
             User customer = existing.get(0);
             if (existing.size() != 1 || Boolean.TRUE.equals(customer.getIsDeleted()) || customer.getStatus() != AccountStatus.ACTIVE
-                    || customer.getRoles() == null || customer.getRoles().stream().noneMatch(role -> "ROLE_CUSTOMER".equals(role.getName()) && !Boolean.TRUE.equals(role.getIsDeleted()))
+                    || customer.getRoles() == null || customer.getRoles().stream().noneMatch(role -> Set.of("ROLE_USER", "ROLE_CUSTOMER").contains(role.getName()) && !Boolean.TRUE.equals(role.getIsDeleted()))
                     || customer.getRoles().stream().anyMatch(role -> Set.of("ROLE_ADMIN", "ROLE_STAFF").contains(role.getName()))) {
                 throw new BusinessException("Số điện thoại đã gắn với tài khoản khác hoặc hồ sơ đã khóa. Vui lòng kiểm tra tại CRM.");
             }
             return mapToSummary(customer);
         }
-        var role = roleRepository.findByName("ROLE_CUSTOMER").filter(r -> !Boolean.TRUE.equals(r.getIsDeleted()))
+        var role = roleRepository.findByName("ROLE_USER")
+                .or(() -> roleRepository.findByName("ROLE_CUSTOMER"))
+                .filter(r -> !Boolean.TRUE.equals(r.getIsDeleted()))
                 .orElseThrow(() -> new BusinessException("Chưa cấu hình vai trò khách hàng. Vui lòng liên hệ quản trị viên."));
         User customer = User.builder().fullName(name).phone(normalized)
                 .username("walkin_" + UUID.randomUUID().toString().replace("-", ""))

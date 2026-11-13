@@ -161,7 +161,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
         <div className="drawer-grid"><Input label="Ngày hẹn" type="date" required min={getVietnamDateString()} value={form.appointmentDate} onChange={event => update('appointmentDate', event.target.value)} />
           <Input label="Giờ bắt đầu" type="time" required step={60} value={form.startTime.slice(0, 5)} onChange={event => update('startTime', `${event.target.value}:00`)} /></div>
         <Select label="Phòng / giường ưu tiên" value={form.facilityId} onChange={event => update('facilityId', event.target.value)} options={[
-          { value: '', label: 'Hệ thống tự xếp tài nguyên phù hợp' }, ...facilities.filter(item => item.active !== false).map(item => ({ value: String(item.id), label: item.name })),
+          { value: '', label: 'Hệ thống tự xếp tài nguyên phù hợp' }, ...facilities.filter(item => item.active !== false).map(item => ({ value: String(item.id), label: `${item.name}${item.capacity ? ` (${item.capacity} giường)` : ''}` })),
         ]} />
         <div className="staff-suggestions"><div className="reception-label">KTV rảnh tại khung giờ đã chọn</div>
           {staffLoading ? <p role="status">Đang kiểm tra ca KTV…</p> : <>

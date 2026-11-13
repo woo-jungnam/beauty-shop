@@ -514,7 +514,23 @@ export const SpaReceptionPage = () => {
           <section className="reception-facility-panel" aria-label="Trạng thái phòng và giường">
             <div className="reception-section-heading"><div><h2><BedDouble size={19} /> Phòng & giường trực tiếp <span className={`live-dot ${data.updatedAt ? '' : 'offline'}`} /></h2><p>{data.updatedAt ? `Cập nhật lúc ${spaTime(new Date(data.updatedAt))} · Tự làm mới mỗi 30 giây` : 'Đang chờ dữ liệu phòng / giường'}</p></div><div className="facility-legend"><span className="free">Trống</span><span className="busy">Đang có khách</span><span className="paused">Tạm dừng</span><Button variant="ghost" size="sm" loading={data.refreshing} onClick={data.refresh} aria-label="Làm mới dữ liệu quầy"><RefreshCw size={16} /></Button></div></div>
             <div className="facility-strip">{currentFacilities.map(facility => <button type="button" key={facility.id} className={`facility-tile ${facility.live.state}`} disabled={facility.live.available <= 0 || !data.services.length} onClick={() => setWalkIn({ facilityId: String(facility.id) })} aria-label={`${facility.name}: ${facility.live.label}. ${facility.live.detail}`}>
-              <div><span className="facility-icon"><BedDouble size={21} /></span><span className="facility-state-dot" /></div><strong>{facility.name}</strong><span className="facility-label">Trống: {facility.live.available} / {facility.live.capacity} giường</span><small>{facility.live.state === 'paused' ? facility.live.label : facility.live.available > 0 ? `Còn trống ${facility.live.available} giường` : 'Hết giường trống'}</small>{facility.live.available > 0 && <span className="facility-cta">Nhận khách phòng này <Plus size={13} /></span>}
+              <div><span className="facility-icon"><BedDouble size={21} /></span><span className="facility-state-dot" /></div>
+              <strong>{facility.name}</strong>
+              <span className="facility-label">
+                {facility.live.state === 'paused'
+                  ? facility.live.label
+                  : facility.live.state === 'busy'
+                    ? `${facility.live.label}${facility.live.customer ? ` (${facility.live.customer})` : ''}`
+                    : `Trống: ${facility.live.available} / ${facility.live.capacity} giường`}
+              </span>
+              <small>
+                {facility.live.state === 'paused'
+                  ? (facility.live.detail || facility.live.label)
+                  : facility.live.state === 'busy'
+                    ? `${facility.live.detail} · Còn ${facility.live.available} giường`
+                    : (facility.description || facility.live.label || 'Sẵn sàng nhận khách')}
+              </small>
+              {facility.live.available > 0 && <span className="facility-cta">Nhận khách phòng này <Plus size={13} /></span>}
             </button>)}</div>
             {!currentFacilities.length && <p className="reception-muted">{data.refreshing ? 'Đang tải phòng / giường…' : data.facilitiesReady ? 'Chưa có phòng / giường được cấu hình.' : 'Chưa xác minh được phòng / giường.'}</p>}
           </section>
@@ -595,7 +611,7 @@ export const SpaReceptionPage = () => {
 
       <footer className="reception-footer"><Sparkles size={14} /> BeautyShop Atelier Spa <span>Chăm sóc tận tâm, vận hành rõ ràng.</span></footer>
     </main>
-    {walkIn && <WalkInDrawer services={data.services} facilities={data.facilities} facilityId={walkIn.facilityId} onClose={() => setWalkIn(null)} onBooked={afterAction} />}
+    {walkIn && <WalkInDrawer key={walkIn.facilityId || 'walkin'} services={data.services} facilities={data.facilities} facilityId={walkIn.facilityId} onClose={() => setWalkIn(null)} onBooked={afterAction} />}
     {assign && <AssignDialog {...assign} onClose={() => setAssign(null)} onAssign={afterAction} />}
     {checkout && <Modal isOpen onClose={() => setCheckout(null)} title="Thu ngân tại quầy" maxWidth="660px" className="reception-dialog"><SpaVisitCheckout key={checkout.id} appointment={checkout} onUpdated={data.refresh} /></Modal>}
     {edit && <Modal isOpen onClose={() => { if (!busy) setEdit(null); }} title={edit.type === 'reschedule' ? 'Đổi lịch hẹn' : 'Ghi nhận khách vắng mặt'} className="reception-dialog"><form className="reception-form" onSubmit={submitEdit}><p><strong>{edit.appointment.customerName}</strong> · {appointmentCode(edit.appointment)}</p>{editError && <div role="alert" className="reception-notice error">{editError}</div>}{edit.type === 'reschedule' && <>

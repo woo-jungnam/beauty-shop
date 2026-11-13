@@ -69,5 +69,5 @@ export const facilityState = (facility, appointments, blocks, now, known = true)
     const minutes = Number.isFinite(end) ? Math.ceil((end - now.getTime()) / 60000) : null;
     return { state: 'busy', label: active ? 'Đang phục vụ' : 'Đã giữ chỗ', detail: minutes === null ? 'Chờ xác nhận thời gian' : minutes > 0 ? `Còn khoảng ${minutes} phút` : `Quá dự kiến ${Math.abs(minutes)} phút`, available: Math.max(0, capacity - used), capacity, customer: active?.appointment.customerName };
   }
-  return { state: 'free', label: 'Sẵn sàng nhận khách', detail: `${capacity} ${facility.type === 'ROOM' ? 'giường' : 'chỗ'} đang trống`, available: capacity, capacity };
+  return { state: 'free', label: 'Sẵn sàng nhận khách', detail: facility.description || 'Toàn bộ giường đã sẵn sàng phục vụ', available: capacity, capacity };
 };
