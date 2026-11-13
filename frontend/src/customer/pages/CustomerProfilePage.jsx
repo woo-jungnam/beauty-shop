@@ -1,655 +1,290 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  User, ShoppingBag, Calendar, Clock, Mail, Phone,
-  Heart, MapPin, Bell, Shield, LogOut, LayoutDashboard,
-  ExternalLink, RefreshCw, Ticket, ArrowLeft
+  User, ShoppingBag, Calendar, Clock, Mail, Phone, Heart, MapPin, Bell,
+  Shield, LogOut, LayoutDashboard, ExternalLink, RefreshCw, Ticket, ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { apiClient } from '../../shared/api/client';
 import { ENDPOINTS } from '../../shared/api/endpoints';
-import { AccountSettings, AddressBook, SkinProfile, NotificationInbox, WishlistPage } from '../components/account/AccountTools';
-import { OrderWorkspace } from '../components/account/OrderWorkspace';
+import {
+  AccountSettings, AddressBook, SkinProfile, NotificationInbox, WishlistPage,
+  Pagination, AccountLoading, message, unwrap,
+} from '../components/account/AccountTools';
+import { OrderWorkspace, OrderDetailDialog } from '../components/account/OrderWorkspace';
 import { AppointmentTools } from '../components/account/AppointmentTools';
+import { TreatmentAppointmentDialog } from '../../features/treatments/TreatmentAppointmentDialog';
 import { TicketDetails } from '../../features/spa/TicketDetails';
-import { buildGoogleCalendarUrl, resolveMediaUrl } from '../../shared/utils/formatters';
+import { ticketDestination } from '../../features/spa/benefitModel';
+import { buildGoogleCalendarUrl, formatCurrency, getOrderStatusBadge, getPaymentStatusBadge, getTicketStatusText, resolveMediaUrl } from '../../shared/utils/formatters';
+import { availableTicket, knownCount, pageWindow, upcomingAppointments } from '../utils/profileModel';
 
-const formatCurrency = (val) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+const APT_PAGE_SIZE = 5;
+const TICKET_PAGE_SIZE = 6;
+const TABS = [
+  ['overview', 'Tổng quan', LayoutDashboard],
+  ['orders', 'Lịch sử giao dịch', ShoppingBag],
+  ['appointments', 'Lịch hẹn Spa', Calendar],
+  ['tickets', 'Ví vé Spa', Ticket],
+  ['skin', 'Hồ sơ da', User],
+  ['addresses', 'Sổ địa chỉ', MapPin],
+  ['wishlist', 'Yêu thích', Heart],
+  ['notifications', 'Thông báo & Ưu đãi', Bell],
+  ['settings', 'Thông tin & Bảo mật', Shield],
+];
+const TITLES = Object.fromEntries(TABS.map(([id, title]) => [id, title]));
+const normalizeTab = tab => Object.hasOwn(TITLES, tab) ? tab : 'overview';
+const tierNames = { MEMBER: 'Hạng Thành Viên', SILVER: 'Hạng Bạc', GOLD: 'Hạng Vàng', PLATINUM: 'Hạng Bạch Kim' };
+const nextTiers = { MEMBER: [1000, 'Hạng Bạc'], SILVER: [5000, 'Hạng Vàng'], GOLD: [10000, 'Hạng Bạch Kim'] };
+const resourceNames = { profile: 'Hồ sơ thành viên', orders: 'Đơn mua sắm', appointments: 'Lịch hẹn Spa', tickets: 'Ví vé Spa', statistics: 'Thống kê giao dịch' };
+const blankData = () => ({ profile: null, orders: null, appointments: null, tickets: null, statistics: null });
+const dateLabel = value => {
+  if (!value || !Number.isFinite(Date.parse(value))) return 'Chưa có ngày';
+  return new Date(String(value).length === 10 ? `${value}T12:00:00+07:00` : value)
+    .toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+};
+const timeLabel = value => value ? String(value).slice(0, 5) : 'Chưa có giờ';
+const staffLabel = name => !name || name === 'No preference' ? 'Spa sắp xếp chuyên viên' : name;
+const appointmentLabel = appointment => appointment.status === 'CONFIRMED' && appointment.checkedInAt ? 'Đã check-in'
+  : ({ PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', CHECKED_IN: 'Đã check-in', IN_PROGRESS: 'Đang thực hiện', COMPLETED: 'Hoàn tất', CANCELLED: 'Đã hủy hẹn', NO_SHOW: 'Vắng hẹn' })[appointment.status] || appointment.status || 'Chưa có trạng thái';
+const listData = response => {
+  const data = unwrap(response);
+  if (!Array.isArray(data)) throw new Error('Chưa đọc được danh sách từ máy chủ.');
+  return data;
+};
+const calendarUrl = appointment => buildGoogleCalendarUrl({
+  title: `Lịch hẹn Spa: ${appointment.items?.map(item => item.serviceName).filter(Boolean).join(', ') || 'Chăm sóc da'}`,
+  date: appointment.appointmentDate, startTime: appointment.startTime,
+  endTime: appointment.endTime, details: `Mã lịch hẹn: SPA-APT-#${appointment.id}`,
+});
+const StateNotice = ({ children, error = false }) => <div className={`profile-state-notice${error ? ' is-error' : ''}`} role={error ? 'alert' : undefined}>{children}</div>;
+const CardBody = ({ data, error, children }) => data == null
+  ? error ? <StateNotice error>Chưa tải được dữ liệu. Dùng nút Thử lại phía trên.</StateNotice> : <AccountLoading count={1} label="Đang tải thông tin thẻ…" />
+  : children;
+
+export const CustomerProfilePage = props => {
+  const { user } = useAuth();
+  return <ProfileContent key={user?.id ?? 'guest'} {...props} />;
 };
 
-const knownCount = (value) => {
-  if ((typeof value !== 'number' && typeof value !== 'string') || String(value).trim() === '') return null;
-  const number = Number(value);
-  return Number.isSafeInteger(number) && number >= 0 ? number : null;
-};
-
-const getAptDateParts = (dateStr) => {
-  if (!dateStr) return { day: '--', month: 'HẸN SPA' };
-  const match = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) return { day: match[3], month: `THÁNG ${match[2]}` };
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return { day: dateStr, month: 'LỊCH HẸN' };
-    const day = d.getDate().toString().padStart(2, '0');
-    const month = `THÁNG ${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-    return { day, month };
-  } catch {
-    return { day: dateStr, month: 'LỊCH HẸN' };
-  }
-};
-
-const displayStaffName = (name) => (!name || name === 'No preference') ? 'Spa sắp xếp chuyên viên' : name;
-
-const getOrderStepIndex = (status) => {
-  const s = String(status || '').toUpperCase();
-  if (['DELIVERED', 'COMPLETED', 'RECEIVED'].includes(s)) return 4;
-  if (['SHIPPED', 'DELIVERING', 'IN_TRANSIT'].includes(s)) return 3;
-  if (['CONFIRMED', 'PROCESSING', 'PAID', 'PACKING'].includes(s)) return 2;
-  return 1;
-};
-
-const TAB_TITLES = {
-  overview: 'Tổng quan tài khoản',
-  orders: 'Đơn hàng mua sắm',
-  tickets: 'Ví vé liệu trình Spa',
-  appointments: 'Lịch hẹn chăm sóc da',
-  skin: 'Hồ sơ phân tích làn da',
-  settings: 'Cài đặt tài khoản & Bảo mật',
-  addresses: 'Sổ địa chỉ giao nhận',
-  wishlist: 'Bộ sưu tập yêu thích',
-  notifications: 'Thông báo & Khuyến mãi'
-};
-
-const normalizeTab = (tab) => (Object.hasOwn(TAB_TITLES, tab) ? tab : 'overview');
-
-const formatAptDate = (dateStr) =>
-  dateStr ? String(dateStr).replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1') : '';
-
-export const CustomerProfilePage = ({ onNavigate, initialTab = 'overview' }) => {
+function ProfileContent({ onNavigate, initialTab = 'overview' }) {
   const { user, isAuthenticated, logout } = useAuth();
   const [activeTab, setActiveTab] = useState(() => normalizeTab(initialTab));
-  const [refreshTick, setRefreshTick] = useState(0);
-  const [profile, setProfile] = useState(user);
-  const [spaTickets, setSpaTickets] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [statistics, setStatistics] = useState(null);
-  const [loadErrors, setLoadErrors] = useState([]);
-  const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const [data, setData] = useState(blankData);
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
-  const [cancellingAptId, setCancellingAptId] = useState(null);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [avatarFailed, setAvatarFailed] = useState(false);
-  const [aptActionError, setAptActionError] = useState('');
+  const [aptPage, setAptPage] = useState(0);
+  const [ticketPage, setTicketPage] = useState(0);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [actionError, setActionError] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [now, setNow] = useState(Date.now);
+  const request = useRef(null);
+  const actionLock = useRef(false);
+  const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const requestedAppointment = params.get('appointment');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
     setLoading(true);
-    setLoadErrors([]);
-    try {
+    setErrors({});
+    const jobs = [
+      ['profile', ENDPOINTS.AUTH.PROFILE, response => {
+        const profile = unwrap(response);
+        if (!profile || String(profile.id) !== String(user?.id)) throw new Error('Chưa xác minh được hồ sơ tài khoản.');
+        return profile;
+      }],
+      ['tickets', ENDPOINTS.SPA.MY_TICKETS, listData],
+      ['appointments', ENDPOINTS.SPA.MY_APPOINTMENTS, listData],
+      ['orders', `${ENDPOINTS.ORDERS.MY_ORDERS}?type=PRODUCT&size=1&sort=createdAt,desc`, response => {
+        const page = unwrap(response);
+        if (!Array.isArray(page?.content) || knownCount(page.totalElements) == null) throw new Error('Chưa đọc được lịch sử đơn mua sắm.');
+        return page;
+      }],
+      ['statistics', '/api/v1/users/order-statistics', response => {
+        const statistics = unwrap(response);
+        if (knownCount(statistics?.totalOrders) == null) throw new Error('Chưa đọc được thống kê giao dịch.');
+        return statistics;
+      }],
+    ];
+    await Promise.allSettled(jobs.map(async ([key, url, parse]) => {
       try {
-        const res = await apiClient.get('/api/v1/users/order-statistics');
-        setStatistics(res.data || res);
+        const value = parse(await apiClient.get(url, { signal: controller.signal }));
+        if (!controller.signal.aborted) setData(previous => ({ ...previous, [key]: value }));
       } catch (error) {
-        setLoadErrors((previous) => [...previous, error.message]);
+        if (!controller.signal.aborted) setErrors(previous => ({ ...previous, [key]: message(error) }));
       }
-
-      const [profileRes, ticketsRes, ordersRes, aptsRes] = await Promise.allSettled([
-        apiClient.get(ENDPOINTS.AUTH.PROFILE),
-        apiClient.get(ENDPOINTS.SPA.MY_TICKETS || '/api/v1/spa/tickets/my-tickets'),
-        apiClient.get(ENDPOINTS.ORDERS.MY_ORDERS + '?size=20&sort=createdAt,desc'),
-        apiClient.get(ENDPOINTS.SPA.MY_APPOINTMENTS || '/api/v1/appointments/my-appointments')
-      ]);
-
-      setLoadErrors((previous) => [
-        ...previous,
-        ...[profileRes, ticketsRes, ordersRes, aptsRes]
-          .filter((row) => row.status === 'rejected')
-          .map((row) => row.reason.message)
-      ]);
-
-      if (profileRes.status === 'fulfilled') {
-        setProfile(profileRes.value?.data || profileRes.value);
-        setAvatarFailed(false);
-      }
-      if (ticketsRes.status === 'fulfilled') {
-        const tData = ticketsRes.value?.data || ticketsRes.value;
-        setSpaTickets(Array.isArray(tData) ? tData : []);
-      }
-      if (ordersRes.status === 'fulfilled') {
-        const oData = ordersRes.value?.data || ordersRes.value;
-        const orderList = oData?.content || (Array.isArray(oData) ? oData : []);
-        setOrders(orderList);
-      }
-      if (aptsRes.status === 'fulfilled') {
-        const aData = aptsRes.value?.data || aptsRes.value;
-        setAppointments(Array.isArray(aData) ? aData : []);
-      }
-    } catch (e) {
-      console.warn('Failed to load profile data', e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    }));
+    if (!controller.signal.aborted) setLoading(false);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    loadData();
-  }, [isAuthenticated]);
-
+    if (isAuthenticated) loadData();
+    return () => request.current?.abort();
+  }, [isAuthenticated, loadData]);
+  useEffect(() => { setActiveTab(normalizeTab(initialTab)); }, [initialTab]);
+  useEffect(() => { setAvatarFailed(false); }, [data.profile?.avatarUrl]);
   useEffect(() => {
-    setActiveTab(normalizeTab(initialTab));
-  }, [initialTab]);
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    if (!requestedAppointment || !data.appointments) return;
+    const index = data.appointments.findIndex(row => String(row.id) === requestedAppointment);
+    if (index >= 0) setAptPage(Math.floor(index / APT_PAGE_SIZE));
+  }, [requestedAppointment, data.appointments]);
 
-  const handleManualRefresh = () => {
-    setRefreshTick((tick) => tick + 1);
-    loadData();
+  const navigateTab = tab => {
+    setActiveTab(tab);
+    onNavigate(`profile?tab=${tab}`, { scroll: false });
   };
-
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    onNavigate?.(`profile?tab=${tabId}`, { scroll: false });
-    if (tabId === 'overview') loadData();
+  const refresh = () => { setRefreshTick(tick => tick + 1); loadData(); };
+  const cancelAppointment = async id => {
+    if (actionLock.current || !window.confirm('Hủy lịch hẹn này? Phí hủy và hoàn cọc áp dụng theo chính sách đã xác nhận khi đặt.')) return;
+    actionLock.current = true;
+    setCancellingId(id); setActionError('');
+    try { await apiClient.put(`/api/v1/appointments/${id}/cancel`); await loadData(); }
+    catch (error) { setActionError(message(error)); }
+    finally { actionLock.current = false; setCancellingId(null); }
   };
-
-  const handleCancelAppointment = async (aptId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy lịch hẹn Spa này không?')) return;
-    setCancellingAptId(aptId);
-    setAptActionError('');
-    try {
-      await apiClient.put(`/api/v1/appointments/${aptId}/cancel`);
-      await loadData();
-    } catch (err) {
-      setAptActionError(err.message || 'Không thể hủy lịch hẹn');
-    } finally {
-      setCancellingAptId(null);
-    }
-  };
-
   const handleLogout = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')) {
-      await logout?.();
-      onNavigate?.('');
-    }
+    if (!window.confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')) return;
+    await logout(); onNavigate('');
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="customer-profile-page profile-login-prompt">
-        <nav className="profile-breadcrumb" aria-label="Đường dẫn tài khoản" style={{ marginBottom: 16 }}>
-          <button type="button" onClick={() => onNavigate('')} style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <ArrowLeft size={14} /> Trang chủ
-          </button>
-          <span aria-hidden="true">/</span>
-          <strong>Tài khoản</strong>
-        </nav>
-        <h2>Vui lòng đăng nhập</h2>
-        <p>Đăng nhập để xem vé liệu trình, lịch sử đơn hàng và thông tin thành viên.</p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button onClick={() => onNavigate('login')} className="btn-editorial-primary">Đăng nhập ngay</button>
-          <button onClick={() => onNavigate('')} className="btn-editorial-outline">Về trang chủ</button>
+  if (!isAuthenticated) return <div className="customer-profile-page profile-login-prompt">
+    <h1>Vui lòng đăng nhập</h1><p>Đăng nhập để xem lịch hẹn, vé Spa và đơn mua sắm của bạn.</p>
+    <button type="button" className="btn-editorial-primary" onClick={() => onNavigate('login')}>Đăng nhập</button>
+    <a href="#/">Về cửa hàng</a>
+  </div>;
+
+  const profile = data.profile || user || {};
+  const displayName = profile.fullName || profile.username || 'Khách hàng';
+  const points = knownCount(profile.loyaltyPoints);
+  const tier = profile.membershipTier;
+  const nextTier = nextTiers[tier];
+  const appointments = data.appointments || [];
+  const upcoming = upcomingAppointments(appointments, now);
+  const nextAppointment = upcoming[0];
+  const tickets = data.tickets || [];
+  const activeTickets = tickets.filter(ticket => availableTicket(ticket, now));
+  const firstTicket = activeTickets[0];
+  const latestOrder = data.orders?.content[0];
+  const orderCount = knownCount(data.orders?.totalElements);
+  const aptWindow = pageWindow(appointments, aptPage, APT_PAGE_SIZE);
+  const ticketWindow = pageWindow(tickets, ticketPage, TICKET_PAGE_SIZE);
+  const badges = { orders: orderCount, appointments: data.appointments ? upcoming.length : null, tickets: data.tickets ? activeTickets.length : null };
+  const title = TITLES[activeTab];
+  const listTab = activeTab === 'appointments' ? 'appointments' : activeTab === 'tickets' ? 'tickets' : null;
+
+  return <div className="customer-profile-page">
+    <div className="profile-shell">
+      <header className="profile-toolbar">
+        <div>
+          <nav className="profile-breadcrumb" aria-label="Đường dẫn tài khoản"><a href="#/">Trang chủ</a><span aria-hidden="true">/</span><span>Tài khoản của tôi</span></nav>
+          <h1>Không gian cá nhân</h1>
+          <p>Lịch hẹn, mua sắm và quyền lợi thành viên trong cùng một nơi.</p>
         </div>
-      </div>
-    );
-  }
-
-  const displayUser = profile || user || {};
-  const displayName = displayUser.fullName || displayUser.username || 'Khách hàng BeautyShop';
-  const avatarLetter = displayName.charAt(0).toUpperCase();
-  const membershipTier = typeof displayUser.membershipTier === 'string' ? displayUser.membershipTier.trim() : '';
-  const totalSpent = statistics?.netSpent;
-  const deliveredOrders = orders.filter((order) => order.status === 'DELIVERED' || order.status === 'COMPLETED').length;
-  const nextTierPoints = { MEMBER: 1000, SILVER: 5000, GOLD: 10000 }[membershipTier] ?? null;
-  const nextTierName = { MEMBER: 'HẠNG BẠC', SILVER: 'HẠNG VÀNG', GOLD: 'HẠNG BẠCH KIM' }[membershipTier] ?? 'HẠNG VIP';
-  const isHighestTier = membershipTier === 'PLATINUM' || membershipTier === 'DIAMOND';
-  const loyaltyPoints = knownCount(displayUser.loyaltyPoints);
-
-  const getAppointmentStatusText = (status, checkedInAt = null) => {
-    if (status === 'CONFIRMED' && checkedInAt) return 'Đã check-in';
-    switch (status) {
-      case 'PENDING': return 'Chờ xác nhận';
-      case 'CONFIRMED': return 'Đã xác nhận';
-      case 'CHECKED_IN':
-      case 'IN_PROGRESS': return 'Đang thực hiện';
-      case 'COMPLETED': return 'Hoàn tất';
-      case 'CANCELLED': return 'Đã hủy hẹn';
-      case 'NO_SHOW': return 'Vắng mặt';
-      default: return typeof status === 'string' && status.trim() ? status : 'Chờ thực hiện';
-    }
-  };
-
-  const getTicketStatusText = (status) => {
-    switch (status) {
-      case 'ACTIVE': return 'Còn hiệu lực';
-      case 'EXPIRED': return 'Đã hết hạn';
-      case 'COMPLETED': return 'Đã dùng hết';
-      case 'REVOKED': return 'Đã thu hồi';
-      case 'USED': return 'Đã dùng hết';
-      case 'CANCELLED': return 'Đã hủy';
-      default: return typeof status === 'string' && status.trim() ? status : 'Khả dụng';
-    }
-  };
-
-  const getTierText = (tier) => {
-    switch (tier) {
-      case 'DIAMOND': return 'Hạng Kim Cương';
-      case 'PLATINUM': return 'Hạng Bạch Kim';
-      case 'GOLD': return 'Hạng Vàng';
-      case 'SILVER': return 'Hạng Bạc';
-      case 'BRONZE': return 'Hạng Đồng';
-      case 'MEMBER': return 'Hạng Thành Viên';
-      default: return tier ? `Hạng ${tier}` : 'Chưa có thông tin hạng';
-    }
-  };
-
-  const upcomingAppointment = appointments.find((a) =>
-    ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS'].includes(a.status)
-  ) || appointments[0];
-  const aptDateParts = getAptDateParts(upcomingAppointment?.appointmentDate);
-
-  const latestOrder = orders[0];
-  const orderStepIndex = getOrderStepIndex(latestOrder?.status);
-
-  const activeTickets = spaTickets.filter((t) =>
-    (t.remainingSessions == null || t.remainingSessions > 0) &&
-    !['EXPIRED', 'REVOKED', 'COMPLETED', 'USED', 'CANCELLED'].includes(t.status) &&
-    (!t.expiryDate || Date.parse(t.expiryDate) > Date.now())
-  );
-
-  const navSections = [
-    { title: '', items: [{ id: 'overview', label: 'Bảng điều khiển', icon: LayoutDashboard }] },
-    {
-      title: 'Chăm sóc da',
-      items: [
-        { id: 'appointments', label: 'Lịch hẹn chăm sóc da', icon: Calendar },
-        { id: 'tickets', label: 'Vé liệu trình điện tử', icon: Ticket },
-        { id: 'skin', label: 'Hồ sơ làn da cá nhân', icon: User }
-      ]
-    },
-    {
-      title: 'Mua sắm',
-      items: [
-        { id: 'orders', label: 'Lịch sử mua sắm', icon: ShoppingBag },
-        { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart }
-      ]
-    },
-    {
-      title: 'Tài khoản',
-      items: [
-        { id: 'settings', label: 'Thông tin & Bảo mật', icon: Shield },
-        { id: 'addresses', label: 'Sổ địa chỉ nhận hàng', icon: MapPin },
-        { id: 'notifications', label: 'Thông báo & Khuyến mãi', icon: Bell }
-      ]
-    }
-  ];
-
-  const currentTabTitle = TAB_TITLES[activeTab] || 'Tài khoản của tôi';
-
-  return (
-    <div className="customer-profile-page">
-      <div className="profile-shell">
-        <div className="profile-toolbar">
-          <nav className="profile-breadcrumb" aria-label="Đường dẫn tài khoản">
-            <button onClick={() => onNavigate('')}>Trang chủ</button>
-            <span aria-hidden="true">/</span>
-            <strong>Tài khoản của tôi</strong>
-            {activeTab !== 'overview' && <><span aria-hidden="true">/</span><span>{currentTabTitle}</span></>}
-          </nav>
-          <button onClick={handleManualRefresh} disabled={loading} className="btn-editorial-outline" title="Làm mới dữ liệu">
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            {loading ? 'Đang đồng bộ...' : 'Làm mới'}
-          </button>
+        <div className="profile-actions">
+          <button type="button" onClick={refresh} disabled={loading} className="btn-editorial-outline"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} />{loading ? 'Đang cập nhật…' : 'Làm mới dữ liệu'}</button>
+          <button type="button" className="profile-text-button profile-danger" onClick={handleLogout}><LogOut size={16} />Đăng xuất</button>
         </div>
+      </header>
 
-        {loadErrors.length > 0 && (
-          <div role="alert" className="profile-load-error">
-            {loadErrors.map((text, index) => <p key={index}>{text}</p>)}
-            <button onClick={loadData} className="btn-editorial-outline">Thử lại</button>
+      <div className="profile-unified-frame">
+        <div className="profile-sync-status" role="status" aria-live="polite">{loading ? 'Đang đồng bộ dữ liệu. Các thông tin đã tải vẫn được giữ.' : Object.keys(errors).length ? 'Một số dữ liệu chưa được cập nhật.' : 'Thông tin đã được cập nhật.'}</div>
+        {Object.keys(errors).length > 0 && <div className="profile-load-error" role="alert">
+          <strong>Chưa tải đủ thông tin</strong>
+          <ul>{Object.entries(errors).map(([key, text]) => <li key={key}>{resourceNames[key]}: {text}</li>)}</ul>
+          <button type="button" onClick={refresh} disabled={loading} className="btn-editorial-outline">Thử lại</button>
+        </div>}
+
+        <section className="profile-bento-panel" aria-label="Tóm tắt tài khoản">
+          <div className="profile-bento-modular-grid">
+            <article className="bento-modular-card">
+              <div className="bento-card-header"><h2><Shield size={17} />Thành viên</h2><span className={`profile-tier tier-${String(tier || 'unknown').toLowerCase()}`}>{tierNames[tier] || 'Chưa có hạng'}</span></div>
+              <div className="bento-card-body">
+                <div className="bento-vip-identity"><div className="bento-vip-avatar">{profile.avatarUrl && !avatarFailed ? <img src={resolveMediaUrl(profile.avatarUrl)} alt="" onError={() => setAvatarFailed(true)} /> : displayName.charAt(0).toUpperCase()}</div><div className="bento-vip-meta"><h3>{displayName}</h3><span>@{profile.username || 'Chưa có tên tài khoản'}</span></div></div>
+                <CardBody data={data.profile} error={errors.profile}>
+                  <dl className="profile-card-facts"><div><dt><Mail size={14} />Email</dt><dd>{profile.email || 'Chưa cập nhật'}</dd></div><div><dt><Phone size={14} />Điện thoại</dt><dd>{profile.phone || 'Chưa cập nhật'}</dd></div><div><dt>Điểm tích lũy</dt><dd>{points == null ? 'Chưa có dữ liệu' : `${points.toLocaleString('vi-VN')} điểm`}</dd></div></dl>
+                  {nextTier && points != null && <div><progress className="profile-meter" max={nextTier[0]} value={Math.min(points, nextTier[0])} aria-label={`Tiến độ lên ${nextTier[1]}`} /><p className="profile-card-note">Còn {Math.max(0, nextTier[0] - points).toLocaleString('vi-VN')} điểm để lên {nextTier[1]}.</p></div>}
+                  {tier === 'PLATINUM' && <p className="profile-card-note">Bạn đang ở hạng thành viên cao nhất.</p>}
+                </CardBody>
+              </div>
+              <div className="bento-card-footer"><button type="button" className="btn-editorial-outline" onClick={() => navigateTab('settings')}>Thông tin & Bảo mật</button></div>
+            </article>
+
+            <article className="bento-modular-card">
+              <div className="bento-card-header"><h2><ShoppingBag size={17} />Đơn mua gần nhất</h2>{latestOrder && <span className="profile-status-badge">{getOrderStatusBadge(latestOrder.status).text}</span>}</div>
+              <div className="bento-card-body"><CardBody data={data.orders} error={errors.orders}>
+                {latestOrder ? <><p className="profile-card-reference">{latestOrder.orderNumber || `Đơn #${latestOrder.id}`}</p><dl className="profile-card-facts"><div><dt>Ngày đặt</dt><dd>{dateLabel(latestOrder.createdAt)}</dd></div><div><dt>Số sản phẩm</dt><dd>{latestOrder.items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0) ?? 'Chưa có dữ liệu'}</dd></div><div><dt>Thanh toán</dt><dd>{getPaymentStatusBadge(latestOrder.paymentStatus).text}</dd></div><div><dt>Tổng đơn</dt><dd className="profile-card-amount">{latestOrder.totalAmount == null ? 'Chưa có dữ liệu' : formatCurrency(latestOrder.totalAmount)}</dd></div></dl><p className="profile-card-note">{latestOrder.carrierName ? `Vận chuyển: ${latestOrder.carrierName}${latestOrder.trackingCode ? ` · ${latestOrder.trackingCode}` : ''}` : 'Thông tin giao nhận được cập nhật trong chi tiết đơn.'}</p></>
+                  : <StateNotice>Bạn chưa có đơn mua sản phẩm. Đơn gói và hóa đơn Spa nằm trong lịch sử dịch vụ.</StateNotice>}
+              </CardBody></div>
+              <div className="bento-card-footer">{latestOrder ? <button type="button" className="btn-editorial-primary" onClick={() => setSelectedOrder(latestOrder.id)}>Xem chi tiết đơn</button> : <button type="button" className="btn-editorial-outline" onClick={() => onNavigate('products')}>Khám phá mỹ phẩm</button>}</div>
+            </article>
+
+            <article className="bento-modular-card">
+              <div className="bento-card-header"><h2><Calendar size={17} />Lịch hẹn sắp tới</h2>{nextAppointment && <span className="profile-status-badge">{appointmentLabel(nextAppointment)}</span>}</div>
+              <div className="bento-card-body"><CardBody data={data.appointments} error={errors.appointments}>
+                {nextAppointment ? <><p className="profile-card-reference">{dateLabel(nextAppointment.appointmentDate)} · {timeLabel(nextAppointment.startTime)}</p><ul className="profile-summary-services">{(nextAppointment.items || []).map((item, index) => <li key={item.id || index}><strong>{item.serviceName || `Dịch vụ #${item.serviceId}`}</strong><span>{staffLabel(item.staffName)}</span>{item.resources?.length > 0 && <small>{item.resources.map(resource => resource.facilityName || resource.name).filter(Boolean).join(', ')}</small>}</li>)}</ul><p className="profile-card-note">SPA-APT-#{nextAppointment.id} · Kết thúc dự kiến {timeLabel(nextAppointment.endTime)}.</p></>
+                  : <StateNotice>Chưa có lịch hẹn sắp tới. Lịch đã hoàn tất hoặc hủy vẫn được giữ trong tab Lịch hẹn Spa.</StateNotice>}
+              </CardBody></div>
+              <div className="bento-card-footer">{nextAppointment ? <button type="button" className="btn-editorial-primary" onClick={() => setSelectedAppointment(nextAppointment.id)}>Chi tiết lịch hẹn</button> : <button type="button" className="btn-editorial-outline" onClick={() => onNavigate('booking')}>Đặt hẹn Spa</button>}</div>
+            </article>
+
+            <article className="bento-modular-card">
+              <div className="bento-card-header"><h2><Ticket size={17} />Ví vé Spa</h2>{data.tickets && <span className="profile-status-badge">{activeTickets.length} vé khả dụng</span>}</div>
+              <div className="bento-card-body"><CardBody data={data.tickets} error={errors.tickets}>
+                {firstTicket ? <><h3>{firstTicket.packageName || `Gói #${firstTicket.id}`}</h3><p className="profile-card-note">{firstTicket.benefitType === 'TREATMENT_COURSE' ? 'Lộ trình chăm sóc da' : 'Gói dịch vụ nhiều lượt'} · Vé #{firstTicket.id}</p><dl className="profile-card-facts"><div><dt>Còn khả dụng</dt><dd>{firstTicket.remainingSessions} lượt</dd></div><div><dt>Đã dùng / mất lượt</dt><dd>{knownCount(firstTicket.usedSessions) ?? 'Chưa xác định'}</dd></div><div><dt>Đang giữ chỗ</dt><dd>{knownCount(firstTicket.reservedSessions) ?? 'Chưa xác định'}</dd></div><div><dt>Hạn dùng</dt><dd>{firstTicket.expiryDate ? dateLabel(firstTicket.expiryDate) : 'Không giới hạn'}</dd></div></dl></>
+                  : <StateNotice>Chưa có vé khả dụng để đặt lịch. Vé đã dùng hết, đang giữ chỗ hoặc hết hạn vẫn xem được trong ví vé.</StateNotice>}
+              </CardBody></div>
+              <div className="bento-card-footer">{firstTicket ? <button type="button" className="btn-editorial-primary" onClick={() => onNavigate(ticketDestination(firstTicket))}>{firstTicket.benefitType === 'TREATMENT_COURSE' ? 'Mở lộ trình chăm sóc' : 'Dùng vé đặt lịch'}</button> : <button type="button" className="btn-editorial-outline" onClick={() => navigateTab('tickets')}>Xem ví vé</button>}</div>
+            </article>
           </div>
-        )}
+        </section>
 
-        <div className="profile-layout-container">
-          <aside className="profile-sidebar">
-            <div className="profile-vip-card">
-              <div className="profile-vip-header">
-                <div className="profile-vip-avatar">
-                  {displayUser.avatarUrl && !avatarFailed ? (
-                    <img
-                      src={resolveMediaUrl(displayUser.avatarUrl)}
-                      alt={displayName}
-                      onError={() => setAvatarFailed(true)}
-                    />
-                  ) : avatarLetter}
-                </div>
-                <div className="profile-vip-identity">
-                  <h3>{displayName}</h3>
-                  <div className="profile-vip-username">@{displayUser.username || 'client'}</div>
-                  <div className="profile-membership">{getTierText(membershipTier)}</div>
-                </div>
-              </div>
-              <div className="profile-vip-points-box">
-                <div className="profile-vip-points-heading">
-                  <span>Điểm tích lũy</span>
-                  <strong>{loyaltyPoints != null ? `${loyaltyPoints.toLocaleString('vi-VN')} điểm` : 'Chưa có thông tin điểm Loyalty'}</strong>
-                </div>
-                {nextTierPoints !== null && loyaltyPoints !== null && !isHighestTier && (
-                  <>
-                    <div className="profile-vip-progress-bar">
-                      <div className="profile-vip-progress-fill" style={{ width: `${Math.min(100, Math.max(5, Math.round((loyaltyPoints / nextTierPoints) * 100)))}%` }} />
-                    </div>
-                    <div className="profile-vip-note">Cần thêm <strong>{Math.max(0, nextTierPoints - loyaltyPoints).toLocaleString('vi-VN')}</strong> điểm để lên {nextTierName}.</div>
-                  </>
-                )}
-                {isHighestTier && <div className="profile-vip-note">Bạn đang ở hạng thành viên cao nhất.</div>}
-              </div>
-              <div className="profile-vip-contact">
-                <div className="profile-icon-label"><Mail size={16} /><span>{displayUser.email || 'Chưa liên kết email'}</span></div>
-                <div className="profile-icon-label"><Phone size={16} /><span>{displayUser.phone || 'Chưa cập nhật số điện thoại'}</span></div>
-              </div>
-            </div>
+        <nav className="profile-horizontal-nav" aria-label="Menu tài khoản"><div className="profile-nav-tabs-group">
+          {TABS.map(([id, label, Icon]) => <button key={id} type="button" className={`profile-tab-btn${activeTab === id ? ' is-active' : ''}`} aria-current={activeTab === id ? 'page' : undefined} onClick={() => navigateTab(id)}><Icon size={16} /><span>{label}</span>{badges[id] != null && <span className="profile-tab-badge">{badges[id]}</span>}</button>)}
+        </div></nav>
 
-            <nav className="profile-nav-card" aria-label="Menu tài khoản">
-              {navSections.map((group) => (
-                <div className="profile-nav-group" key={group.title}>
-                  {group.title && <div className="profile-nav-section-title">{group.title}</div>}
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button key={item.id} type="button" onClick={() => handleTabChange(item.id)} aria-pressed={isActive} className={`profile-nav-item ${isActive ? 'is-active' : ''}`}>
-                        <span className="profile-nav-item-left"><Icon size={20} /><span>{item.label}</span></span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-              <div className="profile-nav-footer">
-                <a href="#/treatments?tab=courses" className="profile-nav-item">
-                  <span className="profile-nav-item-left"><ExternalLink size={20} /><span>Lộ trình chăm sóc da chuyên sâu</span></span>
-                </a>
-                <button type="button" onClick={handleLogout} className="profile-nav-item profile-danger">
-                  <span className="profile-nav-item-left"><LogOut size={20} /><span>Đăng xuất tài khoản</span></span>
-                </button>
-              </div>
-            </nav>
-          </aside>
+        <section className="profile-workspace-canvas" aria-labelledby="profile-workspace-title">
+          <div className="profile-tab-header-banner"><div><h2 id="profile-workspace-title">{title}</h2><p>{activeTab === 'orders' ? 'Đơn mua sản phẩm và giao dịch dịch vụ được quản lý riêng.' : 'Thông tin và thao tác của bạn được giữ trong cùng không gian hồ sơ.'}</p></div>{activeTab === 'appointments' && <button type="button" className="btn-editorial-primary" onClick={() => onNavigate('booking')}>Đặt lịch hẹn mới</button>}{activeTab === 'tickets' && <a href="#/service-packages" className="btn-editorial-outline">Khám phá gói Spa</a>}</div>
+          <div className="profile-tab-content">
+            {activeTab === 'overview' && <>
+              <section className="profile-overview-stats" aria-label="Thống kê tài khoản"><CardBody data={data.statistics} error={errors.statistics}>
+                <dl className="profile-stats-list"><div><dt>Tổng giao dịch</dt><dd>{data.statistics?.totalOrders}</dd><small>Gồm sản phẩm, gói và hóa đơn Spa</small></div><div><dt>Đã thanh toán</dt><dd>{data.statistics?.totalPaid == null ? 'Chưa có dữ liệu' : formatCurrency(data.statistics.totalPaid)}</dd></div><div><dt>Đã hoàn tiền</dt><dd>{data.statistics?.totalRefunded == null ? 'Chưa có dữ liệu' : formatCurrency(data.statistics.totalRefunded)}</dd></div><div><dt>Chi tiêu thực trả</dt><dd>{data.statistics?.netSpent == null ? 'Chưa có dữ liệu' : formatCurrency(data.statistics.netSpent)}</dd><small>Sau hoàn tiền, không phải số điểm tích lũy</small></div></dl>
+              </CardBody></section>
+              <div className="profile-overview-links"><article><h3>Lịch sử mua sắm và dịch vụ</h3><p>Theo dõi giao nhận sản phẩm, thanh toán gói và hóa đơn buổi Spa trong hai nhóm riêng.</p><button type="button" className="btn-editorial-outline" onClick={() => navigateTab('orders')}>Mở lịch sử giao dịch</button></article><article><h3>Hồ sơ chăm sóc da</h3><p>Cập nhật dị ứng, lưu ý chăm sóc và theo dõi lộ trình đã mua.</p><div className="profile-actions"><button type="button" className="btn-editorial-outline" onClick={() => navigateTab('skin')}>Cập nhật hồ sơ da</button><a href="#/treatments?tab=courses" className="profile-text-button"><ExternalLink size={15} />Lộ trình chăm sóc</a></div></article></div>
+            </>}
 
-          <div className={`profile-main-content${activeTab !== 'overview' ? ' profile-main-detail' : ''}`}>
-            {activeTab !== 'overview' && (
-              <div className="profile-tab-heading">
-                <h1>{currentTabTitle}</h1>
-                <button type="button" onClick={() => handleTabChange('overview')} className="profile-text-button"><ArrowLeft size={18} />Bảng điều khiển</button>
-              </div>
-            )}
-
-            {activeTab === 'overview' && (
-              <div className="profile-overview">
-                <section className="profile-overview-summary" aria-label="Tổng quan tài khoản">
-                <div className="bento-hero-banner">
-                  <div>
-                    <h1>Xin chào, {displayName}</h1>
-                    <p>Theo dõi liệu trình chăm sóc da, vé dịch vụ Spa và tiến độ đơn hàng mua sắm.</p>
-                  </div>
-                  <div className="profile-actions">
-                    <button onClick={() => onNavigate('booking')} className="btn-editorial-primary"><Calendar size={20} />Đặt hẹn Spa</button>
-                    <button onClick={() => onNavigate('products')} className="btn-editorial-outline"><ShoppingBag size={20} />Khám phá sản phẩm</button>
-                  </div>
-                </div>
-
-                <div className="bento-kpi-grid">
-                  <div className="bento-kpi-card">
-                    <div className="bento-kpi-label">Đơn mua hàng</div>
-                    <div><div className="bento-kpi-value">{(statistics?.totalOrders ?? orders.length).toString().padStart(2, '0')}</div><div className="bento-kpi-sub">{(statistics?.totalOrders == null || orders.length >= statistics.totalOrders) ? `${deliveredOrders} đơn giao thành công` : `${deliveredOrders} đơn đã giao trong ${orders.length} đơn gần nhất`}</div></div>
-                  </div>
-                  <div className="bento-kpi-card">
-                    <div className="bento-kpi-label">Tích lũy chi tiêu</div>
-                    <div><div className="bento-kpi-value bento-kpi-currency">{totalSpent == null ? 'Chưa tải được' : formatCurrency(totalSpent)}</div><div className="bento-kpi-sub">Thực trả sau hoàn tiền</div></div>
-                  </div>
-                  <div className="bento-kpi-card">
-                    <div className="bento-kpi-label">Vé liệu trình</div>
-                    <div><div className="bento-kpi-value">{spaTickets.length.toString().padStart(2, '0')}</div><div className="bento-kpi-sub">{activeTickets.length} vé còn hiệu lực</div></div>
-                  </div>
-                  <div className="bento-kpi-card" title="Tỷ lệ tích điểm: 10.000 đ tiền hàng = 1 điểm (áp dụng khi đơn hàng giao thành công hoặc thanh toán gói Spa)">
-                    <div className="bento-kpi-label">Điểm tích lũy</div>
-                    <div><div className="bento-kpi-value">{loyaltyPoints != null ? loyaltyPoints.toLocaleString('vi-VN') : '0'}</div><div className="bento-kpi-sub">{getTierText(membershipTier)} (10.000 đ = 1 điểm)</div></div>
-                  </div>
-                </div>
-
-                </section>
-
-                <div className="bento-asymmetric-row">
-                  <div className="bento-ticket-widget">
-                    <div className="bento-ticket-header">
-                      <h2>Lịch hẹn Spa</h2>
-                      {upcomingAppointment && <span className="profile-status-badge">{getAppointmentStatusText(upcomingAppointment.status, upcomingAppointment.checkedInAt)}</span>}
-                    </div>
-                    {upcomingAppointment ? (
-                      <>
-                        <div className="bento-ticket-body">
-                          <div className="bento-ticket-date-badge">
-                            <div className="bento-ticket-date-month">{aptDateParts.month}</div>
-                            <div className="bento-ticket-date-day">{aptDateParts.day}</div>
-                            <div className="bento-ticket-date-time">{upcomingAppointment.startTime ? String(upcomingAppointment.startTime).slice(0, 5) : '10:00'}</div>
-                          </div>
-                          <div>
-                            <h3>{upcomingAppointment.items && upcomingAppointment.items.length > 0 ? upcomingAppointment.items.map((it) => it.serviceName || `Dịch vụ #${it.serviceId}`).join(', ') : 'Chăm sóc & Phục hồi da chuyên sâu'}</h3>
-                            <div className="profile-metadata">
-                              <span className="profile-icon-label"><Clock size={18} /><span>{upcomingAppointment.startTime ? String(upcomingAppointment.startTime).slice(0, 5) : ''} - {upcomingAppointment.endTime ? String(upcomingAppointment.endTime).slice(0, 5) : ''}</span></span>
-                              {upcomingAppointment.items?.[0]?.staffName && <span className="profile-icon-label"><User size={18} /><span>KTV: <strong>{displayStaffName(upcomingAppointment.items[0].staffName)}</strong></span></span>}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="bento-ticket-footer">
-                          <div className="profile-reference">Mã lịch hẹn: <strong>SPA-APT-#{upcomingAppointment.id}</strong></div>
-                          <div className="profile-actions">
-                            {['PENDING', 'CONFIRMED'].includes(upcomingAppointment.status) && buildGoogleCalendarUrl({
-                              title: `Lịch hẹn Spa: ${upcomingAppointment.items?.[0]?.serviceName || 'Chăm sóc da'}`,
-                              date: upcomingAppointment.appointmentDate,
-                              startTime: upcomingAppointment.startTime,
-                              details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${displayStaffName(upcomingAppointment.items[0].staffName)}` : ''}`,
-                            }) && (
-                              <a
-                                href={buildGoogleCalendarUrl({
-                                  title: `Lịch hẹn Spa: ${upcomingAppointment.items?.[0]?.serviceName || 'Chăm sóc da'}`,
-                                  date: upcomingAppointment.appointmentDate,
-                                  startTime: upcomingAppointment.startTime,
-                                  details: `Mã lịch hẹn: SPA-APT-#${upcomingAppointment.id}${upcomingAppointment.items?.[0]?.staffName ? `\nKTV: ${displayStaffName(upcomingAppointment.items[0].staffName)}` : ''}`,
-                                })}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn-editorial-outline"
-                                title="Lưu vào Google Calendar"
-                              >
-                                <Calendar size={15} /> Thêm vào lịch
-                              </a>
-                            )}
-                            <button onClick={() => handleTabChange('appointments')} className="btn-editorial-outline">Chi tiết lịch hẹn</button>
-                            <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt hẹn mới</button>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="profile-empty-state">
-                        <Calendar size={40} />
-                        <h4>Bạn chưa có lịch hẹn chăm sóc da nào sắp tới</h4>
-                        <p>Trải nghiệm không gian thư giãn tiêu chuẩn cao cấp và các liệu trình làm đẹp độc quyền tại BeautyShop.</p>
-                        <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn Spa ngay</button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bento-order-card">
-                    <div>
-                      <div className="profile-card-heading">
-                        <h2>Đơn hàng gần nhất</h2>
-                        {latestOrder && <span className="profile-status-badge">{({ PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PROCESSING: 'Đang xử lý', SHIPPED: 'Đang giao', DELIVERED: 'Đã giao', COMPLETED: 'Hoàn tất', CANCELLED: 'Đã hủy', RETURNED: 'Đã trả hàng', DELIVERY_FAILED: 'Giao không thành công', RETURN_TO_SENDER: 'Hàng hoàn về kho' })[latestOrder.status] || latestOrder.status || 'Chưa có trạng thái'}</span>}
-                      </div>
-                      {latestOrder ? (
-                        <div>
-                          <div className="profile-muted">Mã đơn hàng:</div>
-                          <div className="profile-order-code">#{latestOrder.orderNumber || latestOrder.orderCode || latestOrder.id}</div>
-                          {!['CANCELLED', 'RETURNED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'].includes(latestOrder.status) && (
-                            <div className="editorial-progress-track">
-                              {['Đã đặt', 'Xác nhận', 'Đang giao', 'Hoàn tất'].map((label, index) => (
-                                <div key={label} className={`editorial-progress-step ${orderStepIndex >= index + 1 ? 'is-done' : ''}`}>
-                                  <div className="editorial-progress-dot" /><span className="editorial-progress-label">{label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <div className="profile-order-total"><span>Tổng thanh toán:</span><strong>{formatCurrency(latestOrder.totalAmount || latestOrder.finalAmount)}</strong></div>
-                        </div>
-                      ) : (
-                        <div className="profile-empty-state">
-                          <p>Bạn chưa có đơn đặt hàng nào gần đây.</p>
-                          <button onClick={() => onNavigate('products')} className="btn-editorial-outline">Khám phá mỹ phẩm</button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="profile-card-footer"><button onClick={() => handleTabChange('orders')} className="btn-editorial-outline profile-full-width">Quản lý tất cả đơn hàng</button></div>
-                  </div>
-                </div>
-
-                <div className="bento-bottom-row">
-                  <div className="bento-bottom-card">
-                    <div className="profile-card-heading">
-                      <h2>Vé liệu trình Spa</h2>
-                      {spaTickets.length > 0 && <button onClick={() => handleTabChange('tickets')} className="profile-text-button">Xem tất cả ({spaTickets.length})</button>}
-                    </div>
-                    {spaTickets.length === 0 ? (
-                      <div className="profile-empty-state">
-                        <p>Bạn chưa sở hữu thẻ liệu trình Spa điện tử.</p>
-                        <button onClick={() => onNavigate('service-packages')} className="btn-editorial-outline">Xem gói liệu trình tiết kiệm</button>
-                      </div>
-                    ) : (
-                      <div className="profile-mini-pass-grid">
-                        {spaTickets.slice(0, 2).map((tck) => {
-                          const remaining = knownCount(tck.remainingSessions);
-                          const used = knownCount(tck.usedSessions);
-                          const total = knownCount(tck.totalSessions);
-                          return (
-                            <div key={tck.id} className="profile-mini-pass-card">
-                              <div className="profile-pass-heading"><span>Mã vé #{tck.id}</span><span className="profile-muted">{tck.expiryDate ? new Date(tck.expiryDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Vô hạn'}</span></div>
-                              <h4>{tck.packageName || `Gói Liệu Trình #${tck.id}`}</h4>
-                              <div className="profile-pass-usage">Còn lại: {remaining ?? '—'} buổi (Đã dùng {used ?? '—'} / {total ?? '—'})</div>
-                              {used !== null && total !== null && total > 0 && <div className="profile-pass-progress"><div style={{ width: `${Math.min(100, Math.round((used / total) * 100))}%` }} /></div>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="bento-bottom-card profile-care-card">
-                    <div>
-                      <h2>Hồ sơ chăm sóc cá nhân</h2>
-                      <p>Nhận phân tích tình trạng da từ chuyên gia và theo dõi hình ảnh tiến trình qua các buổi chăm sóc chuyên sâu.</p>
-                    </div>
-                    <div className="profile-actions">
-                      <button onClick={() => handleTabChange('skin')} className="btn-editorial-outline">Hồ sơ chăm sóc da</button>
-                      <a href="#/treatments?tab=courses" className="btn-editorial-primary">Tiến trình chăm sóc</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'tickets' && (
-              <div className="profile-detail-stack">
-                <p>Cung cấp mã vé hoặc số điện thoại tại quầy lễ tân để nhân viên check-in và thực hiện dịch vụ.</p>
-                {spaTickets.length === 0 ? (
-                  <div className="account-card profile-empty-state">
-                    <h3>Bạn chưa có vé liệu trình Spa nào</h3>
-                    <p>Mua gói dịch vụ để tiết kiệm chi phí và hưởng ưu đãi theo liệu trình dài hạn.</p>
-                    <button onClick={() => onNavigate('service-packages')} className="btn-editorial-primary">Khám phá gói dịch vụ Spa</button>
-                  </div>
-                ) : (
-                  <div className="customer-profile-ticket-grid">
-                    {spaTickets.map((tck) => {
-                      const remaining = knownCount(tck.remainingSessions);
-                      const used = knownCount(tck.usedSessions);
-                      const total = knownCount(tck.totalSessions);
-                      return (
-                        <div key={tck.id} className="account-card profile-ticket-card">
-                          <div className="profile-card-heading">
-                            <h3>{tck.packageName || `Gói Liệu Trình #${tck.id}`}</h3>
-                          </div>
-                          <div className="profile-pass-heading"><span>Còn lại: {remaining === null ? 'Chưa có thông tin' : `${remaining} buổi`}</span><span className="profile-muted">Đã sử dụng: {used ?? '—'} / {total ?? '—'}</span></div>
-                          {used !== null && total !== null && total > 0 && <div className="profile-pass-progress"><div style={{ width: `${Math.min(100, Math.round((used / total) * 100))}%` }} /></div>}
-                          <div className="profile-ticket-info">
-                            <div>• Mã vé: <strong className="profile-reference">#{tck.id}</strong></div>
-                            <div>• Hạn sử dụng: <strong>{tck.expiryDate ? new Date(tck.expiryDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Không giới hạn'}</strong></div>
-                            <div>• Trạng thái: <strong>{getTicketStatusText(tck.status)}</strong></div>
-                          </div>
-                          <TicketDetails ticket={tck} onNavigate={onNavigate} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'appointments' && (
-              <div className="profile-detail-stack">
-                <div className="profile-card-heading"><p>Danh sách các buổi hẹn chăm sóc da tại BeautyShop Spa.</p><button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn mới</button></div>
-                {aptActionError && (
-                  <div role="alert" className="profile-load-error">
-                    <p>{aptActionError}</p>
-                  </div>
-                )}
-                {appointments.length === 0 ? (
-                  <div className="account-card profile-empty-state">
-                    <Calendar size={40} /><h3>Bạn chưa có lịch hẹn Spa nào</h3>
-                    <p>Chọn dịch vụ và thời gian mong muốn để chuyên viên chuẩn bị phòng chu đáo nhất.</p>
-                    <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt lịch hẹn ngay</button>
-                  </div>
-                ) : appointments.map((apt) => {
-                  const isCancellable = (apt.status === 'PENDING' || apt.status === 'CONFIRMED') && !apt.checkedInAt;
-                  return (
-                    <div key={apt.id} className="account-card profile-appointment-card">
-                      <div>
-                        <div className="profile-metadata"><strong className="profile-reference">SPA-APT-#{apt.id}</strong><span className="profile-status-badge">{getAppointmentStatusText(apt.status, apt.checkedInAt)}</span></div>
-                        <div className="profile-metadata">
-                          <span className="profile-icon-label"><Calendar size={18} /><strong>{formatAptDate(apt.appointmentDate)}</strong></span>
-                          <span className="profile-icon-label"><Clock size={18} /><span>{apt.startTime ? String(apt.startTime).slice(0, 5) : ''} - {apt.endTime ? String(apt.endTime).slice(0, 5) : ''}</span></span>
-                        </div>
-                        <h3>{apt.items && apt.items.length > 0 ? apt.items.map((it) => it.serviceName || `Dịch vụ #${it.serviceId}`).join(', ') : 'Dịch vụ Chăm Sóc Da Spa'}</h3>
-                        {apt.items && apt.items[0]?.staffName && <div className="profile-muted">Kỹ thuật viên: <strong>{displayStaffName(apt.items[0].staffName)}</strong></div>}
-                      </div>
-                      <div className="account-actions">
-                        <AppointmentTools appointment={apt} onSaved={loadData} autoOpen={String(apt.id) === params.get('appointment')} />
-                        {['PENDING', 'CONFIRMED'].includes(apt.status) && (
-                          <a
-                            href={buildGoogleCalendarUrl({
-                              title: `Lịch hẹn Spa: ${apt.items?.[0]?.serviceName || 'Chăm sóc da'}`,
-                              date: apt.appointmentDate,
-                              startTime: apt.startTime,
-                              details: `Mã lịch hẹn: SPA-APT-#${apt.id}${apt.items?.[0]?.staffName ? `\nKTV: ${displayStaffName(apt.items[0].staffName)}` : ''}`,
-                            })}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-editorial-outline"
-                            title="Lưu vào Google Calendar"
-                          >
-                            <Calendar size={15} /> Lưu lịch
-                          </a>
-                        )}
-                        {isCancellable && <button onClick={() => handleCancelAppointment(apt.id)} disabled={cancellingAptId === apt.id} className="btn-editorial-outline profile-danger">{cancellingAptId === apt.id ? 'Đang hủy...' : 'Hủy lịch hẹn'}</button>}
-                        <button onClick={() => onNavigate('booking')} className="btn-editorial-primary">Đặt hẹn mới</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {activeTab === 'orders' && <OrderWorkspace key={refreshTick} onNavigate={onNavigate} initialOrderId={params.get('order')} onOrderChanged={loadData} />}
-            {activeTab === 'skin' && <SkinProfile key={refreshTick} />}
-            {activeTab === 'settings' && <AccountSettings profile={displayUser} onSaved={loadData} />}
-            {activeTab === 'addresses' && <AddressBook key={refreshTick} />}
-            {activeTab === 'wishlist' && <WishlistPage key={refreshTick} onNavigate={onNavigate} />}
-            {activeTab === 'notifications' && <NotificationInbox key={refreshTick} onNavigate={onNavigate} />}
+            {listTab && <>
+              {data[listTab] == null ? errors[listTab] ? <StateNotice error>Chưa tải được {resourceNames[listTab].toLowerCase()}. Vui lòng thử lại.</StateNotice> : <AccountLoading count={3} label={`Đang tải ${resourceNames[listTab].toLowerCase()}…`} /> : <>
+                {actionError && <StateNotice error>{actionError}</StateNotice>}
+                {listTab === 'tickets' && <div className="profile-list-meta"><span>{tickets.length} vé · {activeTickets.length} vé đang khả dụng</span><span>6 vé mỗi trang</span></div>}
+                {listTab === 'appointments' && <div className="profile-list-meta"><span>{appointments.length} lịch hẹn · {upcoming.length} lịch sắp tới / đang thực hiện</span><span>5 lịch mỗi trang</span></div>}
+                {listTab === 'tickets' && (tickets.length ? <div className="customer-profile-ticket-grid">{ticketWindow.rows.map(ticket => <article key={ticket.id} className="account-card profile-ticket-card"><header className="profile-card-heading"><h3>{ticket.packageName || `Gói #${ticket.id}`}</h3><span className="profile-status-badge">{getTicketStatusText(ticket.status)}</span></header><dl className="profile-card-facts"><div><dt>Mã vé</dt><dd>#{ticket.id}</dd></div><div><dt>Khả dụng / Tổng lượt</dt><dd>{knownCount(ticket.remainingSessions) ?? 'Chưa rõ'} / {knownCount(ticket.totalSessions) ?? 'Chưa rõ'}</dd></div><div><dt>Đã dùng / mất lượt</dt><dd>{knownCount(ticket.usedSessions) ?? 'Chưa rõ'}</dd></div><div><dt>Đang giữ</dt><dd>{knownCount(ticket.reservedSessions) ?? 'Chưa rõ'}</dd></div><div><dt>Hạn sử dụng</dt><dd>{ticket.expiryDate ? dateLabel(ticket.expiryDate) : 'Không giới hạn'}</dd></div></dl><TicketDetails ticket={ticket} onNavigate={onNavigate} onUpdated={loadData} /></article>)}</div> : <StateNotice>Bạn chưa có vé Spa. Các gói đã thanh toán sẽ xuất hiện sau khi hệ thống cấp quyền sử dụng.</StateNotice>)}
+                {listTab === 'appointments' && (appointments.length ? <div className="profile-appointment-list">{aptWindow.rows.map(appointment => {
+                  const calendar = ['PENDING', 'CONFIRMED'].includes(appointment.status) ? calendarUrl(appointment) : '';
+                  return <article key={appointment.id} className="account-card profile-appointment-card"><div><header className="profile-card-heading"><strong>SPA-APT-#{appointment.id}</strong><span className="profile-status-badge">{appointmentLabel(appointment)}</span></header><div className="profile-metadata"><span><Calendar size={16} />{dateLabel(appointment.appointmentDate)}</span><span><Clock size={16} />{timeLabel(appointment.startTime)} – {timeLabel(appointment.endTime)}</span></div><ul className="profile-appointment-services">{(appointment.items || []).map((item, index) => <li key={item.id || index}><strong>{item.serviceName || `Dịch vụ #${item.serviceId}`}</strong><span>{staffLabel(item.staffName)}</span></li>)}</ul></div><div className="profile-appointment-actions"><AppointmentTools appointment={appointment} onSaved={loadData} autoOpen={String(appointment.id) === requestedAppointment} /><div className="profile-actions">{calendar && <a href={calendar} target="_blank" rel="noopener noreferrer" className="profile-text-button">Lưu vào lịch</a>}{['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <button type="button" disabled={cancellingId != null} onClick={() => cancelAppointment(appointment.id)} className="profile-text-button profile-danger">{cancellingId === appointment.id ? 'Đang hủy…' : 'Hủy lịch hẹn'}</button>}</div></div></article>;
+                })}</div> : <StateNotice>Bạn chưa có lịch hẹn Spa. Chọn Đặt lịch hẹn mới để bắt đầu.</StateNotice>)}
+                <Pagination page={listTab === 'tickets' ? ticketWindow.page : aptWindow.page} totalPages={listTab === 'tickets' ? ticketWindow.totalPages : aptWindow.totalPages} onChange={listTab === 'tickets' ? setTicketPage : setAptPage} label={listTab === 'tickets' ? 'Phân trang vé Spa' : 'Phân trang lịch hẹn'} />
+              </>}
+            </>}
+            {activeTab === 'orders' && <OrderWorkspace refreshKey={refreshTick} onNavigate={onNavigate} initialOrderId={params.get('order')} onOrderChanged={loadData} />}
+            {activeTab === 'skin' && <SkinProfile refreshKey={refreshTick} />}
+            {activeTab === 'settings' && <AccountSettings profile={profile} onSaved={loadData} />}
+            {activeTab === 'addresses' && <AddressBook refreshKey={refreshTick} />}
+            {activeTab === 'wishlist' && <WishlistPage refreshKey={refreshTick} onNavigate={onNavigate} />}
+            {activeTab === 'notifications' && <NotificationInbox refreshKey={refreshTick} onNavigate={onNavigate} />}
           </div>
-        </div>
+        </section>
       </div>
+      {selectedOrder && <OrderDetailDialog key={selectedOrder} orderId={selectedOrder} onClose={() => setSelectedOrder(null)} onNavigate={onNavigate} onChanged={loadData} />}
+      {selectedAppointment && <TreatmentAppointmentDialog key={selectedAppointment} appointmentId={selectedAppointment} role="customer" onClose={() => setSelectedAppointment(null)} onSaved={loadData} />}
     </div>
-  );
-};
+  </div>;
+}

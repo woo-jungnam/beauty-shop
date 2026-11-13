@@ -25,6 +25,13 @@ export function ServiceBookingOrders({ admin = false, refreshKey = 0, onNavigate
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; controller.abort(); };
   }, [admin, page, refresh, refreshKey]);
+
+  useEffect(() => {
+    if (result && result.totalPages > 0 && page >= result.totalPages) {
+      setPage(Math.max(0, result.totalPages - 1));
+    }
+  }, [result, page]);
+
   const columns = [
     { header: 'Mã đặt dịch vụ', accessor: row => `LH-${row.appointmentId}` },
     ...(admin ? [{ header: 'Khách hàng', accessor: row => row.customerName || '—' }] : []),

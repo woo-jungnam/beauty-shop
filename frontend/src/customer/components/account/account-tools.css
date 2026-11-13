@@ -1,276 +1,204 @@
-.account-stack{display:grid;gap:18px}.account-card{padding:22px;border:1px solid var(--c-border,#eadde1);border-radius:14px;background:#fff;color:var(--c-primary,#662a3c)}.account-form{display:grid;gap:13px}.account-form label{display:grid;gap:7px;font-size:14px}.account-form input,.account-form select,.account-form textarea{padding:10px;border:1px solid #d6c9ce;border-radius:7px;background:#fff;color:#352d30;min-width:0;width:100%;box-sizing:border-box}.account-form input[type=checkbox]{width:auto;justify-self:start}.account-form textarea{min-height:80px}.account-form button,.account-actions button{cursor:pointer;padding:9px 14px;border:1px solid #bd8b9b;border-radius:8px;background:#fff;color:#713348}.account-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px}.account-actions button:disabled,.account-form button:disabled{opacity:.5;cursor:default}.account-form .btn-luxury-primary,.account-actions .btn-luxury-primary,.account-card .btn-luxury-primary{background:var(--c-primary,#8c2a47)!important;color:#ffffff!important;border-color:var(--c-primary,#8c2a47)!important}.account-form .btn-luxury-primary:hover,.account-actions .btn-luxury-primary:hover,.account-card .btn-luxury-primary:hover{background:var(--c-primary-hover,#6f1d34)!important;color:#ffffff!important;border-color:var(--c-primary-hover,#6f1d34)!important}.account-form .btn-luxury-outline,.account-actions .btn-luxury-outline,.account-card .btn-luxury-outline{background:transparent!important;color:var(--c-primary,#8c2a47)!important;border-color:var(--c-border-strong,#bd8b9b)!important}.account-product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}.account-order-lines{width:100%;border-collapse:collapse}.account-order-lines td,.account-order-lines th{padding:9px 4px;text-align:left;border-bottom:1px solid #eee}.account-status{padding:8px 12px;background:#faf1f4;border-radius:8px}.account-order-total{font-weight:750}.account-ticket-code{font:700 18px monospace;overflow-wrap:anywhere}
+.account-stack { display: grid; gap: 18px; min-width: 0; }
+.account-card { padding: 22px; border: 1px solid var(--c-border, #eadde1); border-radius: 14px; background: #fff; color: var(--c-primary, #662a3c); min-width: 0; }
+.account-form { display: grid; gap: 13px; align-content: start; }
+.account-form label { display: grid; gap: 7px; font-size: 14px; }
+.account-form :is(input, select, textarea) { padding: 10px; border: 1px solid #d6c9ce; border-radius: 7px; background: #fff; color: #352d30; min-width: 0; width: 100%; box-sizing: border-box; }
+.account-form input[type=checkbox] { width: auto; justify-self: start; }
+.account-form textarea { min-height: 80px; resize: vertical; }
+.account-form button, .account-actions button { cursor: pointer; padding: 9px 14px; border: 1px solid #bd8b9b; border-radius: 8px; background: #fff; color: #713348; }
+.account-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.account-actions button:disabled, .account-form button:disabled { opacity: .5; cursor: default; }
+.account-form .btn-luxury-primary, .account-actions .btn-luxury-primary, .account-card .btn-luxury-primary { background: var(--c-primary, #8c2a47) !important; color: #fff !important; border-color: var(--c-primary, #8c2a47) !important; }
+.account-form .btn-luxury-primary:hover, .account-actions .btn-luxury-primary:hover, .account-card .btn-luxury-primary:hover { background: var(--c-primary-hover, #6f1d34) !important; color: #fff !important; border-color: var(--c-primary-hover, #6f1d34) !important; }
+.account-form .btn-luxury-outline, .account-actions .btn-luxury-outline, .account-card .btn-luxury-outline { background: transparent !important; color: var(--c-primary, #8c2a47) !important; border-color: var(--c-border-strong, #bd8b9b) !important; }
+.account-product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; }
+.account-order-lines { width: 100%; border-collapse: collapse; }
+.account-order-lines :is(td, th) { padding: 9px 4px; text-align: left; border-bottom: 1px solid #eee; }
+.account-status { padding: 8px 12px; background: #faf1f4; border-radius: 8px; }
+.account-order-total { font-weight: 750; }
+.account-ticket-code { font: 700 18px monospace; overflow-wrap: anywhere; }
+.account-loading { display: grid; gap: 14px; min-width: 0; color: var(--c-text-muted, #5e5551); }
+.account-loading > span { font-size: 13px; }
+.account-loading-item { min-height: 124px; border-radius: 12px; }
+.profile-shimmer-box { background: linear-gradient(100deg, #f3ece8 20%, #faf8f5 50%, #f3ece8 80%); background-size: 200% 100%; animation: profileShimmer 1.6s ease-in-out infinite; }
+@keyframes profileShimmer { to { background-position: -200% 0; } }
 
-/* Profile-only editorial palette; shared account screens keep their own theme. */
+/* One full-width surface; borders separate sections, not floating islands. */
 .customer-profile-page {
-  --ed-bg: #FAF8F5;
-  --ed-card: #FFFFFF;
-  --ed-wine: #721B29;
-  --ed-wine-dark: #4E101A;
-  --ed-wine-light: #F7ECEE;
-  --ed-champagne-rose: #F4EAE6;
+  --ed-bg: #faf8f5;
+  --ed-card: #fff;
+  --ed-wine: #721b29;
+  --ed-wine-dark: #4e101a;
+  --ed-wine-light: #f7ecee;
   --ed-charcoal: #292321;
-  --ed-charcoal-muted: #5E5551;
+  --ed-charcoal-muted: #5e5551;
   --ed-charcoal-subtle: #716762;
-  --ed-border: #E8DED7;
-  --ed-control-border: #9A8882;
+  --ed-border: #e8ded7;
+  --ed-control-border: #9a8882;
   --ed-sans: 'Be Vietnam Pro', 'Inter', 'Plus Jakarta Sans', sans-serif;
-  --ed-shadow: 0 8px 28px -12px rgb(78 16 26 / 10%);
-  --ed-padding: clamp(20px, 2vw, 32px);
   --ed-gap: 20px;
+  --ed-padding: clamp(18px, 1.8vw, 30px);
   --c-primary: var(--ed-wine);
   --c-primary-hover: var(--ed-wine-dark);
   --c-primary-dark: var(--ed-wine-dark);
   --c-primary-light: var(--ed-wine-light);
   --c-gold: var(--ed-wine);
   --c-gold-hover: var(--ed-wine-dark);
-  --c-gold-light: var(--ed-champagne-rose);
+  --c-gold-light: var(--ed-wine-light);
   --c-gold-border: var(--ed-border);
   --c-text-gold: var(--ed-wine);
   --c-text-main: var(--ed-charcoal);
   --c-text-muted: var(--ed-charcoal-muted);
   --c-text-light: var(--ed-charcoal-subtle);
   --c-canvas: var(--ed-bg);
-  --c-canvas-subtle: var(--ed-champagne-rose);
+  --c-canvas-subtle: var(--ed-bg);
   --c-surface: var(--ed-card);
   --c-border: var(--ed-border);
   --c-border-subtle: var(--ed-border);
   --font-serif: var(--ed-sans);
   --font-sans: var(--ed-sans);
-  background: var(--ed-bg);
-  color: var(--ed-charcoal);
-  font: 500 15px/1.6 var(--ed-sans);
-  padding: 24px clamp(16px, 2.5vw, 48px) 56px;
-  overflow-wrap: anywhere;
+  width: 100%; min-width: 0; box-sizing: border-box;
+  padding: 24px clamp(16px, 2vw, 40px) 48px;
+  background: var(--ed-bg); color: var(--ed-charcoal);
+  font: 500 14px/1.6 var(--ed-sans); overflow-wrap: anywhere;
 }
-
-.customer-profile-page .profile-shell { width: 100%; max-width: 100%; min-width: 0; margin-inline: auto; }
-.customer-app .customer-profile-page :where(h1, h2, h3, h4) {
-  font-family: var(--ed-sans);
-  font-weight: 700;
-  color: var(--ed-charcoal);
-  line-height: 1.4;
-  letter-spacing: -.025em;
-  margin: 0 0 12px;
-}
-/* The storefront's legacy profile h1 rule is also important. */
+.customer-profile-page .profile-shell { width: 100%; min-width: 0; max-width: none; margin-inline: auto; }
+.customer-app .customer-profile-page :is(h1, h2, h3, h4) { font-family: var(--ed-sans); font-weight: 700; color: var(--ed-charcoal); line-height: 1.4; letter-spacing: -.02em; margin: 0; }
 .customer-app .customer-profile-page h1 { color: var(--ed-charcoal) !important; font-size: clamp(24px, 2vw, 30px); }
-.customer-profile-page :where(h2, h3, h4) { font-size: clamp(18px, 1.3vw, 21px); }
-.customer-app .customer-profile-page p { font: inherit; color: var(--ed-charcoal-muted); margin: 0 0 16px; }
+.customer-profile-page h2 { font-size: 20px; }
+.customer-profile-page h3 { font-size: 16px; }
+.customer-profile-page :is(p, dl, ul) { margin-block: 0; }
 .customer-profile-page svg { flex-shrink: 0; }
-.customer-profile-page :where(button, a, input, select, textarea) { scroll-margin-block-start: calc(var(--customer-header-height, 162px) + 20px); }
-.customer-profile-page :where(button, a) { white-space: normal; overflow-wrap: anywhere; }
+.customer-profile-page :is(button, a, input, select, textarea) { scroll-margin-block-start: calc(var(--customer-header-height, 160px) + 24px); }
+.customer-profile-page :is(button, a) { overflow-wrap: anywhere; }
 .customer-profile-page button:disabled { opacity: .55; cursor: not-allowed; }
-
-.customer-profile-page .profile-toolbar,
-.customer-profile-page .profile-tab-heading,
-.customer-profile-page .profile-card-heading,
-.customer-profile-page .profile-pass-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-}
-.customer-profile-page .profile-toolbar { margin-bottom: 20px; }
-.customer-profile-page .profile-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; font-size: 13px; color: var(--ed-charcoal-subtle); }
-.customer-profile-page .profile-breadcrumb strong { color: var(--ed-wine); }
-.customer-profile-page .profile-breadcrumb button { border: 0; padding: 6px 0; min-height: 44px; background: none; color: inherit; font-size: inherit; cursor: pointer; }
-.customer-profile-page .profile-layout-container { display: grid; grid-template-columns: clamp(270px, 18vw, 320px) minmax(0, 1fr); align-items: start; gap: clamp(20px, 2vw, 32px); }
-.customer-profile-page .profile-sidebar { display: grid; min-width: 0; border: 1px solid var(--ed-border); border-radius: 20px; background: var(--ed-card); box-shadow: var(--ed-shadow); overflow: hidden; }
-.customer-profile-page .profile-main-content { min-width: 0; container: profile-content / inline-size; border: 1px solid var(--ed-border); border-radius: 20px; background: var(--ed-card); box-shadow: var(--ed-shadow); overflow: hidden; }
-.customer-profile-page .profile-overview { display: grid; }
-.customer-profile-page .profile-overview > * + * { border-top: 1px solid var(--ed-border); }
-.customer-profile-page .profile-tab-heading { border-bottom: 1px solid var(--ed-border); padding-bottom: 20px; margin-bottom: 24px; }
-.customer-profile-page .profile-tab-heading h1 { flex: 1 1 280px; min-width: 0; margin: 0; }
-.customer-profile-page .profile-muted { color: var(--ed-charcoal-subtle); font-size: 14px; }
-.customer-profile-page .profile-icon-label { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.customer-profile-page .profile-icon-label > :not(svg) { min-width: 0; }
-.customer-profile-page .profile-actions,
-.customer-profile-page .profile-metadata { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; }
-.customer-profile-page .profile-metadata { color: var(--ed-charcoal-muted); font-size: 14px; margin-block: 12px; }
-.customer-profile-page .profile-card-heading { margin-bottom: 20px; }
-.customer-profile-page .profile-card-heading > * { min-width: 0; }
-.customer-profile-page .profile-card-heading h3,
-.customer-profile-page .profile-card-heading p,
-.customer-profile-page .profile-icon-label h3 { margin: 0; }
-.customer-profile-page .profile-reference { color: var(--ed-charcoal-subtle); font: 500 13px/1.6 var(--ed-sans); }
-.customer-profile-page .profile-status-badge { color: var(--ed-wine); font-size: 14px; font-weight: 600; line-height: 1.5; }
-.customer-profile-page .profile-load-error { padding: 20px; border: 1px solid #D88E8E; border-radius: 16px; background: #FEF2F2; margin-bottom: 24px; }
-.customer-profile-page .profile-load-error p { color: #991B1B; margin-bottom: 8px; }
-.customer-profile-page .profile-danger { color: #991B1B; }
-
-/* Membership and navigation. No sticky container: all menu items remain reachable. */
-.customer-profile-page .profile-vip-card { padding: 22px 20px; border-bottom: 1px solid var(--ed-border); color: var(--ed-charcoal); }
-.customer-profile-page .profile-vip-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.customer-profile-page .profile-vip-avatar { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 14px; flex-shrink: 0; background: var(--ed-wine-light); color: var(--ed-wine); font: 700 24px var(--ed-sans); overflow: hidden; }
-.customer-profile-page .profile-vip-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.customer-profile-page .profile-vip-identity { min-width: 0; }
-.customer-profile-page .profile-vip-identity h3 { color: inherit; font-size: 19px; margin-bottom: 2px; }
-.customer-profile-page .profile-vip-username { font-size: 13px; color: var(--ed-charcoal-subtle); }
-.customer-profile-page .profile-membership { margin-top: 6px; color: var(--ed-wine); font-size: 14px; font-weight: 600; }
-.customer-profile-page .profile-vip-points-box { padding-block: 16px; border-block: 1px solid var(--ed-border); margin-bottom: 18px; }
-.customer-profile-page .profile-vip-points-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; }
-.customer-profile-page .profile-vip-points-heading strong { font-size: 18px; font-weight: 700; }
-.customer-profile-page .profile-vip-progress-bar { height: 6px; margin-block: 12px; background: var(--ed-wine-light); border-radius: 99px; overflow: hidden; }
-.customer-profile-page .profile-vip-progress-fill { height: 100%; border-radius: inherit; background: var(--ed-wine); }
-.customer-profile-page .profile-vip-note { color: var(--ed-charcoal-muted); font-size: 13px; line-height: 1.65; }
-.customer-profile-page .profile-vip-contact { display: grid; gap: 10px; font-size: 13px; color: var(--ed-charcoal-muted); }
-.customer-profile-page .profile-vip-contact .profile-icon-label { align-items: flex-start; }
-.customer-profile-page .profile-vip-contact svg { margin-top: 3px; }
-.customer-profile-page .profile-nav-card { padding: 16px 12px; }
-.customer-profile-page .profile-nav-group + .profile-nav-group { margin-top: 12px; }
-.customer-profile-page .profile-nav-section-title { color: var(--ed-charcoal-subtle); font-size: 13px; font-weight: 600; padding: 10px 14px; }
-.customer-profile-page .profile-nav-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 48px; border: 0; border-radius: 12px; padding: 12px 14px; background: transparent; color: var(--ed-charcoal-muted); font-size: 15px; font-weight: 500; text-align: left; text-decoration: none; cursor: pointer; }
-.customer-profile-page .profile-nav-item:hover { background: var(--ed-wine-light); color: var(--ed-wine); }
-.customer-profile-page .profile-nav-item.is-active { background: var(--ed-wine); color: var(--ed-card); font-weight: 600; }
-.customer-profile-page .profile-nav-item-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.customer-profile-page .profile-nav-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--ed-border); }
-.customer-profile-page .profile-nav-item.profile-danger { color: #991B1B; }
-
-/* The main column, not the viewport, decides how many cards fit. */
-.customer-profile-page :where(.profile-overview-summary, .bento-asymmetric-row, .bento-bottom-row) { min-width: 0; }
-.customer-profile-page :where(.bento-hero-banner, .bento-kpi-card, .bento-ticket-widget, .bento-order-card, .bento-bottom-card) { min-width: 0; }
-.customer-profile-page :where(.bento-hero-banner, .bento-order-card, .bento-bottom-card, .account-card) { padding: var(--ed-padding); }
-.customer-profile-page .bento-hero-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
-.customer-profile-page .bento-hero-banner > div:first-child { flex: 1 1 460px; min-width: 0; }
-.customer-profile-page .bento-hero-banner h1 { margin-block: 8px 12px; }
-.customer-profile-page .bento-hero-banner p { margin: 0; max-width: 70ch; }
-.customer-profile-page .bento-kpi-grid,
-.customer-profile-page .bento-asymmetric-row,
-.customer-profile-page .bento-bottom-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
-.customer-profile-page .bento-kpi-grid { border-top: 1px solid var(--ed-border); }
-.customer-profile-page .bento-kpi-card + .bento-kpi-card,
-.customer-profile-page .bento-order-card,
-.customer-profile-page .profile-care-card { border-top: 1px solid var(--ed-border); }
-.customer-profile-page .profile-main-detail { padding: var(--ed-padding); }
-.customer-profile-page .profile-main-detail .account-card { border: 0; border-bottom: 1px solid var(--ed-border); border-radius: 0; box-shadow: none; padding: 24px 0; }
-.customer-profile-page .profile-main-detail .account-card:last-child { border-bottom: 0; }
-.customer-profile-page .bento-kpi-card { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-height: 132px; padding: 20px; }
-.customer-profile-page .bento-kpi-label { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; color: var(--ed-charcoal-muted); }
-.customer-profile-page .bento-kpi-value { font: 600 clamp(24px, 2vw, 32px)/1.25 var(--ed-sans); color: var(--ed-charcoal); letter-spacing: -.03em; margin-bottom: 6px; }
-.customer-profile-page .bento-kpi-currency { font-size: clamp(22px, 1.7vw, 26px); }
-.customer-profile-page .bento-kpi-sub { font-size: 13px; color: var(--ed-charcoal-subtle); }
-.customer-profile-page :where(.bento-ticket-widget, .bento-order-card, .bento-bottom-card) { display: flex; flex-direction: column; justify-content: space-between; }
-.customer-profile-page .bento-ticket-widget { overflow: hidden; }
-.customer-profile-page .bento-ticket-header,
-.customer-profile-page .bento-ticket-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; padding: 18px var(--ed-padding); }
-.customer-profile-page .bento-ticket-header { border-bottom: 1px solid var(--ed-border); }
-.customer-profile-page .bento-ticket-footer { border-top: 1px solid var(--ed-border); }
-.customer-profile-page :is(.bento-ticket-header, .profile-card-heading) h2 { margin: 0; font-size: 20px; }
-.customer-profile-page .bento-ticket-body { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 20px; padding: var(--ed-padding); flex: 1; }
-.customer-profile-page .bento-ticket-date-badge { padding: 14px 10px; border: 1px solid var(--ed-border); border-radius: 16px; background: var(--ed-champagne-rose); text-align: center; }
-.customer-profile-page .bento-ticket-date-month { font-size: 11px; font-weight: 700; color: var(--ed-wine); }
-.customer-profile-page .bento-ticket-date-day { font: 600 38px/1.15 var(--ed-sans); color: var(--ed-charcoal); margin-block: 4px; }
-.customer-profile-page .bento-ticket-date-time { font-size: 14px; font-weight: 600; color: var(--ed-charcoal-muted); }
-.customer-profile-page .bento-ticket-body h3 { margin-top: 8px; }
-.customer-profile-page .profile-order-code { margin-top: 4px; font: 600 18px/1.6 var(--ed-sans); }
-.customer-profile-page .editorial-progress-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-block: 28px; }
-.customer-profile-page .editorial-progress-step { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; min-width: 0; }
-.customer-profile-page .editorial-progress-dot { width: 12px; height: 12px; border: 2px solid var(--ed-card); border-radius: 50%; background: var(--ed-control-border); box-shadow: 0 0 0 1px var(--ed-control-border); }
-.customer-profile-page .editorial-progress-step.is-done .editorial-progress-dot { background: var(--ed-wine); box-shadow: 0 0 0 2px var(--ed-wine); }
-.customer-profile-page .editorial-progress-label { font-size: 13px; color: var(--ed-charcoal-subtle); }
-.customer-profile-page .editorial-progress-step.is-done .editorial-progress-label { color: var(--ed-wine); font-weight: 700; }
-.customer-profile-page .profile-order-total { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 16px; border-radius: 14px; background: var(--ed-bg); font-size: 14px; color: var(--ed-charcoal-muted); }
-.customer-profile-page .profile-order-total strong { color: var(--ed-charcoal); font-size: 20px; }
-.customer-profile-page .profile-card-footer { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ed-border); }
-.customer-profile-page .profile-mini-pass-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
-.customer-profile-page .profile-mini-pass-card { padding-block: 20px; border-top: 1px solid var(--ed-border); }
-.customer-profile-page .profile-mini-pass-card h4 { font-size: 20px; margin-top: 12px; }
-.customer-profile-page .profile-pass-heading { color: var(--ed-wine); font-size: 13px; font-weight: 600; gap: 8px; margin-bottom: 12px; }
-.customer-profile-page .profile-pass-usage { font-size: 14px; color: var(--ed-charcoal-muted); }
-.customer-profile-page .profile-pass-progress { height: 6px; margin-top: 14px; border-radius: 99px; background: var(--ed-wine-light); overflow: hidden; }
-.customer-profile-page .profile-pass-progress > div { height: 100%; background: var(--ed-wine); border-radius: inherit; }
-.customer-profile-page .profile-care-card { gap: 24px; }
-.customer-profile-page .profile-care-card p { margin-top: 16px; }
-.customer-profile-page .profile-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 32px 24px; text-align: center; flex: 1; }
-.customer-profile-page .profile-empty-state > svg { color: var(--ed-wine); }
-.customer-profile-page .profile-empty-state :where(p, h3, h4) { margin: 0; }
-.customer-profile-page .profile-empty-state p { max-width: 56ch; }
-.customer-profile-page.profile-login-prompt { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-height: 50vh; text-align: center; }
-.customer-profile-page.profile-login-prompt p { max-width: 56ch; }
-
-/* Shared detail components inherit the profile's scale and color roles. */
-.customer-profile-page .profile-detail-stack,
-.customer-profile-page .account-stack { display: grid; gap: var(--ed-gap); min-width: 0; }
-.customer-profile-page .profile-detail-stack > p { margin: 0; }
-.customer-profile-page .customer-profile-ticket-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--ed-gap); }
-.customer-profile-page .profile-ticket-icon { display: grid; place-items: center; width: 64px; height: 64px; background: var(--ed-bg); border-radius: 16px; color: var(--ed-wine); flex-shrink: 0; }
-.customer-profile-page .profile-ticket-info { display: grid; gap: 6px; font-size: 14px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--ed-border); }
-.customer-profile-page .profile-appointment-card { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; }
-.customer-profile-page .profile-appointment-card > div { min-width: 0; }
-.customer-profile-page .profile-appointment-card .account-actions { margin: 0; }
+.customer-profile-page :is(button, a, input, textarea, select):focus-visible { outline: 3px solid var(--ed-wine); outline-offset: 3px; }
+.customer-profile-page .profile-toolbar { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 16px 24px; margin-bottom: 20px; }
+.customer-profile-page .profile-toolbar p { margin-top: 6px; color: var(--ed-charcoal-muted); }
+.customer-profile-page .profile-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; color: var(--ed-charcoal-subtle); font-size: 12px; }
+.customer-profile-page .profile-breadcrumb a { color: inherit; text-underline-offset: 3px; }
+.customer-profile-page .profile-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.customer-profile-page .profile-unified-frame { width: 100%; min-width: 0; background: var(--ed-card); border: 1px solid var(--ed-border); border-radius: 18px; box-shadow: 0 8px 28px -18px rgb(78 16 26 / 18%); }
+.customer-profile-page .profile-sync-status { padding: 10px var(--ed-padding); min-height: 40px; box-sizing: border-box; color: var(--ed-charcoal-muted); font-size: 12px; border-bottom: 1px solid var(--ed-border); }
+.customer-profile-page .profile-load-error { margin: 16px var(--ed-padding); padding: 16px; border: 1px solid #d88e8e; border-radius: 10px; background: #fef2f2; color: #991b1b; }
+.customer-profile-page .profile-load-error ul { padding-left: 20px; margin-block: 8px 12px; }
+.customer-profile-page .profile-bento-panel { padding: var(--ed-padding); background: var(--ed-bg); border-bottom: 1px solid var(--ed-border); }
+.customer-profile-page .profile-bento-modular-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid var(--ed-border); border-radius: 12px; background: var(--ed-card); }
+.customer-profile-page .bento-modular-card { display: grid; grid-template-rows: auto minmax(184px, 1fr) auto; min-width: 0; padding: 18px; gap: 14px; }
+.customer-profile-page .bento-modular-card + .bento-modular-card { border-left: 1px solid var(--ed-border); }
+.customer-profile-page .bento-card-header { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 8px; min-height: 48px; }
+.customer-profile-page .bento-card-header h2 { display: flex; align-items: center; gap: 7px; font-size: 14px; }
+.customer-profile-page .bento-card-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.customer-profile-page .bento-card-footer { display: flex; align-items: end; border-top: 1px solid var(--ed-border); padding-top: 14px; }
+.customer-profile-page .bento-card-footer > * { width: 100%; }
+.customer-profile-page .bento-vip-identity { display: flex; align-items: center; gap: 12px; }
+.customer-profile-page .bento-vip-avatar { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 12px; background: var(--ed-wine-light); color: var(--ed-wine); font-size: 22px; font-weight: 700; overflow: hidden; }
+.customer-profile-page .bento-vip-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.customer-profile-page .bento-vip-meta { min-width: 0; }
+.customer-profile-page .bento-vip-meta span { font-size: 12px; color: var(--ed-charcoal-subtle); }
+.customer-profile-page .profile-tier { padding: 2px 8px; background: var(--ed-wine-light); color: var(--ed-wine); border-radius: 6px; font-size: 11px; font-weight: 600; }
+.customer-profile-page .tier-gold { background: #fff3d7; color: #795119; }
+.customer-profile-page .tier-silver { background: #edf0f3; color: #485363; }
+.customer-profile-page .tier-platinum { background: #f0eaf7; color: #61477c; }
+.customer-profile-page .profile-status-badge { color: var(--ed-wine); font-size: 12px; font-weight: 600; }
+.customer-profile-page .profile-card-facts { display: grid; gap: 8px; font-size: 13px; }
+.customer-profile-page .profile-card-facts > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.customer-profile-page .profile-card-facts dt { display: flex; align-items: center; gap: 6px; color: var(--ed-charcoal-muted); }
+.customer-profile-page .profile-card-facts dd { margin: 0; min-width: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.customer-profile-page .profile-card-facts .profile-card-amount { font-size: 18px; font-variant-numeric: tabular-nums; }
+.customer-profile-page .profile-card-reference { font-weight: 700; overflow-wrap: anywhere; }
+.customer-profile-page .profile-card-note { color: var(--ed-charcoal-subtle); font-size: 12px; }
+.customer-profile-page .profile-meter { appearance: none; width: 100%; height: 6px; border: 0; border-radius: 4px; overflow: hidden; accent-color: var(--ed-wine); }
+.customer-profile-page .profile-meter::-webkit-progress-bar { background: var(--ed-wine-light); }
+.customer-profile-page .profile-meter::-webkit-progress-value { background: var(--ed-wine); }
+.customer-profile-page .profile-meter::-moz-progress-bar { background: var(--ed-wine); }
+.customer-profile-page .profile-summary-services, .customer-profile-page .profile-appointment-services { display: grid; gap: 10px; list-style: none; padding: 0; }
+.customer-profile-page .profile-summary-services li, .customer-profile-page .profile-appointment-services li { display: grid; gap: 2px; }
+.customer-profile-page .profile-summary-services span, .customer-profile-page .profile-appointment-services span { color: var(--ed-charcoal-muted); font-size: 12px; }
+.customer-profile-page .profile-horizontal-nav { border-bottom: 1px solid var(--ed-border); padding: 8px var(--ed-padding); background: var(--ed-card); }
+.customer-profile-page .profile-nav-tabs-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.customer-profile-page .profile-tab-btn { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 9px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ed-charcoal-muted); font: 600 13px/1.5 var(--ed-sans); cursor: pointer; white-space: nowrap; }
+.customer-profile-page .profile-tab-btn:hover { background: var(--ed-wine-light); color: var(--ed-wine); }
+.customer-profile-page .profile-tab-btn.is-active { background: var(--ed-wine); color: #fff; }
+.customer-profile-page .profile-tab-badge { font-size: 11px; border-radius: 5px; padding: 0 5px; background: var(--ed-bg); color: var(--ed-wine); font-variant-numeric: tabular-nums; }
+.customer-profile-page .profile-tab-btn.is-active .profile-tab-badge { background: rgb(255 255 255 / 20%); color: #fff; }
+.customer-profile-page .profile-workspace-canvas { width: 100%; min-width: 0; box-sizing: border-box; padding: var(--ed-padding); container: profile-content / inline-size; }
+.customer-profile-page .profile-tab-header-banner { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 12px 20px; border-bottom: 1px solid var(--ed-border); padding-bottom: 18px; margin-bottom: 20px; }
+.customer-profile-page .profile-tab-header-banner p { margin-top: 5px; font-size: 13px; color: var(--ed-charcoal-muted); }
+.customer-profile-page .profile-tab-content { min-height: 500px; min-width: 0; }
+.customer-profile-page .profile-state-notice { display: grid; place-content: center; min-height: 160px; padding: 18px; border-radius: 10px; background: var(--ed-bg); color: var(--ed-charcoal-muted); font-size: 13px; box-sizing: border-box; }
+.customer-profile-page .profile-state-notice.is-error { color: #991b1b; background: #fef2f2; }
+.customer-profile-page .profile-list-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--ed-charcoal-muted); }
+.customer-profile-page .profile-overview-stats { padding-bottom: 24px; border-bottom: 1px solid var(--ed-border); }
+.customer-profile-page .profile-stats-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.customer-profile-page .profile-stats-list > div { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.customer-profile-page .profile-stats-list dt { font-size: 13px; color: var(--ed-charcoal-muted); }
+.customer-profile-page .profile-stats-list dd { margin: 0; font-size: clamp(18px, 1.5vw, 24px); font-weight: 700; font-variant-numeric: tabular-nums; }
+.customer-profile-page .profile-stats-list small { color: var(--ed-charcoal-subtle); }
+.customer-profile-page .profile-overview-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding-top: 24px; }
+.customer-profile-page .profile-overview-links article { display: grid; align-content: start; justify-items: start; gap: 14px; }
+.customer-profile-page .profile-overview-links p { color: var(--ed-charcoal-muted); }
+.customer-profile-page .profile-card-heading { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.customer-profile-page .profile-metadata { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 12px; color: var(--ed-charcoal-muted); }
+.customer-profile-page .profile-metadata > span { display: inline-flex; align-items: center; gap: 8px; }
+.customer-profile-page .profile-appointment-list { display: grid; gap: 16px; }
+.customer-profile-page .profile-appointment-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 380px); gap: 24px; min-height: 210px; }
+.customer-profile-page .profile-appointment-actions { display: grid; align-content: start; justify-items: start; gap: 12px; }
+.customer-profile-page .customer-profile-ticket-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.customer-profile-page .profile-ticket-card { display: flex; flex-direction: column; gap: 16px; min-height: 300px; }
+.customer-profile-page .spa-ticket-detail { margin-top: auto; }
 .customer-profile-page .account-card { color: var(--ed-charcoal); }
-.customer-profile-page .account-form { gap: 16px; }
-.customer-profile-page .account-form > :is(label, p) { max-width: 640px; }
+.customer-profile-page .account-stack { gap: var(--ed-gap); }
+.customer-profile-page .account-settings-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; gap: 24px; }
+.customer-profile-page .account-address-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.customer-profile-page .account-address-list, .customer-profile-page .account-collection-grid { display: grid; gap: 16px; min-width: 0; }
+.customer-profile-page .account-form > :is(label, p) { max-width: 70ch; }
 .customer-profile-page .account-form > button { justify-self: start; }
-.customer-profile-page .account-form label { font-size: 15px; }
-.customer-profile-page .account-form :is(input, select, textarea) { min-height: 48px; padding: 12px 14px; border: 1px solid var(--ed-control-border); background: var(--ed-card); color: var(--ed-charcoal); font: inherit; font-size: 16px; border-radius: 10px; }
+.customer-profile-page .account-form :is(input, select, textarea) { min-height: 46px; padding: 10px 12px; font-size: 16px; }
 .customer-profile-page .account-form input[type=checkbox] { min-height: 24px; width: 24px; accent-color: var(--ed-wine); }
-.customer-profile-page .account-product-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 260px)); justify-content: start; gap: 24px; }
-.customer-profile-page .account-status { background: var(--ed-wine-light); color: var(--ed-wine); }
-.customer-profile-page .account-order-lines { table-layout: fixed; font-size: 14px; }
+.customer-profile-page .account-product-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 260px)); justify-content: start; gap: 20px; }
+.customer-profile-page .account-order-lines { table-layout: fixed; }
 .customer-profile-page .account-order-lines :is(td, th) { overflow-wrap: anywhere; }
-.customer-profile-page .account-stack > button { justify-self: start; }
+.customer-profile-page :is(.btn-editorial-primary, .btn-editorial-outline, .btn-luxury-primary, .btn-luxury-outline, .account-actions button, .account-form button) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 9px 16px; border: 1px solid var(--ed-control-border); border-radius: 8px; background: var(--ed-card); color: var(--ed-wine); font: 600 13px/1.5 var(--ed-sans); text-align: center; text-decoration: none; cursor: pointer; }
+.customer-app .customer-profile-page :is(.btn-editorial-primary, .btn-luxury-primary) { background: var(--ed-wine); border-color: var(--ed-wine); color: #fff; }
+.customer-profile-page :is(.btn-editorial-primary, .btn-luxury-primary):hover { background: var(--ed-wine-dark); }
+.customer-profile-page :is(.btn-editorial-outline, .btn-luxury-outline):hover { background: var(--ed-wine-light); }
+.customer-profile-page .profile-text-button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; border: 0; background: none; color: var(--ed-wine); padding: 6px 0; font: 600 13px/1.5 var(--ed-sans); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.customer-profile-page .profile-danger { color: #991b1b; }
+.customer-profile-page .account-pagination { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 64px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--ed-border); }
+.customer-profile-page .account-loading { min-height: 160px; }
+.customer-profile-page .bento-card-body .account-loading { flex: 1; }
+.customer-profile-page .bento-card-body .account-loading-item { min-height: 140px; }
+.customer-profile-page.profile-login-prompt { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-height: 60vh; text-align: center; }
 
-.customer-profile-page :is(.btn-editorial-primary, .btn-editorial-outline, .btn-luxury-primary, .btn-luxury-outline, .account-actions button, .account-form button, .account-stack > button) { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; max-width: 100%; padding: 11px 20px; border: 1px solid var(--ed-control-border); border-radius: 10px; background: var(--ed-card); color: var(--ed-wine); font: 600 14px/1.5 var(--ed-sans); text-align: center; text-decoration: none; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
-.customer-app .customer-profile-page :is(.btn-editorial-primary, .btn-luxury-primary) { background: var(--ed-wine); color: #FFF; border-color: var(--ed-wine); }
-.customer-app .customer-profile-page :is(.btn-editorial-primary, .btn-luxury-primary):hover { background: var(--ed-wine-dark); border-color: var(--ed-wine-dark); }
-.customer-profile-page :is(.btn-editorial-outline, .btn-luxury-outline):hover { background: var(--ed-wine-light); border-color: var(--ed-wine); }
-.customer-profile-page .profile-text-button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 8px 0; background: none; border: 0; color: var(--ed-wine); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
-.customer-profile-page .profile-full-width { width: 100%; }
-.customer-profile-page .btn-editorial-outline.profile-danger { border-color: #A83E3E; color: #991B1B; }
-
-@container profile-content (min-width: 600px) {
-  .customer-profile-page .bento-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .customer-profile-page .bento-kpi-card + .bento-kpi-card { border-top: 0; }
-  .customer-profile-page .bento-kpi-card:nth-child(even) { border-left: 1px solid var(--ed-border); }
-  .customer-profile-page .bento-kpi-card:nth-child(n + 3) { border-top: 1px solid var(--ed-border); }
+@media (max-width: 1439px) {
+  .customer-profile-page .profile-bento-modular-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .customer-profile-page .bento-modular-card:nth-child(3) { border-left: 0; }
+  .customer-profile-page .bento-modular-card:nth-child(n + 3) { border-top: 1px solid var(--ed-border); }
 }
-@container profile-content (min-width: 680px) {
-  .customer-profile-page .bento-bottom-row { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
-  .customer-profile-page .profile-care-card { border-top: 0; border-left: 1px solid var(--ed-border); }
+@media (max-width: 1000px) {
+  .customer-profile-page .customer-profile-ticket-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .customer-profile-page .profile-stats-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .customer-profile-page .profile-appointment-card, .customer-profile-page .account-settings-grid, .customer-profile-page .account-address-layout { grid-template-columns: minmax(0, 1fr); }
 }
-@container profile-content (min-width: 860px) {
-  .customer-profile-page .bento-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .customer-profile-page .bento-kpi-card:nth-child(n + 2) { border-top: 0; border-left: 1px solid var(--ed-border); }
-  .customer-profile-page .bento-asymmetric-row { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
-  .customer-profile-page .bento-order-card { border-top: 0; border-left: 1px solid var(--ed-border); }
-}
-@container profile-content (max-width: 599px) {
-  .customer-profile-page .bento-ticket-body { grid-template-columns: minmax(0, 1fr); gap: 20px; }
-  .customer-profile-page .bento-ticket-date-badge { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; }
-  .customer-profile-page .bento-ticket-date-day { font-size: 32px; margin: 0; }
-  .customer-profile-page .bento-ticket-footer .profile-actions { width: 100%; }
-  .customer-profile-page .bento-ticket-footer .profile-actions > * { flex: 1 1 140px; }
-}
-@media (max-width: 1199px) {
-  .customer-profile-page { padding-inline: 24px; }
-  .customer-profile-page .profile-layout-container { grid-template-columns: minmax(0, 1fr); }
-  .customer-profile-page .profile-nav-card { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .customer-profile-page .profile-nav-group + .profile-nav-group { margin: 0; }
-  .customer-profile-page .profile-nav-footer { grid-column: 1 / -1; }
-}
-@media (min-width: 900px) and (max-width: 1199px) {
-  .customer-profile-page .profile-sidebar { grid-template-columns: 300px minmax(0, 1fr); align-items: stretch; }
-  .customer-profile-page .profile-vip-card { border-bottom: 0; border-right: 1px solid var(--ed-border); }
-}
-@media (max-width: 767px) {
-  .customer-profile-page { --ed-padding: 18px; --ed-gap: 18px; padding: 20px 16px 36px; }
-  .customer-profile-page .profile-toolbar { gap: 12px; }
-  .customer-profile-page .profile-vip-card { padding: 18px 16px; }
-  .customer-profile-page .profile-vip-header { margin-bottom: 14px; }
-  .customer-profile-page .profile-vip-avatar { width: 52px; height: 52px; font-size: 20px; }
-  .customer-profile-page .profile-nav-card { display: flex; overflow-x: auto; gap: 8px; padding: 12px 16px; scrollbar-width: thin; }
-  .customer-profile-page .profile-nav-group,
-  .customer-profile-page .profile-nav-footer { display: contents; }
-  .customer-profile-page .profile-nav-section-title { display: none; }
-  .customer-profile-page .profile-nav-item { flex: 0 0 auto; width: auto; min-height: 44px; padding: 8px 14px; border: 1px solid var(--ed-border); border-radius: 999px; font-size: 13.5px; white-space: nowrap; }
-  .customer-profile-page .bento-kpi-card { min-height: 124px; }
-  .customer-profile-page .profile-tab-heading { align-items: flex-start; }
-  .customer-profile-page .profile-actions > * { flex: 1 1 auto; }
-  .customer-profile-page .profile-card-heading { gap: 14px; }
-  .customer-profile-page .profile-empty-state { padding: 24px 16px; }
+@media (max-width: 640px) {
+  .customer-profile-page { --ed-padding: 16px; padding: 16px 16px 36px; }
+  .customer-profile-page .profile-toolbar { align-items: start; }
+  .customer-profile-page .profile-toolbar > .profile-actions { justify-content: space-between; width: 100%; }
+  .customer-profile-page .profile-bento-modular-grid { grid-template-columns: minmax(0, 1fr); }
+  .customer-profile-page .bento-modular-card + .bento-modular-card { border-left: 0; border-top: 1px solid var(--ed-border); }
+  .customer-profile-page .bento-modular-card { grid-template-rows: auto minmax(180px, 1fr) auto; padding: 16px; }
+  .customer-profile-page .profile-nav-tabs-group { flex-wrap: nowrap; overflow-x: auto; padding-block: 4px; scrollbar-width: thin; }
+  .customer-profile-page .profile-overview-links, .customer-profile-page .customer-profile-ticket-grid { grid-template-columns: minmax(0, 1fr); }
+  .customer-profile-page .profile-stats-list dd { font-size: 18px; }
+  .customer-profile-page .account-card { padding: 16px; }
+  .customer-profile-page .profile-tab-content { min-height: 450px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .customer-profile-page :is(button, a, .spin) { transition: none; animation: none; }
+  .profile-shimmer-box { animation: none; }
+  .customer-profile-page :is(button, a, .animate-spin) { animation: none; transition: none; }
+}
+@media (forced-colors: active) {
+  .customer-profile-page .profile-tab-btn.is-active { outline: 2px solid Highlight; }
+  .profile-shimmer-box { border: 1px solid GrayText; }
 }

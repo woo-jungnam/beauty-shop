@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   Package,
   Truck,
@@ -44,6 +44,7 @@ import {
 } from '../../../shared/utils/formatters';
 import { ServiceBookingOrders } from '../../../features/spa/ServiceBookingOrders';
 import { PRODUCT_PLACEHOLDER, resolveProductImage } from '../product/ProductCard';
+import { orderBenefitDestination } from '../../../features/spa/benefitModel';
 
 export const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value || 0));
 
@@ -144,38 +145,52 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
   const [serviceSubFilter, setServiceSubFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [reorderingId, setReorderingId] = useState(null);
+  const loadRequest = useRef(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    loadRequest.current?.abort();
+    const controller = new AbortController();
+    loadRequest.current = controller;
     setLoading(true);
     try {
-      const response = await apiClient.get(`/api/v1/orders/my-orders?page=${page}&size=50&sort=createdAt,desc`);
+      const response = await apiClient.get(`/api/v1/orders/my-orders?page=${page}&size=50&sort=createdAt,desc`, { signal: controller.signal });
+      if (controller.signal.aborted) return;
       setData(unwrap(response));
       setError('');
     } catch (e) {
-      setError(e.message || 'Không thể tải danh sách đơn hàng.');
+      if (!controller.signal.aborted) setError(e.message || 'Không thể tải danh sách đơn hàng.');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  };
+  }, [page]);
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => {
+    load();
+    return () => loadRequest.current?.abort();
+  }, [load]);
 
   const allOrders = listRows(data);
 
   useEffect(() => {
-    if (initialOrderId && allOrders.length > 0) {
-      const match = allOrders.find(o => String(o.id) === String(initialOrderId));
-      if (match) {
-        setSelected(initialOrderId);
-        if (getOrderType(match) !== 'PRODUCT') {
-          setScopeTab('SERVICES');
-        } else {
-          setScopeTab('PRODUCTS');
-        }
-      }
-    } else if (initialOrderId) {
+    if (!initialOrderId) return;
+    let active = true;
+    const match = allOrders.find(o => String(o.id) === String(initialOrderId));
+    if (match) {
       setSelected(initialOrderId);
+      setScopeTab(getOrderType(match) !== 'PRODUCT' ? 'SERVICES' : 'PRODUCTS');
+    } else {
+      setSelected(initialOrderId);
+      apiClient.get(`/api/v1/orders/${initialOrderId}`, { headers: { 'X-Guest-Session-Id': getGuestSessionId() } })
+        .then(res => {
+          if (!active) return;
+          const ord = unwrap(res);
+          if (ord && getOrderType(ord) !== 'PRODUCT') {
+            setScopeTab('SERVICES');
+          }
+        })
+        .catch(() => {});
     }
+    return () => { active = false; };
   }, [initialOrderId, allOrders]);
 
   const productOrders = useMemo(() => allOrders.filter(o => getOrderType(o) === 'PRODUCT'), [allOrders]);
@@ -538,7 +553,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
                       {statuses[order.status] || order.status}
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 12, backgroundColor: paymentStyle.bg, color: paymentStyle.color, border: `1px solid ${paymentStyle.border}` }}>
-                      {statuses[order.paymentStatus] || order.paymentStatus}
+                      {getPaymentStatusBadge(order.paymentStatus).text}
                     </span>
                   </div>
                 </div>
@@ -730,7 +745,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
                       {getPaymentMethodLabel(order.paymentMethod)}
                     </div>
                     <div style={{ color: paymentStyle.color, fontWeight: 600, fontSize: 11.5 }}>
-                      {statuses[order.paymentStatus] || order.paymentStatus}
+                      {getPaymentStatusBadge(order.paymentStatus).text}
                       {order.paidAmount > 0 && ` (${money(order.paidAmount)})`}
                     </div>
                     {order.paymentDeadline && order.paymentStatus === 'PENDING' && order.status !== 'CANCELLED' && (
@@ -872,7 +887,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
                           {statuses[order.status] || order.status}
                         </span>
                         <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 12, backgroundColor: paymentStyle.bg, color: paymentStyle.color, border: `1px solid ${paymentStyle.border}` }}>
-                          {statuses[order.paymentStatus] || order.paymentStatus}
+                          {getPaymentStatusBadge(order.paymentStatus).text}
                         </span>
                       </div>
                     </div>
@@ -969,7 +984,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
                           {getPaymentMethodLabel(order.paymentMethod)}
                         </div>
                         <div style={{ color: paymentStyle.color, fontWeight: 600, fontSize: 11.5 }}>
-                          {statuses[order.paymentStatus] || order.paymentStatus}
+                          {getPaymentStatusBadge(order.paymentStatus).text}
                           {order.paidAmount > 0 && ` (${money(order.paidAmount)})`}
                         </div>
                       </div>
@@ -1014,7 +1029,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
                             type="button"
                             className="btn-luxury-primary"
                             style={{ padding: '6px 14px', fontSize: 12, fontWeight: 600 }}
-                            onClick={() => onNavigate(order.spaBenefitType === 'TREATMENT_COURSE' ? 'treatments?tab=courses' : 'profile?tab=tickets')}
+                            onClick={() => onNavigate(orderBenefitDestination(order))}
                           >
                             {order.spaBenefitType === 'TREATMENT_COURSE' ? 'Xem tiến trình lộ trình' : 'Mở ví vé liệu trình'}
                           </button>
@@ -1100,28 +1115,38 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
   const [evidence, setEvidence] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const dialogRequest = useRef(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    dialogRequest.current?.abort();
+    const controller = new AbortController();
+    dialogRequest.current = controller;
     const results = await Promise.allSettled([
-      apiClient.get(`/api/v1/orders/${orderId}`, { headers: { 'X-Guest-Session-Id': getGuestSessionId() } }),
-      apiClient.get(`/api/v1/orders/${orderId}/returns`, { headers: { 'X-Guest-Session-Id': getGuestSessionId() } })
+      apiClient.get(`/api/v1/orders/${orderId}`, { headers: { 'X-Guest-Session-Id': getGuestSessionId() }, signal: controller.signal }),
+      apiClient.get(`/api/v1/orders/${orderId}/returns`, { headers: { 'X-Guest-Session-Id': getGuestSessionId() }, signal: controller.signal })
     ]);
+    if (controller.signal.aborted) return;
     if (results[0].status === 'fulfilled') {
       setOrder(unwrap(results[0].value));
       setSessionOwned(true);
     } else if (!initialOrder) {
-      setError(results[0].reason.message);
+      setError(results[0].reason?.message || 'Không tải được chi tiết đơn hàng.');
     } else {
       setSessionOwned(false);
     }
     if (results[1].status === 'fulfilled') {
       setReturns(listRows(results[1].value));
     } else if (!initialOrder || results[1].reason?.status !== 403) {
-      setError(`Chưa tải được yêu cầu đổi trả. ${results[1].reason.message}`);
+      setError(`Chưa tải được yêu cầu đổi trả. ${results[1].reason?.message || ''}`);
     }
-  };
+  }, [orderId, initialOrder]);
 
-  useEffect(() => { load(); }, [orderId]);
+  useEffect(() => {
+    setOrder(initialOrder);
+    setReturns([]);
+    load();
+    return () => dialogRequest.current?.abort();
+  }, [orderId, load]);
 
   const run = async work => {
     if (operationLock.current) return;
@@ -1260,7 +1285,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                       border: `1px solid ${paymentStyle.border}`
                     }}
                   >
-                    {statuses[order.paymentStatus] || order.paymentStatus}
+                    {getPaymentStatusBadge(order.paymentStatus).text}
                   </span>
                   {typeBadge && (
                     <span style={{ fontSize: 12, color: '#4B5563', backgroundColor: '#F3F4F6', padding: '2px 8px', borderRadius: 4, fontWeight: 500 }}>
@@ -1423,7 +1448,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                   {getPaymentMethodLabel(order.paymentMethod)}
                 </div>
                 <div style={{ color: paymentStyle.color, fontWeight: 600, fontSize: 12 }}>
-                  Trạng thái: {statuses[order.paymentStatus] || order.paymentStatus}
+                  Trạng thái: {getPaymentStatusBadge(order.paymentStatus).text}
                 </div>
                 {order.paidAt && (
                   <div style={{ color: '#6B7280', fontSize: 12 }}>
