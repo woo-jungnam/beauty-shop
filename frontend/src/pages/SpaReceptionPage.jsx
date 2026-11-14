@@ -325,7 +325,13 @@ export const SpaReceptionPage = () => {
     {appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Đổi KTV</Button>}
     {appointment.status === 'CONFIRMED' && appointment.checkedInAt && <>
       <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now) || localInstant(appointment.appointmentDate, appointment.startTime) - 3600000 > now.getTime()} loading={busy === `start-${appointment.id}`}
-        onClick={() => run(`start-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'IN_PROGRESS', notes: 'Lễ tân bắt đầu dịch vụ.' }), 'Đã bắt đầu dịch vụ.')} aria-label="Bắt đầu ca"><ArrowRight size={15} /> Bắt đầu dịch vụ</Button>
+        onClick={() => {
+          const isPast = localInstant(appointment.appointmentDate, appointment.endTime || appointment.startTime) < now.getTime();
+          const startNotes = isPast
+            ? `Lễ tân bắt đầu ca hẹn đã check-in lúc ${spaTime(new Date(appointment.checkedInAt || now))}, điều phối phục vụ trực tiếp.`
+            : 'Lễ tân bắt đầu dịch vụ.';
+          run(`start-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'IN_PROGRESS', notes: startNotes }), 'Đã bắt đầu dịch vụ.');
+        }} aria-label="Bắt đầu ca"><ArrowRight size={15} /> Bắt đầu dịch vụ</Button>
       <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Đổi KTV</Button>
     </>}
     {appointment.status === 'IN_PROGRESS' && <Button size="sm" disabled={Boolean(busy)} loading={busy === `finish-${appointment.id}`} onClick={() => canFinish(appointment) ? complete(appointment) : setWorkspaceId(appointment.id)} aria-label="Hoàn tất & thu ngân">Xong dịch vụ & Thu ngân</Button>}
@@ -409,7 +415,15 @@ export const SpaReceptionPage = () => {
         </div>
       </nav>
 
-      {notice && <div className={`reception-notice ${notice.tone}`} role={notice.tone === 'error' || notice.tone === 'warning' ? 'alert' : 'status'}>{notice.message}<button type="button" onClick={() => setNotice(null)} aria-label="Đóng thông báo">×</button></div>}
+      {notice && <div className={`reception-notice ${notice.tone}`} role={notice.tone === 'error' || notice.tone === 'warning' ? 'alert' : 'status'}>
+        <span>{notice.message}</span>
+        {notice.message?.includes('tiếp nhận') && (
+          <a href="#/staff/treatments" style={{ marginLeft: 8, textDecoration: 'underline', fontWeight: 600, color: 'inherit' }}>
+            Mở Lộ trình điều trị →
+          </a>
+        )}
+        <button type="button" onClick={() => setNotice(null)} aria-label="Đóng thông báo">×</button>
+      </div>}
       {data.error && <div className="reception-notice error" role="alert">{data.error}</div>}
       {data.appointmentsError && <div className="reception-notice error" role="alert">
         {data.appointmentsError} {data.appointmentsReady && 'Dữ liệu lịch hẹn chưa được cập nhật; đang hiển thị lần tải thành công trước đó.'}

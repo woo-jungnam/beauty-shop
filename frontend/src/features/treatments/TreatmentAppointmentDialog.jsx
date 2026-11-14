@@ -84,6 +84,16 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
     <div className="treatment-actions"><Button variant="outline" onClick={load} disabled={Boolean(busy) || loading}>Tải lại lịch hẹn</Button></div>
     {loading && !appointment && <p role="status">Đang tải lịch hẹn…</p>}
     {appointment && <><div className="treatment-card-heading"><strong>{dateLabel(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</strong><span className="treatment-badge">{statusLabel(appointment.status)}</span></div>
+      {appointment.items?.some(item => item.treatmentSessionItemId != null) && (
+        <div className="treatment-notice info" style={{ marginBottom: 12 }}>
+          <span>Buổi chăm sóc này thuộc <strong>Lộ trình điều trị chuyên sâu</strong>. Nếu hồ sơ mới mua, Bác sĩ cần hoàn tất tiếp nhận lâm sàng (Intake) trước khi ca có thể bắt đầu.</span>
+          {operator && (
+            <a href="#/staff/treatments" style={{ marginLeft: 8, textDecoration: 'underline', fontWeight: 600 }}>
+              Mở Lộ trình điều trị →
+            </a>
+          )}
+        </div>
+      )}
       {(reception || String(appointment.userId) === String(user?.id)) && <AppointmentFinance appointmentId={appointment.id} role={role} />}
       {(reception || String(appointment.userId) === String(user?.id)) && appointment.status === 'COMPLETED' && <SpaVisitCheckout appointment={appointment} onUpdated={load} />}
       {preparation.map(item => {

@@ -197,16 +197,16 @@ public class TreatmentCourseService {
     public CourseView assign(Long id, AssignCommand command) {
         if (!access.canManageReception()) throw denied();
         Course c = lock(Course.class, id);
-        if (command == null || command.staffId() == null) throw business("Assigned staff is required");
+        if (command == null || command.staffId() == null) throw business("Vui lòng chọn chuyên viên/bác sĩ phụ trách");
         Staff target = staff.findById(command.staffId()).filter(s -> Boolean.TRUE.equals(s.getIsActive()) && !Boolean.TRUE.equals(s.getIsDeleted()))
-                .orElseThrow(() -> business("Assigned staff is unavailable"));
+                .orElseThrow(() -> business("Chuyên viên/bác sĩ được phân công hiện không khả dụng"));
         c.setAssignedStaffId(target.getId()); audit(c, "ASSIGNED", reasonOr(command.reason(), "Staff assignment") + "; staffId=" + target.getId());
         return courseView(c, access.hasRole("ADMIN") || (access.permission("SPA_EXECUTION") && isAssigned(c)));
     }
 
     public CourseView intake(Long id, IntakeCommand command) {
         Course c = lock(Course.class, id); requireClinical(c);
-        if (!"PENDING_INTAKE".equals(c.getStatus()) || expired(c)) throw business("Only a valid pending intake can be accepted");
+        if (!"PENDING_INTAKE".equals(c.getStatus()) || expired(c)) throw business("Chỉ hồ sơ đang chờ tiếp nhận và còn hạn mới có thể tiếp nhận");
         c.setIntakeNotes(text(command == null ? null : command.notes(), "Intake assessment", 4000));
         c.setStatus("ACTIVE"); audit(c, "INTAKE_ACCEPTED", "Responsible staff accepted the purchased plan");
         return courseView(c, true);
@@ -214,12 +214,12 @@ public class TreatmentCourseService {
 
     public CourseView proposeChange(Long id, ChangeCommand command) {
         Course c = lock(Course.class, id); requireClinical(c); requireOpen(c);
-        if (command == null) throw business("Change request is required");
+        if (command == null) throw business("Thông tin yêu cầu thay đổi phác đồ là bắt buộc");
         expected(c, command.expectedVersion());
         if (list(Change.class, "select x from TreatmentChange x where x.courseId=:cid and x.status in ('PENDING_APPROVAL','AWAITING_CUSTOMER','AWAITING_SETTLEMENT')", "cid", id).size() > 0)
-            throw business("A plan change is already pending");
+            throw business("Lộ trình đã có một đề xuất thay đổi đang chờ xử lý");
         Plan plan = validatedPlan(command.plan());
-        if (!Objects.equals(plan.serviceId(), read(c.getPlanJson()).serviceId())) throw business("The parent treatment service cannot change");
+        if (!Objects.equals(plan.serviceId(), read(c.getPlanJson()).serviceId())) throw business("Dịch vụ lộ trình gốc không thể thay đổi");
         validateAmendment(c, plan);
         Change change = new Change(); change.setCourseId(id); change.setBaseRevision(c.getPlanRevision());
         change.setPlanJson(write(plan)); change.setOldPlanJson(c.getPlanJson());
@@ -231,8 +231,8 @@ public class TreatmentCourseService {
     public CourseView reviewChange(Long id, Long changeId, DecisionCommand command, boolean approve) {
         requireAdmin(); Course c = lock(Course.class, id); Change change = change(c, changeId);
         requireOpen(c);
-        if (!"PENDING_APPROVAL".equals(change.getStatus())) throw business("This change is not awaiting approval");
-        if (change.getBaseRevision() != c.getPlanRevision()) throw business("The plan changed; submit a new proposal");
+        if (!"PENDING_APPROVAL".equals(change.getStatus())) throw business("Đề xuất thay đổi này không ở trạng thái chờ duyệt");
+        if (change.getBaseRevision() != c.getPlanRevision()) throw business("Kế hoạch điều trị đã thay đổi; vui lòng tạo đề xuất mới");
         change.setStatus(approve ? "AWAITING_CUSTOMER" : "REJECTED"); change.setApprovedBy(SecurityUtils.getCurrentUserId());
         audit(c, approve ? "CHANGE_APPROVED" : "CHANGE_REJECTED", "Change " + changeId + "; " + reason(command)); return courseView(c, true);
     }
@@ -240,22 +240,22 @@ public class TreatmentCourseService {
     public CourseView customerChange(Long id, Long changeId, DecisionCommand command, boolean accept) {
         Course c = lock(Course.class, id); requireOwner(c); Change change = change(c, changeId);
         if (command == null || command.expectedVersion() == null || command.expectedVersion() != change.getBaseRevision())
-            throw business("Review the current version before accepting this change");
+            throw business("Vui lòng xem lại phiên bản hiện tại trước khi chấp nhận thay đổi");
         if (accept && Objects.equals(change.getAcceptedBy(), c.getUserId()) && change.getAcceptedAt() != null) {
             if (appliedRevisionMatches(c, change) || ("AWAITING_SETTLEMENT".equals(change.getStatus())
                     && c.getPlanRevision() == change.getBaseRevision() && Objects.equals(c.getPlanJson(), change.getOldPlanJson())
                     && change.getApprovedBy() != null)) return courseView(c, false);
-            throw business("The accepted treatment version is no longer current; reload this treatment");
+            throw business("Phiên bản vừa chấp nhận không còn là mới nhất; vui lòng tải lại hồ sơ");
         }
         requireOpen(c);
-        if (!"AWAITING_CUSTOMER".equals(change.getStatus())) throw business("This change is not awaiting customer confirmation");
-        if (change.getBaseRevision() != c.getPlanRevision()) throw business("The plan changed; reload this treatment");
+        if (!"AWAITING_CUSTOMER".equals(change.getStatus())) throw business("Đề xuất thay đổi này không ở trạng thái chờ khách xác nhận");
+        if (change.getBaseRevision() != c.getPlanRevision()) throw business("Kế hoạch điều trị đã thay đổi; vui lòng tải lại hồ sơ");
         if (!accept) change.setStatus("REJECTED");
         else {
             change.setAcceptedBy(SecurityUtils.getCurrentUserId()); change.setAcceptedAt(Instant.now());
             if (change.getPriceDifference().signum() > 0) change.setStatus("AWAITING_SETTLEMENT");
             else {
-                if (hasLiveBookings(c)) throw business("Cancel future treatment bookings before applying a changed plan");
+                if (hasLiveBookings(c)) throw business("Vui lòng hủy hoặc dời các lịch hẹn điều trị tương lai trước khi áp dụng phác đồ mới");
                 applyChange(c, change);
             }
         }
@@ -288,23 +288,23 @@ public class TreatmentCourseService {
             throw business("The applied treatment version is no longer current; reload this treatment");
         }
         if (!"AWAITING_SETTLEMENT".equals(change.getStatus()) || change.getSettlementOrderId() == null
-                || !orders.isPaidOrderForUser(change.getSettlementOrderId(), c.getUserId())) throw business("Adjustment payment is not settled");
-        if (hasLiveBookings(c)) throw business("Cancel future treatment bookings before applying this revision");
+                || !orders.isPaidOrderForUser(change.getSettlementOrderId(), c.getUserId())) throw business("Khoản thanh toán chênh lệch chưa được hoàn tất");
+        if (hasLiveBookings(c)) throw business("Vui lòng hủy hoặc dời các lịch hẹn điều trị tương lai trước khi áp dụng phiên bản mới");
         applyChange(c, change); return courseView(c, access.hasRole("ADMIN") || (access.permission("SPA_EXECUTION") && isAssigned(c)));
     }
 
     public CourseView request(Long id, RequestCommand command) {
         Course c = lock(Course.class, id); requireView(c);
-        if (command == null || command.type() == null || !Set.of("PAUSE", "RESUME", "CANCEL", "EXTEND", "INCIDENT").contains(command.type())) throw business("Unknown treatment request type");
+        if (command == null || command.type() == null || !Set.of("PAUSE", "RESUME", "CANCEL", "EXTEND", "INCIDENT").contains(command.type())) throw business("Loại yêu cầu lộ trình không hợp lệ");
         boolean assignedIncident = "INCIDENT".equals(command.type()) && access.permission("SPA_EXECUTION") && isAssigned(c);
         if (!Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserId()) && !access.canManageReception() && !assignedIncident) throw denied();
-        if (Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(c.getStatus())) throw business("This treatment is closed");
-        if ("PAUSE".equals(command.type()) && !Set.of("ACTIVE", "PENDING_INTAKE").contains(effectiveStatus(c))) throw business("Only active treatment can be paused");
-        if ("RESUME".equals(command.type()) && !Set.of("PAUSED", "PENDING_REVIEW").contains(c.getStatus())) throw business("Only paused treatment can be resumed");
+        if (Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(c.getStatus())) throw business("Hồ sơ điều trị này đã kết thúc hoặc đóng");
+        if ("PAUSE".equals(command.type()) && !Set.of("ACTIVE", "PENDING_INTAKE").contains(effectiveStatus(c))) throw business("Chỉ lộ trình đang hoạt động mới có thể tạm dừng");
+        if ("RESUME".equals(command.type()) && !Set.of("PAUSED", "PENDING_REVIEW").contains(c.getStatus())) throw business("Chỉ lộ trình đang tạm dừng mới có thể tiếp tục");
         if ("EXTEND".equals(command.type()) && (command.extensionDays() == null || command.extensionDays() < 1 || command.extensionDays() > 3650))
-            throw business("Extension days must be between 1 and 3650");
+            throw business("Số ngày gia hạn phải từ 1 đến 3650 ngày");
         if (first(WorkflowRequest.class, "select r from TreatmentWorkflowRequest r where r.courseId=:cid and r.status='PENDING_APPROVAL' and r.type=:type", "cid", id, "type", command.type()) != null)
-            throw business("A request of this type is already awaiting approval");
+            throw business("Đã có một yêu cầu loại này đang chờ duyệt");
         WorkflowRequest r = new WorkflowRequest(); r.setCourseId(id); r.setType(command.type());
         r.setReason(text(command.reason(), "Request reason", 1000)); r.setExtensionDays(command.extensionDays()); r.setRequestedBy(SecurityUtils.getCurrentUserId()); persist(r);
         if ("INCIDENT".equals(command.type())) {
@@ -317,8 +317,8 @@ public class TreatmentCourseService {
 
     public CourseView reviewRequest(Long id, Long requestId, DecisionCommand command, boolean approve) {
         requireAdmin(); Course c = lock(Course.class, id); WorkflowRequest r = workflow(c, requestId);
-        if (!"PENDING_APPROVAL".equals(r.getStatus())) throw business("This request has already been reviewed");
-        if (Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(c.getStatus())) throw business("Closed treatment requests cannot change the course state");
+        if (!"PENDING_APPROVAL".equals(r.getStatus())) throw business("Yêu cầu này đã được xử lý trước đó");
+        if (Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(c.getStatus())) throw business("Hồ sơ điều trị đã đóng, không thể thay đổi trạng thái");
         r.setReviewReason(text(reason(command), "Review reason", 1000)); r.setReviewedBy(SecurityUtils.getCurrentUserId()); r.setReviewedAt(Instant.now());
         if (!approve) r.setStatus("REJECTED");
         else {
@@ -540,11 +540,11 @@ public class TreatmentCourseService {
     }
     String blocked(Course c, Session s) {
         String state = effectiveStatus(c);
-        if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(state)) return "Treatment is " + state;
-        if ("PENDING_INTAKE".equals(state) && s.getSequence() != 1) return "Intake must be accepted before later sessions";
-        if (Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) return "This session is already complete";
-        if (sessions(c).stream().anyMatch(p -> p.isRequired() && p.getSequence() < s.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(p.getStatus()))) return "Complete the preceding session first";
-        if (items(s).stream().anyMatch(i -> Set.of("SCHEDULED", "IN_PROGRESS").contains(i.getStatus()))) return "This session already has a live appointment";
+        if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(state)) return "Lộ trình đang ở trạng thái " + state;
+        if ("PENDING_INTAKE".equals(state) && s.getSequence() != 1) return "Cần hoàn tất tiếp nhận (Intake) lâm sàng trước khi thực hiện các buổi tiếp theo";
+        if (Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) return "Buổi điều trị này đã hoàn thành hoặc kết thúc";
+        if (sessions(c).stream().anyMatch(p -> p.isRequired() && p.getSequence() < s.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(p.getStatus()))) return "Cần hoàn tất buổi điều trị trước đó trước khi tiếp tục";
+        if (items(s).stream().anyMatch(i -> Set.of("SCHEDULED", "IN_PROGRESS").contains(i.getStatus()))) return "Buổi điều trị này đã có một lịch hẹn đang hoạt động";
         return null;
     }
     void refreshSession(Session s) {

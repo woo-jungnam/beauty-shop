@@ -3,8 +3,34 @@ export const spaErrorMessage = (error, fallback = 'Thao tác chưa hoàn tất. 
   if (status === 401) return 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
   if (status === 403) return 'Bạn chưa có quyền thực hiện thao tác này.';
   const message = error?.response?.data?.message || error?.message || '';
-  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(message)
-      && !/Exception|SQL|stack trace|HTTP \d|java\./i.test(message)) return message;
+
+  if (typeof message === 'string' && message.trim()) {
+    const raw = message.trim();
+    if (raw.includes('Intake must be accepted') || raw.includes('chưa được Bác sĩ tiếp nhận')) {
+      return 'Hồ sơ liệu trình chưa được Bác sĩ tiếp nhận (Intake). Vui lòng hoàn tất khám sàng lọc trước khi bắt đầu dịch vụ.';
+    }
+    if (raw.includes('Complete the previous') || raw.includes('hoàn tất buổi điều trị trước')) {
+      return 'Cần hoàn tất buổi điều trị trước đó trước khi bắt đầu buổi này.';
+    }
+    if (raw.includes('permitted interval') || raw.includes('allowed interval') || raw.includes('khoảng thời gian quy định')) {
+      return 'Lịch hẹn nằm ngoài khoảng thời gian cho phép giữa các buổi của liệu trình.';
+    }
+    if (raw.includes('Cancel future treatment bookings') || raw.includes('hủy các lịch hẹn điều trị tương lai')) {
+      return 'Vui lòng hủy các lịch hẹn tương lai trước khi áp dụng phác đồ mới.';
+    }
+    if (raw.includes('outside your role')) {
+      return 'Bạn không có quyền thực hiện thao tác này trên lịch hẹn.';
+    }
+    if (!/Exception|SQL|stack trace|HTTP \d|java\.|org\.hibernate/i.test(raw)) {
+      if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(raw)) {
+        return raw;
+      }
+      if (/^[A-Za-z0-9 .,:;!?()'-]+$/.test(raw) && raw.length <= 250) {
+        return raw;
+      }
+    }
+  }
+
   if (status === 409) return 'Thông tin vừa thay đổi hoặc ca đã được xếp. Vui lòng làm mới và kiểm tra lại.';
   return fallback;
 };

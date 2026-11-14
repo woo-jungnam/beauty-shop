@@ -38,6 +38,11 @@ export const TreatmentBookingDialog = ({ course, session, role, reschedule = fal
   };
   return <Modal isOpen title={`${reschedule ? 'Đổi lịch' : 'Đặt lịch'} buổi ${session.sequence}: ${session.title}`} onClose={() => { if (!busy) onClose(); }} className="treatment-dialog" maxWidth="640px"><form className="treatment-form" onSubmit={submit}>
     {!reschedule && <BookingPolicyNotice />}
+    {session.sequence === 1 && !reschedule && (
+      <div className="treatment-notice info" style={{ margin: '8px 0', fontSize: '0.85rem' }}>
+        <strong>Lưu ý cho Buổi 1:</strong> Buổi đầu tiên bao gồm bước thăm khám lâm sàng & soi da cùng Bác sĩ để tiếp nhận hồ sơ. Quý khách vui lòng có mặt trước giờ hẹn 10-15 phút.
+      </div>
+    )}
     <p className="treatment-muted">Giờ Việt Nam (UTC+7). Hệ thống kiểm tra toàn bộ dịch vụ, nhân sự, tài nguyên, khoảng cách buổi và quyền lợi khi đặt.</p>
     {(session.earliestBookingAt || session.latestBookingAt) && <p>{session.earliestBookingAt ? `Sớm nhất: ${dateLabel(session.earliestBookingAt)}` : ''}{session.latestBookingAt ? ` · Chậm nhất: ${dateLabel(session.latestBookingAt)}` : ''}. Mỗi dịch vụ trong buổi phải bắt đầu trong khoảng này.</p>}
     {error && <div role="alert" className="treatment-notice error">{error}<Button variant="outline" disabled={busy || uncertain} onClick={() => setRetry(value => value + 1)}>Tải lại giờ trống</Button></div>}
