@@ -100,12 +100,14 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
 
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        Long bookingUserId = (request.getTargetUserId() != null && canManageAppointments())
+        boolean allowTargetUser = canManageAppointments()
+                || (request.getTargetUserId() != null && treatments.canStaffBookForCustomer(currentUserId, request.getTargetUserId(), request.getItems()));
+        Long bookingUserId = (request.getTargetUserId() != null && allowTargetUser)
                 ? request.getTargetUserId()
                 : currentUserId;
         UserSummaryDto user = identityFacade.getUserSummaryById(bookingUserId);
 
-        if (!canManageAppointments()) {
+        if (!allowTargetUser) {
             validateDateTimeNotPast(request.getAppointmentDate(), request.getStartTime());
             requireBookingHorizon(request.getAppointmentDate(), policies.current());
             long pendingCount = appointmentRepository.countByUserIdAndStatusAndIsDeletedFalse(bookingUserId, AppointmentStatus.PENDING);

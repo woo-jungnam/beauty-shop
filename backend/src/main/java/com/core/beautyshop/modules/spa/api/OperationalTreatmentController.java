@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.spa.api;
 import com.core.beautyshop.modules.spa.application.service.TreatmentCourseService;
 import com.core.beautyshop.shared.dto.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,25 +22,27 @@ public class OperationalTreatmentController {
     @PreAuthorize("hasRole('ADMIN')") @Operation(summary = "Báo cáo tiến độ, quyền lợi chưa dùng và tiền đã thu hoàn")
     @GetMapping("/report") public ApiResponse<Report> report() { return ApiResponse.success(treatments.report()); }
     @Operation(summary = "Phân công người phụ trách tiếp nhận lộ trình")
-    @PostMapping("/{id}/assign") public ApiResponse<CourseView> assign(@PathVariable Long id, @RequestBody AssignCommand c) { return ApiResponse.success(treatments.assign(id, c)); }
+    @PostMapping("/{id}/assign") public ApiResponse<CourseView> assign(@PathVariable Long id, @Valid @RequestBody AssignCommand c) { return ApiResponse.success(treatments.assign(id, c)); }
     @Operation(summary = "Người phụ trách ghi nhận tiếp nhận và xác nhận kế hoạch đã mua")
-    @PostMapping("/{id}/intake") public ApiResponse<CourseView> intake(@PathVariable Long id, @RequestBody IntakeCommand c) { return ApiResponse.success(treatments.intake(id, c)); }
+    @PostMapping("/{id}/intake") public ApiResponse<CourseView> intake(@PathVariable Long id, @Valid @RequestBody IntakeCommand c) { return ApiResponse.success(treatments.intake(id, c)); }
     @Operation(summary = "Đề xuất phiên bản điều chỉnh, giữ nguyên lịch sử thực hiện")
-    @PostMapping("/{id}/changes") public ApiResponse<CourseView> change(@PathVariable Long id, @RequestBody ChangeCommand c) { return ApiResponse.success(treatments.proposeChange(id, c)); }
+    @PostMapping("/{id}/changes") public ApiResponse<CourseView> change(@PathVariable Long id, @Valid @RequestBody ChangeCommand c) { return ApiResponse.success(treatments.proposeChange(id, c)); }
     @PreAuthorize("hasRole('ADMIN')") @Operation(summary = "Quản trị duyệt điều chỉnh để khách xác nhận")
-    @PostMapping("/{id}/changes/{changeId}/approve") public ApiResponse<CourseView> approve(@PathVariable Long id, @PathVariable Long changeId, @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewChange(id, changeId, c, true)); }
+    @PostMapping("/{id}/changes/{changeId}/approve") public ApiResponse<CourseView> approve(@PathVariable Long id, @PathVariable Long changeId, @Valid @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewChange(id, changeId, c, true)); }
     @PreAuthorize("hasRole('ADMIN')") @Operation(summary = "Quản trị từ chối đề xuất điều chỉnh")
-    @PostMapping("/{id}/changes/{changeId}/reject") public ApiResponse<CourseView> reject(@PathVariable Long id, @PathVariable Long changeId, @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewChange(id, changeId, c, false)); }
+    @PostMapping("/{id}/changes/{changeId}/reject") public ApiResponse<CourseView> reject(@PathVariable Long id, @PathVariable Long changeId, @Valid @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewChange(id, changeId, c, false)); }
     @Operation(summary = "Tạo yêu cầu vận hành cho hồ sơ điều trị")
-    @PostMapping("/{id}/requests") public ApiResponse<CourseView> request(@PathVariable Long id, @RequestBody RequestCommand c) { return ApiResponse.success(treatments.request(id, c)); }
+    @PostMapping("/{id}/requests") public ApiResponse<CourseView> request(@PathVariable Long id, @Valid @RequestBody RequestCommand c) { return ApiResponse.success(treatments.request(id, c)); }
     @PreAuthorize("hasRole('ADMIN')") @Operation(summary = "Duyệt tạm dừng, tiếp tục, dừng, sự cố hoặc gia hạn")
-    @PostMapping("/{id}/requests/{requestId}/approve") public ApiResponse<CourseView> approveRequest(@PathVariable Long id, @PathVariable Long requestId, @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewRequest(id, requestId, c, true)); }
+    @PostMapping("/{id}/requests/{requestId}/approve") public ApiResponse<CourseView> approveRequest(@PathVariable Long id, @PathVariable Long requestId, @Valid @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewRequest(id, requestId, c, true)); }
     @PreAuthorize("hasRole('ADMIN')") @Operation(summary = "Từ chối yêu cầu thay đổi trạng thái hồ sơ")
-    @PostMapping("/{id}/requests/{requestId}/reject") public ApiResponse<CourseView> rejectRequest(@PathVariable Long id, @PathVariable Long requestId, @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewRequest(id, requestId, c, false)); }
+    @PostMapping("/{id}/requests/{requestId}/reject") public ApiResponse<CourseView> rejectRequest(@PathVariable Long id, @PathVariable Long requestId, @Valid @RequestBody DecisionCommand c) { return ApiResponse.success(treatments.reviewRequest(id, requestId, c, false)); }
     @PreAuthorize("hasRole('ADMIN')") @Operation(summary = "Xác nhận bằng chứng đã hoàn đúng số tiền được duyệt")
-    @PostMapping("/{id}/requests/{requestId}/refund-confirmation") public ApiResponse<CourseView> refund(@PathVariable Long id, @PathVariable Long requestId, @RequestBody RefundCommand c) { return ApiResponse.success(treatments.confirmRefund(id, requestId, c)); }
+    @PostMapping("/{id}/requests/{requestId}/refund-confirmation") public ApiResponse<CourseView> refund(@PathVariable Long id, @PathVariable Long requestId, @Valid @RequestBody RefundCommand c) { return ApiResponse.success(treatments.confirmRefund(id, requestId, c)); }
     @Operation(summary = "Ghi kết quả và hướng dẫn sau buổi, lưu lịch sử bổ sung")
-    @PostMapping("/{id}/sessions/{sessionId}/result") public ApiResponse<CourseView> result(@PathVariable Long id, @PathVariable Long sessionId, @RequestBody ResultCommand c) { return ApiResponse.success(treatments.sessionResult(id, sessionId, c)); }
+    @PostMapping("/{id}/sessions/{sessionId}/result") public ApiResponse<CourseView> result(@PathVariable Long id, @PathVariable Long sessionId, @Valid @RequestBody ResultCommand c) { return ApiResponse.success(treatments.sessionResult(id, sessionId, c)); }
+    @Operation(summary = "Miễn buổi điều trị không bắt buộc theo chỉ định chuyên môn")
+    @PostMapping("/{id}/sessions/{sessionId}/waive") public ApiResponse<CourseView> waive(@PathVariable Long id, @PathVariable Long sessionId, @RequestBody(required = false) DecisionCommand c) { return ApiResponse.success(treatments.waiveSession(id, sessionId, c)); }
     @Operation(summary = "Tổng kết và kết thúc khi đủ buổi cùng kết quả bắt buộc")
-    @PostMapping("/{id}/complete") public ApiResponse<CourseView> complete(@PathVariable Long id, @RequestBody CompleteCommand c) { return ApiResponse.success(treatments.complete(id, c)); }
+    @PostMapping("/{id}/complete") public ApiResponse<CourseView> complete(@PathVariable Long id, @Valid @RequestBody CompleteCommand c) { return ApiResponse.success(treatments.complete(id, c)); }
 }

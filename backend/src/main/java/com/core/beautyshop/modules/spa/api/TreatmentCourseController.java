@@ -28,7 +28,7 @@ public class TreatmentCourseController {
     @Operation(summary = "Xem phiên bản đang bán và điều khoản của lộ trình")
     @GetMapping("/treatment-templates/{id}") public ApiResponse<TemplateView> template(@PathVariable Long id) { return ApiResponse.success(treatments.template(id, false)); }
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Tạo đơn mua lộ trình theo phiên bản và điều khoản đã chấp nhận")
-    @PostMapping("/treatment-purchases") public ApiResponse<SpaPackageOrderResult> purchase(@RequestBody PurchaseCommand command,
+    @PostMapping("/treatment-purchases") public ApiResponse<SpaPackageOrderResult> purchase(@Valid @RequestBody PurchaseCommand command,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         if (command == null) throw new BusinessException("Thông tin mua lộ trình là bắt buộc");
         PurchaseCommand actual = key == null ? command : new PurchaseCommand(command.templateId(), command.versionId(), command.acceptedTerms(), key, command.notes());
@@ -39,15 +39,15 @@ public class TreatmentCourseController {
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Xem tiến độ lộ trình trong phạm vi được phép")
     @GetMapping("/treatments/{id}") public ApiResponse<CourseView> detail(@PathVariable Long id) { return ApiResponse.success(treatments.course(id)); }
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Chủ hồ sơ xác nhận phiên bản kế hoạch được đề xuất")
-    @PostMapping("/treatments/{id}/changes/{changeId}/accept") public ApiResponse<CourseView> accept(@PathVariable Long id, @PathVariable Long changeId, @RequestBody DecisionCommand command) { return ApiResponse.success(treatments.customerChange(id, changeId, command, true)); }
+    @PostMapping("/treatments/{id}/changes/{changeId}/accept") public ApiResponse<CourseView> accept(@PathVariable Long id, @PathVariable Long changeId, @Valid @RequestBody DecisionCommand command) { return ApiResponse.success(treatments.customerChange(id, changeId, command, true)); }
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Chủ hồ sơ từ chối điều chỉnh kế hoạch")
-    @PostMapping("/treatments/{id}/changes/{changeId}/reject") public ApiResponse<CourseView> reject(@PathVariable Long id, @PathVariable Long changeId, @RequestBody DecisionCommand command) { return ApiResponse.success(treatments.customerChange(id, changeId, command, false)); }
+    @PostMapping("/treatments/{id}/changes/{changeId}/reject") public ApiResponse<CourseView> reject(@PathVariable Long id, @PathVariable Long changeId, @Valid @RequestBody DecisionCommand command) { return ApiResponse.success(treatments.customerChange(id, changeId, command, false)); }
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Tạo đơn thanh toán chênh lệch của điều chỉnh đã chấp nhận")
     @PostMapping("/treatments/{id}/changes/{changeId}/settlement") public ApiResponse<SpaPackageOrderResult> settlement(@PathVariable Long id, @PathVariable Long changeId) { return ApiResponse.success(treatments.settlement(id, changeId)); }
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Áp dụng điều chỉnh đã thanh toán sau khi giải quyết lịch đang giữ")
     @PostMapping("/treatments/{id}/changes/{changeId}/apply") public ApiResponse<CourseView> apply(@PathVariable Long id, @PathVariable Long changeId) { return ApiResponse.success(treatments.applySettledChange(id, changeId)); }
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Gửi yêu cầu tạm dừng, tiếp tục, dừng, gia hạn hoặc báo sự cố")
-    @PostMapping("/treatments/{id}/requests") public ApiResponse<CourseView> request(@PathVariable Long id, @RequestBody RequestCommand command) { return ApiResponse.success(treatments.request(id, command)); }
+    @PostMapping("/treatments/{id}/requests") public ApiResponse<CourseView> request(@PathVariable Long id, @Valid @RequestBody RequestCommand command) { return ApiResponse.success(treatments.request(id, command)); }
     @PreAuthorize("isAuthenticated()") @Operation(summary = "Tra giờ trống cho toàn bộ dịch vụ của buổi, hỗ trợ đổi lịch")
     @GetMapping("/treatments/{id}/sessions/{sessionId}/available-slots") public ApiResponse<List<String>> slots(@PathVariable Long id, @PathVariable Long sessionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date, @RequestParam(required = false) Long staffId,

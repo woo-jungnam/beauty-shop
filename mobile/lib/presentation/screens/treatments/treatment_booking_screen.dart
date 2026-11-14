@@ -79,6 +79,7 @@ class _TreatmentBookingScreenState extends State<TreatmentBookingScreen> {
               .map(
                 (item) => {
                   'serviceId': item.serviceId,
+                  if (item.ticketId != null) 'ticketId': item.ticketId,
                   'treatmentSessionItemId': item.id,
                 },
               )

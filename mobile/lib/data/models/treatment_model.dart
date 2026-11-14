@@ -102,6 +102,8 @@ class TreatmentSessionItem {
   TreatmentSessionItem.fromJson(this.raw);
   int get id => treatmentInt(raw['id']);
   int get serviceId => treatmentInt(raw['serviceId']);
+  int? get ticketId =>
+      raw['ticketId'] == null ? null : treatmentInt(raw['ticketId']);
   int? get appointmentId =>
       raw['appointmentId'] == null ? null : treatmentInt(raw['appointmentId']);
   int? get appointmentItemId => raw['appointmentItemId'] == null

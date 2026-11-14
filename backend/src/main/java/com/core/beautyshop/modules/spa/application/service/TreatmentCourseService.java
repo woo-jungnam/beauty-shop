@@ -263,7 +263,9 @@ public class TreatmentCourseService {
     }
 
     public SpaPackageOrderResult settlement(Long id, Long changeId) {
-        Course c = lock(Course.class, id); requireOwner(c); Change change = change(c, changeId);
+        Course c = lock(Course.class, id); requireOwner(c);
+        Change change = lock(Change.class, changeId);
+        if (!Objects.equals(change.getCourseId(), c.getId())) throw missing("Change");
         requireOpen(c);
         if (!"AWAITING_SETTLEMENT".equals(change.getStatus()) || change.getAcceptedAt() == null) throw business("No accepted adjustment payment is due");
         Plan proposed = read(change.getPlanJson());
@@ -346,7 +348,7 @@ public class TreatmentCourseService {
                     c.setExpiryDate((c.getExpiryDate().isAfter(extensionBase) ? c.getExpiryDate() : extensionBase).plus(r.getExtensionDays(), ChronoUnit.DAYS));
                     UserServiceTicket ticket = tickets.findByIdForUpdate(c.getTicketId()).orElseThrow(() -> missing("Ticket")); ticket.setExpiryDate(c.getExpiryDate());
                     if (ticket.getStatus() == TicketStatus.EXPIRED) ticket.setStatus(TicketStatus.ACTIVE);
-                    if ("EXPIRED".equals(c.getStatus())) c.setStatus(c.getIntakeNotes() == null ? "PENDING_INTAKE" : "ACTIVE");
+                    if ("EXPIRED".equals(c.getStatus())) c.setStatus(c.getPausedAt() != null ? "PAUSED" : (c.getIntakeNotes() == null ? "PENDING_INTAKE" : "ACTIVE"));
                 }
                 case "CANCEL" -> {
                     cancelFutureBookings(c); c.setStatus("CANCELLED");
@@ -388,13 +390,36 @@ public class TreatmentCourseService {
         refreshSession(session); audit(c, "SESSION_RESULT", "Result recorded for session " + sessionId); return courseView(c, true);
     }
 
+    public CourseView waiveSession(Long id, Long sessionId, DecisionCommand command) {
+        Course c = lock(Course.class, id); requireClinical(c); requireOpen(c);
+        Session s = session(c, sessionId);
+        if (s.isRequired()) throw business("Chỉ có thể miễn các buổi không bắt buộc");
+        if (Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) throw business("Buổi này đã đóng");
+        if (items(s).stream().anyMatch(i -> Set.of("SCHEDULED", "IN_PROGRESS").contains(i.getStatus())))
+            throw business("Cần hủy lịch hẹn trước khi miễn buổi");
+        s.setStatus("WAIVED");
+        s.setCompletedAt(Instant.now());
+        items(s).forEach(i -> {
+            if (!"COMPLETED".equals(i.getStatus())) {
+                i.setStatus("WAIVED");
+                i.setRetired(true);
+            }
+        });
+        audit(c, "SESSION_WAIVED", "Buổi " + sessionId + " đã được miễn theo chỉ định chuyên môn; " + reasonOr(command == null ? null : command.reason(), "Miễn theo kế hoạch"));
+        return courseView(c, true);
+    }
+
     public CourseView complete(Long id, CompleteCommand command) {
         Course c = lock(Course.class, id); requireClinical(c);
         if (!"ACTIVE".equals(c.getStatus()) || expired(c)) throw business("Only an active valid course can be completed");
-        if (sessions(c).stream().anyMatch(s -> s.isRequired() && !Set.of("COMPLETED", "WAIVED").contains(s.getStatus())))
+        if (sessions(c).stream().anyMatch(s -> s.isRequired() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())))
             throw business("Every required treatment session must be completed with a result");
         if (hasLiveBookings(c)) throw business("Resolve all open treatment appointments before completion");
         c.setSummary(text(command == null ? null : command.summary(), "Completion summary", 4000)); c.setStatus("COMPLETED"); c.setCompletedAt(Instant.now());
+        UserServiceTicket ticket = tickets.findByIdForUpdate(c.getTicketId()).orElse(null);
+        if (ticket != null && ticket.getStatus() == TicketStatus.ACTIVE) {
+            ticket.setStatus(TicketStatus.COMPLETED);
+        }
         audit(c, "COURSE_COMPLETED", "Responsible staff completed the treatment course"); return courseView(c, true);
     }
 
@@ -517,16 +542,20 @@ public class TreatmentCourseService {
         String state = effectiveStatus(c);
         if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(state)) return "Treatment is " + state;
         if ("PENDING_INTAKE".equals(state) && s.getSequence() != 1) return "Intake must be accepted before later sessions";
-        if (Set.of("COMPLETED", "WAIVED").contains(s.getStatus())) return "This session is already complete";
-        if (sessions(c).stream().anyMatch(p -> p.isRequired() && p.getSequence() < s.getSequence() && !Set.of("COMPLETED", "WAIVED").contains(p.getStatus()))) return "Complete the preceding session first";
+        if (Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) return "This session is already complete";
+        if (sessions(c).stream().anyMatch(p -> p.isRequired() && p.getSequence() < s.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(p.getStatus()))) return "Complete the preceding session first";
         if (items(s).stream().anyMatch(i -> Set.of("SCHEDULED", "IN_PROGRESS").contains(i.getStatus()))) return "This session already has a live appointment";
         return null;
     }
     void refreshSession(Session s) {
+        if ("WAIVED".equals(s.getStatus())) return;
         List<SessionItem> all = items(s);
         boolean requiredComplete = all.stream().filter(SessionItem::isRequired).allMatch(i -> "COMPLETED".equals(i.getStatus()));
+        boolean allRequiredClosed = all.stream().filter(SessionItem::isRequired).allMatch(i -> Set.of("COMPLETED", "NO_SHOW").contains(i.getStatus()));
         if (requiredComplete && all.stream().anyMatch(i -> "COMPLETED".equals(i.getStatus())) && s.getResult() != null && !s.getResult().isBlank()) {
             s.setStatus("COMPLETED"); s.setCompletedAt(all.stream().map(SessionItem::getCompletedAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(Instant.now()));
+        } else if (allRequiredClosed && all.stream().allMatch(i -> "NO_SHOW".equals(i.getStatus()))) {
+            s.setStatus("NO_SHOW"); s.setCompletedAt(all.stream().map(SessionItem::getCompletedAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(Instant.now()));
         } else if (all.stream().anyMatch(i -> "IN_PROGRESS".equals(i.getStatus()))) s.setStatus("IN_PROGRESS");
         else if (all.stream().anyMatch(i -> "SCHEDULED".equals(i.getStatus()))) s.setStatus("SCHEDULED");
         else if (all.stream().anyMatch(i -> "COMPLETED".equals(i.getStatus()))) s.setStatus("AWAITING_RESULT");
@@ -613,8 +642,9 @@ public class TreatmentCourseService {
         }).toList();
         ItemView live = views.stream().filter(i -> i.appointmentId() != null && Set.of("SCHEDULED", "IN_PROGRESS").contains(i.status())).findFirst().orElse(null);
         String blocked = blocked(c, s); List<String> actions = new ArrayList<>();
-        if (blocked == null && views.stream().anyMatch(i -> !"COMPLETED".equals(i.status()))) actions.add("BOOK");
+        if (blocked == null && views.stream().anyMatch(i -> !Set.of("COMPLETED", "NO_SHOW").contains(i.status()))) actions.add("BOOK");
         if (clinical && views.stream().anyMatch(i -> "COMPLETED".equals(i.status()))) actions.add("WRITE_RESULT");
+        if (clinical && !s.isRequired() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) actions.add("WAIVE");
         List<ResultView> results = list(SessionResult.class, "select r from TreatmentSessionResult r where r.sessionId=:sid order by r.id desc", "sid", s.getId()).stream()
                 .filter(r -> clinical || (Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserIdOptional().orElse(null)) && r.isSharedWithCustomer()))
                 .map(r -> new ResultView(r.getId(), r.getAuthorId(), r.getResult(), r.getAftercare(), clinical ? r.getInternalNotes() : null, r.isSharedWithCustomer(), r.getCreatedAt())).toList();
@@ -816,7 +846,8 @@ public class TreatmentCourseService {
     private Change change(Course c, Long id) { Change x = get(Change.class, id); if (!Objects.equals(x.getCourseId(), c.getId())) throw missing("Change"); return x; }
     private WorkflowRequest workflow(Course c, Long id) { WorkflowRequest r = get(WorkflowRequest.class, id); if (!Objects.equals(r.getCourseId(), c.getId())) throw missing("Request"); return r; }
     private BeautyService availableService(Long id) { return services.findById(id).filter(s -> !Boolean.TRUE.equals(s.getIsDeleted()) && Boolean.TRUE.equals(s.getIsActive())).orElseThrow(() -> business("Service is unavailable: " + id)); }
-    private boolean isAssigned(Course c) { return c.getAssignedStaffId() != null && staff.findById(c.getAssignedStaffId()).filter(s -> !Boolean.TRUE.equals(s.getIsDeleted()) && Boolean.TRUE.equals(s.getIsActive()) && Objects.equals(s.getUserId(), SecurityUtils.getCurrentUserIdOptional().orElse(null))).isPresent(); }
+    Course getCourse(Long id) { return get(Course.class, id); }
+    boolean isAssigned(Course c) { return c.getAssignedStaffId() != null && staff.findById(c.getAssignedStaffId()).filter(s -> !Boolean.TRUE.equals(s.getIsDeleted()) && Boolean.TRUE.equals(s.getIsActive()) && Objects.equals(s.getUserId(), SecurityUtils.getCurrentUserIdOptional().orElse(null))).isPresent(); }
     private void requireView(Course c) { if (!Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserId()) && !access.canManageReception() && !(access.permission("SPA_EXECUTION") && isAssigned(c))) throw denied(); }
     private void requireOwner(Course c) { if (!Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserId())) throw new AccessDeniedException("Only the customer may confirm their treatment plan"); }
     private void requireClinical(Course c) { if (!access.hasRole("ADMIN") && !(access.permission("SPA_EXECUTION") && isAssigned(c))) throw new AccessDeniedException("Clinical changes require the assigned staff member"); }

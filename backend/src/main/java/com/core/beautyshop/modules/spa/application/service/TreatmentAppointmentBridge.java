@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.spa.application.service;
 
 import com.core.beautyshop.modules.spa.domain.*;
 import com.core.beautyshop.modules.spa.domain.treatment.TreatmentEntities.*;
+import com.core.beautyshop.modules.spa.application.dto.request.AppointmentItemRequest;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import jakarta.persistence.EntityManager;
@@ -77,7 +78,7 @@ public class TreatmentAppointmentBridge {
                 || !Objects.equals(item.getStaff().getUserId(), SecurityUtils.getCurrentUserId())))
             throw new AccessDeniedException("Only the assigned staff member may perform this treatment service");
         Session session = courses.getSession(treatmentItem.getSessionId());
-        if (courses.sessions(course).stream().anyMatch(s -> s.isRequired() && s.getSequence() < session.getSequence() && !Set.of("COMPLETED", "WAIVED").contains(s.getStatus())))
+        if (courses.sessions(course).stream().anyMatch(s -> s.isRequired() && s.getSequence() < session.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())))
             throw business("Complete the previous treatment session first");
         if (!courses.withinWindow(course, session, Instant.now())) throw business("Execution is outside the treatment session's permitted interval");
         if ("COMPLETED".equals(treatmentItem.getStatus())) throw business("This treatment service was already performed");
@@ -93,7 +94,7 @@ public class TreatmentAppointmentBridge {
             if (!"ACTIVE".equals(course.getStatus()) || !courses.withinWindow(course, courses.getSession(linked.getSessionId()), Instant.now()))
                 throw business("Intake must be accepted and treatment must be active within its permitted interval");
             Session session = courses.getSession(linked.getSessionId());
-            if (courses.sessions(course).stream().anyMatch(s -> s.isRequired() && s.getSequence() < session.getSequence() && !Set.of("COMPLETED", "WAIVED").contains(s.getStatus()))) throw business("Complete the previous session first");
+            if (courses.sessions(course).stream().anyMatch(s -> s.isRequired() && s.getSequence() < session.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus()))) throw business("Complete the previous session first");
         }
     }
 
@@ -107,7 +108,9 @@ public class TreatmentAppointmentBridge {
         if ("PERFORMED".equals(state)) {
             treatmentItem.setStatus("COMPLETED"); treatmentItem.setCompletedAt(item.getActualCompletedAt() == null ? Instant.now() : item.getActualCompletedAt());
         } else if ("IN_PROGRESS".equals(state)) treatmentItem.setStatus("IN_PROGRESS");
-        else if (Set.of("SKIPPED", "NO_SHOW").contains(state) || (item.getAppointment() != null && "CANCELLED".equals(item.getAppointment().getStatus().name()))) {
+        else if ("NO_SHOW".equals(state) && item.getTicketUsageState() != null && "FORFEITED".equals(item.getTicketUsageState().name())) {
+            treatmentItem.setStatus("NO_SHOW"); treatmentItem.setCompletedAt(item.getActualCompletedAt() == null ? Instant.now() : item.getActualCompletedAt());
+        } else if (Set.of("SKIPPED", "NO_SHOW").contains(state) || (item.getAppointment() != null && "CANCELLED".equals(item.getAppointment().getStatus().name()))) {
             treatmentItem.setStatus("PLANNED"); treatmentItem.setAppointmentItemId(null);
         }
         courses.refreshSession(courses.getSession(treatmentItem.getSessionId()));
@@ -120,7 +123,7 @@ public class TreatmentAppointmentBridge {
         SessionItem treatmentItem = courses.lockSessionItem(item.getTreatmentSessionItemId());
         if (!Objects.equals(treatmentItem.getAppointmentItemId(), item.getId())) return;
         courses.recordConsumption(course, treatmentItem, item);
-        if (!"COMPLETED".equals(treatmentItem.getStatus())) { treatmentItem.setStatus("PLANNED"); treatmentItem.setAppointmentItemId(null); }
+        if (!Set.of("COMPLETED", "NO_SHOW").contains(treatmentItem.getStatus())) { treatmentItem.setStatus("PLANNED"); treatmentItem.setAppointmentItemId(null); }
         courses.refreshSession(courses.getSession(treatmentItem.getSessionId()));
     }
 
@@ -130,6 +133,19 @@ public class TreatmentAppointmentBridge {
         SessionItem treatmentItem = courses.lockSessionItem(item.getTreatmentSessionItemId()); requireLink(treatmentItem, item);
         if (!Set.of("PENDING_INTAKE", "ACTIVE").contains(course.getStatus()) || !courses.withinWindow(course, courses.getSession(treatmentItem.getSessionId()), newStart))
             throw business("The new time is outside the active treatment plan's interval or validity");
+    }
+
+    public boolean canStaffBookForCustomer(Long staffUserId, Long targetUserId, List<AppointmentItemRequest> items) {
+        if (staffUserId == null || targetUserId == null || items == null || items.isEmpty()) return false;
+        if (!access.permission("SPA_EXECUTION")) return false;
+        for (var item : items) {
+            if (item.getTreatmentSessionItemId() == null) return false;
+            SessionItem sessionItem = courses.item(item.getTreatmentSessionItemId());
+            if (sessionItem == null) return false;
+            Course course = courses.getCourse(sessionItem.getCourseId());
+            if (course == null || !Objects.equals(course.getUserId(), targetUserId) || !courses.isAssigned(course)) return false;
+        }
+        return true;
     }
 
     private void requireLink(SessionItem treatmentItem, AppointmentItem item) {

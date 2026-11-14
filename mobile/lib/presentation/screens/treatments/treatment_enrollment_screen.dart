@@ -243,6 +243,17 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
     }
   }
 
+  Future<void> _waive(TreatmentSession session) async {
+    final data = await treatmentTextForm(
+      context,
+      title: 'Miễn buổi tùy chọn ${session.sequence}',
+      fields: {'reason': 'Lý do miễn buổi'},
+    );
+    if (data != null && mounted) {
+      await _write('$_base/sessions/${session.id}/waive', data);
+    }
+  }
+
   Future<void> _request(TreatmentEnrollment course, String type) async {
     final data = await treatmentTextForm(
       context,
@@ -572,7 +583,8 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
                                 spacing: 8,
                                 children: [
                                   if ((!_operations ||
-                                          provider.canManageReception) &&
+                                          provider.canManageReception ||
+                                          _clinical(course)) &&
                                       session.allows('BOOK'))
                                     FilledButton.icon(
                                       onPressed: _busy
@@ -602,6 +614,14 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
                                       child: const Text(
                                         'Ghi kết quả / hướng dẫn',
                                       ),
+                                    ),
+                                  if (_clinical(course) &&
+                                      session.allows('WAIVE'))
+                                    OutlinedButton(
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _waive(session),
+                                      child: const Text('Miễn buổi'),
                                     ),
                                   ...session.appointmentIds.map(
                                     (id) => OutlinedButton.icon(
