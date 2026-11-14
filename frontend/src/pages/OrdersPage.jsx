@@ -25,6 +25,7 @@ import {
   Receipt,
   Printer,
   CreditCard,
+  AlertTriangle,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -236,6 +237,13 @@ export const OrdersPage = () => {
   const handleUpdateStatusSubmit = async (e) => {
     e.preventDefault();
     if (!selectedOrder) return;
+
+    const isBankUnpaid = selectedOrder.paymentMethod === 'BANK' && selectedOrder.paymentStatus !== 'PAID';
+    if (isBankUnpaid && (targetStatus === 'PROCESSING' || targetStatus === 'SHIPPED')) {
+      setErrorMessage('Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán (PAID) trước khi chuyển sang chuẩn bị hàng hoặc giao hàng.');
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage('');
 
@@ -285,7 +293,7 @@ export const OrdersPage = () => {
     }
   };
 
-  const handleConfirmPayment = (order) => {
+  const handleConfirmPayment = (order, onComplete) => {
     askConfirm({
       title: 'Xác nhận thanh toán đơn hàng',
       message: `Đánh dấu đơn hàng ${order.orderNumber || order.orderCode || '#' + order.id} đã thanh toán (PAID)?`,
@@ -295,12 +303,12 @@ export const OrdersPage = () => {
       onConfirm: async () => {
         const res = await apiClient.post(ENDPOINTS.ORDERS.CONFIRM_PAYMENT(order.id));
         const confirmedOrder = res?.data || res;
+        const finalOrder = confirmedOrder && confirmedOrder.id ? confirmedOrder : { ...order, paymentStatus: 'PAID' };
         if (selectedOrder && selectedOrder.id === order.id) {
-          if (confirmedOrder && confirmedOrder.id) {
-            setSelectedOrder(confirmedOrder);
-          } else {
-            await handleOpenDetail(order);
-          }
+          setSelectedOrder(finalOrder);
+        }
+        if (typeof onComplete === 'function') {
+          onComplete(finalOrder);
         }
         fetchOrders(page);
       },
@@ -900,6 +908,18 @@ export const OrdersPage = () => {
                 In hóa đơn
               </Button>
               <div style={{ display: 'flex', gap: '8px' }}>
+                {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={CheckCircle2}
+                    onClick={() => handleConfirmPayment(selectedOrder)}
+                    style={{ color: '#059669', borderColor: '#059669' }}
+                    title="Đánh dấu đã thanh toán (PAID)"
+                  >
+                    Xác nhận PAID
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1478,18 +1498,26 @@ export const OrdersPage = () => {
         onClose={() => setStatusModalOpen(false)}
         title={`Cập nhật trạng thái đơn: ${selectedOrder?.orderNumber || selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
         footer={
-          <>
-            <Button variant="outline" onClick={() => setStatusModalOpen(false)}>
-              Hủy bỏ
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleUpdateStatusSubmit}
-              loading={submitting}
-            >
-              Lưu thay đổi
-            </Button>
-          </>
+          (() => {
+            const isBankUnpaid = selectedOrder?.paymentMethod === 'BANK' && selectedOrder?.paymentStatus !== 'PAID';
+            const isBlockedTarget = isBankUnpaid && (targetStatus === 'PROCESSING' || targetStatus === 'SHIPPED');
+            return (
+              <>
+                <Button variant="outline" onClick={() => setStatusModalOpen(false)}>
+                  Hủy bỏ
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleUpdateStatusSubmit}
+                  loading={submitting}
+                  disabled={isBlockedTarget}
+                  title={isBlockedTarget ? 'Cần xác nhận thanh toán trước khi lưu trạng thái này' : 'Lưu thay đổi'}
+                >
+                  Lưu thay đổi
+                </Button>
+              </>
+            );
+          })()
         }
       >
         <form onSubmit={handleUpdateStatusSubmit}>
@@ -1507,6 +1535,78 @@ export const OrdersPage = () => {
               {errorMessage}
             </div>
           )}
+
+          {selectedOrder && (
+            <div
+              style={{
+                padding: '10px 14px',
+                background: '#F8FAFC',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', color: '#64748B' }}>Thanh toán:</span>
+                <strong style={{ fontSize: '12.5px', color: '#1E293B' }}>
+                  {getPaymentMethodLabel(selectedOrder.paymentMethod)}
+                </strong>
+                <span style={{ color: '#94A3B8' }}>·</span>
+                <Badge variant={getPaymentStatusBadge(selectedOrder.paymentStatus).variant} size="sm">
+                  {getPaymentStatusBadge(selectedOrder.paymentStatus).text}
+                </Badge>
+              </div>
+
+              {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  icon={CheckCircle2}
+                  onClick={() => handleConfirmPayment(selectedOrder, (updated) => setSelectedOrder(updated))}
+                  style={{ color: '#059669', borderColor: '#059669', fontSize: '12px' }}
+                >
+                  Xác nhận PAID
+                </Button>
+              )}
+            </div>
+          )}
+
+          {(() => {
+            const isBankUnpaid = selectedOrder?.paymentMethod === 'BANK' && selectedOrder?.paymentStatus !== 'PAID';
+            const isBlockedTarget = isBankUnpaid && (targetStatus === 'PROCESSING' || targetStatus === 'SHIPPED');
+            if (!isBlockedTarget) return null;
+            return (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  backgroundColor: '#FFFBEB',
+                  border: '1px solid #FCD34D',
+                  borderRadius: '6px',
+                  color: '#92400E',
+                  fontSize: '12.5px',
+                  marginBottom: '14px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                  lineHeight: '1.45',
+                }}
+              >
+                <AlertTriangle size={16} style={{ color: '#D97706', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong>Yêu cầu thanh toán trước:</strong> Đơn hàng chuyển khoản cần được xác nhận thanh toán (PAID) trước khi chuyển sang trạng thái <strong>{targetStatus === 'PROCESSING' ? 'Chuẩn bị hàng' : 'Giao hàng'}</strong>.
+                  <div style={{ marginTop: '4px' }}>
+                    Vui lòng bấm nút <strong>"Xác nhận PAID"</strong> ở phía trên để cập nhật thanh toán trước khi lưu.
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {selectedOrder && getOrderType(selectedOrder) !== 'PRODUCT' ? (
             <>
@@ -1531,10 +1631,14 @@ export const OrdersPage = () => {
                 onChange={(e) => setTargetStatus(e.target.value)}
               >
                 <option value="CONFIRMED">Xác nhận đơn hàng</option>
-                <option value="PROCESSING">Chuyển sang chuẩn bị hàng</option>
+                <option value="PROCESSING">
+                  Chuyển sang chuẩn bị hàng{selectedOrder?.paymentMethod === 'BANK' && selectedOrder?.paymentStatus !== 'PAID' ? ' (Cần thanh toán PAID)' : ''}
+                </option>
                 <option value="DELIVERY_FAILED">Giao không thành công</option>
                 <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
-                <option value="SHIPPED">Xuất kho bàn giao vận chuyển</option>
+                <option value="SHIPPED">
+                  Xuất kho bàn giao vận chuyển{selectedOrder?.paymentMethod === 'BANK' && selectedOrder?.paymentStatus !== 'PAID' ? ' (Cần thanh toán PAID)' : ''}
+                </option>
                 <option value="DELIVERED">Xác nhận giao thành công</option>
                 <option value="CANCELLED">Hủy đơn hàng</option>
                 <option value="RETURNED">Khách trả hàng về kho</option>

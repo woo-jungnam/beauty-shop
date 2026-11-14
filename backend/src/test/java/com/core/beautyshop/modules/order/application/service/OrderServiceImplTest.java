@@ -219,6 +219,80 @@ class OrderServiceImplTest {
         assertEquals(new BigDecimal("1000"), order.getPaidAmount());
     }
 
+    @Test
+    void bankOrderRequiresPaymentBeforeTransitionToProcessing() {
+        Order order = Order.builder()
+                .orderNumber("ORD-BANK-UNPAID")
+                .status(OrderStatus.CONFIRMED)
+                .paymentMethod(com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK)
+                .paymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PENDING)
+                .items(new ArrayList<>())
+                .statusHistories(new ArrayList<>())
+                .build();
+        order.setId(14L);
+
+        when(orderRepository.findByIdForUpdate(14L)).thenReturn(Optional.of(order));
+
+        UpdateOrderStatusRequest request = new UpdateOrderStatusRequest();
+        request.setStatus(OrderStatus.PROCESSING);
+
+        com.core.beautyshop.shared.exception.BusinessException ex = assertThrows(
+                com.core.beautyshop.shared.exception.BusinessException.class,
+                () -> orderService.updateOrderStatus(14L, request)
+        );
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("thanh toán (PAID) trước khi chuẩn bị hàng"));
+    }
+
+    @Test
+    void bankOrderTransitionsToProcessingWhenPaid() {
+        Order order = Order.builder()
+                .orderNumber("ORD-BANK-PAID")
+                .status(OrderStatus.CONFIRMED)
+                .paymentMethod(com.core.beautyshop.shared.domain.enums.PaymentMethod.BANK)
+                .paymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PAID)
+                .items(new ArrayList<>())
+                .statusHistories(new ArrayList<>())
+                .build();
+        order.setId(15L);
+
+        when(orderRepository.findByIdForUpdate(15L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(orderMapper.toOrderResponse(order)).thenReturn(new OrderResponse());
+
+        UpdateOrderStatusRequest request = new UpdateOrderStatusRequest();
+        request.setStatus(OrderStatus.PROCESSING);
+
+        orderService.updateOrderStatus(15L, request);
+
+        assertEquals(OrderStatus.PROCESSING, order.getStatus());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void codOrderTransitionsToProcessingEvenWhenPaymentPending() {
+        Order order = Order.builder()
+                .orderNumber("ORD-COD-PENDING")
+                .status(OrderStatus.CONFIRMED)
+                .paymentMethod(com.core.beautyshop.shared.domain.enums.PaymentMethod.COD)
+                .paymentStatus(com.core.beautyshop.modules.order.domain.enums.PaymentStatus.PENDING)
+                .items(new ArrayList<>())
+                .statusHistories(new ArrayList<>())
+                .build();
+        order.setId(16L);
+
+        when(orderRepository.findByIdForUpdate(16L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(orderMapper.toOrderResponse(order)).thenReturn(new OrderResponse());
+
+        UpdateOrderStatusRequest request = new UpdateOrderStatusRequest();
+        request.setStatus(OrderStatus.PROCESSING);
+
+        orderService.updateOrderStatus(16L, request);
+
+        assertEquals(OrderStatus.PROCESSING, order.getStatus());
+        verify(orderRepository).save(order);
+    }
+
     private void asCustomer(Long userId) {
         var principal = new UserDetailsImpl(userId, "customer", "customer@example.test", "unused",
                 List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER")));

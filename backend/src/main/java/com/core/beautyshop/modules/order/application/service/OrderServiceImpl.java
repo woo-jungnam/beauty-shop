@@ -256,7 +256,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyRole('ADMIN', 'ORDER_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'ORDER_STAFF')")
     public OrderResponse getAdminOrderById(Long id) {
         Order order = orderRepository.findById(id)
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
@@ -384,7 +384,7 @@ public class OrderServiceImpl implements OrderService {
         if ((newStatus == OrderStatus.PROCESSING || newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED)
                 && order.getPaymentMethod() == PaymentMethod.BANK
                 && order.getPaymentStatus() != PaymentStatus.PAID) {
-            throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán trước khi giao hàng");
+            throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán (PAID) trước khi chuẩn bị hàng hoặc xuất kho giao hàng");
         }
         if (newStatus == OrderStatus.SHIPPED) {
             Map<Long, Integer> totalQtyByVariant = order.getItems().stream()
