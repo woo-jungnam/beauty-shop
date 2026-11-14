@@ -54,6 +54,17 @@ class ProductImageSearchServiceTest {
         verifyNoInteractions(client);
     }
 
+    @Test void acceptsAvifImageFormat() {
+        var client = mock(ImageSearchClient.class);
+        var repository = mock(ProductSearchRepository.class);
+        var service = new ProductImageSearchService(client, repository, mock(ProductImageRepository.class));
+        byte[] avifHeader = new byte[]{0, 0, 0, 0x1c, 'f', 't', 'y', 'p', 'a', 'v', 'i', 'f', 0, 0, 0, 0};
+        when(client.search(any(), any(), any(), anyDouble()))
+                .thenReturn(new ImageSearchClient.Result("success", "EMPTY", "v1", List.of()));
+        var result = service.search(new MockMultipartFile("image", "test.avif", "image/avif", avifHeader));
+        assertEquals("EMPTY", result.matchStatus());
+    }
+
     @Test void usesMatchedUploadInsteadOfExternalThumbnailAndSkipsExternalPhoto() {
         var repository = mock(ProductSearchRepository.class);
         var photos = mock(ProductImageRepository.class);

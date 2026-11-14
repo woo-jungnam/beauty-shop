@@ -180,9 +180,14 @@ public class ImageSearchClient {
     }
 
     static Result validate(Result result) {
-        if (result == null || !"success".equals(result.status()) || !"CANDIDATES".equals(result.matchStatus())
+        if (result == null || !"success".equals(result.status())
                 || result.indexVersion() == null || result.indexVersion().isBlank()
                 || result.items() == null || result.items().size() > 50) throw unavailable();
+        if ("EMPTY".equals(result.matchStatus())) {
+            if (!result.items().isEmpty()) throw unavailable();
+            return result;
+        }
+        if (!"CANDIDATES".equals(result.matchStatus())) throw unavailable();
         var seen = new HashSet<Long>();
         double previous = Double.POSITIVE_INFINITY;
         for (var candidate : result.items()) {

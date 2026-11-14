@@ -116,7 +116,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
       });
 
       final response = await _api.post<Map<String, dynamic>>(
-        ApiConstants.searchByImage,
+        '${ApiConstants.searchByImage}?minSimilarity=0.65',
         data: formData,
         fromJsonT: (json) => Map<String, dynamic>.from(json as Map),
       );
@@ -149,9 +149,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen>
 
         setState(() {
           _results = parsed;
-          if (parsed.isEmpty) {
-            _error = 'Không tìm thấy sản phẩm có bao bì tương đồng trong catalog.';
-          }
+          _error = null;
         });
       } else {
         setState(() {

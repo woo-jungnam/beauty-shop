@@ -104,16 +104,30 @@ def resolve_upload_path(upload_dir: str, url: str) -> Optional[Path]:
 
 def read_catalog_image(upload_dir: str, url: str, max_bytes: int = 5 * 1024 * 1024) -> Optional[bytes]:
     target = resolve_upload_path(upload_dir, url)
-    if not target:
-        return None
-    try:
-        with target.open("rb") as stream:
-            raw = stream.read(max_bytes + 1)
-        if len(raw) > max_bytes:
+    if target:
+        try:
+            with target.open("rb") as stream:
+                raw = stream.read(max_bytes + 1)
+            if len(raw) > max_bytes:
+                return None
+            return raw
+        except Exception:
             return None
-        return raw
-    except Exception:
-        return None
+
+    # Fallback doc anh tu URL ngoai (vi du: anh seed unsplash, CDN)
+    if url and (url.startswith("http://") or url.startswith("https://")):
+        try:
+            import urllib.request
+            req = urllib.request.Request(url, headers={"User-Agent": "BeautyShop-AI/1.0"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                raw = resp.read(max_bytes + 1)
+                if len(raw) > max_bytes:
+                    return None
+                return raw
+        except Exception:
+            return None
+
+    return None
 
 
 def fetch_all_catalog_images(settings) -> List[Dict]:

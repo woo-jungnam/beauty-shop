@@ -49,7 +49,7 @@ public class ProductImageSearchService {
             throw new ImageSearchException(400, "Không đọc được ảnh.");
         }
         if (raw.length > MAX_BYTES) throw new ImageSearchException(413, "Ảnh tối đa 5 MiB.");
-        if (!supported(raw)) throw new ImageSearchException(415, "Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.");
+        if (!supported(raw)) throw new ImageSearchException(415, "Chỉ hỗ trợ ảnh JPEG, PNG, WebP hoặc AVIF.");
         double cutoff = (minSimilarity != null && minSimilarity >= 0.0 && minSimilarity <= 1.0) ? minSimilarity : MIN_SIMILARITY;
         return resolve(client.search(raw, categoryId, brandId, cutoff), cutoff);
     }
@@ -83,7 +83,13 @@ public class ProductImageSearchService {
                         var photo = photos.get(candidate.imageId());
                         if (photo != null && photo.getProduct().getId().equals(product.getId())) photoUrl = photo.getImageUrl();
                     }
-                    if (!isUploadUrl(photoUrl)) return null;
+                    if (!isUploadUrl(photoUrl)) {
+                        if (isUploadUrl(product.getThumbnailUrl())) {
+                            photoUrl = product.getThumbnailUrl();
+                        } else {
+                            return null;
+                        }
+                    }
                     product.setThumbnailUrl(photoUrl);
                     return new Item(product, true, "product/" + product.getId(), candidate.similarity());
                 }).filter(Objects::nonNull).limit(5)
@@ -107,6 +113,8 @@ public class ProductImageSearchService {
                 || (b.length >= 8 && b[0] == (byte) 137 && b[1] == 80 && b[2] == 78 && b[3] == 71
                     && b[4] == 13 && b[5] == 10 && b[6] == 26 && b[7] == 10)
                 || (b.length >= 12 && b[0] == 82 && b[1] == 73 && b[2] == 70 && b[3] == 70
-                    && b[8] == 87 && b[9] == 69 && b[10] == 66 && b[11] == 80);
+                    && b[8] == 87 && b[9] == 69 && b[10] == 66 && b[11] == 80)
+                || (b.length >= 12 && b[4] == 0x66 && b[5] == 0x74 && b[6] == 0x79 && b[7] == 0x70
+                    && b[8] == 0x61 && b[9] == 0x76 && b[10] == 0x69 && (b[11] == 0x66 || b[11] == 0x73));
     }
 }

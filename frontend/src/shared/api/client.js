@@ -147,7 +147,9 @@ apiClient.interceptors.response.use(
       } else if (error.response?.status === 409) {
         message = 'Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc dữ liệu.';
       } else if (error.response?.status === 413) {
-        message = 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 10MB).';
+        message = originalRequest?.url?.includes('search-by-image')
+          ? 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 5MB).'
+          : 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 10MB).';
       } else if (error.response?.status === 500) {
         message = 'Đã xảy ra lỗi hệ thống trên máy chủ. Vui lòng thử lại sau!';
       } else if (error.response?.status >= 502 && error.response?.status <= 504) {

@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.catalog.api;
 
 import com.core.beautyshop.modules.catalog.infrastructure.ImageSearchClient;
+import com.core.beautyshop.modules.catalog.infrastructure.ImageSearchException;
 import com.core.beautyshop.shared.dto.ApiResponse;
 import com.core.beautyshop.shared.exception.BusinessException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -58,6 +60,12 @@ public class AdminImageSearchController {
         } catch (IOException e) {
             throw new BusinessException("Không thể đọc tệp hình ảnh: " + e.getMessage());
         }
+    }
+
+    @ExceptionHandler(ImageSearchException.class)
+    public ResponseEntity<ApiResponse<Void>> handle(ImageSearchException error) {
+        return ResponseEntity.status(error.status()).body(ApiResponse.error(
+                error.status(), "IMAGE_SEARCH_" + error.status(), error.getMessage(), null));
     }
 }
 

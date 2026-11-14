@@ -21,6 +21,16 @@ class ImageSearchClientTest {
                 new ImageSearchClient.Result("success", "CANDIDATES", "v1", List.of(new ImageSearchClient.Candidate(1L, 1L, Double.NaN)))));
     }
 
+    @Test void validatesEmptyResultSuccessfully() {
+        var result = new ImageSearchClient.Result("success", "EMPTY", "v1", List.of());
+        var validated = ImageSearchClient.validate(result);
+        assertEquals("EMPTY", validated.matchStatus());
+        assertTrue(validated.items().isEmpty());
+
+        assertThrows(ImageSearchException.class, () -> ImageSearchClient.validate(
+                new ImageSearchClient.Result("success", "EMPTY", "v1", List.of(new ImageSearchClient.Candidate(1L, -1L, .8)))));
+    }
+
     @Test void sendsMultipartAndInternalTokenAndParsesIds() {
         var builder = RestClient.builder().baseUrl("http://image-service");
         var server = MockRestServiceServer.bindTo(builder).build();
