@@ -25,6 +25,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -220,16 +222,37 @@ public class ProductServiceImpl implements ProductService {
         }
 
         product.setAttributeValues(new ArrayList<>());
-        Product saved = productRepository.save(product);
-        if (saved.getThumbnailUrl() != null && !saved.getThumbnailUrl().isBlank()) {
-            try {
-                Long brandId = saved.getBrand() != null ? saved.getBrand().getId() : null;
-                List<Long> categoryIds = saved.getCategories() != null
-                        ? saved.getCategories().stream().map(Category::getId).toList()
-                        : null;
-                imageSearchClient.syncImage(saved.getId(), -saved.getId(), saved.getThumbnailUrl(), "UPSERT", saved.getName(), true, categoryIds, brandId);
-            } catch (Exception ignored) { }
-        }
+        Product saved = productRepository.saveAndFlush(product);
+
+        final Long savedId = saved.getId();
+        final String savedName = saved.getName();
+        final String thumbUrl = saved.getThumbnailUrl();
+        final Long brandId = saved.getBrand() != null ? saved.getBrand().getId() : null;
+        final List<Long> categoryIds = saved.getCategories() != null
+                ? saved.getCategories().stream().map(Category::getId).toList()
+                : null;
+        final List<ProductImage> galleryImages = saved.getImages() != null
+                ? new ArrayList<>(saved.getImages())
+                : List.of();
+
+        executeAfterCommit(() -> {
+            if (imageSearchClient == null) return;
+            // 1. Dong bo anh dai dien (Thumbnail)
+            if (thumbUrl != null && !thumbUrl.isBlank()) {
+                try {
+                    imageSearchClient.syncImage(savedId, -savedId, thumbUrl, "UPSERT", savedName, true, categoryIds, brandId);
+                } catch (Exception ignored) { }
+            }
+            // 2. Dong bo danh sach anh bo suu tap (Gallery Images)
+            for (ProductImage img : galleryImages) {
+                if (img.getId() != null && img.getImageUrl() != null && !img.getImageUrl().isBlank()) {
+                    try {
+                        imageSearchClient.syncImage(savedId, img.getId(), img.getImageUrl(), "UPSERT", savedName, false, categoryIds, brandId);
+                    } catch (Exception ignored) { }
+                }
+            }
+        });
+
         return mapToProductResponse(saved);
     }
 
@@ -326,17 +349,23 @@ public class ProductServiceImpl implements ProductService {
 
         Product saved = productRepository.saveAndFlush(product);
         if (request.getThumbnailUrl() != null) {
-            try {
-                if (saved.getThumbnailUrl() != null && !saved.getThumbnailUrl().isBlank()) {
-                    Long brandId = saved.getBrand() != null ? saved.getBrand().getId() : null;
-                    List<Long> categoryIds = saved.getCategories() != null
-                            ? saved.getCategories().stream().map(Category::getId).toList()
-                            : null;
-                    imageSearchClient.syncImage(saved.getId(), -saved.getId(), saved.getThumbnailUrl(), "UPSERT", saved.getName(), true, categoryIds, brandId);
-                } else {
-                    imageSearchClient.syncImage(saved.getId(), -saved.getId(), null, "DELETE", null, true);
-                }
-            } catch (Exception ignored) { }
+            final Long savedId = saved.getId();
+            final String savedName = saved.getName();
+            final String thumbUrl = saved.getThumbnailUrl();
+            final Long brandId = saved.getBrand() != null ? saved.getBrand().getId() : null;
+            final List<Long> categoryIds = saved.getCategories() != null
+                    ? saved.getCategories().stream().map(Category::getId).toList()
+                    : null;
+            executeAfterCommit(() -> {
+                if (imageSearchClient == null) return;
+                try {
+                    if (thumbUrl != null && !thumbUrl.isBlank()) {
+                        imageSearchClient.syncImage(savedId, -savedId, thumbUrl, "UPSERT", savedName, true, categoryIds, brandId);
+                    } else {
+                        imageSearchClient.syncImage(savedId, -savedId, null, "DELETE", null, true);
+                    }
+                } catch (Exception ignored) { }
+            });
         }
         return mapToProductResponse(saved);
     }
@@ -352,9 +381,12 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
         product.setIsDeleted(true);
         productRepository.save(product);
-        try {
-            imageSearchClient.syncImage(id, -id, null, "DELETE", null, true);
-        } catch (Exception ignored) { }
+        executeAfterCommit(() -> {
+            if (imageSearchClient == null) return;
+            try {
+                imageSearchClient.syncImage(id, -id, null, "DELETE", null, true);
+            } catch (Exception ignored) { }
+        });
     }
 
     private ProductResponse mapToProductResponse(Product product) {
@@ -852,5 +884,18 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException("Sản phẩm không còn hiển thị");
         interactionRecorder.record(new com.core.beautyshop.modules.catalog.api.event.ProductInteractionEvent(
                 userId, sessionId, productId, actionType, null));
+    }
+
+    private void executeAfterCommit(Runnable task) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    task.run();
+                }
+            });
+        } else {
+            task.run();
+        }
     }
 }

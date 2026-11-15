@@ -190,7 +190,7 @@ export const HomePage = ({ onNavigate }) => {
           apiClient.get('/api/v1/categories'),
           apiClient.get('/api/v1/brands?size=100'),
           apiClient.get('/api/v1/banners'),
-          apiClient.get(`/api/v1/products/recommended-for-you?limit=8&sessionId=${encodeURIComponent(guestSessionId)}`)
+          apiClient.get(`/api/v1/products/recommended-for-you?limit=24&sessionId=${encodeURIComponent(guestSessionId)}`)
         ]);
 
         if (isMounted) {
@@ -374,6 +374,19 @@ export const HomePage = ({ onNavigate }) => {
     }
     return arr;
   }, [products]);
+
+  const displayedRecommendations = useMemo(() => {
+    const list = Array.isArray(recommendedProducts) ? [...recommendedProducts] : [];
+    const seenIds = new Set(list.map(p => p.id));
+    for (const p of randomProducts) {
+      if (list.length >= sectionLimits.recommendations) break;
+      if (p?.id && !seenIds.has(p.id)) {
+        seenIds.add(p.id);
+        list.push(p);
+      }
+    }
+    return list.slice(0, sectionLimits.recommendations);
+  }, [recommendedProducts, randomProducts, sectionLimits.recommendations]);
 
   const openCatalog = () => {
     const params = new URLSearchParams();
@@ -1022,24 +1035,53 @@ export const HomePage = ({ onNavigate }) => {
       </section>
 
       <section id="random-picks" className="customer-container">
-        <div style={{
+        <div className="recommendations-box" style={{
           backgroundColor: '#F8FAFC',
           borderRadius: '2px',
           border: '1px solid #CBD5E1',
           borderTop: '3px solid #1E3A8A',
-          padding: 'clamp(16px, 2vw, 24px)'
+          padding: 'clamp(12px, 1.5vw, 20px)',
+          boxShadow: '0 2px 4px rgba(30, 58, 138, 0.04)'
         }}>
-          <div style={{ marginBottom: '20px' }}>
-            <h2 style={{
-              margin: '0 0 4px 0',
-              fontSize: '20px',
-              fontWeight: 800,
-              color: '#1E3A8A',
-              fontFamily: 'var(--font-sans)',
-              letterSpacing: '-0.01em'
-            }}>
-              GỢI Ý CHO BẠN
-            </h2>
+          <div className="recommendations-header" style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            marginBottom: '20px',
+            paddingBottom: '16px',
+            borderBottom: '1px solid #E2E8F0'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h2 style={{
+                margin: 0,
+                color: '#1E3A8A',
+                fontSize: 'clamp(18px, 2vw, 20px)',
+                fontWeight: 800,
+                fontFamily: 'var(--font-sans)',
+                letterSpacing: '-0.01em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Sparkles size={20} color="#1E3A8A" />
+                GỢI Ý CHO BẠN
+              </h2>
+              <span style={{
+                backgroundColor: '#EFF6FF',
+                color: '#1E40AF',
+                border: '1px solid #BFDBFE',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase'
+              }}>
+                Dành riêng cho bạn
+              </span>
+            </div>
             <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
               Sản phẩm chọn lọc dựa trên xu hướng và thói quen mua sắm
             </p>
@@ -1053,7 +1095,7 @@ export const HomePage = ({ onNavigate }) => {
             </div>
           ) : (
             <div className="customer-product-grid">
-              {((recommendedProducts && recommendedProducts.length > 0) ? recommendedProducts : randomProducts).slice(0, sectionLimits.recommendations).map((prod) => (
+              {displayedRecommendations.map((prod) => (
                 <ProductCard
                   key={prod.id}
                   product={prod}
@@ -1063,6 +1105,26 @@ export const HomePage = ({ onNavigate }) => {
               ))}
             </div>
           )}
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+            <button
+              onClick={() => onNavigate('products')}
+              className="btn-luxury-outline"
+              style={{
+                borderColor: '#94A3B8',
+                color: '#1E3A8A',
+                padding: '9px 24px',
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              <span>Xem toàn bộ sản phẩm gợi ý</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
         </div>
       </section>
 

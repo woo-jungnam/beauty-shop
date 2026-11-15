@@ -15,6 +15,8 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,13 +59,20 @@ public class ProductImageServiceImpl implements ProductImageService {
                 .build();
 
         image = imageRepository.save(image);
-        try {
-            Long brandId = product.getBrand() != null ? product.getBrand().getId() : null;
-            List<Long> categoryIds = product.getCategories() != null
-                    ? product.getCategories().stream().map(Category::getId).toList()
-                    : null;
-            imageSearchClient.syncImage(productId, image.getId(), image.getImageUrl(), "UPSERT", product.getName(), false, categoryIds, brandId);
-        } catch (Exception ignored) { }
+        final Long prodId = productId;
+        final Long imgId = image.getId();
+        final String imgUrl = image.getImageUrl();
+        final String prodName = product.getName();
+        final Long brandId = product.getBrand() != null ? product.getBrand().getId() : null;
+        final List<Long> categoryIds = product.getCategories() != null
+                ? product.getCategories().stream().map(Category::getId).toList()
+                : null;
+        executeAfterCommit(() -> {
+            if (imageSearchClient == null) return;
+            try {
+                imageSearchClient.syncImage(prodId, imgId, imgUrl, "UPSERT", prodName, false, categoryIds, brandId);
+            } catch (Exception ignored) { }
+        });
         return mapToResponse(image);
     }
 
@@ -91,9 +100,27 @@ public class ProductImageServiceImpl implements ProductImageService {
         }
         Long prodId = image.getProduct() != null ? image.getProduct().getId() : productId;
         imageRepository.delete(image);
-        try {
-            imageSearchClient.syncImage(prodId, imageId, null, "DELETE", null, false);
-        } catch (Exception ignored) { }
+        final Long targetProdId = prodId;
+        final Long targetImageId = imageId;
+        executeAfterCommit(() -> {
+            if (imageSearchClient == null) return;
+            try {
+                imageSearchClient.syncImage(targetProdId, targetImageId, null, "DELETE", null, false);
+            } catch (Exception ignored) { }
+        });
+    }
+
+    private void executeAfterCommit(Runnable task) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    task.run();
+                }
+            });
+        } else {
+            task.run();
+        }
     }
 
     private ProductImageResponse mapToResponse(ProductImage image) {

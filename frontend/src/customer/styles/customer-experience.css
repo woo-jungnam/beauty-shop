@@ -719,7 +719,8 @@
   .customer-app .home-banner-small button { padding: 6px 10px !important; }
   .customer-app .home-banner-small > div > div { padding-right: 0 !important; }
   .customer-app .customer-home-page { gap: 32px !important; }
-  .customer-app .customer-home-page #store-catalog { margin-block: 16px !important; }
+  .customer-app .customer-home-page #store-catalog,
+  .customer-app .customer-home-page #random-picks { margin-block: 16px !important; }
   .customer-app .catalog-filter-panel { top: 0 !important; max-height: 100dvh !important; }
   .customer-app .catalog-result-toolbar { padding: 14px !important; }
   .customer-app .catalog-result-toolbar > div:last-child { width: 100%; flex-wrap: wrap; }
@@ -1052,6 +1053,14 @@
 }
 
 /* 3. Recommendations Section (#random-picks) — Slate Navy (#1E3A8A) */
+#random-picks .recommendations-box {
+  background-color: #F8FAFC;
+  border-radius: 2px;
+  border: 1px solid #CBD5E1;
+  border-top: 3px solid #1E3A8A;
+  padding: clamp(12px, 1.5vw, 20px);
+  box-shadow: 0 2px 4px rgba(30, 58, 138, 0.04);
+}
 #random-picks .product-card-resolved {
   border-radius: 2px !important;
   border: 1px solid #CBD5E1 !important;
@@ -1061,6 +1070,30 @@
   border-color: #1E3A8A !important;
   transform: translateY(-3px) !important;
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.12) !important;
+}
+#random-picks .btn-luxury-outline:hover {
+  background: #1E3A8A !important;
+  color: #FFFFFF !important;
+  border-color: #1E3A8A !important;
+}
+
+@media (max-width: 767px) {
+  #random-picks .recommendations-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+    padding-bottom: 12px !important;
+  }
+}
+
+@media (max-width: 639px) {
+  #random-picks .recommendations-box {
+    padding: 12px 10px !important;
+  }
+  #random-picks .customer-product-grid {
+    gap: 10px !important;
+  }
 }
 
 @keyframes chatbotFadeIn {

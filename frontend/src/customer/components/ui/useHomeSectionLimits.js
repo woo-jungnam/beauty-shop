@@ -2,10 +2,10 @@ import { useLayoutEffect, useState } from 'react';
 
 const initialLimits = {
   deals: 4,
-  categories: 4,
-  brands: 4,
-  recommendations: 4,
-  catalog: 4,
+  categories: 8,
+  brands: 6,
+  recommendations: 8,
+  catalog: 8,
   spa: 2,
 };
 
@@ -22,7 +22,7 @@ export const useHomeSectionLimits = (pageRef) => {
       return tracks === 'none' ? 1 : tracks.trim().split(/\s+/).length;
     };
     const updateLimits = () => {
-      const productColumns = columns('#random-picks .customer-product-grid');
+      const productColumns = columns('#random-picks .customer-product-grid') || columns('#store-catalog .customer-product-grid') || 4;
       const dealColumns = columns('.flash-sale-grid');
       const categoryColumns = columns('.category-grid-8');
       const brandColumns = columns('.brands-grid-12');
@@ -31,8 +31,8 @@ export const useHomeSectionLimits = (pageRef) => {
         deals: dealColumns * (dealColumns <= 3 ? 2 : 1),
         categories: categoryColumns * (categoryColumns < 8 ? 2 : 1),
         brands: brandColumns * (brandColumns < 12 ? 2 : 1),
-        recommendations: productColumns * (productColumns <= 3 ? 2 : 1),
-        catalog: productColumns * 2,
+        recommendations: productColumns * (productColumns <= 1 ? 4 : 2),
+        catalog: productColumns * (productColumns <= 1 ? 4 : 2),
         spa: spaColumns * (spaColumns <= 4 ? 2 : 1),
       };
       setLimits(current => Object.keys(next).every(key => current[key] === next[key]) ? current : next);
