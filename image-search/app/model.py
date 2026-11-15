@@ -22,7 +22,7 @@ def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
 def combine_vectors(
     image_vector: List[float],
     text_vector: Optional[List[float]],
-    image_weight: float = 0.30,
+    image_weight: float = 0.70,
 ) -> List[float]:
     """
     Hoa tron hai vector da phuong thai (anh va chu bao bi) theo trong so
@@ -77,6 +77,46 @@ class ClipEncoder:
                         cache_folder=self.cache_dir,
                         device="cpu",
                     )
+
+                    # Dam bao CLIP tokenizer luon truncate ve dung 77 tokens toi da tranh loi kich thuoc tensor
+                    try:
+                        clip_module = self.model[0]
+                        if hasattr(clip_module, "processor") and hasattr(clip_module.processor, "tokenizer"):
+                            def safe_tokenize(texts, padding=True):
+                                from PIL import Image as PILImage
+                                images = []
+                                texts_values = []
+                                image_text_info = []
+
+                                for data in texts:
+                                    if isinstance(data, PILImage.Image):
+                                        images.append(data)
+                                        image_text_info.append(0)
+                                    else:
+                                        texts_values.append(str(data))
+                                        image_text_info.append(1)
+
+                                encoding = {}
+                                if len(texts_values):
+                                    encoding = clip_module.processor.tokenizer(
+                                        texts_values,
+                                        return_tensors="pt",
+                                        padding=padding,
+                                        truncation=True,
+                                        max_length=77,
+                                    )
+
+                                if len(images):
+                                    image_features = clip_module.processor.image_processor(images, return_tensors="pt")
+                                    encoding["pixel_values"] = image_features.pixel_values
+
+                                encoding["image_text_info"] = image_text_info
+                                return dict(encoding)
+
+                            clip_module.tokenize = safe_tokenize
+                    except Exception as patch_err:
+                        logger.warning("Khong the patch CLIP tokenizer truncation: %s", patch_err)
+
                     logger.info("Mo hinh CLIP da san sang hoat dong")
 
     def encode(self, images: List[Image.Image], batch_size: int = 16) -> np.ndarray:
