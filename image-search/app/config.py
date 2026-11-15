@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     gemini_timeout: float = 12.0
     target_detection_enabled: bool = True
     ocr_hybrid_enabled: bool = True
-    hybrid_image_weight: float = 0.65
-    hybrid_text_weight: float = 0.35
+    hybrid_image_weight: float = 0.30
+    hybrid_text_weight: float = 0.70
 
     @property
     def effective_gemini_api_key(self) -> str:

@@ -22,7 +22,7 @@ def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
 def combine_vectors(
     image_vector: List[float],
     text_vector: Optional[List[float]],
-    image_weight: float = 0.65,
+    image_weight: float = 0.30,
 ) -> List[float]:
     """
     Hoa tron hai vector da phuong thai (anh va chu bao bi) theo trong so
