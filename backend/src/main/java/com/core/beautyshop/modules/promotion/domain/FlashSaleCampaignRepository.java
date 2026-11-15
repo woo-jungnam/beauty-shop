@@ -17,7 +17,8 @@ public interface FlashSaleCampaignRepository extends JpaRepository<FlashSaleCamp
     Page<FlashSaleCampaign> findAllActive(Pageable pageable);
 
     @Query("SELECT c FROM FlashSaleCampaign c WHERE c.isDeleted = false " +
-            "AND (c.status = 'ACTIVE' OR (c.status = 'SCHEDULED' AND c.startsAt <= :now AND c.endsAt > :now)) " +
+            "AND c.startsAt <= :now AND c.endsAt > :now " +
+            "AND c.status IN ('ACTIVE', 'SCHEDULED') " +
             "ORDER BY c.startsAt ASC")
     List<FlashSaleCampaign> findRunningCampaigns(@Param("now") Instant now);
 

@@ -121,12 +121,22 @@ export const HomePage = ({ onNavigate }) => {
   useEffect(() => {
     if (!countdownTarget) return;
     const target = new Date(countdownTarget).getTime();
+    let isExpiredHandled = false;
     const updateCountdown = () => {
-      const diff = Math.max(0, target - Date.now());
+      const now = Date.now();
+      const diff = Math.max(0, target - now);
       const hours = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
       const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
       const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
       setFlashCountdown({ hours, minutes, seconds });
+
+      if (diff <= 0 && !isExpiredHandled) {
+        isExpiredHandled = true;
+        // Flash Sale slot/campaign expired! Re-fetch overview immediately to remove expired items or transition slots
+        setTimeout(() => {
+          setClearanceAttempt(c => c + 1);
+        }, 1000);
+      }
     };
     updateCountdown();
     const timer = setInterval(updateCountdown, 1000);
@@ -139,7 +149,11 @@ export const HomePage = ({ onNavigate }) => {
     if (flashFilterType === 'CURATED') return curatedFlashProducts;
     const seen = new Set();
     const merged = [];
-    for (const p of [...campaignFlashProducts, ...curatedFlashProducts, ...clearanceProducts]) {
+    // Only mix in curated catalog deals if there is an active flash sale campaign
+    const baseList = campaignFlashProducts.length > 0
+      ? [...campaignFlashProducts, ...curatedFlashProducts, ...clearanceProducts]
+      : [...clearanceProducts];
+    for (const p of baseList) {
       if (p?.id && !seen.has(p.id)) {
         seen.add(p.id);
         merged.push(p);
@@ -492,7 +506,8 @@ export const HomePage = ({ onNavigate }) => {
     return spaServices.filter(s => String(s.categoryId) === String(activeSpaCategory)).slice(0, sectionLimits.spa);
   };
 
-  const hasAnyFlashProducts = campaignFlashProducts.length > 0 || curatedFlashProducts.length > 0 || clearanceProducts.length > 0;
+  const hasFlashCampaign = campaignFlashProducts.length > 0 || Boolean(flashOverview?.slots && flashOverview.slots.length > 0);
+  const hasAnyFlashProducts = hasFlashCampaign || clearanceProducts.length > 0;
   const showFlashSection = clearanceLoading || Boolean(clearanceError) || hasAnyFlashProducts;
 
   return (
@@ -652,7 +667,7 @@ export const HomePage = ({ onNavigate }) => {
                     Khung giờ vàng ({campaignFlashProducts.length})
                   </button>
                 )}
-                {curatedFlashProducts.length > 0 && (
+                {campaignFlashProducts.length > 0 && curatedFlashProducts.length > 0 && (
                   <button
                     type="button"
                     style={{

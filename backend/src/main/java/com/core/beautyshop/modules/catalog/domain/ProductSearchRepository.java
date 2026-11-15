@@ -267,14 +267,9 @@ public class ProductSearchRepository {
             activeFlashSale.select(builder.literal(1)).where(
                     builder.equal(flashItem.get("productVariantId"), variant.get("id")),
                     builder.isFalse(campaign.get("isDeleted")),
-                    builder.or(
-                            builder.equal(campaign.get("status"), FlashSaleStatus.ACTIVE),
-                            builder.and(
-                                    builder.equal(campaign.get("status"), FlashSaleStatus.SCHEDULED),
-                                    builder.lessThanOrEqualTo(campaign.get("startsAt"), now),
-                                    builder.greaterThan(campaign.get("endsAt"), now)
-                            )
-                    ),
+                    builder.lessThanOrEqualTo(campaign.get("startsAt"), now),
+                    builder.greaterThan(campaign.get("endsAt"), now),
+                    campaign.get("status").in(FlashSaleStatus.ACTIVE, FlashSaleStatus.SCHEDULED),
                     builder.greaterThan(flashItem.<Integer>get("quantityQuota"), flashItem.<Integer>get("quantitySold")),
                     builder.lessThan(flashItem.<BigDecimal>get("flashPrice"), variant.<BigDecimal>get("price"))
             );

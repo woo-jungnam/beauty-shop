@@ -316,6 +316,22 @@ public class FlashSaleService implements FlashSaleFacade {
 
     @Transactional(readOnly = true)
     public List<CustomerSlotItem> getCampaignItems(Long campaignId) {
+        if (campaignId == null) {
+            return List.of();
+        }
+        FlashSaleCampaign campaign = campaignRepository.findById(campaignId)
+                .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+                .orElse(null);
+        if (campaign == null) {
+            return List.of();
+        }
+        Instant now = Instant.now();
+        if (campaign.getStatus() == FlashSaleStatus.DRAFT
+                || campaign.getStatus() == FlashSaleStatus.ENDED
+                || campaign.getStatus() == FlashSaleStatus.PAUSED
+                || campaign.getEndsAt().isBefore(now)) {
+            return List.of();
+        }
         List<FlashSaleItem> items = itemRepository.findByCampaignIdOrderByDisplayOrderAsc(campaignId);
         return enrichSlotItems(items);
     }
@@ -462,10 +478,24 @@ public class FlashSaleService implements FlashSaleFacade {
     // MAPPER HELPERS
     // =========================================================================
 
+    private FlashSaleStatus resolveEffectiveStatus(FlashSaleCampaign c, Instant now) {
+        if (c.getStatus() == FlashSaleStatus.DRAFT || c.getStatus() == FlashSaleStatus.PAUSED) {
+            return c.getStatus();
+        }
+        if (c.getEndsAt() != null && c.getEndsAt().isBefore(now)) {
+            return FlashSaleStatus.ENDED;
+        }
+        if (c.getStartsAt() != null && c.getStartsAt().isAfter(now)) {
+            return FlashSaleStatus.SCHEDULED;
+        }
+        return FlashSaleStatus.ACTIVE;
+    }
+
     private CampaignView toCampaignView(FlashSaleCampaign c) {
         int totalItems = c.getItems() != null ? c.getItems().size() : 0;
         int totalQuota = c.getItems() != null ? c.getItems().stream().mapToInt(FlashSaleItem::getQuantityQuota).sum() : 0;
         int totalSold = c.getItems() != null ? c.getItems().stream().mapToInt(FlashSaleItem::getQuantitySold).sum() : 0;
+        FlashSaleStatus effectiveStatus = resolveEffectiveStatus(c, Instant.now());
 
         return new CampaignView(
                 c.getId(),
@@ -474,7 +504,7 @@ public class FlashSaleService implements FlashSaleFacade {
                 c.getBannerUrl(),
                 c.getStartsAt(),
                 c.getEndsAt(),
-                c.getStatus(),
+                effectiveStatus,
                 totalItems,
                 totalQuota,
                 totalSold
@@ -485,6 +515,7 @@ public class FlashSaleService implements FlashSaleFacade {
         List<CustomerSlotItem> enrichedItems = enrichSlotItems(c.getItems() != null ? c.getItems() : List.of());
         int totalQuota = enrichedItems.stream().mapToInt(CustomerSlotItem::quantityQuota).sum();
         int totalSold = enrichedItems.stream().mapToInt(CustomerSlotItem::quantitySold).sum();
+        FlashSaleStatus effectiveStatus = resolveEffectiveStatus(c, Instant.now());
 
         return new CampaignDetailView(
                 c.getId(),
@@ -493,7 +524,7 @@ public class FlashSaleService implements FlashSaleFacade {
                 c.getBannerUrl(),
                 c.getStartsAt(),
                 c.getEndsAt(),
-                c.getStatus(),
+                effectiveStatus,
                 enrichedItems.size(),
                 totalQuota,
                 totalSold,

@@ -16,7 +16,8 @@ public interface FlashSaleItemRepository extends JpaRepository<FlashSaleItem, Lo
     @Query("SELECT i FROM FlashSaleItem i JOIN i.campaign c " +
             "WHERE i.productVariantId = :variantId " +
             "AND c.isDeleted = false " +
-            "AND (c.status = 'ACTIVE' OR (c.status = 'SCHEDULED' AND c.startsAt <= :now AND c.endsAt > :now)) " +
+            "AND c.startsAt <= :now AND c.endsAt > :now " +
+            "AND c.status IN ('ACTIVE', 'SCHEDULED') " +
             "AND (i.quantityQuota - i.quantitySold) > 0 " +
             "ORDER BY i.flashPrice ASC")
     List<FlashSaleItem> findActiveFlashItemsForVariant(@Param("variantId") Long variantId, @Param("now") Instant now);
