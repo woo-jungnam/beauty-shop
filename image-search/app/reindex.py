@@ -12,6 +12,7 @@ from app.catalog import (
     fetch_all_catalog_images,
     read_catalog_image,
 )
+from app.model import combine_vectors
 
 logger = logging.getLogger("reindex_manager")
 
@@ -156,14 +157,31 @@ class ReindexManager:
 
     def _flush_batch(self, images, meta_list):
         try:
-            vectors = self.encoder.encode(images, batch_size=len(images))
+            img_vectors = self.encoder.encode(images, batch_size=len(images))
+
+            # Encode text metadata (brand, product_name, volume ml) tu Database de tao Dual-side Hybrid Embedding
+            txt_vectors = None
+            if self.settings.ocr_hybrid_enabled:
+                catalog_texts = [meta.get("catalog_text", "") for meta in meta_list]
+                if any(catalog_texts):
+                    txt_vectors = self.encoder.encode_text(catalog_texts)
+
             points = []
-            for vec, meta in zip(vectors, meta_list):
+            for idx, (img_v, meta) in enumerate(zip(img_vectors, meta_list)):
                 pid = meta["product_id"]
                 img_id = meta["image_id"]
                 point_id = self.store.make_point_id(pid, img_id)
                 category_ids = meta.get("category_ids", [])
                 brand_id = meta.get("brand_id")
+
+                if txt_vectors is not None and idx < len(txt_vectors):
+                    txt_v = txt_vectors[idx].tolist()
+                    final_vec = combine_vectors(
+                        img_v.tolist(), txt_v, image_weight=self.settings.hybrid_image_weight
+                    )
+                else:
+                    final_vec = img_v.tolist()
+
                 payload = {
                     "product_id": int(pid),
                     "image_id": int(img_id),
@@ -172,10 +190,12 @@ class ReindexManager:
                     "is_deleted": False,
                     "is_thumbnail": bool(meta.get("is_thumbnail", 0)),
                     "product_name": meta.get("product_name", ""),
+                    "brand_name": meta.get("brand_name", ""),
+                    "volumes": meta.get("volumes", ""),
                     "category_ids": [int(c) for c in category_ids] if category_ids else [],
                     "brand_id": int(brand_id) if brand_id is not None else None,
                 }
-                points.append(PointStruct(id=point_id, vector=vec.tolist(), payload=payload))
+                points.append(PointStruct(id=point_id, vector=final_vec, payload=payload))
 
             self.store.upsert_batch(points)
             with self._lock:

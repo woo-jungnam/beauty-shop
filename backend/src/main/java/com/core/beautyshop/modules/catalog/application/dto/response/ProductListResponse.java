@@ -14,7 +14,7 @@ import java.io.Serializable;
 import java.time.LocalDate;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Thông tin tóm tắt sản phẩm trong danh sách và kết quả tìm kiếm")

@@ -478,9 +478,11 @@ export function ImageSearch({ onNavigate }) {
               <div className="image-search-empty-icon">
                 <HelpCircle size={32} />
               </div>
-              <h3>Chưa tìm thấy sản phẩm trùng khớp đạt ngưỡng tin cậy</h3>
+              <h3>{result.message || 'Chưa tìm thấy sản phẩm trùng khớp đạt ngưỡng tin cậy'}</h3>
               <p>
-                Ảnh tải lên có thể bị mờ, chụp ở góc quá hẹp hoặc không có trong kho hàng BeautyShop.
+                {result.message
+                  ? 'Vui lòng kiểm tra lại góc chụp hoặc chụp rõ bao bì, nhãn hiệu sản phẩm mỹ phẩm để hệ thống nhận diện chính xác nhất.'
+                  : 'Ảnh tải lên có thể bị mờ, chụp ở góc quá hẹp hoặc không có trong kho hàng BeautyShop.'}
               </p>
 
               <div className="image-search-tips-card">

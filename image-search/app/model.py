@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 import threading
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 from PIL import Image
@@ -17,6 +17,32 @@ def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
     if not np.isfinite(norms).all() or np.any(norms <= 1e-12):
         raise ValueError("Zero or invalid vector norm")
     return vectors / norms
+
+
+def combine_vectors(
+    image_vector: List[float],
+    text_vector: Optional[List[float]],
+    image_weight: float = 0.65,
+) -> List[float]:
+    """
+    Hoa tron hai vector da phuong thai (anh va chu bao bi) theo trong so
+    sau do chuan hoa L2 ve do dai bang 1 cho phep tinh Cosine Distance.
+    """
+    if not text_vector:
+        return image_vector
+    try:
+        img_arr = np.asarray(image_vector, dtype=np.float32)
+        txt_arr = np.asarray(text_vector, dtype=np.float32)
+        weight_img = max(0.0, min(1.0, float(image_weight)))
+        weight_txt = 1.0 - weight_img
+        combined = weight_img * img_arr + weight_txt * txt_arr
+        norm = np.linalg.norm(combined)
+        if norm <= 1e-12 or not np.isfinite(norm):
+            return image_vector
+        return (combined / norm).tolist()
+    except Exception as exc:
+        logger.warning("Loi khi hoa tron vector anh va chu: %s, dung vector anh goc", exc)
+        return image_vector
 
 
 class ClipEncoder:
@@ -66,6 +92,23 @@ class ClipEncoder:
 
     def encode_single(self, image: Image.Image) -> List[float]:
         vectors = self.encode([image], batch_size=1)
+        return vectors[0].tolist()
+
+    def encode_text(self, texts: List[str]) -> np.ndarray:
+        """Ma hoa van ban bao bi thanh vector 512D cung khong gian voi anh."""
+        self.load_model()
+        vectors = self.model.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        return normalize_vectors(vectors)
+
+    def encode_text_single(self, text: str) -> Optional[List[float]]:
+        if not text or not text.strip():
+            return None
+        vectors = self.encode_text([text.strip()])
         return vectors[0].tolist()
 
 

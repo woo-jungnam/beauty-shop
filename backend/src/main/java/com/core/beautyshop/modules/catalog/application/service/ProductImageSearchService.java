@@ -33,7 +33,11 @@ public class ProductImageSearchService {
             this(product, inStock, detailPath, null);
         }
     }
-    public record SearchResult(String matchStatus, String indexVersion, List<Item> items) {}
+    public record SearchResult(String matchStatus, String indexVersion, List<Item> items, String message) {
+        public SearchResult(String matchStatus, String indexVersion, List<Item> items) {
+            this(matchStatus, indexVersion, items, null);
+        }
+    }
 
     public SearchResult search(MultipartFile image) {
         return search(image, null, null, MIN_SIMILARITY);
@@ -65,7 +69,7 @@ public class ProductImageSearchService {
                 .toList();
 
         var ids = validCandidates.stream().map(ImageSearchClient.Candidate::productId).toList();
-        if (ids.isEmpty()) return new SearchResult("EMPTY", result.indexVersion(), List.of());
+        if (ids.isEmpty()) return new SearchResult("EMPTY", result.indexVersion(), List.of(), result.message());
         var available = products.findAvailableByIds(ids, BusinessTime.today()).stream()
                 .collect(Collectors.toMap(ProductListResponse::getId, Function.identity(), (a, b) -> a));
         var photoIds = validCandidates.stream().map(ImageSearchClient.Candidate::imageId)
@@ -90,11 +94,11 @@ public class ProductImageSearchService {
                             return null;
                         }
                     }
-                    product.setThumbnailUrl(photoUrl);
-                    return new Item(product, true, "product/" + product.getId(), candidate.similarity());
+                    var itemProduct = product.toBuilder().thumbnailUrl(photoUrl).build();
+                    return new Item(itemProduct, true, "product/" + itemProduct.getId(), candidate.similarity());
                 }).filter(Objects::nonNull).limit(5)
                 .toList();
-        return new SearchResult(items.isEmpty() ? "EMPTY" : "CANDIDATES", result.indexVersion(), items);
+        return new SearchResult(items.isEmpty() ? "EMPTY" : "CANDIDATES", result.indexVersion(), items, result.message());
     }
 
     private static boolean isUploadUrl(String url) {

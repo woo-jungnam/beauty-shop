@@ -34,6 +34,20 @@ class Settings(BaseSettings):
     image_search_max_pixels: int = 20_000_000
     image_search_batch_size: int = 16
 
+    # Target Detection & Packaging OCR (Gemini Vision)
+    gemini_api_key: str = ""
+    llm_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_timeout: float = 12.0
+    target_detection_enabled: bool = True
+    ocr_hybrid_enabled: bool = True
+    hybrid_image_weight: float = 0.65
+    hybrid_text_weight: float = 0.35
+
+    @property
+    def effective_gemini_api_key(self) -> str:
+        return (self.gemini_api_key or self.llm_api_key or "").strip()
+
     model_config = SettingsConfigDict(
         env_file=(".env", str(BASE_DIR / ".env")),
         env_file_encoding="utf-8",

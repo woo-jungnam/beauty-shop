@@ -3,7 +3,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 import warnings
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 import pymysql
@@ -130,8 +130,57 @@ def read_catalog_image(upload_dir: str, url: str, max_bytes: int = 5 * 1024 * 10
     return None
 
 
+def fetch_product_text_metadata(settings, product_id: int) -> Dict[str, Any]:
+    """Lay brand_name, product_name va volumes (dung tich ml) cua 1 san pham tu MySQL."""
+    try:
+        connection = pymysql.connect(
+            host=settings.mysql_host,
+            port=settings.mysql_port,
+            user=settings.mysql_user,
+            password=settings.mysql_password,
+            database=settings.mysql_database,
+            charset="utf8mb4",
+            cursorclass=pymysql.cursors.DictCursor,
+            connect_timeout=5,
+            read_timeout=10,
+        )
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT p.id AS product_id, p.name AS product_name, p.brand_id,
+                           b.name AS brand_name,
+                           GROUP_CONCAT(DISTINCT pv.volume SEPARATOR ' ') AS volumes_str
+                    FROM products p
+                    LEFT JOIN brands b ON b.id = p.brand_id AND b.is_deleted = 0
+                    LEFT JOIN product_variants pv ON pv.product_id = p.id AND pv.is_deleted = 0 AND pv.is_active = 1
+                    WHERE p.id = %s
+                    GROUP BY p.id, p.name, p.brand_id, b.name
+                    """,
+                    (product_id,),
+                )
+                row = cursor.fetchone()
+                if row:
+                    brand_name = (row.get("brand_name") or "").strip()
+                    product_name = (row.get("product_name") or "").strip()
+                    volumes = (row.get("volumes_str") or "").strip()
+                    catalog_text = " ".join([brand_name, product_name, volumes]).strip()
+                    return {
+                        "brand_name": brand_name,
+                        "product_name": product_name,
+                        "volumes": volumes,
+                        "catalog_text": catalog_text,
+                    }
+        finally:
+            connection.close()
+    except Exception as exc:
+        pass
+
+    return {"brand_name": "", "product_name": "", "volumes": "", "catalog_text": ""}
+
+
 def fetch_all_catalog_images(settings) -> List[Dict]:
-    """Doc toan bo anh san pham va thumbnail tu MySQL database gom ca category_ids va brand_id."""
+    """Doc toan bo anh san pham, thumbnail, ten san pham, thuong hieu va dung tich (ml) tu MySQL."""
     connection = pymysql.connect(
         host=settings.mysql_host,
         port=settings.mysql_port,
@@ -149,24 +198,30 @@ def fetch_all_catalog_images(settings) -> List[Dict]:
                 """
                 SELECT p.id AS product_id, pi.id AS image_id, pi.image_url,
                        p.status AS product_status, p.name AS product_name,
-                       p.brand_id, 0 AS is_thumbnail,
-                       GROUP_CONCAT(DISTINCT pc.category_id SEPARATOR ',') AS category_ids_str
+                       p.brand_id, b.name AS brand_name, 0 AS is_thumbnail,
+                       GROUP_CONCAT(DISTINCT pc.category_id SEPARATOR ',') AS category_ids_str,
+                       GROUP_CONCAT(DISTINCT pv.volume SEPARATOR ' ') AS volumes_str
                 FROM products p
                 JOIN product_images pi ON pi.product_id = p.id
+                LEFT JOIN brands b ON b.id = p.brand_id AND b.is_deleted = 0
+                LEFT JOIN product_variants pv ON pv.product_id = p.id AND pv.is_deleted = 0 AND pv.is_active = 1
                 LEFT JOIN product_categories pc ON pc.product_id = p.id
                 WHERE p.is_deleted = 0 AND pi.is_deleted = 0
                   AND TRIM(pi.image_url) <> ''
-                GROUP BY p.id, pi.id, pi.image_url, p.status, p.name, p.brand_id
+                GROUP BY p.id, pi.id, pi.image_url, p.status, p.name, p.brand_id, b.name
                 UNION ALL
                 SELECT p.id AS product_id, -p.id AS image_id, p.thumbnail_url AS image_url,
                        p.status AS product_status, p.name AS product_name,
-                       p.brand_id, 1 AS is_thumbnail,
-                       GROUP_CONCAT(DISTINCT pc.category_id SEPARATOR ',') AS category_ids_str
+                       p.brand_id, b.name AS brand_name, 1 AS is_thumbnail,
+                       GROUP_CONCAT(DISTINCT pc.category_id SEPARATOR ',') AS category_ids_str,
+                       GROUP_CONCAT(DISTINCT pv.volume SEPARATOR ' ') AS volumes_str
                 FROM products p
+                LEFT JOIN brands b ON b.id = p.brand_id AND b.is_deleted = 0
+                LEFT JOIN product_variants pv ON pv.product_id = p.id AND pv.is_deleted = 0 AND pv.is_active = 1
                 LEFT JOIN product_categories pc ON pc.product_id = p.id
                 WHERE p.is_deleted = 0
                   AND p.thumbnail_url IS NOT NULL AND TRIM(p.thumbnail_url) <> ''
-                GROUP BY p.id, p.thumbnail_url, p.status, p.name, p.brand_id
+                GROUP BY p.id, p.thumbnail_url, p.status, p.name, p.brand_id, b.name
                 ORDER BY product_id, image_id DESC
             """
             )
@@ -186,6 +241,14 @@ def fetch_all_catalog_images(settings) -> List[Dict]:
         cat_str = str(row.pop("category_ids_str", "") or "")
         category_ids = [int(c.strip()) for c in cat_str.split(",") if c.strip().isdigit()]
         row["category_ids"] = category_ids
+
+        brand_name = (row.get("brand_name") or "").strip()
+        product_name = (row.get("product_name") or "").strip()
+        volumes = (row.pop("volumes_str", "") or "").strip()
+        row["brand_name"] = brand_name
+        row["product_name"] = product_name
+        row["volumes"] = volumes
+        row["catalog_text"] = " ".join([brand_name, product_name, volumes]).strip()
 
         key = (row["product_id"], url)
         if key not in seen:

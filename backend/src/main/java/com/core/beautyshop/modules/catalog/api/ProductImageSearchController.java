@@ -25,7 +25,10 @@ public class ProductImageSearchController {
             @RequestParam("image") MultipartFile image,
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "brandId", required = false) Long brandId,
-            @RequestParam(value = "minSimilarity", required = false, defaultValue = "0.65") Double minSimilarity) {
+            @RequestParam(value = "minSimilarity", required = false) Double minSimilarity) {
+        if (categoryId == null && brandId == null && minSimilarity == null) {
+            return ApiResponse.success(service.search(image));
+        }
         return ApiResponse.success(service.search(image, categoryId, brandId, minSimilarity));
     }
 

@@ -38,7 +38,12 @@ public class ImageSearchClient {
     }
 
     public record Result(String status, @JsonProperty("match_status") String matchStatus,
-                         @JsonProperty("index_version") String indexVersion, List<Candidate> items) {}
+                         @JsonProperty("index_version") String indexVersion, List<Candidate> items,
+                         String message) {
+        public Result(String status, String matchStatus, String indexVersion, List<Candidate> items) {
+            this(status, matchStatus, indexVersion, items, null);
+        }
+    }
 
     public ImageSearchClient(@Value("${image-search.service-url:http://image-search:8001}") String url,
                              @Value("${image-search.internal-token:}") String token,
@@ -58,7 +63,7 @@ public class ImageSearchClient {
     }
 
     public Result search(byte[] image) {
-        return search(image, null, null, 0.65);
+        return search(image, null, null, null);
     }
 
     public Result search(byte[] image, Long categoryId, Long brandId, Double minSimilarity) {

@@ -67,6 +67,8 @@ class QdrantImageStore:
         is_deleted: bool = False,
         is_thumbnail: bool = False,
         product_name: str = "",
+        brand_name: str = "",
+        volumes: str = "",
         category_ids: Optional[List[int]] = None,
         brand_id: Optional[int] = None,
     ):
@@ -79,6 +81,8 @@ class QdrantImageStore:
             "is_deleted": bool(is_deleted),
             "is_thumbnail": bool(is_thumbnail),
             "product_name": product_name,
+            "brand_name": brand_name,
+            "volumes": volumes,
             "category_ids": [int(c) for c in category_ids] if category_ids else [],
             "brand_id": int(brand_id) if brand_id is not None else None,
         }
@@ -134,6 +138,8 @@ class QdrantImageStore:
                     "image_id": point.payload.get("image_id"),
                     "image_url": point.payload.get("image_url"),
                     "product_name": point.payload.get("product_name"),
+                    "brand_name": point.payload.get("brand_name", ""),
+                    "volumes": point.payload.get("volumes", ""),
                     "category_ids": point.payload.get("category_ids", []),
                     "brand_id": point.payload.get("brand_id"),
                     "similarity": score,
