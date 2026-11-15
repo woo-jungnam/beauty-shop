@@ -1136,7 +1136,7 @@ export const HomePage = ({ onNavigate }) => {
                 cursor: 'pointer'
               }}
             >
-              <span>Xem tất thêm sản phẩm</span>
+              <span>Xem thêm sản phẩm</span>
               <ArrowRight size={14} />
             </button>
           </div>
