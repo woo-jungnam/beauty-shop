@@ -9,6 +9,25 @@ import {
   ACTIVE_INGREDIENT_FILTERS, SKIN_TYPES, PRICE_RANGES, RATING_OPTIONS, GENDER_OPTIONS,
   readCatalogFilters, catalogRoute, catalogSearchParams, flattenCategories, toggleFilterValue,
 } from '../utils/catalogFilters';
+import '../styles/catalog-filter-design.css';
+
+const FilterSection = ({ title, count = 0, className = '', children }) => {
+  const [expanded, setExpanded] = useState(false);
+  const contentId = React.useId();
+  return (
+    <fieldset className={`catalog-filter-group ${className}`}>
+      <legend>
+        <button type="button" className="catalog-group-toggle" aria-expanded={expanded}
+          aria-controls={contentId} onClick={() => setExpanded(value => !value)}>
+          <span>{title}</span>
+          {count > 0 && <span className="catalog-group-count" aria-hidden="true">{count}</span>}
+          <span className="catalog-group-symbol" aria-hidden="true">{expanded ? '−' : '+'}</span>
+        </button>
+      </legend>
+      <div id={contentId} className="catalog-group-content" hidden={!expanded}>{children}</div>
+    </fieldset>
+  );
+};
 
 const FilterGroup = ({ title, options, selected, onToggle, onClear, className = '', searchable = false }) => {
   const [localQuery, setLocalQuery] = useState('');
@@ -21,8 +40,7 @@ const FilterGroup = ({ title, options, selected, onToggle, onClear, className = 
     : options;
 
   return (
-    <fieldset className={`catalog-filter-group ${className}`}>
-      <legend>{title}</legend>
+    <FilterSection title={title} count={selected.length} className={className}>
       <button
         type="button"
         className="catalog-filter-all"
@@ -50,13 +68,12 @@ const FilterGroup = ({ title, options, selected, onToggle, onClear, className = 
           </label>
         ))}
       </div>
-    </fieldset>
+    </FilterSection>
   );
 };
 
 const RadioGroup = ({ title, name, options, selected, onChange, children }) => (
-  <fieldset className="catalog-filter-group">
-    <legend>{title}</legend>
+  <FilterSection title={title}>
     <div className="catalog-filter-options">
       {options.map(option => (
         <label key={option.id} className={`catalog-filter-option ${selected === option.id ? 'is-selected' : ''}`}>
@@ -66,7 +83,7 @@ const RadioGroup = ({ title, name, options, selected, onChange, children }) => (
       ))}
     </div>
     {children}
-  </fieldset>
+  </FilterSection>
 );
 
 const FilterChip = ({ label, onRemove }) => (
@@ -287,8 +304,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
           </div>
           <p className="catalog-filter-help">Có thể chọn nhiều mục trong cùng nhóm.</p>
 
-          <fieldset className="catalog-filter-group">
-            <legend>Ưu đãi</legend>
+          <FilterSection title="Ưu đãi">
             <div className="catalog-filter-options">
               <label className={`catalog-filter-option ${filters.onSale ? 'is-selected' : ''}`}>
                 <input
@@ -305,7 +321,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
                 <span>Đang giảm giá / Flash Sale</span>
               </label>
             </div>
-          </fieldset>
+          </FilterSection>
 
           {categoryOptions.length > 0 && <FilterGroup title="Danh mục sản phẩm" options={categoryOptions} selected={filters.categoryIds}
             onToggle={id => changeFilters({ categoryIds: toggleFilterValue(filters.categoryIds, id) })} onClear={() => changeFilters({ categoryIds: [], categorySlug: '', categoryName: '' })} />}
@@ -317,8 +333,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
           <FilterGroup title="Hoạt chất chuyên sâu" options={ACTIVE_INGREDIENT_FILTERS} selected={filters.activeIngredients}
             onToggle={id => changeFilters({ activeIngredients: toggleFilterValue(filters.activeIngredients, id) })} onClear={() => changeFilters({ activeIngredients: [] })} />
 
-          <fieldset className="catalog-filter-group">
-            <legend>An toàn thành phần</legend>
+          <FilterSection title="An toàn thành phần">
             <div className="catalog-filter-options">
               <label className={`catalog-filter-option ${filters.fragranceFree ? 'is-selected' : ''}`}>
                 <input type="checkbox" checked={filters.fragranceFree} onChange={() => changeFilters({ fragranceFree: !filters.fragranceFree })} />
@@ -329,7 +344,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
                 <span>Không cồn</span>
               </label>
             </div>
-          </fieldset>
+          </FilterSection>
 
           <RadioGroup
             title="Khoảng giá"
@@ -370,8 +385,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
 
           <RadioGroup title="Đánh giá" name="minRating" options={RATING_OPTIONS} selected={filters.minRating} onChange={minRating => changeFilters({ minRating })} />
 
-          <fieldset className="catalog-filter-group">
-            <legend>Đối tượng sử dụng</legend>
+          <FilterSection title="Đối tượng sử dụng">
             <select
               aria-label="Đối tượng sử dụng"
               className="catalog-filter-select"
@@ -380,11 +394,10 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
             >
               {GENDER_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
             </select>
-          </fieldset>
+          </FilterSection>
 
           {origins.length > 0 && (
-            <fieldset className="catalog-filter-group">
-              <legend>Xuất xứ</legend>
+            <FilterSection title="Xuất xứ">
               <select
                 aria-label="Xuất xứ"
                 className="catalog-filter-select"
@@ -394,7 +407,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
                 <option value="">Tất cả xuất xứ</option>
                 {origins.map(origin => <option key={origin} value={origin}>{origin}</option>)}
               </select>
-            </fieldset>
+            </FilterSection>
           )}
 
           <button type="button" className="catalog-filter-apply btn-luxury-primary" onClick={() => setMobileFilterOpen(false)}>

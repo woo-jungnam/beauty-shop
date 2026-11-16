@@ -39,6 +39,22 @@ const categoryGroup = page => page.getByRole('group', { name: 'Danh mục sản 
 const brandGroup = page => page.getByRole('group', { name: 'Thương hiệu chính hãng', exact: true });
 const ids = (params, key) => (params.get(key) || '').split(',').filter(Boolean).sort();
 
+test('Filter accordion preserves selected categories while collapsed', async ({ page }) => {
+  await catalog(page);
+  await page.goto('/#/products');
+  const group = categoryGroup(page);
+  const option = group.getByRole('checkbox', { name: 'Serum', exact: true });
+  await expect(option).toBeHidden();
+  await group.getByRole('button', { expanded: false }).click();
+  await option.check();
+  const toggle = group.getByRole('button', { expanded: true });
+  await toggle.click();
+  await expect(option).toBeHidden();
+  await group.getByRole('button', { expanded: false }).click();
+  await expect(option).toBeChecked();
+  await page.screenshot({ path: 'test-results/catalog-filter-design.png', fullPage: false });
+});
+
 test('Multiple brands and categories preserve keyword, price, skin type and sort', async ({ page }) => {
   const api = await catalog(page);
   await page.goto('/#/products?search=Serum');
@@ -66,7 +82,7 @@ test('Removing one chip or clearing one group leaves the other filters selected'
   await page.getByRole('button', { name: 'Bỏ Danh mục: Serum', exact: true }).click();
   await expect(categoryGroup(page).getByRole('checkbox', { name: 'Serum', exact: true })).not.toBeChecked();
   await expect(categoryGroup(page).getByRole('checkbox', { name: 'Kem dưỡng', exact: true })).toBeChecked();
-  await brandGroup(page).getByRole('button', { name: 'Tất cả', exact: true }).click();
+  await brandGroup(page).getByRole('button', { name: 'Tất cả (Bỏ lọc)', exact: true }).click();
   await expect.poll(() => ({ categories: ids(api.requests.at(-1), 'categoryIds'), brands: ids(api.requests.at(-1), 'brandIds'), keyword: api.requests.at(-1)?.get('keyword') })).toEqual({ categories: ['8'], brands: [], keyword: 'Serum' });
   await expect(page.getByRole('radio', { name: 'Da Dầu & Lỗ Chân Lông To' })).toBeChecked();
   await expect(page.getByRole('radio', { name: 'Dưới 300.000 ₫' })).toBeChecked();

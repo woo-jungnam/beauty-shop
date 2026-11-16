@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveMediaUrl } from '../../shared/utils/formatters';
 import { bannerHref } from './bannerLinks';
 import './image-banners.css';
@@ -37,10 +36,8 @@ export function ImageBannerGallery({ banners = [] }) {
     aria-label="Banner nổi bật" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
     onFocusCapture={() => setPaused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
     {count > 0 && <div className="image-banner-carousel" aria-roledescription="trình chiếu" aria-label="Banner chính">
-      <BannerImage banner={slides[index]} priority />
+      <BannerImage key={slides[index].id ?? slides[index].imageUrl} banner={slides[index]} priority />
       {count > 1 && <>
-        <button className="image-banner-prev" type="button" aria-label="Banner trước" onClick={() => setActive(value => (value - 1 + count) % count)}><ChevronLeft size={20} /></button>
-        <button className="image-banner-next" type="button" aria-label="Banner tiếp theo" onClick={() => setActive(value => (value + 1) % count)}><ChevronRight size={20} /></button>
         <div className="image-banner-dots" aria-label="Chọn banner">{slides.map((banner, position) => <button key={banner.id || position} type="button"
           aria-label={`Xem banner ${position + 1}`} aria-pressed={position === index} onClick={() => setActive(position)} />)}</div>
       </>}

@@ -1,0 +1,50 @@
+.customer-app .pd-related {
+  margin-top: 28px;
+  width: 100%;
+  min-width: 0;
+  padding: clamp(16px, 2.5vw, 28px);
+  border: 1px solid #E4C3AD;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #FFF0E5, #FFFFFF 65%);
+}
+.customer-app .related-carousel-controls { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 12px; }
+.customer-app .related-carousel-controls button {
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border: 1px solid #E4C3AD; border-radius: 50%; background: #FFFFFF; color: #6B4226; cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.customer-app .related-carousel-controls button:hover { background: #FFF0E5; border-color: #B76E79; }
+.customer-app .related-carousel-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 80px) / 6);
+  gap: 16px;
+  overflow-x: auto;
+  padding: 4px 0 14px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: #E4C3AD transparent;
+  overscroll-behavior-x: contain;
+}
+.customer-app .related-carousel-track > article { min-width: 0; scroll-snap-align: start; }
+.customer-app .related-carousel-track {
+  --product-card-media-padding: 85%;
+  --product-card-image-fit: contain;
+  --product-card-body-padding: 10px;
+}
+.customer-app .related-carousel-track .product-card-brand { font-size: 10px !important; }
+.customer-app .related-carousel-track .product-card-title-link { font-size: 12px; }
+.customer-app .related-carousel-track .product-card-price > span:first-child { font-size: 15px !important; }
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .customer-app .related-carousel-track { grid-auto-columns: calc((100% - 64px) / 5); }
+}
+@media (max-width: 1023px) {
+  .customer-app .related-carousel-track { grid-auto-columns: calc((100% - 32px) / 3); }
+}
+@media (max-width: 639px) {
+  .customer-app .related-carousel-track { grid-auto-columns: calc((100% - 16px) / 2); }
+  .customer-app .related-carousel-controls button { width: 40px; height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-app .related-carousel-controls button { transition: none; }
+}

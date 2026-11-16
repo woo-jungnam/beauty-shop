@@ -7,8 +7,11 @@ import { formatCurrency, resolveMediaUrl } from '../../shared/utils/formatters';
 import { getGuestSessionId } from '../../shared/utils/session';
 import { useCustomerCart } from '../stores/customerCartStore';
 import { useCustomerDialog } from '../components/ui/useCustomerDialog';
-import { ProductCard } from '../components/product/ProductCard';
+import { RelatedProductCarousel } from '../components/product/RelatedProductCarousel';
+import { ProductDetailSidebar } from '../components/product/ProductDetailSidebar';
 import { ProductReviews } from './product-detail/ProductReviews';
+import '../styles/product-detail-gallery.css';
+import '../styles/product-detail-dust-rose.css';
 import { knownCount, knownNumber, variantPrice } from '../utils/productSelection';
 import { activeVariants, chooseVariant, detailError, IMAGE_TYPES, productGallery, SKIN_LABELS, skinName, textList, unitPriceReference, unwrap, variantChoiceLabels, variantLabel } from './product-detail/detailUtils';
 
@@ -32,6 +35,8 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
   const [variantId, setVariantId] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [imageIndex, setImageIndex] = useState(0);
+  const [galleryPaused, setGalleryPaused] = useState(false);
+  const [galleryInteracting, setGalleryInteracting] = useState(false);
   const [brokenImages, setBrokenImages] = useState(() => new Set());
   const [zoomOpen, setZoomOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -51,6 +56,21 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
   const mounted = useRef(true);
   const readyProduct = product && String(product.id) === String(productId) ? product : null;
   const loadedProductId = readyProduct?.id;
+  const gallery = React.useMemo(() => readyProduct ? productGallery(readyProduct) : [], [readyProduct]);
+  useEffect(() => {
+    if (galleryPaused || galleryInteracting || zoomOpen || gallery.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      setImageIndex(current => {
+        for (let step = 1; step <= gallery.length; step++) {
+          const next = (current + step) % gallery.length;
+          if (!brokenImages.has(gallery[next].imageUrl)) return next;
+        }
+        return current;
+      });
+    }, 3500);
+    return () => window.clearInterval(timer);
+  }, [gallery, galleryPaused, galleryInteracting, zoomOpen, brokenImages]);
   useCustomerDialog(zoomOpen && Boolean(readyProduct), zoomRef, () => setZoomOpen(false));
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
@@ -158,7 +178,7 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
   const reloadProduct = () => { setLoading(true); setLoadError(null); setAttempt(previous => previous + 1); };
   const reloadRelated = () => { setRelatedLoading(true); setRelatedError(''); setRelatedAttempt(previous => previous + 1); };
   const image = (entry, className = '') => entry?.imageUrl && !brokenImages.has(entry.imageUrl)
-    ? <img className={className} src={resolveMediaUrl(entry.imageUrl)} alt={entry.altText || readyProduct?.name || 'Ảnh sản phẩm'} onError={() => markBroken(entry.imageUrl)} />
+    ? <img key={entry.imageUrl} className={className} src={resolveMediaUrl(entry.imageUrl)} alt={entry.altText || readyProduct?.name || 'Ảnh sản phẩm'} onError={() => markBroken(entry.imageUrl)} />
     : <span className={`pd-image-placeholder ${className}`}><ImageOff size={35} /><span>{entry?.imageUrl ? 'Chưa tải được ảnh sản phẩm' : 'Ảnh sản phẩm đang cập nhật'}</span></span>;
 
   if (!readyProduct) return <div ref={pageRef} className="customer-container product-detail-page pd-page pd-loading" style={{ '--pd-header-height': `${headerHeight}px` }}>
@@ -166,7 +186,6 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
       : <div className="pd-load-error" role="alert"><ImageOff size={37} /><h1>{loadError.notFound ? 'Không tìm thấy sản phẩm' : 'Chưa tải được sản phẩm'}</h1><p>{loadError.notFound ? 'Sản phẩm không còn hiển thị hoặc đường dẫn chưa chính xác.' : loadError.message}</p>{!loadError.notFound && <button type="button" className="btn-luxury-primary" onClick={reloadProduct}>Thử tải lại sản phẩm</button>}<a href="#/products" onClick={event => { event.preventDefault(); onNavigate('products'); }}>Xem danh mục sản phẩm <ArrowRight size={15} /></a></div>}
   </div>;
 
-  const gallery = productGallery(readyProduct);
   const selectedImage = gallery[imageIndex] || gallery[0];
   const categories = Array.isArray(readyProduct.categories) ? readyProduct.categories : [];
   const brand = readyProduct.brand?.name || readyProduct.brandName;
@@ -188,10 +207,11 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
 
   return <div ref={pageRef} className="customer-container product-detail-page pd-page" style={{ '--pd-header-height': `${headerHeight}px` }}>
     <nav className="pd-breadcrumb" aria-label="Đường dẫn sản phẩm"><a href="#/" onClick={event => { event.preventDefault(); onNavigate(''); }}>Trang chủ</a><ChevronRight size={12} /><a href="#/products" onClick={event => { event.preventDefault(); onNavigate('products'); }}>Sản phẩm</a>{categories[0]?.id && <><ChevronRight size={12} /><a href={`#/products?categoryId=${categories[0].id}`} onClick={event => { event.preventDefault(); onNavigate(`products?categoryId=${categories[0].id}`); }}>{categories[0].name}</a></>}<ChevronRight size={12} /><span aria-current="page">{readyProduct.name}</span></nav>
+    <div className="pd-detail-layout"><div className="pd-detail-primary">
     <div className="pd-main-grid">
-      <section className="pd-gallery" aria-label="Ảnh sản phẩm"><button type="button" className="pd-main-image" aria-label="Phóng to ảnh sản phẩm" disabled={!selectedImage || brokenImages.has(selectedImage.imageUrl)} onClick={() => setZoomOpen(true)}>{image(selectedImage)}{discount > 0 && <span className="pd-discount">-{discount}%</span>}{selectedImage && !brokenImages.has(selectedImage.imageUrl) && <span className="pd-expand"><Expand size={17} /></span>}</button>
-        {gallery.length > 0 && <div className="pd-thumbnails" aria-label="Chọn ảnh sản phẩm">{gallery.map((entry, index) => <button type="button" key={entry.key} aria-pressed={imageIndex === index} aria-label={`Xem ảnh ${index + 1}: ${entry.altText || IMAGE_TYPES[entry.imageType] || readyProduct.name}`} onClick={() => setImageIndex(index)}>{image(entry)}<span>{IMAGE_TYPES[entry.imageType] || `Ảnh ${index + 1}`}</span></button>)}</div>}
-        <p className="pd-gallery-caption">{selectedImage?.altText || (gallery.length ? IMAGE_TYPES[selectedImage?.imageType] || 'Ảnh sản phẩm' : 'Chưa có ảnh trong dữ liệu sản phẩm.')}</p>
+      <section onMouseEnter={() => setGalleryInteracting(true)} onMouseLeave={() => setGalleryInteracting(false)} onFocusCapture={() => setGalleryInteracting(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setGalleryInteracting(false); }} className="pd-gallery" aria-label="Ảnh sản phẩm"><button type="button" className="pd-main-image" aria-label="Phóng to ảnh sản phẩm" disabled={!selectedImage || brokenImages.has(selectedImage.imageUrl)} onClick={() => setZoomOpen(true)}>{image(selectedImage)}{discount > 0 && <span className="pd-discount">-{discount}%</span>}{selectedImage && !brokenImages.has(selectedImage.imageUrl) && <span className="pd-expand"><Expand size={17} /></span>}</button>
+        {gallery.length > 0 && <div className="pd-thumbnails" aria-label="Chọn ảnh sản phẩm">{gallery.map((entry, index) => <button type="button" key={entry.key} aria-pressed={imageIndex === index} aria-label={`Xem ảnh ${index + 1}: ${entry.altText || IMAGE_TYPES[entry.imageType] || readyProduct.name}`} onMouseEnter={() => { if (window.matchMedia('(hover: hover)').matches) setImageIndex(index); }} onFocus={() => setImageIndex(index)} onClick={() => setImageIndex(index)}>{image(entry)}<span>{IMAGE_TYPES[entry.imageType] || `Ảnh ${index + 1}`}</span></button>)}</div>}
+        {gallery.length > 1 && <div className="pd-gallery-tools"><span>{imageIndex + 1} / {gallery.length}</span><button type="button" aria-pressed={galleryPaused} onClick={() => setGalleryPaused(value => !value)}>{galleryPaused ? 'Tiếp tục chuyển ảnh' : 'Dừng chuyển ảnh'}</button></div>}<p className="pd-gallery-caption">{selectedImage?.altText || (gallery.length ? IMAGE_TYPES[selectedImage?.imageType] || 'Ảnh sản phẩm' : 'Chưa có ảnh trong dữ liệu sản phẩm.')}</p>
       </section>
       <section className="pd-buy-panel" aria-label="Thông tin mua sản phẩm">{brand && <p className="pd-brand">{brand}</p>}<h1>{readyProduct.name}</h1><div className="pd-top-meta">{Number(readyProduct.totalReviews) > 0 ? <a href="#product-reviews" onClick={event => navigateSection(event, 'product-reviews')}><Star size={15} fill="currentColor" />{Number(readyProduct.averageRating ?? 0).toFixed(1)} / 5 · {readyProduct.totalReviews} lượt chấm sao mua xác thực</a> : <span>Chưa có lượt chấm sao mua xác thực</span>}{Number(readyProduct.totalSold) > 0 && <span>Đã bán {readyProduct.totalSold}</span>}</div>
         {textList((readyProduct.tags || []).map(tag => tag.name)).length > 0 && <div className="pd-tags">{textList(readyProduct.tags.map(tag => tag.name)).map(tag => <span key={tag}>{tag}</span>)}</div>}
@@ -214,7 +234,9 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
       <section id="product-usage" className="product-content-section pd-usage" tabIndex={-1}><header className="product-section-heading"><h2>Hướng dẫn sử dụng</h2></header><div className="product-section-body"><div className="pd-usage-meta">{whenToUse.length > 0 && <div><h3>Thời điểm sử dụng</h3><div className="pd-tags">{whenToUse.map(value => <span key={value}>{value}</span>)}</div></div>}{frequency && <div><h3>Tần suất</h3><p>{frequency}</p></div>}</div>{instructions.length > 0 && <div className="pd-usage-steps"><h3>Các bước hướng dẫn</h3><ol>{instructions.map(value => <li key={value}>{value}</li>)}</ol></div>}{showRawUsage && <div className="pd-raw-usage"><h3>Hướng dẫn nguyên văn</h3><p className="pd-copy">{rawUsage}</p></div>}{warnings.length > 0 && <div className="pd-cautions"><h3>Cảnh báo sử dụng</h3><ul>{warnings.map(value => <li key={value}>{value}</li>)}</ul></div>}{!whenToUse.length && !frequency && !instructions.length && !rawUsage && !warnings.length && <p className="pd-muted">Hướng dẫn sử dụng đang được cập nhật.</p>}</div></section>
       <ProductReviews key={readyProduct.id} product={readyProduct} isAuthenticated={isAuthenticated} onNavigate={onNavigate} />
     </div>
-    <section className="pd-related" aria-label="Sản phẩm tương tự"><header><div><p className="pd-eyebrow">KHÁM PHÁ THÊM</p><h2>Sản phẩm tương tự</h2></div><a href="#/products" onClick={event => { event.preventDefault(); onNavigate('products'); }}>Xem danh mục <ArrowRight size={15} /></a></header>{relatedLoading ? <p role="status" className="pd-muted">Đang tải sản phẩm tương tự…</p> : relatedError ? <div className="pd-aux-error" role="alert"><p>{relatedError}</p><button type="button" className="pd-text-button" onClick={reloadRelated}>Thử lại sản phẩm tương tự</button></div> : related.length ? <div className="pd-related-grid">{related.map(item => <ProductCard key={item.id} product={item} onNavigate={onNavigate} />)}</div> : <p className="pd-muted">Chưa có sản phẩm tương tự trong dữ liệu hiện tại.</p>}</section>
+
+    </div><ProductDetailSidebar product={readyProduct} onNavigate={onNavigate} /></div>
+    <section className="pd-related" aria-label="Sản phẩm tương tự"><header><div><p className="pd-eyebrow">KHÁM PHÁ THÊM</p><h2>Sản phẩm tương tự</h2></div><a href="#/products" onClick={event => { event.preventDefault(); onNavigate('products'); }}>Xem danh mục <ArrowRight size={15} /></a></header>{relatedLoading ? <p role="status" className="pd-muted">Đang tải sản phẩm tương tự…</p> : relatedError ? <div className="pd-aux-error" role="alert"><p>{relatedError}</p><button type="button" className="pd-text-button" onClick={reloadRelated}>Thử lại sản phẩm tương tự</button></div> : related.length ? <RelatedProductCarousel products={related} onNavigate={onNavigate} /> : <p className="pd-muted">Chưa có sản phẩm tương tự trong dữ liệu hiện tại.</p>}</section>
     <div className="pd-mobile-purchase" aria-label="Thanh mua sản phẩm"><div><small>{variantLabel(selectedVariant)}</small><strong>{price == null ? 'Chưa có giá' : formatCurrency(price)}</strong></div><button type="button" className="btn-luxury-outline" aria-label="Thêm vào giỏ" disabled={buyDisabled} onClick={() => purchase(false)}>{adding ? <Loader2 size={17} className="animate-spin" /> : <ShoppingBag size={17} />}</button><button type="button" className="btn-luxury-primary" disabled={buyDisabled} onClick={() => purchase(true)}>Mua ngay</button></div>
     {zoomOpen && <div className="pd-zoom-backdrop" onClick={event => { if (event.target === event.currentTarget) setZoomOpen(false); }}><div ref={zoomRef} role="dialog" aria-modal="true" aria-label="Ảnh sản phẩm" tabIndex={-1} className="pd-zoom-dialog"><button type="button" aria-label="Đóng ảnh phóng to" onClick={() => setZoomOpen(false)}><X size={22} /></button>{image(selectedImage)}<p>{selectedImage?.altText || readyProduct.name}</p></div></div>}
   </div>;

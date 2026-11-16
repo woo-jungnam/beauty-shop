@@ -1,6 +1,49 @@
 import { test, expect } from '@playwright/test';
 
 const customer = { id: 7, username: 'detail-test', fullName: 'Khách hàng kiểm thử', roles: ['ROLE_CUSTOMER'] };
+
+test('Detail sidebar displays vertical recommendations and category products responsively', async ({ page }) => {
+  await mockDetail(page);
+  await page.route('**/api/v1/products/recommended-for-you**', route => route.fulfill({ json: { data: [{ ...baseProduct, id: 51, name: 'Suggested serum' }] } }));
+  await page.route('**/api/v1/products/search**', route => {
+    const params = new URL(route.request().url()).searchParams;
+    if (params.has('brandIds')) {
+      expect(params.get('brandIds')).toBe('5');
+      return route.fulfill({ json: { data: { content: [{ ...baseProduct, id: 53, name: 'Brand serum' }] } } });
+    }
+    expect(params.get('categoryIds')).toBe('4');
+    return route.fulfill({ json: { data: { content: [{ ...baseProduct, id: 42 }, { ...baseProduct, id: 52, name: 'Category serum' }] } } });
+  });
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto('/#/product/42');
+  const sidebar = page.getByRole('complementary', { name: 'Khám phá sản phẩm' });
+  await expect(sidebar.getByRole('link', { name: /Suggested serum/ })).toBeVisible();
+  await expect(sidebar.getByRole('link', { name: /Category serum/ })).toBeVisible();
+  await expect(sidebar.getByRole('region', { name: 'Cùng thương hiệu' }).getByRole('link', { name: /Brand serum/ })).toBeVisible();
+  await expect(sidebar.locator('.pd-side-item')).toHaveCount(3);
+  const sideBox = await sidebar.boundingBox();
+  const mainBox = await page.locator('.pd-detail-primary').boundingBox();
+  expect(sideBox.x).toBeGreaterThan(mainBox.x + mainBox.width);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(sidebar.getByRole('link', { name: /Category serum/ })).toHaveAttribute('href', '#/product/52');
+});
+
+test('Related products stay on one row and advance automatically', async ({ page }) => {
+  await mockDetail(page);
+  await page.route('**/api/v1/products/42/similar**', route => route.fulfill({ json: { success: true,
+    data: Array.from({ length: 8 }, (_, index) => ({ ...baseProduct, id: 50 + index, name: `Related ${index}` })) } }));
+  await page.goto('/#/product/42');
+  const track = page.locator('.related-carousel-track');
+  await track.scrollIntoViewIfNeeded();
+  await page.mouse.move(0, 0);
+  await expect(track.locator('article')).toHaveCount(8);
+  const boxes = await track.locator('article').evaluateAll(items => items.map(item => item.getBoundingClientRect().top));
+  expect(Math.max(...boxes) - Math.min(...boxes)).toBeLessThan(1);
+  await expect.poll(() => track.evaluate(element => element.scrollLeft), { timeout: 6000 }).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'Dừng tự chuyển sản phẩm', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tự chuyển sản phẩm', exact: true })).toBeVisible();
+});
 const artwork = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="800" viewBox="0 0 640 800"><rect width="640" height="800" fill="#faf7f8"/><rect x="200" y="130" width="240" height="540" rx="30" fill="#f4d8df"/><text x="320" y="390" text-anchor="middle" font-size="32" fill="#9a4363">B5 SERUM</text></svg>';
 const baseProduct = {
   id: 42, name: 'Serum phục hồi B5', slug: 'serum-phuc-hoi-b5', status: 'ACTIVE', productType: 'PRODUCT',

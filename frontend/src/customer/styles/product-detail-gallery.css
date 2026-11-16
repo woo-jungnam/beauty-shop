@@ -1,0 +1,7 @@
+.customer-app .pd-gallery-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--c-text-muted); font-size: 11px; }
+.customer-app .pd-gallery-tools > span { padding: 5px 10px; border-radius: 20px; background: var(--c-primary-light); font-variant-numeric: tabular-nums; }
+.customer-app .pd-gallery-tools button { border: 1px solid var(--c-border); border-radius: 20px; background: var(--c-surface, #FFFFFF); color: var(--c-primary); padding: 7px 12px; min-height: 40px; font: inherit; }
+.customer-app .pd-main-image > img { animation: pd-gallery-reveal 360ms ease both; transition: transform 450ms ease; }
+@keyframes pd-gallery-reveal { from { opacity: .35; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@media (hover: hover) and (pointer: fine) { .customer-app .pd-main-image:hover > img { transform: scale(1.035); } }
+@media (prefers-reduced-motion: reduce) { .customer-app .pd-main-image > img { animation: none; transition: none; transform: none; } }
