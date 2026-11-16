@@ -82,6 +82,9 @@
   font-size: 11px !important;
   line-height: 1.6;
 }
+.customer-app .customer-home-page #flash-sale .product-card-clearance-note:not([role="alert"]) {
+  display: none;
+}
 .customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-price {
   margin-top: auto !important;
   padding: 12px 0 2px;
