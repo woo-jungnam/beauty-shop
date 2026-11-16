@@ -1471,8 +1471,8 @@
 
   /* Home */
   .customer-home-page {
-    gap: 40px !important;
-    padding-bottom: 48px !important;
+    gap: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   .home-promo-strip {
@@ -1480,7 +1480,8 @@
   }
 
   .hero-slider-container {
-    padding: 42px 0 54px !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   .hero-content-grid,

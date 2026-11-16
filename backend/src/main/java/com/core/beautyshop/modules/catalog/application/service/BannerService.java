@@ -11,5 +11,6 @@ public interface BannerService {
     BannerResponse getBannerById(Long id);
     BannerResponse createBanner(BannerRequest request);
     BannerResponse updateBanner(Long id, BannerRequest request);
+    BannerResponse toggleBannerStatus(Long id);
     void deleteBanner(Long id);
 }

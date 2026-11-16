@@ -1,0 +1,200 @@
+/* Campaign surfaces use the supplied pastels; dark ink keeps labels readable. */
+.customer-app .customer-home-page > #flash-sale {
+  --section-surface: #FFE5D9;
+}
+.customer-app .customer-home-page > #random-picks {
+  --section-surface: #FAD2E1;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-panel,
+.customer-app .customer-home-page #random-picks .recommendations-box {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(18px, 2.5vw, 36px) !important;
+  border: 1px solid #E5989B !important;
+  border-radius: 24px !important;
+  box-shadow: 0 12px 36px rgb(74 53 53 / 7%) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-panel {
+  background: linear-gradient(135deg, #FFB4A2, #FFE5D9) !important;
+  border: 1px solid #E5989B !important;
+  border-top: 5px solid #E5989B !important;
+}
+.customer-app .customer-home-page #random-picks .recommendations-box {
+  background: linear-gradient(135deg, #FAD2E1 30%, #FFE5D9) !important;
+  border-top: 4px solid #E5989B !important;
+}
+/* Decorative light stays behind content and never intercepts clicks. */
+.customer-app .customer-home-page :is(.flash-sale-panel, .recommendations-box)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background: radial-gradient(circle at 92% 8%, rgb(255 255 255 / 25%) 0 90px, transparent 91px),
+    radial-gradient(circle at 85% 0%, transparent 0 140px, rgb(255 255 255 / 22%) 141px 142px, transparent 143px);
+}
+.customer-app .customer-home-page .campaign-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgb(74 53 53 / 16%);
+  border-radius: 6px;
+  background: #E5989B;
+  color: #4A3535;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+.customer-app #random-picks .campaign-eyebrow { background: #FFFFFF; }
+.customer-app #flash-sale .flash-sale-header,
+.customer-app #random-picks .recommendations-header {
+  padding-bottom: 24px !important;
+  margin-bottom: 24px !important;
+  border-bottom: 1px solid rgb(74 53 53 / 18%) !important;
+}
+.customer-app #flash-sale .flash-sale-panel > p:last-child {
+  padding: 12px 16px;
+  margin-bottom: 0;
+  border: 1px dashed #E5989B;
+  border-radius: 10px;
+  background: #FFE5D9;
+  color: #4A3535 !important;
+}
+.customer-app #random-picks .recommendations-header > p {
+  padding: 8px 12px;
+  border-left: 3px solid #E5989B;
+  color: #4A3535 !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) h2.section-title-highlight {
+  color: #4A3535 !important;
+  background: linear-gradient(110deg, #4A3535 20%, #855057 45%, #4A3535 70%) !important;
+  background-size: 220% 100% !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-wrap: balance;
+  font-size: clamp(21px, 2.2vw, 29px) !important;
+  animation: home-title-light 8s ease-in-out 2;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .section-title-wrap::after {
+  width: 72px;
+  height: 4px;
+  background: linear-gradient(90deg, #E5989B, #FFFFFF) !important;
+  transition: width 300ms ease;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks):hover .section-title-wrap::after {
+  width: 112px;
+}
+.customer-app .customer-home-page #flash-sale .section-title-icon {
+  fill: #FFB4A2;
+  animation: home-zap 3s ease-in-out 3;
+}
+.customer-app .customer-home-page #random-picks .section-title-icon {
+  fill: #FAD2E1;
+  animation: home-sparkle 4s ease-in-out 3;
+}
+.customer-app #flash-sale .flash-sale-countdown {
+  background: rgb(255 255 255 / 80%) !important;
+  border-color: #E5989B !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  gap: 6px !important;
+}
+.customer-app #flash-sale .flash-sale-countdown span[style*="tabular-nums"] {
+  background: #E5989B !important;
+  color: #4A3535 !important;
+  padding: 5px 7px !important;
+  border-radius: 6px !important;
+  min-width: 28px;
+  text-align: center;
+}
+.customer-app #flash-sale .flash-sale-filters {
+  background: rgb(255 255 255 / 65%) !important;
+  border: 1px solid #FFFFFF;
+  border-radius: 12px !important;
+  padding: 5px !important;
+}
+.customer-app #flash-sale .flash-sale-filters button {
+  color: #4A3535 !important;
+  min-height: 36px;
+  border-radius: 8px !important;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+.customer-app #flash-sale .flash-sale-filters button:hover {
+  box-shadow: 0 3px 10px rgb(74 53 53 / 12%);
+  transform: translateY(-1px);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved {
+  border: 1px solid #FFE5D9 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 3px 12px rgb(74 53 53 / 4%);
+  transition: transform 250ms ease, box-shadow 250ms ease, border-color 250ms ease !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-media img {
+  transition: transform 450ms ease;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved:focus-within {
+  border-color: #E5989B !important;
+  box-shadow: 0 0 0 3px #FAD2E1;
+}
+.customer-app .customer-home-page #random-picks .btn-luxury-outline {
+  min-height: 44px;
+  background: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgb(74 53 53 / 6%);
+  transition: background 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+.customer-app #random-picks .btn-luxury-outline svg {
+  transition: transform 200ms ease;
+}
+.customer-app #random-picks .btn-luxury-outline:hover svg { transform: translateX(4px); }
+.customer-app #flash-sale :is(.carousel-nav-btn, .carousel-floating-btn) {
+  color: #4A3535 !important;
+  border-color: #E5989B !important;
+  box-shadow: 0 3px 12px rgb(74 53 53 / 8%) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved:hover {
+    transform: translateY(-6px) !important;
+    border-color: #E5989B !important;
+    box-shadow: 0 14px 24px rgb(74 53 53 / 12%) !important;
+  }
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved:hover .product-card-media img {
+    transform: scale(1.045);
+  }
+}
+@keyframes home-title-light {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes home-zap {
+  0%, 80%, 100% { transform: rotate(0); }
+  85% { transform: rotate(-10deg); }
+  90% { transform: rotate(8deg); }
+}
+@keyframes home-sparkle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12) rotate(8deg); }
+}
+@media (max-width: 639px) {
+  .customer-app .customer-home-page #flash-sale .flash-sale-panel,
+  .customer-app .customer-home-page #random-picks .recommendations-box {
+    padding: 16px 12px !important;
+    border-radius: 18px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks),
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks) *,
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks) *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.product-card-resolved, .product-card-media img, .section-title-icon, .flash-sale-filters button, .btn-luxury-outline svg) {
+    transform: none !important;
+  }
+  .customer-app #flash-sale .carousel-floating-btn { transform: translateY(-50%) !important; }
+}

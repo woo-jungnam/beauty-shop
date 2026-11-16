@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 
-const VALID_POSITIONS = new Set(['HERO_SLIDE', 'HERO_SIDE', 'PROMO']);
+const VALID_POSITIONS = new Set([
+  'HERO_SLIDE',
+  'HERO_SIDE',
+  'SECTION_FLASH_SALE',
+  'SECTION_CATEGORIES',
+  'SECTION_BRANDS',
+  'SECTION_RECOMMENDATIONS',
+  'SECTION_CATALOG',
+  'SECTION_SPA',
+  'PROMO'
+]);
 
 function validateBannerPayload(payload) {
   assert(payload.title && payload.title.trim().length > 0, 'title is required');
@@ -39,6 +49,14 @@ const b2 = validateBannerPayload({
 });
 assert.equal(b2.position, 'HERO_SIDE');
 assert.equal(b2.targetUrl, 'booking');
+
+const bSection = validateBannerPayload({
+  title: 'Flash Sale Ribbon',
+  imageUrl: 'https://images.unsplash.com/strip.jpg',
+  position: 'SECTION_FLASH_SALE',
+  targetUrl: '#flash-sale'
+});
+assert.equal(bSection.position, 'SECTION_FLASH_SALE');
 
 assert.throws(() => validateBannerPayload({ title: '', imageUrl: 'abc' }), /title is required/);
 assert.throws(() => validateBannerPayload({ title: 'Test', imageUrl: '' }), /imageUrl is required/);

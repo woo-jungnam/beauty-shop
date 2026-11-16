@@ -89,15 +89,15 @@ export const CustomerFooter = ({ onNavigate }) => {
   const subscribe = async () => { if (newsletterBusy) return; if (!newsletterConsent) { setNewsletterFeedback('Vui lòng đồng ý nhận bản tin trước khi đăng ký.'); return; } if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsletterEmail)) { setNewsletterFeedback('Vui lòng nhập email hợp lệ.'); return; } setNewsletterBusy(true); try { const response = await apiClient.post('/api/v1/newsletter/subscriptions', { email: newsletterEmail, consent: newsletterConsent }); setNewsletterFeedback(response?.message || 'Đã đăng ký nhận bản tin.'); setNewsletterEmail(''); } catch (error) { setNewsletterFeedback(error.message); } finally { setNewsletterBusy(false); } };
   return (
     <footer style={{
-      backgroundColor: '#8C2A47',
-      color: '#FFFFFF',
-      marginTop: 'auto',
-      borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+      backgroundColor: '#6B4F4F',
+      color: '#FFF5E4',
+      marginTop: 0,
+      borderTop: 'none'
     }}>
       <div style={{
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid rgba(255, 214, 186, 0.15)',
         padding: '32px 0',
-        backgroundColor: '#B84365'
+        backgroundColor: '#5A4242'
       }}>
         <div className="customer-container">
           <div style={{
@@ -114,19 +114,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: '#FFD6BA',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <ShieldCheck size={22} color="#FFCCD5" />
+                <ShieldCheck size={22} color="#6B4F4F" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Thông Tin Sản Phẩm
                 </h4>
-                <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Xem thương hiệu, mô tả và phân loại trước khi chọn mua.
                 </p>
               </div>
@@ -141,19 +141,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: '#FFD6BA',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <Truck size={22} color="#FFCCD5" />
+                <Truck size={22} color="#6B4F4F" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Phí Giao Hàng Tại Thanh Toán
                 </h4>
-                <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Nhập địa chỉ và kiểm tra phí vận chuyển khi thanh toán.
                 </p>
               </div>
@@ -168,19 +168,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: '#FFD6BA',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <RotateCcw size={22} color="#FFCCD5" />
+                <RotateCcw size={22} color="#6B4F4F" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Yêu Cầu Đổi Trả Theo Đơn
                 </h4>
-                <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Gửi mặt hàng, số lượng và lý do để cửa hàng xét duyệt.
                 </p>
               </div>
@@ -195,19 +195,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: '#FFD6BA',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <Award size={22} color="#FFCCD5" />
+                <Award size={22} color="#6B4F4F" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Dịch Vụ Spa
                 </h4>
-                <p style={{ color: '#FCE7EC', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Xem dịch vụ, nhân viên và khung giờ còn trống trước khi đặt lịch.
                 </p>
               </div>
@@ -236,38 +236,39 @@ export const CustomerFooter = ({ onNavigate }) => {
                   color: '#FFFFFF',
                   letterSpacing: '0.04em'
                 }}>
-                  BEAUTY<span style={{ color: '#FFCCD5' }}>SHOP</span>
+                  BEAUTY<span style={{ color: '#FFD6BA' }}>SHOP</span>
                 </span>
               </div>
               <p style={{
                 fontSize: '13px',
-                color: '#F8D0DA',
+                color: '#FFF5E4',
                 marginTop: '12px',
-                lineHeight: 1.6
+                lineHeight: 1.6,
+                opacity: 0.95
               }}>
                 Mua sắm mỹ phẩm và đặt lịch dịch vụ làm đẹp. Theo dõi đơn hàng, lịch hẹn và các yêu cầu của bạn trong tài khoản.
               </p>
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#FCE7EC' }}>
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#FFF5E4' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MapPin size={15} color="#FFCCD5" />
+                  <MapPin size={15} color="#FFD6BA" />
                   <span>Địa chỉ cửa hàng: {storeContact.address
                     ? <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeContact.address)}`} target="_blank" rel="noopener noreferrer" style={contactLinkStyle}>{storeContact.address}</a>
                     : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Phone size={15} color="#FFCCD5" />
+                  <Phone size={15} color="#FFD6BA" />
                   <span>Hotline CSKH: {hotlineHref
                     ? <a href={hotlineHref} style={contactLinkStyle}>{storeContact.hotline}</a>
                     : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Mail size={15} color="#FFCCD5" />
+                  <Mail size={15} color="#FFD6BA" />
                   <span>Email liên hệ: {emailHref
                     ? <a href={emailHref} style={contactLinkStyle}>{storeContact.email}</a>
                     : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={15} color="#FFCCD5" />
+                  <Clock size={15} color="#FFD6BA" />
                   <button type="button" onClick={() => onNavigate('booking')} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}>Xem giờ trống và đặt lịch Spa</button>
                 </div>
               </div>
@@ -277,7 +278,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Danh Mục Nổi Bật
               </h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FDE8ED' }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FFF5E4' }}>
                 {featuredCategories.length > 0 ? featuredCategories.map((cat) => (
                   <li key={cat.id} style={{ cursor: 'pointer' }} onClick={() => onNavigate(`products?categoryId=${cat.id}${cat.slug ? `&category=${encodeURIComponent(cat.slug)}` : ''}&name=${encodeURIComponent(cat.name)}`)}>
                     {cat.name}
@@ -292,7 +293,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Dịch Vụ Làm Đẹp
               </h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#CBD5E1' }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FFF5E4' }}>
                 <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('spa')}>Xem Danh Sách Dịch Vụ</li>
                 <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Chọn Nhân Viên Và Giờ Trống</li>
                 <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Đăng Ký Đặt Lịch Hẹn Trực Tuyến</li>
@@ -303,7 +304,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Khuyến Mãi & Bản Tin
               </h4>
-              <p style={{ fontSize: '12px', color: '#CBD5E1', marginBottom: '12px' }}>
+              <p style={{ fontSize: '12px', color: '#FFF5E4', marginBottom: '12px', opacity: 0.95 }}>
                 Đăng ký email để nhận thông tin ưu đãi và sản phẩm mới:
               </p>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -312,11 +313,12 @@ export const CustomerFooter = ({ onNavigate }) => {
                   placeholder="Nhập email của bạn..." value={newsletterEmail} onChange={event => setNewsletterEmail(event.target.value)} aria-label="Email đăng ký bản tin"
                   style={{
                     padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                    color: '#FFFFFF',
+                    borderRadius: '6px',
+                    border: '1px solid #FFD6BA',
+                    backgroundColor: '#FFF5E4',
+                    color: '#6B4F4F',
                     fontSize: '12px',
+                    fontWeight: 500,
                     flex: 1,
                     outline: 'none'
                   }}
@@ -325,26 +327,27 @@ export const CustomerFooter = ({ onNavigate }) => {
                   onClick={subscribe} disabled={newsletterBusy}
                   style={{
                     padding: '8px 16px',
-                    borderRadius: '4px',
-                    backgroundColor: 'var(--c-deal-red, #E31837)',
-                    color: '#FFFFFF',
+                    borderRadius: '6px',
+                    backgroundColor: '#F4ACB7',
+                    color: '#6B4F4F',
                     border: 'none',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     fontSize: '12px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                   }}
                 >
                   Đăng ký
                 </button>
               </div>
 
-              <label style={{ display: 'flex', gap: 6, fontSize: 12, marginTop: 10 }}><input type="checkbox" checked={newsletterConsent} onChange={event => setNewsletterConsent(event.target.checked)} />Tôi đồng ý nhận email ưu đãi và có thể hủy đăng ký.</label>
-              {newsletterFeedback && <p role="status">{newsletterFeedback}</p>}
+              <label style={{ display: 'flex', gap: 6, fontSize: 12, marginTop: 10, color: '#FFF5E4' }}><input type="checkbox" checked={newsletterConsent} onChange={event => setNewsletterConsent(event.target.checked)} />Tôi đồng ý nhận email ưu đãi và có thể hủy đăng ký.</label>
+              {newsletterFeedback && <p role="status" style={{ fontSize: 12, marginTop: 6, color: '#FFD6BA' }}>{newsletterFeedback}</p>}
             </div>
           </div>
 
           <div style={{
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            borderTop: '1px solid rgba(255, 214, 186, 0.2)',
             marginTop: '36px',
             paddingTop: '18px',
             display: 'flex',
@@ -353,17 +356,17 @@ export const CustomerFooter = ({ onNavigate }) => {
             flexWrap: 'wrap',
             gap: '12px',
             fontSize: '12px',
-            color: '#F8D0DA'
+            color: '#FFF5E4'
           }}>
             <div>
               © 2026 BeautyShop. Mỹ phẩm & dịch vụ làm đẹp.
             </div>
             <div style={{ display: 'flex', gap: '16px' }}>
-              <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setActivePolicy('terms')}>Điều khoản sử dụng</span>
+              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#FFD6BA' }} onClick={() => setActivePolicy('terms')}>Điều khoản sử dụng</span>
               <span>•</span>
-              <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setActivePolicy('privacy')}>Chính sách bảo mật</span>
+              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#FFD6BA' }} onClick={() => setActivePolicy('privacy')}>Chính sách bảo mật</span>
               <span>•</span>
-              <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setActivePolicy('shipping')}>Thông tin giao hàng</span>
+              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#FFD6BA' }} onClick={() => setActivePolicy('shipping')}>Thông tin giao hàng</span>
             </div>
           </div>
         </div>
@@ -401,7 +404,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '16px 20px',
-              backgroundColor: '#8C2A47',
+              backgroundColor: '#6B4F4F',
               color: '#FFFFFF'
             }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>
@@ -439,7 +442,7 @@ export const CustomerFooter = ({ onNavigate }) => {
                 style={{
                   padding: '8px 18px',
                   borderRadius: '6px',
-                  backgroundColor: '#8C2A47',
+                  backgroundColor: '#6B4F4F',
                   color: '#FFFFFF',
                   border: 'none',
                   fontWeight: 600,

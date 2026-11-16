@@ -48,6 +48,15 @@ for (const width of [1280, 390]) {
     const imageBox = await image.boundingBox(), frame = await gallery.locator('.image-banner-carousel').boundingBox();
     expect(Math.abs(imageBox.width - frame.width)).toBeLessThan(1);
     expect(Math.abs(imageBox.height - frame.height)).toBeLessThan(1);
+    const galleryBox = await gallery.boundingBox();
+    expect(Math.abs(galleryBox.x)).toBeLessThan(1);
+    expect(Math.abs(galleryBox.width - width)).toBeLessThan(1);
+    for (const side of await gallery.locator('.image-banner-sides .image-banner-art').all()) {
+      const sideFrame = await side.boundingBox();
+      const sideImage = await side.locator('img').boundingBox();
+      expect(Math.abs(sideImage.width - sideFrame.width)).toBeLessThan(1);
+      expect(Math.abs(sideImage.height - sideFrame.height)).toBeLessThan(1);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await gallery.getByRole('button', { name: 'Xem banner 2', exact: true }).click();
     await expect(gallery.getByRole('link', { name: 'Ảnh quảng bá 2' })).toHaveAttribute('href', '#/booking');

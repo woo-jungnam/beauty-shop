@@ -1,0 +1,137 @@
+/* Two card treatments share structure, with campaign-specific pastel accents. */
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) {
+  --item-accent: #FFB4A2;
+  --item-tint: #FFE5D9;
+  --item-ink: #4A3535;
+}
+.customer-app .customer-home-page #random-picks {
+  --item-accent: #E5989B;
+  --item-tint: #FAD2E1;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved {
+  padding: 7px;
+  border: 1px solid var(--item-accent) !important;
+  border-radius: 20px !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 5px 15px rgb(74 53 53 / 7%);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-media {
+  border-radius: 14px;
+  background: linear-gradient(145deg, #FFFFFF 60%, var(--item-tint)) !important;
+  border: 1px solid var(--item-tint);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-media > img {
+  padding: 14px 8px;
+  box-sizing: border-box;
+  object-fit: contain;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-body {
+  padding: 12px 6px 6px !important;
+  gap: 3px;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-brand {
+  align-self: flex-start;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 4px 7px;
+  border-radius: 5px;
+  color: var(--item-ink) !important;
+  background: var(--item-tint);
+  font-size: 10px !important;
+  letter-spacing: .07em !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-title-link {
+  color: var(--item-ink);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-title-link:hover {
+  color: #855057;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-rating {
+  padding-block: 4px;
+  gap: 4px;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-badges {
+  align-items: flex-start;
+  max-width: calc(100% - 80px);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-discount {
+  padding: 5px 9px !important;
+  border-radius: 7px 7px 7px 0 !important;
+  color: var(--item-ink) !important;
+  background: var(--item-accent) !important;
+  box-shadow: 0 3px 7px rgb(74 53 53 / 12%) !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-expiry {
+  background: #FFE5D9 !important;
+  border: 1px solid #E5989B;
+  color: var(--item-ink) !important;
+  box-shadow: none !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-clearance-note {
+  padding: 8px;
+  border-radius: 8px;
+  border-left: 2px solid #E5989B;
+  background: #FFE5D9;
+  color: var(--item-ink) !important;
+  font-size: 11px !important;
+  line-height: 1.6;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-price {
+  margin-top: auto !important;
+  padding: 12px 0 2px;
+  border-top: 1px dashed var(--item-accent);
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-price > span:first-child {
+  color: #855057 !important;
+  font-size: clamp(15px, 1.1vw, 19px) !important;
+  font-family: inherit !important;
+  font-weight: 850 !important;
+  letter-spacing: -.03em;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.product-card-wishlist, .product-card-preview) {
+  background: #FFFFFF !important;
+  border: 1px solid var(--item-tint) !important;
+  box-shadow: 0 2px 7px rgb(74 53 53 / 8%);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.product-card-wishlist, .product-card-preview):hover {
+  background: var(--item-tint) !important;
+  border-color: var(--item-accent) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-quick-add {
+  position: absolute !important;
+  inset: auto 0 0 !important;
+  margin: 6px;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-media:has(.product-card-quick-add) {
+  padding-bottom: 44px;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-media:has(.product-card-quick-add) > img {
+  height: calc(100% - 44px);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-quick-add button {
+  min-height: 36px;
+  padding: 8px 6px !important;
+  background: var(--item-tint) !important;
+  border: 1px solid var(--item-accent) !important;
+  border-radius: 9px !important;
+  color: var(--item-ink) !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-quick-add button svg { color: currentColor; }
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-quick-add button:hover:not(:disabled) { background: var(--item-accent) !important; }
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) button:disabled { cursor: wait; opacity: .65; }
+@media (max-width: 639px) {
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved { padding: 5px; border-radius: 15px !important; }
+  .customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-body { padding-inline: 3px !important; }
+}

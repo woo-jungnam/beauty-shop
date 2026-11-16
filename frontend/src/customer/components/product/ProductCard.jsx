@@ -178,7 +178,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           zIndex: 2
         }}>
           {discountPercent > 0 && (
-            <span style={{
+            <span className="product-card-discount" style={{
               backgroundColor: 'var(--c-deal-red, #E11D48)',
               color: '#FFFFFF',
               fontSize: '11px',
@@ -192,7 +192,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
             </span>
           )}
           {isClearance && product.earliestExpirationDate && (
-            <span style={{
+            <span className="product-card-expiry" style={{
               backgroundColor: '#B45309',
               color: '#FFFFFF',
               fontSize: '9.5px',
@@ -235,6 +235,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
         </div>
 
         <button
+          className="product-card-wishlist"
           onClick={handleToggleWishlist}
           disabled={wishlistBusy}
           aria-pressed={isWishlisted}
@@ -268,6 +269,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
 
         {onQuickView && (
           <button
+            className="product-card-preview"
             onClick={(e) => {
               e.stopPropagation();
               if (fromSearch) recordSearchClick(product.id);
@@ -419,7 +421,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
           </div>
         </div>
 
-        {isClearance && <p role={unavailable ? 'alert' : undefined} style={{ fontSize: '12px', margin: '8px 0 0', color: 'var(--c-text-muted)' }}>
+        {isClearance && <p className="product-card-clearance-note" role={unavailable ? 'alert' : undefined} style={{ fontSize: '12px', margin: '8px 0 0', color: 'var(--c-text-muted)' }}>
           {unavailable ? 'Ưu đãi này không còn khả dụng. Vui lòng tải lại.'
             : `SKU ${selectedVariant.sku} · Còn ${clearanceStock} sản phẩm cận hạn tại lúc tải${knownCount(product.daysRemaining) != null ? ` · HSD gần nhất còn ${product.daysRemaining} ngày` : ''}`}
         </p>}

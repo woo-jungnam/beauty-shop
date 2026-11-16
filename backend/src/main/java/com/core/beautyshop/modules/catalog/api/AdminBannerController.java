@@ -52,6 +52,13 @@ public class AdminBannerController {
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
+    @Operation(summary = "Bật / Tắt trạng thái hiển thị của banner")
+    @PatchMapping("/{id}/toggle")
+    public ResponseEntity<ApiResponse<BannerResponse>> toggleBannerStatus(@PathVariable Long id) {
+        BannerResponse updated = bannerService.toggleBannerStatus(id);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Cập nhật trạng thái banner thành công"));
+    }
+
     @Operation(summary = "Xóa banner (soft-delete)")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteBanner(@PathVariable Long id) {

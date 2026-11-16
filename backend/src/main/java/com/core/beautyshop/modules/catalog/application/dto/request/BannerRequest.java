@@ -1,8 +1,10 @@
 package com.core.beautyshop.modules.catalog.application.dto.request;
 
+import com.core.beautyshop.modules.catalog.domain.BannerPosition;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -56,11 +58,19 @@ public class BannerRequest {
     @Schema(description = "Nút kêu gọi hành động", example = "Mua Sắm Ngay")
     private String ctaText;
 
+    @NotBlank(message = "Vị trí hiển thị không được để trống")
     @Size(max = 50, message = "Vị trí không quá 50 ký tự")
-    @Schema(description = "Vị trí hiển thị: HERO_SLIDE, HERO_SIDE, PROMO", example = "HERO_SLIDE")
+    @Schema(description = "Vị trí hiển thị: HERO_SLIDE, HERO_SIDE, SECTION_FLASH_SALE, SECTION_CATEGORIES, SECTION_BRANDS, SECTION_RECOMMENDATIONS, SECTION_CATALOG, SECTION_SPA, PROMO", example = "HERO_SLIDE")
     @Builder.Default
     private String position = "HERO_SLIDE";
 
+    @AssertTrue(message = "Vị trí hiển thị không hợp lệ. Vui lòng chọn một trong các vị trí được hệ thống hỗ trợ.")
+    public boolean isPositionAllowed() {
+        if (position == null || position.isBlank()) return true; // Report by NotBlank
+        return BannerPosition.isValid(position);
+    }
+
+    @Min(value = 0, message = "Thứ tự sắp xếp phải lớn hơn hoặc bằng 0")
     @Schema(description = "Thứ tự sắp xếp", example = "1")
     @Builder.Default
     private Integer sortOrder = 0;

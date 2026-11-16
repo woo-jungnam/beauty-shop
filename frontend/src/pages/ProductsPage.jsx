@@ -32,6 +32,11 @@ import { Select } from '../shared/ui/Select';
 import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
 import { bannerHref } from '../features/banners/bannerLinks';
+import {
+  BANNER_POSITIONS,
+  getBannerPositionLabel,
+  isSectionBanner,
+} from '../features/banners/bannerPositions';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { ConfirmModal } from '../shared/ui/ConfirmModal';
@@ -245,6 +250,8 @@ export const ProductsPage = () => {
     isActive: true,
   });
   const [bannerSubmitting, setBannerSubmitting] = useState(false);
+  const [bannerFilterPosition, setBannerFilterPosition] = useState('ALL');
+  const [togglingBannerId, setTogglingBannerId] = useState(null);
 
   const [imagesModalOpen, setImagesModalOpen] = useState(false);
   const [selectedProductForImages, setSelectedProductForImages] = useState(null);
@@ -956,18 +963,53 @@ export const ProductsPage = () => {
 
   const handleOpenCreateBanner = () => {
     setEditingBanner(null);
+    const initialPosition =
+      bannerFilterPosition !== 'ALL' && bannerFilterPosition !== 'SECTIONS'
+        ? bannerFilterPosition
+        : 'HERO_SLIDE';
     setBannerForm({
       title: '',
       badge: '',
       description: '',
       imageUrl: '',
-      targetUrl: 'products',
+      targetUrl: initialPosition === 'SECTION_FLASH_SALE' ? '#flash-sale'
+        : initialPosition === 'SECTION_CATEGORIES' ? '#categories-section'
+        : initialPosition === 'SECTION_BRANDS' ? '#brand-partners'
+        : initialPosition === 'SECTION_RECOMMENDATIONS' ? '#random-picks'
+        : initialPosition === 'SECTION_CATALOG' ? '#store-catalog'
+        : initialPosition === 'SECTION_SPA' ? 'booking'
+        : 'products',
       ctaText: 'Mua Sắm Ngay',
-      position: 'HERO_SLIDE',
+      position: initialPosition,
       sortOrder: (banners.length || 0) + 1,
       isActive: true,
     });
     setBannerModalOpen(true);
+  };
+
+  const handleToggleBannerStatus = async (banner) => {
+    if (!banner || !banner.id || togglingBannerId) return;
+    setTogglingBannerId(banner.id);
+    const targetStatus = !banner.isActive;
+    try {
+      if (ENDPOINTS.CATALOG.BANNER_TOGGLE) {
+        await apiClient.patch(ENDPOINTS.CATALOG.BANNER_TOGGLE(banner.id));
+      } else {
+        const payload = {
+          ...banner,
+          isActive: targetStatus,
+        };
+        await apiClient.put(ENDPOINTS.CATALOG.BANNER_DETAIL(banner.id), payload);
+      }
+      setBanners((prev) =>
+        prev.map((b) => (b.id === banner.id ? { ...b, isActive: targetStatus } : b))
+      );
+    } catch (err) {
+      alert(err.message || 'Lỗi cập nhật trạng thái banner');
+      fetchBanners();
+    } finally {
+      setTogglingBannerId(null);
+    }
   };
 
   const handleOpenEditBanner = (b) => {
@@ -1012,6 +1054,22 @@ export const ProductsPage = () => {
 
   const handleSubmitBanner = async (e) => {
     e.preventDefault();
+    if (!bannerForm.title || !bannerForm.title.trim()) {
+      alert('Vui lòng nhập tên banner / mô tả ảnh.');
+      return;
+    }
+    if (!bannerForm.imageUrl || !bannerForm.imageUrl.trim()) {
+      alert('Vui lòng chọn hoặc nhập đường dẫn ảnh banner.');
+      return;
+    }
+    if (!bannerForm.position) {
+      alert('Vui lòng chọn vị trí hiển thị cho banner.');
+      return;
+    }
+    if (bannerForm.sortOrder < 0 || isNaN(bannerForm.sortOrder)) {
+      alert('Thứ tự hiển thị phải là số nguyên không âm (>= 0).');
+      return;
+    }
     if (!bannerHref(bannerForm.targetUrl)) {
       alert('Vui lòng nhập trang đích nội bộ hoặc liên kết http/https hợp lệ.');
       return;
@@ -1412,28 +1470,57 @@ export const ProductsPage = () => {
     {
       header: 'Hình ảnh',
       accessor: (row) => (
-        <div style={{ width: '84px', height: '48px', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
-          <img src={resolveMediaUrl(row.imageUrl)} alt={row.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+        <div style={{
+          width: isSectionBanner(row.position) ? '120px' : '84px',
+          height: isSectionBanner(row.position) ? '25px' : '44px',
+          borderRadius: '6px',
+          overflow: 'hidden',
+          backgroundColor: '#F3F4F6',
+          border: '1px solid #E5E7EB',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <img
+            src={resolveMediaUrl(row.imageUrl)}
+            alt={row.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
         </div>
       ),
-      width: '100px'
+      width: '135px'
     },
     {
       header: 'Tên banner',
       accessor: (row) => (
         <div>
-          <strong style={{ fontSize: '13px' }}>{row.title}</strong>
+          <strong style={{ fontSize: '13px', display: 'block', color: 'var(--text-main)' }}>{row.title}</strong>
+          {row.badge && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Badge: {row.badge}</span>
+          )}
         </div>
       )
     },
     {
-      header: 'Vị trí',
-      accessor: (row) => (
-        <Badge variant={row.position === 'HERO_SLIDE' ? 'primary' : row.position === 'HERO_SIDE' ? 'warning' : 'default'}>
-          {row.position === 'HERO_SLIDE' ? 'Banner chính' : row.position === 'HERO_SIDE' ? 'Banner phụ' : (row.position || 'Mặc định')}
-        </Badge>
-      ),
-      width: '120px'
+      header: 'Vị trí hiển thị',
+      accessor: (row) => {
+        const isSec = isSectionBanner(row.position);
+        const isHeroSlide = row.position === 'HERO_SLIDE';
+        const isHeroSide = row.position === 'HERO_SIDE';
+        const variant = isHeroSlide ? 'primary' : isSec ? 'info' : isHeroSide ? 'warning' : 'default';
+        return (
+          <div>
+            <Badge variant={variant}>
+              {getBannerPositionLabel(row.position)}
+            </Badge>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
+              {row.position}
+            </div>
+          </div>
+        );
+      },
+      width: '180px'
     },
     {
       header: 'Đích liên kết',
@@ -1443,8 +1530,46 @@ export const ProductsPage = () => {
     { header: 'Thứ tự', accessor: 'sortOrder', width: '70px', align: 'center' },
     {
       header: 'Trạng thái',
-      accessor: (row) => <Badge variant={row.isActive ? 'success' : 'default'}>{row.isActive ? 'Đang bật' : 'Tắt'}</Badge>,
-      width: '90px'
+      accessor: (row) => (
+        <button
+          type="button"
+          onClick={() => handleToggleBannerStatus(row)}
+          disabled={togglingBannerId === row.id}
+          title={row.isActive ? 'Bấm để Tắt banner này trên giao diện' : 'Bấm để Bật banner này'}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 10px',
+            borderRadius: '16px',
+            border: row.isActive ? '1px solid #A7F3D0' : '1px solid #D1D5DB',
+            backgroundColor: row.isActive ? '#ECFDF5' : '#F3F4F6',
+            color: row.isActive ? '#065F46' : '#6B7280',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: togglingBannerId === row.id ? 'wait' : 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: row.isActive ? '#10B981' : '#9CA3AF',
+              boxShadow: row.isActive ? '0 0 0 2px rgba(16, 185, 129, 0.25)' : 'none',
+            }}
+          />
+          {togglingBannerId === row.id
+            ? 'Đang đổi...'
+            : row.isActive
+            ? 'Đang bật'
+            : 'Đã tắt'}
+        </button>
+      ),
+      width: '120px',
+      align: 'center',
     },
     {
       header: 'Thao tác',
@@ -1875,16 +2000,93 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {activeTab === 'banners' && (
-        <div className="card">
-          <DataTable
-            columns={bannerColumns}
-            data={banners}
-            loading={false}
-            emptyMessage="Chưa có banner quảng cáo nào."
-          />
-        </div>
-      )}
+      {activeTab === 'banners' && (() => {
+        const activeCount = banners.filter((b) => b.isActive).length;
+        const inactiveCount = banners.length - activeCount;
+        const filteredBanners = banners.filter((b) => {
+          if (bannerFilterPosition === 'ALL') return true;
+          if (bannerFilterPosition === 'SECTIONS') return isSectionBanner(b.position);
+          return b.position === bannerFilterPosition;
+        });
+
+        return (
+          <div className="card">
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              marginBottom: '16px',
+              paddingBottom: '14px',
+              borderBottom: '1px solid var(--border-color, #E5E7EB)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Lọc vị trí:
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setBannerFilterPosition('ALL')}
+                    className={`btn btn-sm ${bannerFilterPosition === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ borderRadius: '16px', fontSize: '12px', padding: '4px 12px' }}
+                  >
+                    Tất cả ({banners.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBannerFilterPosition('HERO_SLIDE')}
+                    className={`btn btn-sm ${bannerFilterPosition === 'HERO_SLIDE' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ borderRadius: '16px', fontSize: '12px', padding: '4px 12px' }}
+                  >
+                    Slide Hero ({banners.filter((b) => b.position === 'HERO_SLIDE').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBannerFilterPosition('SECTIONS')}
+                    className={`btn btn-sm ${bannerFilterPosition === 'SECTIONS' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ borderRadius: '16px', fontSize: '12px', padding: '4px 12px' }}
+                  >
+                    Banner dài Section ({banners.filter((b) => isSectionBanner(b.position)).length})
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <Select
+                  value={bannerFilterPosition}
+                  onChange={(e) => setBannerFilterPosition(e.target.value)}
+                  options={[
+                    { label: '--- Chọn lọc cụ thể vị trí ---', value: 'ALL' },
+                    { label: `Tất cả vị trí (${banners.length})`, value: 'ALL' },
+                    { label: `Chỉ banner dài Section (${banners.filter((b) => isSectionBanner(b.position)).length})`, value: 'SECTIONS' },
+                    ...BANNER_POSITIONS.map((p) => ({
+                      label: `${p.label} (${banners.filter((b) => b.position === p.value).length})`,
+                      value: p.value,
+                    })),
+                  ]}
+                  style={{ minWidth: '240px', fontSize: '12.5px' }}
+                />
+                <Badge variant="outline">
+                  {filteredBanners.length} banner ({activeCount} bật / {inactiveCount} tắt)
+                </Badge>
+              </div>
+            </div>
+
+            <DataTable
+              columns={bannerColumns}
+              data={filteredBanners}
+              loading={false}
+              emptyMessage={
+                bannerFilterPosition === 'ALL'
+                  ? 'Chưa có banner quảng cáo nào.'
+                  : `Không có banner nào ở vị trí "${getBannerPositionLabel(bannerFilterPosition)}".`
+              }
+            />
+          </div>
+        );
+      })()}
 
       {featureProduct && <ProductFeaturesModal key={featureProduct.id} product={featureProduct} onClose={() => setFeatureProduct(null)} />}
 
@@ -2971,14 +3173,28 @@ export const ProductsPage = () => {
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Tên dùng để quản lý và hỗ trợ đọc ảnh. Trang chủ chỉ hiển thị ảnh, không phủ chữ hoặc nút lên banner.</p>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Select
-              label="Vị trí hiển thị *"
+              label="Vị trí hiển thị banner *"
               value={bannerForm.position}
-              onChange={(e) => setBannerForm({ ...bannerForm, position: e.target.value })}
-              options={[
-                { label: 'Slide chính (HERO_SLIDE)', value: 'HERO_SLIDE' },
-                { label: 'Banner phụ bên cạnh (HERO_SIDE)', value: 'HERO_SIDE' },
-                { label: 'Khuyến mãi khác (PROMO)', value: 'PROMO' },
-              ]}
+              onChange={(e) => {
+                const newPos = e.target.value;
+                setBannerForm((prev) => ({
+                  ...prev,
+                  position: newPos,
+                  targetUrl: prev.targetUrl || (
+                    newPos === 'SECTION_FLASH_SALE' ? '#flash-sale'
+                    : newPos === 'SECTION_CATEGORIES' ? '#categories-section'
+                    : newPos === 'SECTION_BRANDS' ? '#brand-partners'
+                    : newPos === 'SECTION_RECOMMENDATIONS' ? '#random-picks'
+                    : newPos === 'SECTION_CATALOG' ? '#store-catalog'
+                    : newPos === 'SECTION_SPA' ? 'booking'
+                    : 'products'
+                  ),
+                }));
+              }}
+              options={BANNER_POSITIONS.map((p) => ({
+                label: `${p.label} [${p.recommendedRatio}]`,
+                value: p.value,
+              }))}
             />
           </div>
           <div className="form-group" style={{ marginTop: '12px' }}>
@@ -2986,7 +3202,17 @@ export const ProductsPage = () => {
               Hình ảnh banner *
             </label>
             <div className="media-upload-zone" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <div className="media-preview-box" style={{ width: '100%', aspectRatio: '32 / 15', height: 'auto' }}>
+              <div
+                className="media-preview-box"
+                style={{
+                  width: '100%',
+                  aspectRatio: ['SECTION_CATEGORIES', 'SECTION_BRANDS'].includes(bannerForm.position) ? '3 / 1' : isSectionBanner(bannerForm.position) ? '1600 / 332' : '32 / 15',
+                  height: 'auto',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  backgroundColor: '#F3F4F6',
+                }}
+              >
                 {bannerForm.imageUrl ? (
                   <img
                     src={resolveMediaUrl(bannerForm.imageUrl)}
@@ -3053,7 +3279,17 @@ export const ProductsPage = () => {
               placeholder="products, booking, #/treatments hoặc https://..."
             />
           </div>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Nhấp vào toàn bộ ảnh sẽ mở trang này. Ảnh căn giữa và phủ kín khung. Nên dùng ảnh ngang tỉ lệ 32:15; banner chính khoảng 1600×750 px, banner phụ khoảng 800×375 px.</p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+            {bannerForm.position === 'SECTION_BRANDS'
+              ? 'Thương hiệu: Tạo 3 banner riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 banner đang bật theo thứ tự tăng dần, dưới tiêu đề thương hiệu. Mỗi banner có ảnh và liên kết riêng.'
+              : bannerForm.position === 'SECTION_CATEGORIES'
+              ? 'Danh mục: Tạo 3 banner riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 banner đang bật theo thứ tự tăng dần, ngay dưới tiêu đề H2 danh mục. Mỗi banner có ảnh và liên kết riêng.'
+              : isSectionBanner(bannerForm.position)
+              ? 'Banner section: Ngang bằng section, cao tối đa 332px; tự thu gọn trên điện thoại. Ảnh gợi ý 1600 x 332px, cắt căn giữa để vừa khung.'
+              : bannerForm.position === 'HERO_SIDE'
+              ? '💡 Banner phụ Hero: Nên dùng ảnh ngang tỉ lệ ~2:1 (khoảng 800×400 px).'
+              : '💡 Slide chính Hero: Nên dùng ảnh ngang tỉ lệ ~16:7 (khoảng 1600×700 px).'}
+          </p>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Input
               label="Thứ tự hiển thị"

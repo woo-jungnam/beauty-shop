@@ -95,6 +95,17 @@ public class BannerServiceImpl implements BannerService {
     @Override
     @Transactional
     @CacheEvict(value = "banners", allEntries = true)
+    public BannerResponse toggleBannerStatus(Long id) {
+        Banner banner = bannerRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy banner với ID: " + id));
+        banner.setIsActive(!Boolean.TRUE.equals(banner.getIsActive()));
+        Banner updated = bannerRepository.save(banner);
+        return BannerResponse.fromEntity(updated);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "banners", allEntries = true)
     public void deleteBanner(Long id) {
         Banner banner = bannerRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy banner với ID: " + id));

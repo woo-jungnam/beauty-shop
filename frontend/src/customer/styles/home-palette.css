@@ -1,0 +1,98 @@
+/* Reference palette: keep pastel surfaces separate from readable ink. */
+.customer-app .customer-home-page {
+  --home-white: #FFFFFF;
+  --home-pink: #FAD2E1;
+  --home-ivory: #FFE5D9;
+  --home-peach: #FFB4A2;
+  --home-rose: #E5989B;
+  --home-ink: #4A3535;
+  background: var(--home-white);
+  overflow-x: clip;
+}
+
+/* White section surfaces preserve the existing container alignment. */
+.customer-app .customer-home-page > section {
+  position: relative;
+  isolation: isolate;
+  background: var(--section-surface, var(--home-white)) !important;
+  padding-block: clamp(28px, 4vw, 56px);
+}
+.customer-app .customer-home-page > section::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  background: var(--section-surface, var(--home-white));
+  z-index: -1;
+  pointer-events: none;
+}
+.customer-app .customer-home-page > .hero-slider-container {
+  --section-surface: var(--home-white);
+}
+.customer-app .customer-home-page > #flash-sale {
+  --section-surface: var(--home-white);
+}
+.customer-app .customer-home-page > #categories-section {
+  --section-surface: var(--home-white);
+}
+.customer-app .customer-home-page > #brand-partners {
+  --section-surface: var(--home-white);
+}
+.customer-app .customer-home-page > #random-picks {
+  --section-surface: var(--home-white);
+}
+.customer-app .customer-home-page > #store-catalog {
+  --section-surface: var(--home-white);
+}
+.customer-app .customer-home-page > #spa-section {
+  --section-surface: var(--home-white);
+  border-block: 0 !important;
+}
+
+.customer-app .customer-home-page :is(.product-card-resolved, .spa-service-card) {
+  background: var(--home-white) !important;
+}
+.customer-app .customer-home-page #brand-partners :is(.brand-partner-box, .brand-partner-card) {
+  background: var(--home-white) !important;
+  border-color: var(--home-pink) !important;
+}
+.customer-app .customer-home-page #categories-section .category-tile-avatar {
+  background: var(--home-white) !important;
+  border-color: var(--home-peach) !important;
+}
+.customer-app .customer-home-page :is(.section-title-highlight, .section-title-editorial, .section-title-wrap h2) {
+  color: var(--home-ink) !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  filter: none;
+}
+.customer-app .customer-home-page .section-eyebrow-badge {
+  color: var(--home-ink);
+  background: var(--home-white);
+  border-color: var(--home-rose);
+  box-shadow: none;
+}
+.customer-app .customer-home-page :is(.section-header-editorial, .section-title-wrap)::after {
+  background: var(--home-rose);
+  box-shadow: none;
+}
+.customer-app .customer-home-page .section-title-icon {
+  color: var(--home-ink) !important;
+  stroke: currentColor !important;
+  filter: none;
+}
+/* Pastel fills require dark labels, including selected and hover states. */
+.customer-app .customer-home-page :is(#brand-partners, #random-picks, #store-catalog, #spa-section) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .tab-filter-btn.active) {
+  background: var(--home-rose) !important;
+  color: var(--home-ink) !important;
+  border: 1px solid var(--home-rose) !important;
+}
+.customer-app .customer-home-page :is(#brand-partners, #random-picks, #store-catalog, #spa-section) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .tab-filter-btn):hover {
+  background: var(--home-peach) !important;
+  color: var(--home-ink) !important;
+}
+.customer-app .customer-home-page :is(.category-tile-meta, .home-spa-card-price) {
+  color: var(--home-ink) !important;
+}

@@ -4,11 +4,11 @@ import {
   ArrowRight,
   Calendar,
   Clock,
-  ShieldCheck,
   Zap,
   Award,
   Search,
-  Ticket
+  Ticket,
+  Package
 } from 'lucide-react';
 import { ProductCard } from '../components/product/ProductCard';
 import { ProductCardSkeleton } from '../components/product/ProductCardSkeleton';
@@ -23,6 +23,7 @@ import { getGuestSessionId } from '../../shared/utils/session';
 import { useHomeSectionLimits } from '../components/ui/useHomeSectionLimits';
 import { Modal } from '../../shared/ui/Modal';
 import { ImageBannerGallery } from '../../features/banners/ImageBannerGallery';
+import { SectionStripBanner, CategoryBannerRow, SectionBannerRow } from '../../features/banners/SectionStripBanner';
 
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -511,7 +512,7 @@ export const HomePage = ({ onNavigate }) => {
   const showFlashSection = clearanceLoading || Boolean(clearanceError) || hasAnyFlashProducts;
 
   return (
-    <div ref={homePageRef} className="customer-home-page" style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '56px' }}>
+    <div ref={homePageRef} className="customer-home-page" style={{ display: 'flex', flexDirection: 'column', gap: '0px', paddingBottom: '0px' }}>
 
       <section
         className="hero-slider-container"
@@ -520,46 +521,6 @@ export const HomePage = ({ onNavigate }) => {
         <div style={{ position: 'relative', zIndex: 3, width: '100%' }}>
           <ImageBannerGallery banners={backendBanners} />
 
-          <div className="customer-container">
-            <div className="hero-trust-bar">
-              <div className="hero-trust-item">
-                <div className="hero-trust-icon">
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <div className="hero-trust-title">100% Chính Hãng</div>
-                  <div className="hero-trust-desc">Tem phụ & hóa đơn đầy đủ</div>
-                </div>
-              </div>
-              <div className="hero-trust-item">
-                <div className="hero-trust-icon">
-                  <Award size={20} />
-                </div>
-                <div>
-                  <div className="hero-trust-title">Tiêu Chuẩn Quốc Tế</div>
-                  <div className="hero-trust-desc">Mỹ phẩm chính ngạch nguồn gốc minh bạch</div>
-                </div>
-              </div>
-              <div className="hero-trust-item">
-                <div className="hero-trust-icon">
-                  <Sparkles size={20} />
-                </div>
-                <div>
-                  <div className="hero-trust-title">Tư Vấn Routine</div>
-                  <div className="hero-trust-desc">Chuyên viên tư vấn routine tận tâm</div>
-                </div>
-              </div>
-              <div className="hero-trust-item">
-                <div className="hero-trust-icon">
-                  <Clock size={20} />
-                </div>
-                <div>
-                  <div className="hero-trust-title">Giao Nhanh 2H</div>
-                  <div className="hero-trust-desc">Nội thành hỏa tốc nhận liền</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -570,15 +531,15 @@ export const HomePage = ({ onNavigate }) => {
           onMouseEnter={() => setIsFlashHovered(true)}
           onMouseLeave={() => setIsFlashHovered(false)}
         >
-          <div style={{
+          <div className="flash-sale-panel" style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: '2px',
-            border: '1px solid #FECACA',
-            borderTop: '3px solid #DC2626',
+            borderRadius: '12px',
+            border: '1px solid #FFE5D9',
+            borderTop: '3px solid #FFB4A2',
             padding: 'clamp(12px, 1.5vw, 20px)',
-            boxShadow: '0 2px 4px rgba(220, 38, 38, 0.04)'
+            boxShadow: '0 4px 16px rgba(255, 180, 162, 0.12)'
           }}>
-            <div style={{
+            <div className="flash-sale-header" style={{
               display: 'flex',
               flexWrap: 'wrap',
               alignItems: 'center',
@@ -586,53 +547,46 @@ export const HomePage = ({ onNavigate }) => {
               gap: '16px',
               marginBottom: '20px',
               paddingBottom: '16px',
-              borderBottom: '1px solid var(--c-border-subtle)'
+              borderBottom: '1px solid #FFE5D9'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <h2 style={{
-                    margin: 0,
-                    color: '#DC2626',
-                    fontSize: '20px',
-                    fontWeight: 800,
-                    fontFamily: 'var(--font-sans)',
-                    letterSpacing: '-0.01em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <Zap size={20} color="#DC2626" />
-                    FLASH SALE GIỜ VÀNG • GIÁ SỐC ONLINE
-                  </h2>
+                  <div className="section-title-wrap">
+                    <span className="campaign-eyebrow"><Zap size={12} /> ƯU ĐÃI GIỚI HẠN</span>
+                    <h2 className="section-title-highlight">
+                      <Zap size={22} className="section-title-icon" />
+                      FLASH SALE GIỜ VÀNG • GIÁ SỐC ONLINE
+                    </h2>
+                  </div>
 
                   {/* Real-time Countdown Timer */}
                   {countdownTarget && (
-                    <div style={{
+                    <div className="flash-sale-countdown" style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
-                      background: '#FEE2E2',
-                      border: '1px solid #FECACA',
+                      background: '#FFE5D9',
+                      border: '1px solid #FFB4A2',
                       padding: '3px 10px',
                       borderRadius: '6px',
                       fontSize: '11.5px',
                       fontWeight: 700,
-                      color: '#991B1B'
+                      color: '#4A3535'
                     }}>
-                      <Clock size={13} color="#DC2626" />
+                      <Clock size={13} color="#E5989B" />
                       <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>
                         {activeFlashSlot && !activeFlashSlot.isCurrent ? 'Bắt đầu sau:' : 'Kết thúc trong:'}
                       </span>
-                      <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.hours}</span>
+                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.hours}</span>
                       <span>:</span>
-                      <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.minutes}</span>
+                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.minutes}</span>
                       <span>:</span>
-                      <span style={{ background: '#DC2626', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>{flashCountdown.seconds}</span>
+                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.seconds}</span>
                     </div>
                   )}
                 </div>
 
-                <div style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FEE2E2', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
+                <div className="flash-sale-filters" style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FFE5D9', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     style={{
@@ -640,10 +594,10 @@ export const HomePage = ({ onNavigate }) => {
                       padding: '4px 10px',
                       borderRadius: '4px',
                       fontSize: '12px',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       cursor: 'pointer',
-                      backgroundColor: flashFilterType === 'ALL' ? '#DC2626' : 'transparent',
-                      color: flashFilterType === 'ALL' ? '#FFFFFF' : '#991B1B',
+                      backgroundColor: flashFilterType === 'ALL' ? '#FFB4A2' : 'transparent',
+                      color: flashFilterType === 'ALL' ? '#FFFFFF' : '#4A3535',
                     }}
                     onClick={() => { setFlashFilterType('ALL'); setCurrentFlashTab(0); }}
                   >
@@ -657,10 +611,10 @@ export const HomePage = ({ onNavigate }) => {
                         padding: '4px 10px',
                         borderRadius: '4px',
                         fontSize: '12px',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         cursor: 'pointer',
-                        backgroundColor: flashFilterType === 'CAMPAIGN' ? '#DC2626' : 'transparent',
-                        color: flashFilterType === 'CAMPAIGN' ? '#FFFFFF' : '#991B1B',
+                        backgroundColor: flashFilterType === 'CAMPAIGN' ? '#FFB4A2' : 'transparent',
+                        color: flashFilterType === 'CAMPAIGN' ? '#FFFFFF' : '#4A3535',
                       }}
                       onClick={() => { setFlashFilterType('CAMPAIGN'); setCurrentFlashTab(0); }}
                     >
@@ -675,10 +629,10 @@ export const HomePage = ({ onNavigate }) => {
                         padding: '4px 10px',
                         borderRadius: '4px',
                         fontSize: '12px',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         cursor: 'pointer',
-                        backgroundColor: flashFilterType === 'CURATED' ? '#DC2626' : 'transparent',
-                        color: flashFilterType === 'CURATED' ? '#FFFFFF' : '#991B1B',
+                        backgroundColor: flashFilterType === 'CURATED' ? '#FFB4A2' : 'transparent',
+                        color: flashFilterType === 'CURATED' ? '#FFFFFF' : '#4A3535',
                       }}
                       onClick={() => { setFlashFilterType('CURATED'); setCurrentFlashTab(0); }}
                     >
@@ -693,10 +647,10 @@ export const HomePage = ({ onNavigate }) => {
                         padding: '4px 10px',
                         borderRadius: '4px',
                         fontSize: '12px',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         cursor: 'pointer',
-                        backgroundColor: flashFilterType === 'CLEARANCE' ? '#DC2626' : 'transparent',
-                        color: flashFilterType === 'CLEARANCE' ? '#FFFFFF' : '#991B1B',
+                        backgroundColor: flashFilterType === 'CLEARANCE' ? '#FFB4A2' : 'transparent',
+                        color: flashFilterType === 'CLEARANCE' ? '#FFFFFF' : '#4A3535',
                       }}
                       onClick={() => { setFlashFilterType('CLEARANCE'); setCurrentFlashTab(0); }}
                     >
@@ -751,6 +705,8 @@ export const HomePage = ({ onNavigate }) => {
                 )}
               </div>
             </div>
+
+            <SectionStripBanner banners={backendBanners} position="SECTION_FLASH_SALE" priority />
 
             {/* Time Slot navigation pills */}
             {flashOverview?.slots && flashOverview.slots.length > 1 && (
@@ -894,29 +850,18 @@ export const HomePage = ({ onNavigate }) => {
         onMouseEnter={() => setIsCategoryHovered(true)}
         onMouseLeave={() => setIsCategoryHovered(false)}
       >
-        <div style={{ textAlign: 'center', marginBottom: '18px' }}>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 800,
-            color: 'var(--c-gold-hover, #B38E46)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            display: 'block',
-            marginBottom: '4px'
-          }}>
+        <div className="section-header-editorial">
+          <span className="section-eyebrow-badge">
             Danh mục nổi bật
           </span>
-          <h2 style={{
-            margin: '0 auto',
-            fontSize: 'clamp(20px, 2.4vw, 26px)',
-            fontWeight: 800,
-            color: '#33262C',
-            letterSpacing: '-0.02em',
-            fontFamily: 'var(--font-sans)'
-          }}>
+          <h2 className="section-title-highlight">
+            <Sparkles size={22} className="section-title-icon" />
             Danh Mục Sản Phẩm
           </h2>
         </div>
+
+
+        <CategoryBannerRow banners={backendBanners} />
 
         {totalCategoryTabs > 1 && (
           <div style={{
@@ -1006,10 +951,16 @@ export const HomePage = ({ onNavigate }) => {
 
       <section id="brand-partners" className="customer-container">
         <div className="section-header-editorial">
-          <h2 className="section-title-editorial">
-            Thương hiệu chính hãng
+          <span className="section-eyebrow-badge">
+            Đối tác uy tín
+          </span>
+          <h2 className="section-title-highlight">
+            <Award size={22} className="section-title-icon" />
+            Thương Hiệu Chính Hãng
           </h2>
         </div>
+
+        <SectionBannerRow banners={backendBanners} position="SECTION_BRANDS" label="Ưu đãi thương hiệu" />
 
         <div className="brands-marquee-wrapper">
           {loading ? (
@@ -1051,12 +1002,12 @@ export const HomePage = ({ onNavigate }) => {
 
       <section id="random-picks" className="customer-container">
         <div className="recommendations-box" style={{
-          backgroundColor: '#F8FAFC',
-          borderRadius: '2px',
-          border: '1px solid #CBD5E1',
-          borderTop: '3px solid #1E3A8A',
+          backgroundColor: '#FFE5D9',
+          borderRadius: '12px',
+          border: '1px solid #FFB4A2',
+          borderTop: '3px solid #E5989B',
           padding: 'clamp(12px, 1.5vw, 20px)',
-          boxShadow: '0 2px 4px rgba(30, 58, 138, 0.04)'
+          boxShadow: '0 4px 16px rgba(229, 152, 155, 0.12)'
         }}>
           <div className="recommendations-header" style={{
             display: 'flex',
@@ -1066,41 +1017,36 @@ export const HomePage = ({ onNavigate }) => {
             gap: '12px',
             marginBottom: '20px',
             paddingBottom: '16px',
-            borderBottom: '1px solid #E2E8F0'
+            borderBottom: '1px solid rgba(229, 152, 155, 0.25)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h2 style={{
-                margin: 0,
-                color: '#1E3A8A',
-                fontSize: 'clamp(20px, 2vw, 20px)',
-                fontWeight: 800,
-                fontFamily: 'var(--font-sans)',
-                letterSpacing: '-0.01em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <Sparkles size={20} color="#1E3A8A" />
-                GỢI Ý CHO BẠN
-              </h2>
+              <div className="section-title-wrap">
+                <span className="campaign-eyebrow"><Sparkles size={12} /> BEAUTY SELECTION</span>
+                <h2 className="section-title-highlight">
+                  <Sparkles size={22} className="section-title-icon" />
+                  GỢI Ý DÀNH CHO BẠN
+                </h2>
+              </div>
               <span style={{
-                backgroundColor: '#EFF6FF',
-                color: '#1E40AF',
-                border: '1px solid #BFDBFE',
-                padding: '2px 8px',
-                borderRadius: '4px',
+                backgroundColor: '#FAD2E1',
+                color: '#8C2A47',
+                border: '1px solid #F4ACB7',
+                padding: '3px 10px',
+                borderRadius: '9999px',
                 fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.02em',
+                fontWeight: 800,
+                letterSpacing: '0.04em',
                 textTransform: 'uppercase'
               }}>
                 Dành riêng cho bạn
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: '#7A666D' }}>
               Cá nhân loại sản phẩm
             </p>
           </div>
+
+          <SectionStripBanner banners={backendBanners} position="SECTION_RECOMMENDATIONS" />
 
           {loading ? (
             <div className="customer-product-grid product-skeleton-frame">
@@ -1126,8 +1072,10 @@ export const HomePage = ({ onNavigate }) => {
               onClick={() => onNavigate('products')}
               className="btn-luxury-outline"
               style={{
-                borderColor: '#94A3B8',
-                color: '#1E3A8A',
+                borderColor: '#E5989B',
+                color: '#E5989B',
+                backgroundColor: '#FFFFFF',
+                borderRadius: '9999px',
                 padding: '9px 24px',
                 fontSize: '13px',
                 display: 'inline-flex',
@@ -1143,12 +1091,18 @@ export const HomePage = ({ onNavigate }) => {
         </div>
       </section>
 
-      <section id="store-catalog" className="customer-container" style={{ margin: '52px auto' }}>
+      <section id="store-catalog" className="customer-container" style={{ margin: '0 auto' }}>
         <div className="section-header-editorial">
-          <h2 className="section-title-editorial">
-            Tất cả sản phẩm
+          <span className="section-eyebrow-badge">
+            Khám phá làm đẹp
+          </span>
+          <h2 className="section-title-highlight">
+            <Package size={22} className="section-title-icon" />
+            Tất Cả Sản Phẩm
           </h2>
         </div>
+
+        <SectionStripBanner banners={backendBanners} position="SECTION_CATALOG" />
 
         <div style={{
           display: 'flex',
@@ -1284,17 +1238,24 @@ export const HomePage = ({ onNavigate }) => {
       </section>
 
       <section id="spa-section" style={{
-        backgroundColor: '#FFFFFF',
-        padding: '72px 0',
-        borderTop: '1px solid var(--c-border-subtle)',
-        borderBottom: '1px solid var(--c-border-subtle)'
+        backgroundColor: '#FAD2E1',
+        padding: '36px 0',
+        borderTop: '1px solid #FFE5D9',
+        borderBottom: 'none',
+        marginBottom: 0
       }}>
         <div className="customer-container">
           <div className="section-header-editorial">
-            <h2 className="section-title-editorial">
-              Dịch vụ Spa Làm Đẹp
+            <span className="section-eyebrow-badge">
+              Liệu trình chuyên sâu
+            </span>
+            <h2 className="section-title-highlight">
+              <Calendar size={22} className="section-title-icon" />
+              Dịch Vụ Spa Làm Đẹp
             </h2>
           </div>
+
+          <SectionStripBanner banners={backendBanners} position="SECTION_SPA" />
 
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
             {dynamicSpaCategories.map(cat => (

@@ -1,3 +1,8 @@
+.customer-app .hero-slider-container .image-banner-grid {
+  width: 100%;
+  max-width: none;
+  padding-inline: 0;
+}
 .customer-app .image-banner-grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
@@ -8,9 +13,9 @@
 .customer-app .image-banner-carousel { position: relative; width: 100%; aspect-ratio: 32 / 15; min-width: 0; min-height: 0; overflow: hidden; }
 .customer-app .image-banner-art { position: relative; display: block; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: #f6f6f6; }
 .customer-app .image-banner-carousel > .image-banner-art { position: absolute; inset: 0; }
-.customer-app .image-banner-art img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.customer-app .image-banner-art img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; max-height: none; padding: 0; margin: 0; object-fit: cover; object-position: center; }
 .customer-app .image-banner-art:focus-visible { outline: 3px solid var(--c-primary, #8c2a47); outline-offset: -3px; }
-.customer-app .image-banner-sides { display: grid; grid-auto-rows: minmax(0, 1fr); gap: 12px; min-height: 0; }
+.customer-app .image-banner-sides { display: grid; grid-auto-rows: minmax(0, 1fr); gap: 12px; min-width: 0; min-height: 0; align-self: stretch; }
 .customer-app .image-banner-sides--only { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .customer-app .image-banner-sides--only .image-banner-art { aspect-ratio: 32 / 15; }
 .customer-app .image-banner-sides--only .image-banner-art:only-child { grid-column: 1 / -1; }
@@ -30,4 +35,84 @@
   .customer-app .image-banner-sides .image-banner-art { aspect-ratio: 32 / 15; }
   .customer-app .image-banner-prev, .customer-app .image-banner-next { width: 28px; height: 32px; }
   .customer-app .image-banner-dots { bottom: 2px; }
+}
+
+
+/* ==========================================================================
+   Section Banners (Banner tỉ lệ ngang 5 : cao 3 nằm dưới thẻ H2)
+   ========================================================================== */
+.section-strip-banner-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 16px auto 24px auto;
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+
+.category-banner-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+.category-banner-row .section-strip-banner-wrapper { margin: 0; min-width: 0; }
+.category-banner-row :is(.section-strip-banner-link, .section-strip-banner-static) {
+  height: auto;
+  aspect-ratio: 3 / 1;
+}
+.category-banner-row .section-strip-banner-img { position: absolute; inset: 0; }
+@media (max-width: 767px) {
+  .category-banner-row { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 24px; }
+}
+
+.section-strip-banner-wrapper:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.section-strip-banner-link,
+.section-strip-banner-static {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: clamp(160px, 25vw, 332px);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(107, 79, 79, 0.1);
+  border: 1px solid rgba(244, 172, 183, 0.4);
+  background: linear-gradient(135deg, #FFF5E4 0%, #FAD2E1 100%);
+  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+  text-decoration: none;
+}
+
+.section-strip-banner-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(107, 79, 79, 0.16);
+  border-color: #F4ACB7;
+}
+
+.section-strip-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.section-strip-banner-link:hover .section-strip-banner-img {
+  transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+  .section-strip-banner-wrapper {
+    max-width: 100%;
+    margin: 12px auto 18px auto;
+  }
+  .section-strip-banner-link,
+  .section-strip-banner-static {
+    border-radius: 10px;
+  }
 }

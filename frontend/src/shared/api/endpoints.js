@@ -117,6 +117,7 @@ export const ENDPOINTS = {
     PUBLIC_BANNERS: (position) => position ? `/api/v1/banners?position=${encodeURIComponent(position)}` : '/api/v1/banners',
     BANNERS: '/api/v1/admin/banners',
     BANNER_DETAIL: (id) => `/api/v1/admin/banners/${id}`,
+    BANNER_TOGGLE: (id) => `/api/v1/admin/banners/${id}/toggle`,
   },
 
   SPA: {

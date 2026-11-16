@@ -23,4 +23,35 @@ class BannerRequestTest {
             assertFalse(validator.validate(request).isEmpty());
         }
     }
+
+    @Test void validatesBannerPositionsAndSortOrder() {
+        try (var factory = Validation.buildDefaultValidatorFactory()) {
+            var validator = factory.getValidator();
+            var validRequest = BannerRequest.builder()
+                    .title("Section Banner")
+                    .imageUrl("/uploads/strip.webp")
+                    .targetUrl("products")
+                    .position("SECTION_FLASH_SALE")
+                    .sortOrder(1)
+                    .build();
+            assertTrue(validator.validate(validRequest).isEmpty());
+
+            for (String pos : new String[]{
+                    "HERO_SLIDE", "HERO_SIDE", "SECTION_FLASH_SALE", "SECTION_CATEGORIES",
+                    "SECTION_BRANDS", "SECTION_RECOMMENDATIONS", "SECTION_CATALOG", "SECTION_SPA", "PROMO"
+            }) {
+                validRequest.setPosition(pos);
+                assertTrue(validator.validate(validRequest).isEmpty(), "Position should be valid: " + pos);
+            }
+
+            // Invalid position
+            validRequest.setPosition("INVALID_POSITION");
+            assertFalse(validator.validate(validRequest).isEmpty());
+
+            // Negative sort order
+            validRequest.setPosition("SECTION_CATEGORIES");
+            validRequest.setSortOrder(-1);
+            assertFalse(validator.validate(validRequest).isEmpty());
+        }
+    }
 }
