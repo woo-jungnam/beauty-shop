@@ -589,6 +589,7 @@ export const HomePage = ({ onNavigate }) => {
                 <div className="flash-sale-filters" style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FFE5D9', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
+                    aria-pressed={flashFilterType === 'ALL'}
                     style={{
                       border: 0,
                       padding: '4px 10px',
@@ -606,6 +607,7 @@ export const HomePage = ({ onNavigate }) => {
                   {campaignFlashProducts.length > 0 && (
                     <button
                       type="button"
+                    aria-pressed={flashFilterType === 'CAMPAIGN'}
                       style={{
                         border: 0,
                         padding: '4px 10px',
@@ -624,6 +626,7 @@ export const HomePage = ({ onNavigate }) => {
                   {campaignFlashProducts.length > 0 && curatedFlashProducts.length > 0 && (
                     <button
                       type="button"
+                    aria-pressed={flashFilterType === 'CURATED'}
                       style={{
                         border: 0,
                         padding: '4px 10px',
@@ -642,6 +645,7 @@ export const HomePage = ({ onNavigate }) => {
                   {clearanceProducts.length > 0 && (
                     <button
                       type="button"
+                    aria-pressed={flashFilterType === 'CLEARANCE'}
                       style={{
                         border: 0,
                         padding: '4px 10px',
@@ -1245,6 +1249,9 @@ export const HomePage = ({ onNavigate }) => {
         marginBottom: 0
       }}>
         <div className="customer-container">
+          <SectionStripBanner banners={backendBanners} position="SECTION_SPA" />
+
+          <div className="home-spa-panel">
           <div className="section-header-editorial">
             <span className="section-eyebrow-badge">
               Liệu trình chuyên sâu
@@ -1255,12 +1262,12 @@ export const HomePage = ({ onNavigate }) => {
             </h2>
           </div>
 
-          <SectionStripBanner banners={backendBanners} position="SECTION_SPA" />
-
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
             {dynamicSpaCategories.map(cat => (
               <button
                 key={cat.id}
+                type="button"
+                aria-pressed={activeSpaCategory === cat.id}
                 onClick={() => setActiveSpaCategory(cat.id)}
                 className={`tab-filter-btn ${activeSpaCategory === cat.id ? 'active' : ''}`}
                 style={{ fontSize: '12.5px', padding: '9px 20px' }}
@@ -1287,7 +1294,7 @@ export const HomePage = ({ onNavigate }) => {
                       }
                     }}
                   />
-                  <div style={{
+                  <div className="home-spa-duration" style={{
                     position: 'absolute',
                     top: '12px',
                     left: '12px',
@@ -1309,9 +1316,6 @@ export const HomePage = ({ onNavigate }) => {
 
                 <div className="home-spa-card-body">
                   <div>
-                    <span style={{ fontSize: '11px', color: 'var(--c-gold-hover)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {spa.categoryName || 'Chăm Sóc Chuyên Sâu'}
-                    </span>
                     <h3>
                       {spa.name}
                     </h3>
@@ -1358,6 +1362,7 @@ export const HomePage = ({ onNavigate }) => {
               <Ticket size={16} color="var(--c-primary)" />
               <span>Gói Dịch Vụ Nhiều Lượt Tiết Kiệm</span>
             </button>
+          </div>
           </div>
         </div>
       </section>

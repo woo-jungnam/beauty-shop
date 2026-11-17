@@ -6,7 +6,7 @@ const POLICIES = {
   terms: {
     title: 'Điều Khoản Sử Dụng',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
         <p><strong>Tài khoản:</strong> Bảo mật thông tin đăng nhập và kiểm tra thông tin người nhận trước khi gửi đơn hàng hoặc đặt lịch.</p>
         <p><strong>Đơn hàng:</strong> Xem lại sản phẩm, số lượng, giá và phí vận chuyển tại bước thanh toán. Theo dõi kết quả xử lý trong chi tiết đơn hàng.</p>
         <p><strong>Lịch hẹn:</strong> Kiểm tra dịch vụ, nhân viên, giờ trống và điều kiện được hiển thị trước khi xác nhận đặt lịch.</p>
@@ -17,7 +17,7 @@ const POLICIES = {
   privacy: {
     title: 'Chính Sách Bảo Mật Thông Tin',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
         <p><strong>Thông tin bạn cung cấp:</strong> Hồ sơ, địa chỉ nhận hàng và thông tin đặt lịch được dùng trong các thao tác tương ứng trên hệ thống.</p>
         <p><strong>Quản lý hồ sơ:</strong> Bạn có thể xem và cập nhật các trường được hỗ trợ trong tài khoản của mình.</p>
         <p><strong>Bản tin:</strong> Đăng ký nhận email cần sự đồng ý của bạn; bạn có thể yêu cầu hủy đăng ký.</p>
@@ -28,7 +28,7 @@ const POLICIES = {
   shipping: {
     title: 'Thông Tin Giao Hàng',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
         <p><strong>Địa chỉ:</strong> Nhập đúng người nhận, số điện thoại và địa chỉ tại bước thanh toán.</p>
         <p><strong>Phí vận chuyển:</strong> Kiểm tra mức phí được hiển thị tại bước thanh toán trước khi gửi đơn hàng.</p>
         <p><strong>Theo dõi:</strong> Xem trạng thái xử lý và giao hàng trong chi tiết đơn. Thời điểm giao thực tế phụ thuộc quá trình xử lý đơn.</p>
@@ -39,7 +39,7 @@ const POLICIES = {
   returns: {
     title: 'Yêu Cầu Đổi Trả Theo Đơn Hàng',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
         <p><strong>Gửi yêu cầu:</strong> Mở đơn đã giao, chọn sản phẩm và số lượng muốn trả, điền lý do và đường dẫn bằng chứng nếu có. Hệ thống kiểm tra thời hạn và số lượng đủ điều kiện theo đơn.</p>
         <p><strong>Xét duyệt và nhận hàng:</strong> Yêu cầu được cửa hàng duyệt hoặc từ chối có lý do. Theo dõi kết quả và xác nhận nhận hàng trong chi tiết yêu cầu.</p>
         <p><strong>Hoàn tiền:</strong> Khoản hoàn được xử lý theo yêu cầu đã duyệt, hàng thực nhận và số tiền thực thu. Xem trạng thái xác nhận hoàn trong đơn hàng; phí phát sinh và cách nhận lại hàng cần được trao đổi với cửa hàng.</p>
@@ -49,7 +49,7 @@ const POLICIES = {
   authentic: {
     title: 'Thông Tin Sản Phẩm',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#334155' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
         <p><strong>Trước khi mua:</strong> Xem thương hiệu, mô tả và thông tin sản phẩm được cửa hàng công bố trên trang chi tiết.</p>
         <p><strong>Chọn đúng phân loại:</strong> Kiểm tra phân loại, số lượng, giá và khả năng cung ứng trước khi gửi đơn.</p>
         <p><strong>Khi có thắc mắc:</strong> Trao đổi với cửa hàng về nguồn gốc, nhãn hàng hóa hoặc thông tin chưa rõ trước khi chọn mua.</p>
@@ -328,7 +328,7 @@ export const CustomerFooter = ({ onNavigate }) => {
                   style={{
                     padding: '8px 16px',
                     borderRadius: '6px',
-                    backgroundColor: '#F4ACB7',
+                    backgroundColor: '#FFD6BA',
                     color: '#6B4F4F',
                     border: 'none',
                     fontWeight: 800,
@@ -390,7 +390,7 @@ export const CustomerFooter = ({ onNavigate }) => {
           <div
             style={{
               backgroundColor: '#FFFFFF',
-              color: '#0F172A',
+              color: '#5A4242',
               borderRadius: '12px',
               maxWidth: '560px',
               width: '100%',
@@ -432,10 +432,10 @@ export const CustomerFooter = ({ onNavigate }) => {
             </div>
             <div style={{
               padding: '12px 20px',
-              borderTop: '1px solid #E2E8F0',
+              borderTop: '1px solid #E5D6CD',
               display: 'flex',
               justifyContent: 'flex-end',
-              backgroundColor: '#F8FAFC'
+              backgroundColor: '#FFF5E4'
             }}>
               <button
                 onClick={() => setActivePolicy(null)}

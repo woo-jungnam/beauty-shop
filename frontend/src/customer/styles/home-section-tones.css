@@ -1,0 +1,231 @@
+/* Each campaign owns its palette, inherited by its headings and product cards. */
+.customer-app .customer-home-page :is(#categories-section, #brand-partners, #store-catalog) {
+  --c-primary: #7A223B;
+  --c-primary-dark: #59172B;
+  --c-primary-hover: #59172B;
+  --c-primary-light: #FFF1F2;
+}
+.customer-app .customer-home-page :is(#categories-section, #brand-partners, #store-catalog) :is(.section-title-highlight, .section-title-editorial, h2) {
+  color: #7A223B !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  font-weight: 900 !important;
+  filter: none;
+}
+.customer-app .customer-home-page :is(#categories-section, #brand-partners, #store-catalog) .section-title-icon {
+  color: #7A223B !important;
+  stroke: currentColor !important;
+}
+.customer-app .customer-home-page :is(#categories-section, #brand-partners, #store-catalog) .section-eyebrow-badge {
+  color: #7A223B;
+  border-color: #7A223B;
+  font-weight: 800;
+}
+.customer-app .customer-home-page :is(#categories-section, #brand-partners, #store-catalog) .section-header-editorial::after {
+  background: #7A223B;
+  box-shadow: none;
+}
+.customer-app .customer-home-page #categories-section .category-tile-title {
+  color: #38232B !important;
+  font-weight: 800;
+}
+.customer-app .customer-home-page #categories-section .category-tile-meta {
+  color: #7A223B !important;
+  font-weight: 750;
+}
+.customer-app .customer-home-page #categories-section .category-tile-avatar,
+.customer-app .customer-home-page #brand-partners :is(.brand-partner-box, .brand-partner-card) {
+  border-color: #AA6177 !important;
+}
+.customer-app .customer-home-page #store-catalog .tab-filter-btn:not(.active) {
+  color: #7A223B !important;
+  background: #FFFFFF !important;
+  border-color: #AA6177 !important;
+  font-weight: 750;
+}
+.customer-app .customer-home-page #store-catalog .tab-filter-btn:not(.active):hover {
+  background: #FFF1F2 !important;
+}
+.customer-app .customer-home-page #store-catalog .product-card-price > span:first-child {
+  color: #A1193D !important;
+  font-weight: 850 !important;
+}
+.customer-app .customer-home-page #store-catalog .product-card-price > span:not(:first-child),
+.customer-app .customer-home-page #store-catalog .product-card-rating {
+  color: #62616B !important;
+}
+.customer-app .customer-home-page #store-catalog .product-card-brand {
+  color: #7A223B !important;
+  font-weight: 800 !important;
+}
+.customer-app .customer-home-page #flash-sale {
+  --section-surface: #FFF1F2;
+  --item-accent: #A62D48;
+  --item-deep: #812039;
+  --item-tint: #FFF1F2;
+  --item-ink: #492330;
+  --item-border: #ECC1CB;
+  --item-highlight: #FFE0A3;
+}
+.customer-app .customer-home-page #random-picks {
+  --c-primary: #17675E;
+  --c-primary-hover: #104D46;
+  --c-primary-dark: #104D46;
+  --c-primary-light: #EDF8F5;
+  --section-surface: #EDF8F5;
+  --item-accent: #17675E;
+  --item-deep: #104D46;
+  --item-tint: #EDF8F5;
+  --item-ink: #183E38;
+  --item-border: #B9DBD0;
+  --item-highlight: #C8EADF;
+}
+.customer-app .customer-home-page #random-picks :is(.product-card-wishlist, .product-card-preview) {
+  background: #FFFFFF !important;
+  border-color: #17675E !important;
+  color: #17675E !important;
+}
+.customer-app .customer-home-page #random-picks :is(.product-card-wishlist, .product-card-preview):hover {
+  background: #C8EADF !important;
+  border-color: #104D46 !important;
+  color: #104D46 !important;
+}
+.customer-app .customer-home-page #random-picks :is(.product-card-wishlist, .product-card-preview) svg {
+  stroke: currentColor;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.flash-sale-panel, .recommendations-box) {
+  background: #FFFFFF !important;
+  border: 1px solid var(--item-border) !important;
+  border-top: 4px solid var(--item-accent) !important;
+  box-shadow: 0 12px 32px #30232B0D !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.flash-sale-header, .recommendations-header) {
+  background: var(--item-accent);
+  color: #FFFFFF;
+  padding: clamp(16px, 2vw, 24px) !important;
+  border-radius: 16px;
+  border-bottom: 3px solid var(--item-highlight) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .campaign-eyebrow {
+  color: var(--item-ink);
+  background: var(--item-highlight);
+  border-color: var(--item-highlight);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .section-title-icon {
+  color: var(--item-highlight) !important;
+  fill: none;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .section-title-wrap::after {
+  background: var(--item-highlight) !important;
+}
+.customer-app .customer-home-page #random-picks .recommendations-header > p {
+  color: #FFFFFF !important;
+  border-left-color: var(--item-highlight);
+}
+.customer-app .customer-home-page #random-picks .recommendations-header > div > span {
+  color: var(--item-ink) !important;
+  background: var(--item-highlight) !important;
+  border-color: var(--item-border) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-countdown {
+  color: var(--item-ink) !important;
+  background: var(--item-highlight) !important;
+  border-color: var(--item-highlight) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-countdown svg {
+  color: var(--item-accent);
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-countdown span[style*="tabular-nums"] {
+  color: #FFFFFF !important;
+  background: var(--item-deep) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-filters {
+  background: #FFFFFF !important;
+  border-color: var(--item-border);
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-filters button {
+  color: var(--item-ink) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-filters button:hover {
+  background: var(--item-tint) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-filters button[aria-pressed="true"] {
+  background: var(--item-highlight) !important;
+  color: var(--item-ink) !important;
+  box-shadow: inset 0 -2px var(--item-accent);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved {
+  border-color: var(--item-border) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved:is(:hover, :focus-within) {
+  border-color: var(--item-accent) !important;
+  box-shadow: 0 10px 24px #30232B18 !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-body {
+  background: linear-gradient(#FFFFFF, var(--item-tint));
+  border-radius: 0 0 12px 12px;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-title-link {
+  color: var(--item-ink) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-title-link:hover,
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-price > span:first-child {
+  color: var(--item-accent) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-discount {
+  background: var(--item-accent) !important;
+  color: #FFFFFF !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.product-card-expiry, .product-card-clearance-note) {
+  background: var(--item-tint) !important;
+  border-color: var(--item-border);
+  color: var(--item-ink) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.product-card-wishlist, .product-card-preview, .carousel-nav-btn, .carousel-floating-btn) {
+  color: var(--item-accent) !important;
+  border-color: var(--item-border) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.product-card-quick-add button, .btn-luxury-outline) {
+  background: var(--item-accent) !important;
+  color: #FFFFFF !important;
+  border-color: var(--item-accent) !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(.product-card-quick-add button, .btn-luxury-outline):hover:not(:disabled) {
+  background: var(--item-deep) !important;
+  color: #FFFFFF !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) :is(button, a):focus-visible {
+  outline-color: var(--item-accent) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-header button:focus-visible {
+  outline-color: var(--item-highlight) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-panel > p:last-child {
+  background: var(--item-tint);
+  border-color: var(--item-border);
+  color: var(--item-ink) !important;
+}
+/* Secondary copy needs the same contrast care as titles and prices. */
+.customer-app .customer-home-page #flash-sale .flash-sale-header p {
+  color: #FFFFFF !important;
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-resolved {
+  --c-text-light: #62616B;
+  --c-text-muted: #57545F;
+  --c-primary: var(--item-accent);
+  --c-primary-light: var(--item-tint);
+}
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .product-card-price > span:not(:first-child) {
+  color: #62616B !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-header .carousel-nav-btn {
+  background: #FFFFFF !important;
+  color: var(--item-accent) !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-tab-indicator {
+  background: #FFFFFF !important;
+  opacity: 1;
+}
+.customer-app .customer-home-page #flash-sale .flash-tab-indicator.is-active {
+  background: var(--item-highlight) !important;
+}

@@ -83,15 +83,15 @@
   stroke: currentColor !important;
   filter: none;
 }
-/* Pastel fills require dark labels, including selected and hover states. */
-.customer-app .customer-home-page :is(#brand-partners, #random-picks, #store-catalog, #spa-section) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .tab-filter-btn.active) {
-  background: var(--home-rose) !important;
-  color: var(--home-ink) !important;
-  border: 1px solid var(--home-rose) !important;
+/* White sections use solid berry controls with high-contrast labels. */
+.customer-app .customer-home-page :is(#brand-partners, #store-catalog) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .tab-filter-btn.active) {
+  background: #7A223B !important;
+  color: #FFFFFF !important;
+  border: 1px solid #7A223B !important;
 }
-.customer-app .customer-home-page :is(#brand-partners, #random-picks, #store-catalog, #spa-section) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .tab-filter-btn):hover {
-  background: var(--home-peach) !important;
-  color: var(--home-ink) !important;
+.customer-app .customer-home-page :is(#brand-partners, #store-catalog) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .tab-filter-btn):hover {
+  background: #59172B !important;
+  color: #FFFFFF !important;
 }
 .customer-app .customer-home-page :is(.category-tile-meta, .home-spa-card-price) {
   color: var(--home-ink) !important;

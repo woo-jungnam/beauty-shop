@@ -1,9 +1,9 @@
-/* Campaign surfaces use the supplied pastels; dark ink keeps labels readable. */
+/* Saturated campaign panels contrast with white product cards. */
 .customer-app .customer-home-page > #flash-sale {
-  --section-surface: #FFE5D9;
+  --section-surface: #FFF0F3;
 }
 .customer-app .customer-home-page > #random-picks {
-  --section-surface: #FAD2E1;
+  --section-surface: #FFF0F3;
 }
 .customer-app .customer-home-page #flash-sale .flash-sale-panel,
 .customer-app .customer-home-page #random-picks .recommendations-box {
@@ -15,12 +15,12 @@
   box-shadow: 0 12px 36px rgb(74 53 53 / 7%) !important;
 }
 .customer-app .customer-home-page #flash-sale .flash-sale-panel {
-  background: linear-gradient(135deg, #FFB4A2, #FFE5D9) !important;
+  background: linear-gradient(135deg, var(--c-primary), var(--c-primary-dark)) !important;
   border: 1px solid #E5989B !important;
   border-top: 5px solid #E5989B !important;
 }
 .customer-app .customer-home-page #random-picks .recommendations-box {
-  background: linear-gradient(135deg, #FAD2E1 30%, #FFE5D9) !important;
+  background: linear-gradient(135deg, var(--c-primary) 30%, var(--c-primary-dark)) !important;
   border-top: 4px solid #E5989B !important;
 }
 /* Decorative light stays behind content and never intercepts clicks. */
@@ -54,7 +54,7 @@
 .customer-app #random-picks .recommendations-header {
   padding-bottom: 24px !important;
   margin-bottom: 24px !important;
-  border-bottom: 1px solid rgb(74 53 53 / 18%) !important;
+  border-bottom: 1px solid rgb(255 255 255 / 28%) !important;
 }
 .customer-app #flash-sale .flash-sale-panel > p:last-child {
   padding: 12px 16px;
@@ -66,16 +66,16 @@
 }
 .customer-app #random-picks .recommendations-header > p {
   padding: 8px 12px;
-  border-left: 3px solid #E5989B;
-  color: #4A3535 !important;
+  border-left: 3px solid #F3BCD1;
+  color: #FFF1F6 !important;
 }
 .customer-app .customer-home-page :is(#flash-sale, #random-picks) h2.section-title-highlight {
-  color: #4A3535 !important;
-  background: linear-gradient(110deg, #4A3535 20%, #855057 45%, #4A3535 70%) !important;
+  color: #FFFFFF !important;
+  background: none !important;
   background-size: 220% 100% !important;
   background-clip: text !important;
   -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
+  -webkit-text-fill-color: currentColor !important;
   text-wrap: balance;
   font-size: clamp(21px, 2.2vw, 29px) !important;
   animation: home-title-light 8s ease-in-out 2;
@@ -197,4 +197,29 @@
     transform: none !important;
   }
   .customer-app #flash-sale .carousel-floating-btn { transform: translateY(-50%) !important; }
+}
+
+/* Light headings and controls remain legible over both deep campaign tones. */
+.customer-app .customer-home-page :is(#flash-sale, #random-picks) .section-title-icon {
+  color: #FFD6BA !important;
+}
+.customer-app #flash-sale .flash-sale-countdown {
+  background: #FFF5EE !important;
+  color: var(--c-primary-dark) !important;
+}
+.customer-app #flash-sale .flash-sale-countdown span[style*="tabular-nums"] {
+  background: var(--c-primary) !important;
+  color: #FFFFFF !important;
+}
+.customer-app #flash-sale .flash-sale-filters button[aria-pressed="true"] {
+  background: var(--c-primary) !important;
+  color: #FFFFFF !important;
+}
+.customer-app #random-picks .btn-luxury-outline {
+  color: var(--c-primary-dark) !important;
+  border-color: #FFFFFF !important;
+}
+.customer-app #random-picks .btn-luxury-outline:hover {
+  background: #FAD2E1 !important;
+  color: var(--c-primary-dark) !important;
 }

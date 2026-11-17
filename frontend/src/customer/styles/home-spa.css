@@ -1,0 +1,171 @@
+/* Plum headings and controls over a soft lavender service section. */
+.customer-app .customer-home-page > #spa-section {
+  --section-surface: #F5EFF8;
+  --c-primary: #70406E;
+  --c-primary-hover: #51304F;
+  --c-primary-dark: #51304F;
+  --c-primary-light: #F5EFF8;
+  --c-gold: #70406E;
+  --c-gold-hover: #51304F;
+  color: #38243D;
+}
+.customer-app .customer-home-page #spa-section::before {
+  background: radial-gradient(ellipse at top right, #FFFFFF14, transparent 55%), var(--section-surface);
+}
+.customer-app .customer-home-page #spa-section .home-spa-panel {
+  padding: clamp(18px, 2.5vw, 36px);
+  background: #FFFFFF;
+  border: 1px solid #D9BFD9;
+  border-top: 4px solid #70406E;
+  border-radius: 24px;
+  box-shadow: 0 12px 32px #30232B0D;
+}
+.customer-app .customer-home-page #spa-section .section-header-editorial {
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: flex-start;
+  text-align: left;
+  margin: 0 0 24px;
+  padding: clamp(16px, 2vw, 24px);
+  border-radius: 16px;
+  background: #70406E;
+  border-bottom: 3px solid #F3DFC1;
+}
+.customer-app .customer-home-page #spa-section .section-title-highlight {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: currentColor !important;
+  font-size: clamp(21px, 2.2vw, 29px) !important;
+  text-wrap: balance;
+}
+.customer-app .customer-home-page #spa-section .section-title-icon {
+  color: #F3DFC1 !important;
+}
+.customer-app .customer-home-page #spa-section .section-eyebrow-badge {
+  background: #F5EFF8;
+  color: #70406E;
+  border-color: #D9BFD9;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+.customer-app .customer-home-page #spa-section .section-header-editorial::after {
+  background: #F3DFC1;
+  width: 72px;
+  margin-top: 6px;
+  margin-left: 0;
+  box-shadow: none;
+}
+.customer-app .customer-home-page #spa-section .tab-filter-btn {
+  background: #FFFFFF !important;
+  color: #70406E !important;
+  border: 1px solid #D9BFD9 !important;
+}
+.customer-app .customer-home-page #spa-section .tab-filter-btn:hover {
+  background: #E9D9ED !important;
+  color: #51304F !important;
+  border-color: #70406E !important;
+}
+.customer-app .customer-home-page #spa-section .tab-filter-btn.active {
+  background: #70406E !important;
+  color: #FFFFFF !important;
+  border-color: #70406E !important;
+  box-shadow: 0 0 0 2px #FFFFFF60;
+}
+.customer-app .customer-home-page #spa-section .tab-filter-btn.active:hover {
+  background: #51304F !important;
+  color: #FFFFFF !important;
+}
+.customer-app .customer-home-page #spa-section .spa-service-card {
+  border: 1px solid #D9BFD9 !important;
+  box-shadow: 0 5px 15px #38243D12 !important;
+}
+.customer-app .customer-home-page #spa-section .spa-service-card:hover {
+  border-color: #F3DFC1 !important;
+  box-shadow: 0 16px 32px #38243D55 !important;
+}
+.customer-app .customer-home-page #spa-section .spa-service-image-box {
+  border-bottom: 4px solid #70406E;
+  background: #F5EFF8;
+}
+.customer-app .customer-home-page #spa-section .home-spa-duration {
+  background: #70406E !important;
+  border: 1px solid #D9BFD9;
+  box-shadow: 0 3px 10px #38243D33;
+}
+.customer-app .customer-home-page #spa-section .home-spa-duration svg {
+  color: #F3DFC1;
+}
+.customer-app .customer-home-page #spa-section .home-spa-card-body {
+  background: linear-gradient(#FFFFFF 60%, #F5EFF8);
+  padding: 20px 16px;
+}
+.customer-app .customer-home-page #spa-section .home-spa-card-body h3 {
+  color: #38243D;
+}
+.customer-app .customer-home-page #spa-section .home-spa-card-body p,
+.customer-app .customer-home-page #spa-section .home-spa-card-footer > div > div:first-child {
+  color: #6E5872 !important;
+}
+.customer-app .customer-home-page #spa-section .home-spa-card-footer {
+  padding-top: 16px;
+  border-top: 1px solid #D9BFD9;
+}
+.customer-app .customer-home-page #spa-section .home-spa-card-price {
+  color: #70406E !important;
+}
+.customer-app .customer-home-page #spa-section .spa-service-card .btn-luxury-primary {
+  background: #70406E !important;
+  color: #FFFFFF !important;
+  border: 1px solid #70406E !important;
+  box-shadow: 0 3px 8px #70406E26 !important;
+}
+.customer-app .customer-home-page #spa-section .spa-service-card .btn-luxury-primary:hover {
+  background: #51304F !important;
+  color: #FFFFFF !important;
+}
+@media (max-width: 639px) {
+  .customer-app .customer-home-page #spa-section .home-spa-panel {
+    padding: 16px 12px;
+    border-radius: 18px;
+  }
+}
+.customer-app .customer-home-page #spa-section :is(.btn-luxury-gold, .btn-luxury-outline) {
+  background: #F5EFF8 !important;
+  color: #70406E !important;
+  border: 1px solid #70406E !important;
+  box-shadow: 0 3px 8px #70406E1A !important;
+  animation: none;
+}
+.customer-app .customer-home-page #spa-section :is(.btn-luxury-gold, .btn-luxury-outline):hover {
+  background: #E9D9ED !important;
+  color: #51304F !important;
+}
+.customer-app .customer-home-page #spa-section .btn-luxury-gold {
+  background: #70406E !important;
+  color: #FFFFFF !important;
+  border-color: #70406E !important;
+}
+.customer-app .customer-home-page #spa-section .btn-luxury-gold:hover {
+  background: #51304F !important;
+  color: #FFFFFF !important;
+}
+.customer-app .customer-home-page #spa-section :is(.btn-luxury-gold, .btn-luxury-outline) svg {
+  color: currentColor;
+}
+.customer-app .customer-home-page #spa-section button:focus-visible {
+  outline-color: #70406E !important;
+}
+.customer-app .customer-home-page #spa-section .spa-service-card:focus-within {
+  outline: 3px solid #F3DFC1;
+  outline-offset: 4px;
+}
+.customer-app .customer-home-page #spa-section .spa-service-card button:focus-visible {
+  outline-color: #70406E !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-app .customer-home-page #spa-section .spa-service-card {
+    transition: none !important;
+    transform: none !important;
+  }
+}
