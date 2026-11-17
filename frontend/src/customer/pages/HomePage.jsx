@@ -549,7 +549,7 @@ export const HomePage = ({ onNavigate }) => {
               paddingBottom: '16px',
               borderBottom: '1px solid #FFE5D9'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div className="flash-sale-heading-group" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <div className="section-title-wrap">
                     <span className="campaign-eyebrow"><Zap size={12} /> ƯU ĐÃI GIỚI HẠN</span>
@@ -664,7 +664,7 @@ export const HomePage = ({ onNavigate }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <div className="flash-sale-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
                   {flashFilterType === 'CLEARANCE' ? 'Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.' : flashFilterType === 'CURATED' ? 'Sản phẩm khuyến mãi sốc được tuyển chọn đặc biệt.' : 'Ưu đãi Flash Sale tuyển chọn và lô cận date chính hãng.'}
                 </p>

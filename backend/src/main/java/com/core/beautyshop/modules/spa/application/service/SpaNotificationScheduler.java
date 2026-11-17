@@ -20,10 +20,13 @@ public class SpaNotificationScheduler {
     private final SpaNotificationWorkflow workflow;
     @Value("${app.jobs.enabled:true}") private boolean jobsEnabled;
     @Value("${app.spa.notifications.reminder-hours:24}") private int hoursAhead;
+    @Value("${app.spa.notifications.final-reminder-hours:2}") private int finalHoursAhead = 2;
 
     @PostConstruct
     void validateConfiguration() {
         if (hoursAhead < 1 || hoursAhead > 168) throw new IllegalStateException("Spa reminder-hours must be between 1 and 168");
+        if (finalHoursAhead < 1 || finalHoursAhead >= hoursAhead)
+            throw new IllegalStateException("Spa final-reminder-hours must be positive and less than reminder-hours");
     }
 
     @Scheduled(fixedDelayString="${app.spa.notifications.poll-interval-ms:60000}")
@@ -40,13 +43,11 @@ public class SpaNotificationScheduler {
             var candidates = SpaJdbcSupport.query(jdbc, """
             SELECT a.id FROM appointments a WHERE a.is_deleted=false AND a.status='CONFIRMED' AND a.checked_in_at IS NULL
               AND a.appointment_date>=? AND a.appointment_date<=? AND a.id>?
-              AND NOT EXISTS (SELECT 1 FROM spa_notification_dispatches d WHERE d.appointment_id=a.id
-                AND d.notification_kind='REMINDER' AND d.appointment_date=a.appointment_date AND d.start_time=a.start_time)
             ORDER BY a.id LIMIT 200
             """, (rs, row) -> rs.getLong(1), local.toLocalDate(), horizon.toLocalDate(), cursor);
             if (candidates.isEmpty()) break;
             for (Long id : candidates) {
-                try { workflow.enqueueReminder(id, now, hoursAhead); }
+                try { workflow.enqueueDueReminder(id, now, hoursAhead, finalHoursAhead); }
                 catch (Exception exception) { log.warn("Could not enqueue spa reminder for appointment {}", id, exception); }
             }
             cursor = candidates.getLast();

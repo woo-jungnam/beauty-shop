@@ -14,6 +14,7 @@ import com.core.beautyshop.shared.outbox.application.service.OutboxService;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -40,6 +42,8 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
     private final OutboxService outbox;
     @Autowired
     private CustomerNotificationFacade customerInbox;
+    @Value("${app.spa.notifications.final-reminder-hours:2}")
+    private int finalReminderHours = 2;
 
     @Transactional
     public Instruction addInstruction(Long appointmentId, Long itemId, InstructionCommand command) {
@@ -76,18 +80,31 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
     }
 
     @Transactional
+    public boolean enqueueDueReminder(Long appointmentId, Instant now, int firstHours, int finalHours) {
+        Appointment appointment = load(appointmentId, true);
+        // A late booking or delayed job receives only the nearest reminder, never both at once.
+        int milestone = scheduledAt(appointment).isAfter(now.plus(finalHours, ChronoUnit.HOURS))
+                ? firstHours : finalHours;
+        return enqueueReminder(appointmentId, now, milestone);
+    }
+
+    @Transactional
     public boolean enqueueReminder(Long appointmentId, Instant now, int hoursAhead) {
+        if (hoursAhead < 1 || hoursAhead > 168) throw new IllegalArgumentException("Invalid reminder milestone");
         Appointment appointment = load(appointmentId, true);
         Instant scheduled = scheduledAt(appointment);
         if (appointment.getStatus() != AppointmentStatus.CONFIRMED || appointment.getCheckedInAt() != null
                 || !scheduled.isAfter(now) || scheduled.isAfter(now.plus(hoursAhead, ChronoUnit.HOURS))) return false;
-        String key = "REMINDER:" + appointmentId + ":" + appointment.getAppointmentDate() + ":" + appointment.getStartTime();
+        String legacyKey = "REMINDER:" + appointmentId + ":" + appointment.getAppointmentDate() + ":" + appointment.getStartTime();
+        String key = legacyKey + ":" + hoursAhead + "H";
+        // Existing reminders were the 24-hour milestone; preserve their deduplication on upgrade.
+        if (hoursAhead == 24 && dispatched(legacyKey)) return false;
         if (dispatched(key)) return false;
         recordDispatch(key, appointment, SpaNotificationMessage.Kind.REMINDER, null, now);
         customerInbox.publish(appointment.getUserId(),"spa:"+key,"SPA","Nhắc lịch hẹn Spa",
-                "Lịch hẹn của bạn vào "+appointment.getAppointmentDate()+" lúc "+appointment.getStartTime()+" (giờ Việt Nam)","profile?tab=appointments&appointment="+appointmentId);
+                reminderBody(appointment),"profile?tab=appointments&appointment="+appointmentId);
         outbox.recordEvent("APPOINTMENT", appointmentId.toString(), TOPIC, appointmentId.toString(),
-                new SpaNotificationMessage(appointmentId, SpaNotificationMessage.Kind.REMINDER, appointment.getAppointmentDate(), appointment.getStartTime(), null));
+                new SpaNotificationMessage(appointmentId, SpaNotificationMessage.Kind.REMINDER, appointment.getAppointmentDate(), appointment.getStartTime(), null, hoursAhead));
         return true;
     }
 
@@ -117,9 +134,11 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
             if (appointment.getStatus() != AppointmentStatus.CONFIRMED || appointment.getCheckedInAt() != null
                     || !Objects.equals(appointment.getAppointmentDate(), message.appointmentDate())
                     || !Objects.equals(appointment.getStartTime(), message.startTime()) || !scheduledAt(appointment).isAfter(now)) return Optional.empty();
+            // Do not deliver a delayed first email alongside the final reminder.
+            if (message.reminderHours() != null && message.reminderHours() > finalReminderHours
+                    && !scheduledAt(appointment).isAfter(now.plus(finalReminderHours, ChronoUnit.HOURS))) return Optional.empty();
             return Optional.of(new Delivery(appointment.getUserId(), "Nhắc lịch hẹn Spa #" + appointment.getId(),
-                    "Lịch hẹn Spa của bạn: " + appointment.getAppointmentDate() + " lúc " + appointment.getStartTime()
-                            + " (giờ Việt Nam). Vui lòng liên hệ lễ tân nếu cần thay đổi lịch.", "SPA_APPOINTMENT_REMINDER"));
+                    reminderBody(appointment), "SPA_APPOINTMENT_REMINDER"));
         }
         if (message.kind() != SpaNotificationMessage.Kind.FOLLOW_UP || message.instructionId() == null
                 || appointment.getStatus() != AppointmentStatus.COMPLETED) return Optional.empty();
@@ -148,6 +167,13 @@ public class SpaNotificationWorkflow implements SpaNotificationFacade {
 
     private Instant scheduledAt(Appointment appointment) {
         return appointment.getAppointmentDate().atTime(appointment.getStartTime()).atZone(SpaTimeRules.ZONE).toInstant();
+    }
+
+    private String reminderBody(Appointment appointment) {
+        return "BeautyShop nhắc bạn có lịch hẹn Spa lúc "
+                + appointment.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+                + " ngày " + appointment.getAppointmentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                + " (giờ Việt Nam). Vui lòng đến trước 10 phút. Nếu cần đổi lịch, hãy liên hệ cửa hàng.";
     }
 
     private Instruction instruction(Long id) {

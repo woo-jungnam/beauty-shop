@@ -760,7 +760,7 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                         </div>
                         <footer className="pf-bento-footer">
                           <span style={{ fontSize: '12.5px', color: 'var(--pf-text-dim)' }}>
-                            Nhắc hẹn tự động qua tin nhắn và Zalo trước 2 giờ
+                            Nhắc lịch trong tài khoản trước 24 giờ và 2 giờ; nhận thêm email khi cửa hàng bật gửi thư
                           </span>
                           <button
                             type="button"

@@ -220,7 +220,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
             </span>
           )}
           {product.isFeatured && (
-            <span style={{
+            <span className="product-card-hot-deal" style={{
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               color: 'var(--c-primary, #D45D79)',
               fontSize: '9.5px',

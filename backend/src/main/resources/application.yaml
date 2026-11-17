@@ -136,6 +136,9 @@ app:
   spa:
     notifications:
       enabled: ${SPA_NOTIFICATIONS_ENABLED:true}
+      reminder-hours: ${SPA_REMINDER_HOURS:24}
+      final-reminder-hours: ${SPA_FINAL_REMINDER_HOURS:2}
+      poll-interval-ms: ${SPA_NOTIFICATION_POLL_INTERVAL_MS:60000}
   media:
     upload-dir: ${MEDIA_UPLOAD_DIR:uploads}
   cache:

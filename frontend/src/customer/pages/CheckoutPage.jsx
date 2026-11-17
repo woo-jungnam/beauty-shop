@@ -500,12 +500,12 @@ export const CheckoutPage = ({ onNavigate }) => {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <strong style={{ fontSize: '13px', color: 'var(--c-primary)' }}>
-                        Quét Mã VietQR Chuyển Khoản Tức Thì (SePay)
+                        Chuyển khoản bằng mã QR
                       </strong>
                       <span className="badge-dermatology safe" style={{ fontSize: '10px' }}>KHUYÊN DÙNG</span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px' }}>
-                      Mã VietQR tự động sinh từ hệ thống ngân hàng, tự khớp lệnh sau 1 giây.
+                      Sau khi đặt hàng, mở ứng dụng ngân hàng để quét mã và chuyển khoản.
                     </div>
                   </div>
                 </label>
@@ -530,10 +530,10 @@ export const CheckoutPage = ({ onNavigate }) => {
                   />
                   <div style={{ flex: 1 }}>
                     <strong style={{ fontSize: '13px', color: 'var(--c-primary)' }}>
-                      Thanh Toán Tiền Mặt Khi Nhận Hàng (COD)
+                      Thanh toán khi nhận hàng
                     </strong>
                     <div style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px' }}>
-                      Kiểm tra hàng trước khi thanh toán cho nhân viên giao hàng.
+                      Thanh toán bằng tiền mặt cho nhân viên giao hàng khi nhận hàng.
                     </div>
                   </div>
                 </label>
@@ -601,7 +601,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                 marginBottom: '8px'
               }}>
                 <Tag size={14} color="var(--c-gold)" />
-                MÃ GIẢM GIÁ / VOUCHER
+                MÃ GIẢM GIÁ
               </label>
 
               {voucher ? (
@@ -650,7 +650,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
-                      placeholder="Nhập mã voucher (vd: WELCOME10)..."
+                      placeholder="Nhập mã giảm giá (ví dụ: WELCOME10)"
                       value={inputVoucher}
                       onChange={(e) => {
                         setInputVoucher(e.target.value.toUpperCase());
@@ -759,7 +759,7 @@ export const CheckoutPage = ({ onNavigate }) => {
               </div>
               {discountAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-safe-green)' }}>
-                  <span>Voucher giảm giá {voucher?.code ? `(${voucher.code})` : ''}</span>
+                  <span>Giảm giá {voucher?.code ? `(${voucher.code})` : ''}</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
@@ -811,7 +811,7 @@ export const CheckoutPage = ({ onNavigate }) => {
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', color: '#94A3B8', marginTop: '12px' }}>
               <ShieldCheck size={14} color="var(--c-safe-green)" />
-              <span>Thông tin thanh toán được mã hóa SSL 256-bit an toàn</span>
+              <span>Vui lòng kiểm tra thông tin trước khi đặt hàng.</span>
             </div>
           </div>
         </div>

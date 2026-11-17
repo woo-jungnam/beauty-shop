@@ -1,16 +1,18 @@
-/* Catalog-only palette: Rose Gold, Beige, Cream, Chocolate and White. */
+/* Lumière palette: ivory, champagne blush, soft pink and muted rose. */
 .customer-app .catalog-page {
-  --filter-rose: #B76E79;
-  --filter-beige: #E4C3AD;
-  --filter-cream: #FFF0E5;
-  --filter-ink: #6B4226;
+  --filter-rose: #D77F91;
+  --filter-beige: #EBC9C9;
+  --filter-cream: #F1DEDA;
+  --filter-ink: #242020;
+  --filter-surface: #FFFCFA;
+  --filter-mauve: #B78A91;
 }
 .customer-app .catalog-page .catalog-facet-panel {
   padding: 0;
-  background: #FFFFFF;
+  background: var(--filter-surface);
   border: 1px solid var(--filter-beige);
   border-radius: 16px;
-  box-shadow: 0 6px 22px rgb(107 66 38 / 5%);
+  box-shadow: 0 6px 22px rgb(183 138 145 / 8%);
   scrollbar-width: thin;
   scrollbar-color: var(--filter-beige) transparent;
 }
@@ -46,7 +48,7 @@
   gap: 8px;
   padding: 12px 14px;
   border: 0;
-  background: #FFFFFF;
+  background: var(--filter-surface);
   color: var(--filter-ink);
   text-align: left;
   font-size: 11px;
@@ -92,7 +94,7 @@
 .customer-app .catalog-page .catalog-filter-option.is-selected { background: var(--filter-cream); color: var(--filter-ink); font-weight: 600; box-shadow: inset 2px 0 var(--filter-rose); }
 .customer-app .catalog-page .catalog-filter-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--filter-rose); }
 .customer-app .catalog-page :is(.catalog-filter-quick-search, .catalog-filter-search input, .catalog-price-inputs input, .catalog-filter-select) {
-  background: #FFFFFF;
+  background: var(--filter-surface);
   border: 1px solid var(--filter-beige);
   border-radius: 8px;
   color: var(--filter-ink);
@@ -106,6 +108,15 @@
 .customer-app .catalog-page .catalog-price-apply:hover { background: var(--filter-beige); }
 .customer-app .catalog-page .catalog-filter-chip { background: var(--filter-cream); border-color: var(--filter-beige); color: var(--filter-ink); border-radius: 20px; }
 .customer-app .catalog-page :is(.catalog-mobile-filter-trigger, .catalog-filter-apply) { background: var(--filter-cream); color: var(--filter-ink); border: 1px solid var(--filter-beige); }
+.customer-app .catalog-page :is(.catalog-price-apply, .catalog-filter-apply) {
+  background: var(--filter-rose);
+  border-color: var(--filter-rose);
+  color: var(--filter-ink);
+}
+.customer-app .catalog-page :is(.catalog-price-apply, .catalog-filter-apply):hover {
+  background: var(--filter-mauve);
+  border-color: var(--filter-mauve);
+}
 .customer-app .catalog-page :is(button, input, select):focus-visible { outline-color: var(--filter-rose) !important; outline-offset: 2px; }
 @media (max-width: 767px) {
   .customer-app .catalog-page .catalog-facet-panel { border-radius: 0; }

@@ -297,6 +297,72 @@ class SpaPreparationServiceTest {
     }
 
     @Test
+    void schedulerSendsOneReminderPerMilestoneWithoutSendingBothForLateBookings() {
+        Instant first = Instant.parse("2026-10-02T03:00:00Z"); // 24 hours before 10:00 Vietnam time.
+        SpaJdbcSupport.update(jdbc, "UPDATE appointments SET appointment_date=?,start_time=?,status='CONFIRMED' WHERE id=?",
+                appointment.getAppointmentDate(), appointment.getStartTime(), 300L);
+        SpaNotificationScheduler scheduler = new SpaNotificationScheduler(jdbc, notifications);
+        ReflectionTestUtils.setField(scheduler, "jobsEnabled", true);
+        ReflectionTestUtils.setField(scheduler, "hoursAhead", 24);
+        scheduler.validateConfiguration();
+        scheduler.enqueueDueNotifications(first.minusSeconds(1));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spa_notification_dispatches", Integer.class)).isZero();
+        scheduler.enqueueDueNotifications(first);
+        scheduler.enqueueDueNotifications(first.plusSeconds(60));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spa_notification_dispatches", Integer.class)).isEqualTo(1);
+        scheduler.enqueueDueNotifications(first.plusSeconds(22 * 3600));
+        scheduler.enqueueDueNotifications(first.plusSeconds(22 * 3600 + 60));
+        assertThat(jdbc.queryForList("SELECT dedup_key FROM spa_notification_dispatches", String.class))
+                .anyMatch(key -> key.endsWith(":24H")).anyMatch(key -> key.endsWith(":2H")).hasSize(2);
+        verify(outbox, times(2)).recordEvent(eq("APPOINTMENT"), eq("300"), eq(SpaNotificationWorkflow.TOPIC), eq("300"), any());
+
+        jdbc.update("DELETE FROM spa_notification_dispatches");
+        reset(outbox);
+        scheduler.enqueueDueNotifications(first.plusSeconds(23 * 3600));
+        assertThat(jdbc.queryForList("SELECT dedup_key FROM spa_notification_dispatches", String.class))
+                .singleElement().asString().endsWith(":2H");
+        scheduler.enqueueDueNotifications(first.plusSeconds(24 * 3600));
+        verify(outbox, times(1)).recordEvent(eq("APPOINTMENT"), eq("300"), eq(SpaNotificationWorkflow.TOPIC), eq("300"), any());
+    }
+
+    @Test
+    void delayedFirstEmailIsDroppedWhenFinalReminderIsDue() {
+        Instant first = Instant.parse("2026-10-02T03:00:00Z");
+        var early = new SpaNotificationMessage(300L, SpaNotificationMessage.Kind.REMINDER,
+                appointment.getAppointmentDate(), appointment.getStartTime(), null, 24);
+        var last = new SpaNotificationMessage(300L, SpaNotificationMessage.Kind.REMINDER,
+                appointment.getAppointmentDate(), appointment.getStartTime(), null, 2);
+        assertThat(notifications.currentDelivery(early, first)).isPresent();
+        Instant finalWindow = first.plusSeconds(22 * 3600);
+        assertThat(notifications.currentDelivery(early, finalWindow)).isEmpty();
+        assertThat(notifications.currentDelivery(last, finalWindow)).get()
+                .satisfies(delivery -> assertThat(delivery.body()).contains("10:00", "03/10/2026", "10 phút"));
+    }
+
+    @Test
+    void legacyReminderDoesNotRepeatButStillAllowsFinalReminder() {
+        Instant now = Instant.parse("2026-10-02T03:00:00Z");
+        assertThat(notifications.enqueueReminder(300L, now, 24)).isTrue();
+        jdbc.update("UPDATE spa_notification_dispatches SET dedup_key=REPLACE(dedup_key, ':24H', '')");
+        assertThat(notifications.enqueueReminder(300L, now.plusSeconds(60), 24)).isFalse();
+        assertThat(notifications.enqueueDueReminder(300L, now.plusSeconds(22 * 3600), 24, 2)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spa_notification_dispatches", Integer.class)).isEqualTo(2);
+    }
+
+    @Test
+    void finalReminderRejectsCancelledCheckedInAndPastAppointments() {
+        Instant now = Instant.parse("2026-10-03T02:00:00Z");
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        assertThat(notifications.enqueueDueReminder(300L, now, 24, 2)).isFalse();
+        appointment.setStatus(AppointmentStatus.CONFIRMED);
+        appointment.setCheckedInAt(now);
+        assertThat(notifications.enqueueDueReminder(300L, now, 24, 2)).isFalse();
+        appointment.setCheckedInAt(null);
+        assertThat(notifications.enqueueDueReminder(300L, now.plusSeconds(3600), 24, 2)).isFalse();
+        verifyNoInteractions(outbox);
+    }
+
+    @Test
     void remindersDeduplicateEachScheduleRevisionAndDropCancelledRescheduledOrCheckedInDeliveries() {
         Instant now = Instant.parse("2026-10-03T02:00:00Z");
         assertThat(notifications.enqueueReminder(300L, now, 24)).isTrue();

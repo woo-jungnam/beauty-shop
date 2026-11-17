@@ -1,4 +1,33 @@
 /* Saturated campaign panels contrast with white product cards. */
+.customer-app .customer-home-page #flash-sale .flash-sale-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-heading-group {
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-header-actions {
+  justify-content: flex-end;
+  max-width: 420px;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-header-actions p {
+  margin: 0;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-grid {
+  padding-inline: 0 !important;
+}
+@media (max-width: 1100px) {
+  .customer-app .customer-home-page #flash-sale .flash-sale-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .customer-app .customer-home-page #flash-sale .flash-sale-header-actions {
+    justify-content: flex-start;
+    max-width: none;
+  }
+}
 .customer-app .customer-home-page > #flash-sale {
   --section-surface: #FFF0F3;
 }

@@ -9,11 +9,15 @@
   box-shadow: 0 4px 18px #8C2A470D;
 }
 .customer-app .storefront-announcement {
-  background: #B6A09B;
-  border-bottom-color: #B78A91;
+  background: #FFFFFF;
+  color: #8C2A47;
+  border-bottom-color: #F1DEDA;
 }
 .customer-app .storefront-announcement :is(span, a) {
-  color: #242020;
+  color: #8C2A47;
+}
+.customer-app .storefront-announcement a:hover {
+  color: #633D47;
 }
 .customer-app .storefront-header .storefront-brand,
 .customer-app .storefront-header .storefront-brand > span,
