@@ -22,12 +22,12 @@
   z-index: 3;
   margin: 0;
   padding: 18px 16px;
-  background: var(--filter-cream);
+  background: var(--filter-rose);
   border-bottom: 1px solid var(--filter-beige);
   border-radius: 15px 15px 0 0;
 }
 .customer-app .catalog-page .catalog-filter-heading strong { font-size: 14px; color: var(--filter-ink); }
-.customer-app .catalog-page .catalog-filter-heading svg { color: var(--filter-rose); }
+.customer-app .catalog-page .catalog-filter-heading svg { color: var(--filter-ink); }
 .customer-app .catalog-page .catalog-filter-reset { color: var(--filter-ink); font-size: 11px; }
 .customer-app .catalog-page .catalog-filter-search { padding: 16px 14px 0; margin: 0; }
 .customer-app .catalog-page .catalog-filter-search > label { font-size: 10px; letter-spacing: .07em; color: var(--filter-ink); }
