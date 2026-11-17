@@ -1,0 +1,170 @@
+/* Lumiere reference palette. Color overrides only; structure is unchanged. */
+.customer-app .customer-home-page {
+  --home-white: #FFFCFA;
+  --home-pink: #EBC9C9;
+  --home-ivory: #F8F4F1;
+  --home-peach: #F1DEDA;
+  --home-rose: #B78A91;
+  --home-ink: #242020;
+  background-color: #FFFCFA;
+}
+.customer-app .customer-home-page.customer-home-page > :is(.hero-slider-container, #flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) {
+  --section-surface: #FFFCFA;
+  --c-primary: #D77F91;
+  --c-primary-dark: #B78A91;
+  --c-primary-hover: #B78A91;
+  --c-primary-light: #F1DEDA;
+  --c-gold: #D77F91;
+  --c-gold-hover: #242020;
+  --c-deal-red: #242020;
+  --c-text-light: #625653;
+  --c-text-muted: #625653;
+  --item-accent: #D77F91;
+  --item-deep: #B78A91;
+  --item-tint: #F8F4F1;
+  --item-ink: #242020;
+  --item-border: #EBC9C9;
+  --item-highlight: #EBC9C9;
+  color: #242020;
+  border-color: #EBC9C9 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.flash-sale-panel, .recommendations-box, .home-spa-panel) {
+  background: #FFFCFA !important;
+  border-color: #EBC9C9 !important;
+  box-shadow: 0 12px 32px #70564B0D !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section) :is(.flash-sale-header, .recommendations-header, .section-header-editorial) {
+  background: #F1DEDA;
+  color: #242020;
+  border-color: #B78A91 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(h2, .section-title-highlight, .section-title-editorial) {
+  color: #242020 !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  filter: none;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) .section-title-icon {
+  color: #242020 !important;
+  stroke: currentColor !important;
+  fill: none;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.section-header-editorial, .section-title-wrap)::after {
+  background: #B78A91 !important;
+  box-shadow: none;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.section-eyebrow-badge, .campaign-eyebrow) {
+  color: #242020;
+  background: #F8F4F1;
+  border-color: #B78A91;
+  box-shadow: none;
+}
+.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-header > p,
+.customer-app .customer-home-page.customer-home-page #flash-sale .flash-sale-header p {
+  color: #625653 !important;
+  border-color: #B78A91;
+}
+.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-header > div > span {
+  color: #242020 !important;
+  background: #EBC9C9 !important;
+  border-color: #B78A91 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-title, .product-card-title-link, .home-spa-card-body h3, .brand-partner-name) {
+  color: #242020 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-meta, .product-card-brand, .home-spa-card-price, .product-card-price > span:first-child) {
+  color: #242020 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-avatar, .brand-partner-box, .brand-partner-card, .spa-service-card, .product-card-resolved) {
+  background: #FFFCFA !important;
+  border-color: #EBC9C9 !important;
+  box-shadow: 0 5px 15px #70564B0D !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) .category-tile-avatar {
+  background: #F8F4F1 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) .category-tile-card:nth-child(even) .category-tile-avatar {
+  background: #EBC9C9 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.product-card-body, .home-spa-card-body) {
+  background: linear-gradient(#FFFCFA, #F8F4F1);
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.product-card-media, .spa-service-image-box) {
+  background: #F8F4F1 !important;
+  border-color: #B78A91;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.home-spa-card-footer, .product-card-price) {
+  border-color: #B78A91;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .product-card-quick-add button, .tab-filter-btn.active) {
+  background: #D77F91 !important;
+  color: #242020 !important;
+  border-color: #D77F91 !important;
+  box-shadow: 0 3px 8px #80545E1A !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.btn-luxury-primary, .btn-luxury-gold, .btn-luxury-outline, .product-card-quick-add button, .tab-filter-btn.active):hover {
+  background: #B78A91 !important;
+  color: #242020 !important;
+  border-color: #B78A91 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.tab-filter-btn:not(.active), .carousel-nav-btn, .carousel-floating-btn, .product-card-preview, .product-card-wishlist) {
+  background: #FFFCFA !important;
+  color: #242020 !important;
+  border-color: #B78A91 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.tab-filter-btn:not(.active), .carousel-nav-btn, .carousel-floating-btn, .product-card-preview, .product-card-wishlist):hover {
+  background: #EBC9C9 !important;
+  color: #242020 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.product-card-discount, .home-spa-duration) {
+  color: #242020 !important;
+  background: #D77F91 !important;
+  border-color: #B78A91;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.home-spa-duration, .btn-luxury-outline, .btn-luxury-gold) svg {
+  color: currentColor;
+}
+.customer-app .customer-home-page.customer-home-page #flash-sale .flash-sale-countdown {
+  background: #F8F4F1 !important;
+  color: #242020 !important;
+  border-color: #B78A91 !important;
+}
+.customer-app .customer-home-page.customer-home-page #flash-sale .flash-sale-countdown span[style*="tabular-nums"] {
+  background: #D77F91 !important;
+  color: #242020 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(button, a):focus-visible {
+  outline-color: #242020 !important;
+}
+
+/* Cream secondary surfaces separate sections without adding new geometry. */
+.customer-app .customer-home-page.customer-home-page > :is(#flash-sale, #random-picks, #spa-section) {
+  --section-surface: #F8F4F1;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) :is(.product-card-resolved, .spa-service-card) {
+  background: #EBC9C9 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) :is(.product-card-body, .home-spa-card-body) {
+  background: linear-gradient(#FFFCFA, #F1DEDA);
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) :is(.product-card-brand, .product-card-expiry, .product-card-clearance-note) {
+  color: #242020 !important;
+  background: #EBC9C9 !important;
+  border-color: #B78A91;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) .product-card-resolved {
+  --c-primary: #D77F91;
+  --c-primary-dark: #B78A91;
+  --c-text-muted: #625653;
+  --c-text-light: #625653;
+}
+.customer-app .customer-home-page.customer-home-page #spa-section .home-spa-card-body p,
+.customer-app .customer-home-page.customer-home-page #spa-section .home-spa-card-footer > div > div:first-child {
+  color: #625653 !important;
+}
+.customer-app .customer-home-page.customer-home-page #flash-sale .flash-tab-indicator {
+  background: #B6A09B !important;
+}
+.customer-app .customer-home-page.customer-home-page #flash-sale .flash-tab-indicator.is-active {
+  background: #242020 !important;
+}

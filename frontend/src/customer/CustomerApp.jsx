@@ -7,6 +7,8 @@ import './styles/home-highlights.css';
 import './styles/home-product-cards.css';
 import './styles/home-spa.css';
 import './styles/home-section-tones.css';
+import './styles/home-soft-palette.css';
+import './styles/customer-header.css';
 import { CustomerHeader } from './components/layout/CustomerHeader';
 import { CustomerFooter } from './components/layout/CustomerFooter';
 import { MiniCartDrawer } from './components/cart/MiniCartDrawer';

@@ -1,0 +1,122 @@
+/* White storefront shell with accessible berry accents. */
+.customer-app .storefront-header {
+  --header-berry: #AD3F61;
+  --header-deep: #8C2A47;
+  --header-blush: #FFF0F4;
+  --header-border: #E5B5C5;
+  background: #FFFFFF;
+  border-bottom-color: var(--header-border);
+  box-shadow: 0 4px 18px #8C2A470D;
+}
+.customer-app .storefront-announcement {
+  background: #B6A09B;
+  border-bottom-color: #B78A91;
+}
+.customer-app .storefront-announcement :is(span, a) {
+  color: #242020;
+}
+.customer-app .storefront-header .storefront-brand,
+.customer-app .storefront-header .storefront-brand > span,
+.customer-app .storefront-header .storefront-brand > span > span,
+.customer-app .storefront-header .storefront-brand i {
+  color: var(--header-berry);
+  text-shadow: none;
+}
+.customer-app .storefront-header .storefront-brand small {
+  color: var(--header-deep);
+  opacity: 1;
+}
+.customer-app .storefront-header .storefront-brand > span > span {
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-search form {
+  background: #FFFFFF;
+  border-color: var(--header-border);
+  color: var(--header-berry);
+}
+.customer-app .storefront-header .storefront-search form:focus-within {
+  border-color: var(--header-berry);
+  box-shadow: 0 0 0 3px #AD3F611F;
+}
+.customer-app .storefront-header .storefront-search input { color: #51303D; }
+.customer-app .storefront-header .storefront-search input::placeholder {
+  color: #786066;
+  opacity: 1;
+}
+.customer-app .storefront-header :is(.storefront-search-clear, .storefront-search-camera-btn, .storefront-action) {
+  color: var(--header-berry);
+}
+.customer-app .storefront-header :is(.storefront-search-camera-btn, .storefront-action):hover {
+  background: var(--header-blush);
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-search-submit {
+  background: var(--header-berry);
+  color: #FFFFFF;
+}
+.customer-app .storefront-header .storefront-search-submit:hover {
+  background: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-booking {
+  background: var(--header-berry);
+  color: #FFFFFF;
+  border-color: var(--header-berry);
+  box-shadow: 0 3px 8px #AD3F611A;
+}
+.customer-app .storefront-header .storefront-booking:hover {
+  background: var(--header-deep);
+  color: #FFFFFF;
+  border-color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-cart b {
+  background: var(--header-berry);
+  color: #FFFFFF;
+  border-color: #FFFFFF;
+}
+.customer-app .storefront-header .storefront-nav {
+  background: #FFFFFF;
+  border-top-color: #F1D8E1;
+}
+.customer-app .storefront-header .storefront-nav :is(.storefront-nav-link, .storefront-dropdown-toggle, .storefront-nav-note) {
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-nav-link:hover,
+.customer-app .storefront-header .storefront-nav-link.is-active {
+  color: var(--header-deep);
+  background: var(--header-blush);
+  border-bottom-color: var(--header-berry);
+}
+.customer-app .storefront-header .storefront-dropdown-toggle:is(:hover, [aria-expanded="true"]) {
+  background: var(--header-blush);
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-dropdown {
+  border-color: var(--header-border);
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-dropdown :is(a, button, strong) {
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-dropdown :is(a, button):hover {
+  background: var(--header-blush);
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-mobile-panel {
+  background: #FFFFFF;
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-mobile-panel :is(h2, small, strong, a) {
+  color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-mobile-panel nav a[aria-current="page"] {
+  background: var(--header-blush);
+  border-bottom-color: var(--header-berry);
+}
+.customer-app .storefront-header .storefront-mobile-categories a {
+  background: var(--header-blush);
+  border-color: var(--header-border);
+}
+.customer-app .storefront-header :is(button, a, input):focus-visible,
+.customer-app .storefront-header :is(.storefront-main-row, .storefront-nav-row, .storefront-announcement) :is(button, a):focus-visible {
+  outline-color: var(--header-deep) !important;
+}

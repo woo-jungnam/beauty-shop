@@ -6,7 +6,7 @@ const POLICIES = {
   terms: {
     title: 'Điều Khoản Sử Dụng',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#423431' }}>
         <p><strong>Tài khoản:</strong> Bảo mật thông tin đăng nhập và kiểm tra thông tin người nhận trước khi gửi đơn hàng hoặc đặt lịch.</p>
         <p><strong>Đơn hàng:</strong> Xem lại sản phẩm, số lượng, giá và phí vận chuyển tại bước thanh toán. Theo dõi kết quả xử lý trong chi tiết đơn hàng.</p>
         <p><strong>Lịch hẹn:</strong> Kiểm tra dịch vụ, nhân viên, giờ trống và điều kiện được hiển thị trước khi xác nhận đặt lịch.</p>
@@ -17,7 +17,7 @@ const POLICIES = {
   privacy: {
     title: 'Chính Sách Bảo Mật Thông Tin',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#423431' }}>
         <p><strong>Thông tin bạn cung cấp:</strong> Hồ sơ, địa chỉ nhận hàng và thông tin đặt lịch được dùng trong các thao tác tương ứng trên hệ thống.</p>
         <p><strong>Quản lý hồ sơ:</strong> Bạn có thể xem và cập nhật các trường được hỗ trợ trong tài khoản của mình.</p>
         <p><strong>Bản tin:</strong> Đăng ký nhận email cần sự đồng ý của bạn; bạn có thể yêu cầu hủy đăng ký.</p>
@@ -28,7 +28,7 @@ const POLICIES = {
   shipping: {
     title: 'Thông Tin Giao Hàng',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#423431' }}>
         <p><strong>Địa chỉ:</strong> Nhập đúng người nhận, số điện thoại và địa chỉ tại bước thanh toán.</p>
         <p><strong>Phí vận chuyển:</strong> Kiểm tra mức phí được hiển thị tại bước thanh toán trước khi gửi đơn hàng.</p>
         <p><strong>Theo dõi:</strong> Xem trạng thái xử lý và giao hàng trong chi tiết đơn. Thời điểm giao thực tế phụ thuộc quá trình xử lý đơn.</p>
@@ -39,7 +39,7 @@ const POLICIES = {
   returns: {
     title: 'Yêu Cầu Đổi Trả Theo Đơn Hàng',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#423431' }}>
         <p><strong>Gửi yêu cầu:</strong> Mở đơn đã giao, chọn sản phẩm và số lượng muốn trả, điền lý do và đường dẫn bằng chứng nếu có. Hệ thống kiểm tra thời hạn và số lượng đủ điều kiện theo đơn.</p>
         <p><strong>Xét duyệt và nhận hàng:</strong> Yêu cầu được cửa hàng duyệt hoặc từ chối có lý do. Theo dõi kết quả và xác nhận nhận hàng trong chi tiết yêu cầu.</p>
         <p><strong>Hoàn tiền:</strong> Khoản hoàn được xử lý theo yêu cầu đã duyệt, hàng thực nhận và số tiền thực thu. Xem trạng thái xác nhận hoàn trong đơn hàng; phí phát sinh và cách nhận lại hàng cần được trao đổi với cửa hàng.</p>
@@ -49,7 +49,7 @@ const POLICIES = {
   authentic: {
     title: 'Thông Tin Sản Phẩm',
     content: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#5A4242' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px', lineHeight: 1.6, color: '#423431' }}>
         <p><strong>Trước khi mua:</strong> Xem thương hiệu, mô tả và thông tin sản phẩm được cửa hàng công bố trên trang chi tiết.</p>
         <p><strong>Chọn đúng phân loại:</strong> Kiểm tra phân loại, số lượng, giá và khả năng cung ứng trước khi gửi đơn.</p>
         <p><strong>Khi có thắc mắc:</strong> Trao đổi với cửa hàng về nguồn gốc, nhãn hàng hóa hoặc thông tin chưa rõ trước khi chọn mua.</p>
@@ -89,15 +89,15 @@ export const CustomerFooter = ({ onNavigate }) => {
   const subscribe = async () => { if (newsletterBusy) return; if (!newsletterConsent) { setNewsletterFeedback('Vui lòng đồng ý nhận bản tin trước khi đăng ký.'); return; } if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsletterEmail)) { setNewsletterFeedback('Vui lòng nhập email hợp lệ.'); return; } setNewsletterBusy(true); try { const response = await apiClient.post('/api/v1/newsletter/subscriptions', { email: newsletterEmail, consent: newsletterConsent }); setNewsletterFeedback(response?.message || 'Đã đăng ký nhận bản tin.'); setNewsletterEmail(''); } catch (error) { setNewsletterFeedback(error.message); } finally { setNewsletterBusy(false); } };
   return (
     <footer style={{
-      backgroundColor: '#6B4F4F',
-      color: '#FFF5E4',
+      backgroundColor: '#51413E',
+      color: '#FFFCFA',
       marginTop: 0,
       borderTop: 'none'
     }}>
       <div style={{
-        borderBottom: '1px solid rgba(255, 214, 186, 0.15)',
+        borderBottom: '1px solid rgba(235, 201, 201, 0.2)',
         padding: '32px 0',
-        backgroundColor: '#5A4242'
+        backgroundColor: '#423431'
       }}>
         <div className="customer-container">
           <div style={{
@@ -114,19 +114,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: '#FFD6BA',
+                background: '#EBC9C9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <ShieldCheck size={22} color="#6B4F4F" />
+                <ShieldCheck size={22} color="#51413E" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Thông Tin Sản Phẩm
                 </h4>
-                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFFCFA', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Xem thương hiệu, mô tả và phân loại trước khi chọn mua.
                 </p>
               </div>
@@ -141,19 +141,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: '#FFD6BA',
+                background: '#EBC9C9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <Truck size={22} color="#6B4F4F" />
+                <Truck size={22} color="#51413E" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Phí Giao Hàng Tại Thanh Toán
                 </h4>
-                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFFCFA', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Nhập địa chỉ và kiểm tra phí vận chuyển khi thanh toán.
                 </p>
               </div>
@@ -168,19 +168,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: '#FFD6BA',
+                background: '#EBC9C9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <RotateCcw size={22} color="#6B4F4F" />
+                <RotateCcw size={22} color="#51413E" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Yêu Cầu Đổi Trả Theo Đơn
                 </h4>
-                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFFCFA', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Gửi mặt hàng, số lượng và lý do để cửa hàng xét duyệt.
                 </p>
               </div>
@@ -195,19 +195,19 @@ export const CustomerFooter = ({ onNavigate }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: '#FFD6BA',
+                background: '#EBC9C9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <Award size={22} color="#6B4F4F" />
+                <Award size={22} color="#51413E" />
               </div>
               <div>
                 <h4 style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 800, margin: '0 0 4px 0' }}>
                   Dịch Vụ Spa
                 </h4>
-                <p style={{ color: '#FFF5E4', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ color: '#FFFCFA', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
                   Xem dịch vụ, nhân viên và khung giờ còn trống trước khi đặt lịch.
                 </p>
               </div>
@@ -236,39 +236,39 @@ export const CustomerFooter = ({ onNavigate }) => {
                   color: '#FFFFFF',
                   letterSpacing: '0.04em'
                 }}>
-                  BEAUTY<span style={{ color: '#FFD6BA' }}>SHOP</span>
+                  BEAUTY<span style={{ color: '#EBC9C9' }}>SHOP</span>
                 </span>
               </div>
               <p style={{
                 fontSize: '13px',
-                color: '#FFF5E4',
+                color: '#FFFCFA',
                 marginTop: '12px',
                 lineHeight: 1.6,
                 opacity: 0.95
               }}>
                 Mua sắm mỹ phẩm và đặt lịch dịch vụ làm đẹp. Theo dõi đơn hàng, lịch hẹn và các yêu cầu của bạn trong tài khoản.
               </p>
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#FFF5E4' }}>
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#FFFCFA' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MapPin size={15} color="#FFD6BA" />
+                  <MapPin size={15} color="#EBC9C9" />
                   <span>Địa chỉ cửa hàng: {storeContact.address
                     ? <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeContact.address)}`} target="_blank" rel="noopener noreferrer" style={contactLinkStyle}>{storeContact.address}</a>
                     : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Phone size={15} color="#FFD6BA" />
+                  <Phone size={15} color="#EBC9C9" />
                   <span>Hotline CSKH: {hotlineHref
                     ? <a href={hotlineHref} style={contactLinkStyle}>{storeContact.hotline}</a>
                     : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Mail size={15} color="#FFD6BA" />
+                  <Mail size={15} color="#EBC9C9" />
                   <span>Email liên hệ: {emailHref
                     ? <a href={emailHref} style={contactLinkStyle}>{storeContact.email}</a>
                     : 'Chưa cập nhật.'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={15} color="#FFD6BA" />
+                  <Clock size={15} color="#EBC9C9" />
                   <button type="button" onClick={() => onNavigate('booking')} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}>Xem giờ trống và đặt lịch Spa</button>
                 </div>
               </div>
@@ -278,7 +278,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Danh Mục Nổi Bật
               </h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FFF5E4' }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FFFCFA' }}>
                 {featuredCategories.length > 0 ? featuredCategories.map((cat) => (
                   <li key={cat.id} style={{ cursor: 'pointer' }} onClick={() => onNavigate(`products?categoryId=${cat.id}${cat.slug ? `&category=${encodeURIComponent(cat.slug)}` : ''}&name=${encodeURIComponent(cat.name)}`)}>
                     {cat.name}
@@ -293,7 +293,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Dịch Vụ Làm Đẹp
               </h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FFF5E4' }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FFFCFA' }}>
                 <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('spa')}>Xem Danh Sách Dịch Vụ</li>
                 <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Chọn Nhân Viên Và Giờ Trống</li>
                 <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Đăng Ký Đặt Lịch Hẹn Trực Tuyến</li>
@@ -304,7 +304,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               <h4 style={{ color: '#FFFFFF', fontSize: '14.5px', fontWeight: 800, marginBottom: '16px' }}>
                 Khuyến Mãi & Bản Tin
               </h4>
-              <p style={{ fontSize: '12px', color: '#FFF5E4', marginBottom: '12px', opacity: 0.95 }}>
+              <p style={{ fontSize: '12px', color: '#FFFCFA', marginBottom: '12px', opacity: 0.95 }}>
                 Đăng ký email để nhận thông tin ưu đãi và sản phẩm mới:
               </p>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -314,9 +314,9 @@ export const CustomerFooter = ({ onNavigate }) => {
                   style={{
                     padding: '8px 12px',
                     borderRadius: '6px',
-                    border: '1px solid #FFD6BA',
-                    backgroundColor: '#FFF5E4',
-                    color: '#6B4F4F',
+                    border: '1px solid #EBC9C9',
+                    backgroundColor: '#FFFCFA',
+                    color: '#51413E',
                     fontSize: '12px',
                     fontWeight: 500,
                     flex: 1,
@@ -328,8 +328,8 @@ export const CustomerFooter = ({ onNavigate }) => {
                   style={{
                     padding: '8px 16px',
                     borderRadius: '6px',
-                    backgroundColor: '#FFD6BA',
-                    color: '#6B4F4F',
+                    backgroundColor: '#EBC9C9',
+                    color: '#51413E',
                     border: 'none',
                     fontWeight: 800,
                     fontSize: '12px',
@@ -341,13 +341,13 @@ export const CustomerFooter = ({ onNavigate }) => {
                 </button>
               </div>
 
-              <label style={{ display: 'flex', gap: 6, fontSize: 12, marginTop: 10, color: '#FFF5E4' }}><input type="checkbox" checked={newsletterConsent} onChange={event => setNewsletterConsent(event.target.checked)} />Tôi đồng ý nhận email ưu đãi và có thể hủy đăng ký.</label>
-              {newsletterFeedback && <p role="status" style={{ fontSize: 12, marginTop: 6, color: '#FFD6BA' }}>{newsletterFeedback}</p>}
+              <label style={{ display: 'flex', gap: 6, fontSize: 12, marginTop: 10, color: '#FFFCFA' }}><input type="checkbox" checked={newsletterConsent} onChange={event => setNewsletterConsent(event.target.checked)} />Tôi đồng ý nhận email ưu đãi và có thể hủy đăng ký.</label>
+              {newsletterFeedback && <p role="status" style={{ fontSize: 12, marginTop: 6, color: '#EBC9C9' }}>{newsletterFeedback}</p>}
             </div>
           </div>
 
           <div style={{
-            borderTop: '1px solid rgba(255, 214, 186, 0.2)',
+            borderTop: '1px solid rgba(235, 201, 201, 0.25)',
             marginTop: '36px',
             paddingTop: '18px',
             display: 'flex',
@@ -356,17 +356,17 @@ export const CustomerFooter = ({ onNavigate }) => {
             flexWrap: 'wrap',
             gap: '12px',
             fontSize: '12px',
-            color: '#FFF5E4'
+            color: '#FFFCFA'
           }}>
             <div>
               © 2026 BeautyShop. Mỹ phẩm & dịch vụ làm đẹp.
             </div>
             <div style={{ display: 'flex', gap: '16px' }}>
-              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#FFD6BA' }} onClick={() => setActivePolicy('terms')}>Điều khoản sử dụng</span>
+              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#EBC9C9' }} onClick={() => setActivePolicy('terms')}>Điều khoản sử dụng</span>
               <span>•</span>
-              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#FFD6BA' }} onClick={() => setActivePolicy('privacy')}>Chính sách bảo mật</span>
+              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#EBC9C9' }} onClick={() => setActivePolicy('privacy')}>Chính sách bảo mật</span>
               <span>•</span>
-              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#FFD6BA' }} onClick={() => setActivePolicy('shipping')}>Thông tin giao hàng</span>
+              <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#EBC9C9' }} onClick={() => setActivePolicy('shipping')}>Thông tin giao hàng</span>
             </div>
           </div>
         </div>
@@ -390,7 +390,7 @@ export const CustomerFooter = ({ onNavigate }) => {
           <div
             style={{
               backgroundColor: '#FFFFFF',
-              color: '#5A4242',
+              color: '#423431',
               borderRadius: '12px',
               maxWidth: '560px',
               width: '100%',
@@ -404,7 +404,7 @@ export const CustomerFooter = ({ onNavigate }) => {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '16px 20px',
-              backgroundColor: '#6B4F4F',
+              backgroundColor: '#51413E',
               color: '#FFFFFF'
             }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>
@@ -432,17 +432,17 @@ export const CustomerFooter = ({ onNavigate }) => {
             </div>
             <div style={{
               padding: '12px 20px',
-              borderTop: '1px solid #E5D6CD',
+              borderTop: '1px solid #D8C7C0',
               display: 'flex',
               justifyContent: 'flex-end',
-              backgroundColor: '#FFF5E4'
+              backgroundColor: '#FFFCFA'
             }}>
               <button
                 onClick={() => setActivePolicy(null)}
                 style={{
                   padding: '8px 18px',
                   borderRadius: '6px',
-                  backgroundColor: '#6B4F4F',
+                  backgroundColor: '#51413E',
                   color: '#FFFFFF',
                   border: 'none',
                   fontWeight: 600,
