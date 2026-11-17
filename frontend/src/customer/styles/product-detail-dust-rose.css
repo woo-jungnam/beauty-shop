@@ -1,16 +1,16 @@
 /* Scope the new rose to product detail content. */
 .customer-app .pd-page {
-  --pd-rose: #E5989B;
-  --pd-rose-ink: #70464B;
-  --c-primary: #E5989B;
-  --c-primary-hover: #70464B;
-  --c-primary-dark: #70464B;
-  --c-primary-light: #E5989B26;
-  --c-gold: #E5989B;
-  --c-gold-hover: #70464B;
-  --c-text-gold: #70464B;
-  --c-border: #E5989B66;
-  --c-border-subtle: #E5989B33;
+  --pd-rose: #D77F91;
+  --pd-rose-ink: #242020;
+  --c-primary: #D77F91;
+  --c-primary-hover: #242020;
+  --c-primary-dark: #242020;
+  --c-primary-light: #D77F9126;
+  --c-gold: #D77F91;
+  --c-gold-hover: #242020;
+  --c-text-gold: #242020;
+  --c-border: #D77F9166;
+  --c-border-subtle: #D77F9133;
 }
 .customer-app .pd-page :is(h1, h2, h3, h4, .pd-brand, .pd-eyebrow, .pd-price strong, .pd-rating-value, .pd-side-copy strong, .product-card-brand, .pd-text-button, .pd-side-more, .pd-mobile-purchase strong) {
   color: var(--pd-rose-ink);
@@ -18,34 +18,34 @@
 .customer-app .pd-page :is(.pd-section-nav a.active, .btn-luxury-primary, .pd-discount) {
   background: var(--pd-rose) !important;
   border-color: var(--pd-rose) !important;
-  color: #4A3535 !important;
+  color: #242020 !important;
 }
 .customer-app .pd-page :is(.btn-luxury-outline, .pd-top-meta a, .pd-gallery-tools button, .pd-inci-accordion > button, .pd-ingredient-heading, .pd-category-links a, .pd-section-nav a) {
   color: var(--pd-rose-ink);
 }
 .customer-app .pd-page :is(.pd-variants button[aria-pressed="true"], .pd-tags > span, .pd-ingredient-heading > span, .pd-usage-steps li::before) {
-  background: #E5989B26;
+  background: #D77F9126;
   border-color: var(--pd-rose);
   color: var(--pd-rose-ink);
 }
 .customer-app .pd-page .pd-thumbnails > button[aria-pressed="true"] {
   border-color: var(--pd-rose);
-  box-shadow: 0 0 0 2px #E5989B33;
+  box-shadow: 0 0 0 2px #D77F9133;
 }
 .customer-app .pd-page :is(.shopee-filter-pill.is-active, .shopee-filter-pill:hover) {
   border-color: var(--pd-rose);
   color: var(--pd-rose-ink);
-  background: #E5989B26;
+  background: #D77F9126;
 }
 .customer-app .pd-page :is(.shopee-score-num, .shopee-review-author, .shopee-review-rating) { color: var(--pd-rose-ink); }
-.customer-app .pd-page .pd-side-section > header { background: #E5989B26; border-color: #E5989B66; }
+.customer-app .pd-page .pd-side-section > header { background: #D77F9126; border-color: #D77F9166; }
 .customer-app .pd-page :is(.pd-side-section > header, .pd-side-section > header h2, .pd-side-copy small) { color: var(--pd-rose-ink); }
-.customer-app .pd-page :is(.pd-side-item, .pd-side-more, .pd-side-image) { border-color: #E5989B33; }
+.customer-app .pd-page :is(.pd-side-item, .pd-side-more, .pd-side-image) { border-color: #D77F9133; }
 .customer-app .pd-page :is(.related-carousel-controls button, .pd-gallery-tools button) { border-color: var(--pd-rose); color: var(--pd-rose-ink); }
 .customer-app .pd-page .related-carousel-track { scrollbar-color: var(--pd-rose) transparent; }
 .customer-app .pd-page :is(.btn-luxury-primary, .btn-luxury-outline):hover:not(:disabled) {
-  background: #E5989B40 !important;
-  color: #4A3535 !important;
+  background: #D77F9140 !important;
+  color: #242020 !important;
   border-color: var(--pd-rose) !important;
 }
 .customer-app .pd-page :focus-visible { outline-color: var(--pd-rose-ink) !important; }

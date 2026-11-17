@@ -1,22 +1,18 @@
-/* ==========================================================================
-   SPA BOOKING FLOW — CLINICAL EDITORIAL DESIGN SYSTEM
-   Palette: Alabaster Cream (#FAF8F5), Deep Burgundy (#721B29),
-   Charcoal (#292321), Pure White (#FFFFFF), Subtle Border (#E8DED7).
-   Typography: Be Vietnam Pro, Plus Jakarta Sans, Inter, sans-serif.
-   ========================================================================== */
+/* Lumi?re Beauty: ivory #FFFCFA, cream #F8F4F1, blush #F1DEDA,
+   soft pink #EBC9C9, rose #D77F91, mauve #B78A91, ink #242020. */
 
 .customer-app .spa-booking-page {
-  --booking-ink: #292321;
+  --booking-ink: #242020;
   --booking-muted: #5E5551;
   --booking-subtle: #716762;
-  --booking-rose: #721B29;
-  --booking-rose-dark: #4E101A;
-  --booking-rose-light: #F7ECEE;
-  --booking-line: #E8DED7;
+  --booking-rose: #D77F91;
+  --booking-rose-dark: #B78A91;
+  --booking-rose-light: #F1DEDA;
+  --booking-line: #EBC9C9;
   --booking-green: #285E3A;
   --booking-green-bg: #EEF7F0;
-  --booking-bg: #FAF8F5;
-  --booking-card: #FFFFFF;
+  --booking-bg: #FFFCFA;
+  --booking-card: #FFFCFA;
   --booking-shadow: 0 8px 28px -12px rgb(78 16 26 / 8%);
   --booking-font: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
   background-color: var(--booking-bg);
@@ -80,11 +76,11 @@
 }
 
 .spa-booking-page .booking-breadcrumb button:hover {
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 .spa-booking-page .booking-breadcrumb > span:last-child {
-  color: var(--booking-rose);
+  color: #242020;
   font-weight: 600;
 }
 
@@ -118,7 +114,7 @@
   display: block;
   font-size: 13.5px;
   font-weight: 500;
-  color: var(--booking-rose);
+  color: #242020;
   margin-top: 4px;
   line-height: 1.5;
 }
@@ -149,7 +145,7 @@
 }
 
 .spa-booking-page .booking-hero-benefits svg {
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 .spa-booking-page .booking-hero-shortcuts {
@@ -167,7 +163,7 @@
   background: var(--booking-rose-light);
   border: 1px solid var(--booking-line);
   border-radius: 8px;
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
@@ -176,7 +172,7 @@
 
 .spa-booking-page .booking-link-chip:hover {
   background: var(--booking-rose);
-  color: #FFFFFF;
+  color: #242020;
 }
 
 .spa-booking-page .booking-hero-photo {
@@ -274,13 +270,13 @@
 }
 
 .spa-booking-page .booking-stepper .is-current > span {
-  color: #FFFFFF;
+  color: #242020;
   background: var(--booking-rose);
   border-color: var(--booking-rose);
 }
 
 .spa-booking-page .booking-stepper .is-current strong {
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 /* Booking Layout (Main Sections + Sticky Aside) */
@@ -328,7 +324,7 @@
   flex-shrink: 0;
   border: 1px solid var(--booking-line);
   background: var(--booking-rose-light);
-  color: var(--booking-rose);
+  color: #242020;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 700;
@@ -369,7 +365,7 @@
 
 .spa-booking-page .booking-service-search:focus-within {
   border-color: var(--booking-rose);
-  background: #FFFFFF;
+  background: #FFFCFA;
 }
 
 .spa-booking-page .booking-service-search svg {
@@ -418,12 +414,12 @@
 
 .spa-booking-page .booking-category-pills button:hover {
   border-color: var(--booking-rose);
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 .spa-booking-page .booking-category-pills button[aria-pressed="true"] {
   background: var(--booking-rose);
-  color: #FFFFFF;
+  color: #242020;
   border-color: var(--booking-rose);
   font-weight: 600;
 }
@@ -485,7 +481,7 @@
 }
 
 .spa-booking-page .booking-service-content > small {
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -533,7 +529,7 @@
 }
 
 .spa-booking-page .booking-service-meta b {
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 16px;
   font-weight: 700;
 }
@@ -548,7 +544,7 @@
   height: 20px;
   border-radius: 50%;
   border: 1.5px solid #DACBD1;
-  color: #FFFFFF;
+  color: #FFFCFA;
 }
 
 .spa-booking-page .is-selected .booking-service-check {
@@ -558,7 +554,7 @@
 
 .spa-booking-page .booking-service-skeleton {
   height: 130px;
-  background: linear-gradient(110deg, #FAF8F5 10%, #FFFFFF 40%, #FAF8F5 70%);
+  background: linear-gradient(110deg, #FFFCFA 10%, #FFFCFA 40%, #FFFCFA 70%);
   background-size: 200% 100%;
   animation: bookingShimmer 1.5s ease infinite;
   border-radius: 14px;
@@ -604,7 +600,7 @@
 .spa-booking-page .booking-ticket-benefit select {
   border: 1px solid #A3D4B6;
   border-radius: 8px;
-  background: #FFFFFF;
+  background: #FFFCFA;
   color: #215134;
   padding: 8px 12px;
   font-size: 13px;
@@ -636,7 +632,7 @@
   border: 1px solid var(--booking-line);
   border-radius: 10px;
   background: var(--booking-bg);
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 .spa-booking-page .booking-custom-date input {
@@ -690,7 +686,7 @@
 
 .spa-booking-page .booking-date-strip button > span {
   height: 16px;
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 .spa-booking-page .booking-date-strip .is-selected {
@@ -699,7 +695,7 @@
 }
 
 .spa-booking-page .booking-date-strip .is-selected :is(strong, small) {
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 /* Specialist Dropdown Picker */
@@ -750,7 +746,7 @@
   font-size: 11px;
   font-weight: 600;
   background: var(--booking-rose-light);
-  color: var(--booking-rose);
+  color: #242020;
   border: 1px solid var(--booking-line);
 }
 
@@ -818,7 +814,7 @@
   border-radius: 50%;
   overflow: hidden;
   background: var(--booking-rose-light);
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 15px;
   font-weight: 700;
 }
@@ -848,7 +844,7 @@
 }
 
 .spa-booking-page .booking-staff-card > svg {
-  color: var(--booking-rose);
+  color: #242020;
   flex-shrink: 0;
 }
 
@@ -933,7 +929,7 @@
 
 .spa-booking-page .booking-slot-group button.is-selected {
   background: var(--booking-rose);
-  color: #FFFFFF;
+  color: #242020;
   border-color: var(--booking-rose);
   box-shadow: 0 4px 12px rgba(114, 27, 41, 0.2);
 }
@@ -993,7 +989,7 @@
   border-radius: 12px;
   background: var(--booking-rose-light);
   margin-bottom: 22px;
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 13px;
 }
 
@@ -1008,7 +1004,7 @@
   align-items: center;
   gap: 6px;
   background: var(--booking-rose);
-  color: #FFFFFF;
+  color: #242020;
   border: 0;
   border-radius: 8px;
   padding: 6px 14px;
@@ -1060,7 +1056,7 @@
 
 .spa-booking-page .booking-input-wrap:focus-within {
   border-color: var(--booking-rose);
-  background: #FFFFFF;
+  background: #FFFCFA;
   box-shadow: 0 0 0 3px rgba(114, 27, 41, 0.08);
 }
 
@@ -1124,13 +1120,13 @@
 
 .spa-booking-page .booking-skin-tags button:hover {
   border-color: var(--booking-rose);
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 .spa-booking-page .booking-skin-tags button[aria-pressed="true"] {
   border-color: var(--booking-rose);
   background: var(--booking-rose-light);
-  color: var(--booking-rose);
+  color: #242020;
   font-weight: 600;
 }
 
@@ -1157,7 +1153,7 @@
 
 .spa-booking-page .booking-note-field textarea:focus {
   border-color: var(--booking-rose);
-  background: #FFFFFF;
+  background: #FFFCFA;
 }
 
 .spa-booking-page .booking-contact-note {
@@ -1185,7 +1181,7 @@
 .spa-booking-page .booking-summary-heading {
   padding: 22px 24px;
   background: var(--booking-rose);
-  color: #FFFFFF;
+  color: #242020;
 }
 
 .spa-booking-page .booking-summary-heading .booking-eyebrow {
@@ -1196,7 +1192,7 @@
 }
 
 .spa-booking-page .booking-summary-heading h2 {
-  color: #FFFFFF;
+  color: #FFFCFA;
   font-size: 20px;
   font-weight: 700;
   line-height: 1.3;
@@ -1234,7 +1230,7 @@
 .spa-booking-page .booking-summary-service small {
   display: block;
   font-size: 11px;
-  color: var(--booking-rose);
+  color: #242020;
   font-weight: 600;
   text-transform: uppercase;
   margin-bottom: 3px;
@@ -1307,7 +1303,7 @@
 }
 
 .spa-booking-page .booking-summary-details .is-ready {
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 15px;
   font-weight: 700;
 }
@@ -1356,7 +1352,7 @@
 }
 
 .spa-booking-page .booking-total b {
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 22px;
   font-weight: 750;
   white-space: nowrap;
@@ -1494,7 +1490,7 @@
   border: 1px solid var(--booking-rose);
   border-radius: 10px;
   background: var(--booking-rose);
-  color: #FFFFFF;
+  color: #242020;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -1541,7 +1537,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--booking-rose);
+  color: #242020;
   text-decoration: none;
   font-size: 13px;
   font-weight: 700;
@@ -1553,7 +1549,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: var(--booking-rose);
+  color: #242020;
   background: none;
   border: 0;
   padding: 8px 12px;
@@ -1663,7 +1659,7 @@
   justify-content: space-between;
   background: var(--booking-rose);
   padding: 18px 24px;
-  color: #FFFFFF;
+  color: #242020;
 }
 
 .spa-booking-page .booking-confirmation-top > span:first-of-type {
@@ -1703,7 +1699,7 @@
 }
 
 .spa-booking-page .booking-confirmation-code strong {
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 28px;
   font-weight: 750;
   letter-spacing: 2px;
@@ -1717,7 +1713,7 @@
   background: var(--booking-rose-light);
   border: 1px solid var(--booking-line);
   border-radius: 8px;
-  color: var(--booking-rose);
+  color: #242020;
 }
 
 .spa-booking-page .booking-confirmation-code > small {
@@ -1771,7 +1767,7 @@
 }
 
 .spa-booking-page .booking-confirmation-details > div:last-child dd {
-  color: var(--booking-rose);
+  color: #242020;
   font-size: 19px;
   font-weight: 750;
 }
@@ -1799,7 +1795,7 @@
   gap: 8px;
   min-height: 48px;
   padding: 12px 22px;
-  background: #FFFFFF;
+  background: #FFFCFA;
   border: 1.5px solid #1A73E8;
   color: #1A73E8;
   border-radius: 12px;
@@ -1920,7 +1916,7 @@
   .spa-booking-page .booking-mobile-bar strong {
     display: block;
     font-size: 16px;
-    color: var(--booking-rose);
+    color: #242020;
   }
   .spa-booking-page .booking-mobile-bar .booking-primary-button {
     min-width: 140px;

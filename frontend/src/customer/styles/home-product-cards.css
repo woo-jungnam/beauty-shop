@@ -39,7 +39,7 @@
     margin-bottom: 7px !important;
     border: 0;
     background: transparent !important;
-    color: #ad405d !important;
+    color: #D77F91 !important;
     font-size: 13px !important;
     letter-spacing: .045em !important;
   }
@@ -113,6 +113,10 @@
     border: 0 !important;
   }
   & .product-card-quick-add button svg { color: inherit; }
+}
+/* Keep the brand line consistent across all homepage product sections. */
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #store-catalog) .product-card-body .product-card-brand {
+  color: #D77F91 !important;
 }
 @media (max-width: 639px) {
   .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #store-catalog) {

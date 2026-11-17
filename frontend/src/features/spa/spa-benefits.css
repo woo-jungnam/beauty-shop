@@ -1,15 +1,11 @@
-/* ==========================================================================
-   SPA SERVICE PACKAGES & BENEFITS — CLINICAL LUXURY EDITORIAL SYSTEM
-   Design System matching BeautyShop Atelier Spa
-   Colors: Deep Burgundy (#721B29 / #8C2A47), Blush Rose (#AD3F61),
-   Alabaster Cream (#FAF8F5), Crisp White (#FFFFFF), Border (#E8DED7 / #F0DEE3).
-   ========================================================================== */
+/* Lumi?re Beauty: ivory #FFFCFA, cream #F8F4F1, blush #F1DEDA,
+   soft pink #EBC9C9, rose #D77F91, mauve #B78A91, ink #242020. */
 
 .spa-benefits {
   max-width: 1360px;
   margin: 24px auto 64px;
   padding: 0 clamp(16px, 3vw, 40px);
-  color: var(--c-text-main, #1F2937);
+  color: var(--c-text-main, #242020);
   font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
   overflow-wrap: anywhere;
 }
@@ -41,13 +37,13 @@
 }
 
 .spa-benefit-breadcrumb button:hover {
-  color: var(--c-primary, #AD3F61);
+  color: #242020;
 }
 
 .spa-benefit-hero {
   position: relative;
-  background: linear-gradient(135deg, #FFF9FA 0%, #FFF0F3 50%, #FAF2F4 100%);
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: linear-gradient(135deg, #FFFCFA 0%, #F1DEDA 50%, #F8F4F1 100%);
+  border: 1px solid var(--c-border, #EBC9C9);
   border-radius: 20px;
   padding: clamp(28px, 4vw, 48px);
   margin-bottom: 32px;
@@ -75,7 +71,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--c-primary, #AD3F61);
+  color: #242020;
   background: rgba(173, 63, 97, 0.08);
   padding: 5px 12px;
   border-radius: 999px;
@@ -85,7 +81,7 @@
 .spa-benefits h1 {
   font-size: clamp(24px, 3.2vw, 36px);
   font-weight: 800;
-  color: var(--c-primary-dark, #721B29);
+  color: #242020;
   line-height: 1.25;
   letter-spacing: -0.02em;
   margin: 0 0 12px 0;
@@ -113,7 +109,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--c-primary-dark, #721B29);
+  color: #242020;
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(173, 63, 97, 0.15);
   padding: 8px 14px;
@@ -122,7 +118,7 @@
 }
 
 .spa-benefit-trust-chip svg {
-  color: var(--c-primary, #AD3F61);
+  color: #242020;
   flex-shrink: 0;
 }
 
@@ -135,9 +131,9 @@
 }
 
 .spa-benefit-actions .btn-editorial-primary {
-  background: var(--c-primary, #AD3F61);
-  color: #FFFFFF;
-  border: 1px solid var(--c-primary, #AD3F61);
+  background: var(--c-primary, #D77F91);
+  color: #242020;
+  border: 1px solid var(--c-primary, #D77F91);
   padding: 10px 20px;
   border-radius: 10px;
   font-weight: 600;
@@ -150,15 +146,15 @@
 }
 
 .spa-benefit-actions .btn-editorial-primary:hover {
-  background: var(--c-primary-hover, #8C2A47);
+  background: var(--c-primary-hover, #B78A91);
   box-shadow: 0 4px 12px rgba(173, 63, 97, 0.25);
   transform: translateY(-1px);
 }
 
 .spa-benefit-actions .btn-editorial-outline {
-  background: #FFFFFF;
-  color: var(--c-primary-dark, #721B29);
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: #FFFCFA;
+  color: #242020;
+  border: 1px solid var(--c-border, #EBC9C9);
   padding: 10px 18px;
   border-radius: 10px;
   font-weight: 600;
@@ -171,8 +167,8 @@
 }
 
 .spa-benefit-actions .btn-editorial-outline:hover {
-  background: var(--c-primary-light, #FFF0F3);
-  border-color: var(--c-primary, #AD3F61);
+  background: var(--c-primary-light, #F1DEDA);
+  border-color: var(--c-primary, #D77F91);
 }
 
 /* ==========================================================================
@@ -185,8 +181,8 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  background: #FFFFFF;
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: #FFFCFA;
+  border: 1px solid var(--c-border, #EBC9C9);
   border-radius: 14px;
   padding: 14px 20px;
   margin-bottom: 28px;
@@ -206,7 +202,7 @@
   background: none;
   width: 100%;
   font-size: 14px;
-  color: var(--c-text-main, #1F2937);
+  color: var(--c-text-main, #242020);
   outline: none;
 }
 
@@ -217,8 +213,8 @@
 .spa-benefit-count-badge {
   font-size: 13px;
   font-weight: 600;
-  color: var(--c-primary, #AD3F61);
-  background: var(--c-primary-light, #FFF0F3);
+  color: #242020;
+  background: var(--c-primary-light, #F1DEDA);
   padding: 4px 12px;
   border-radius: 999px;
   white-space: nowrap;
@@ -239,8 +235,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: #FFFCFA;
+  border: 1px solid var(--c-border, #EBC9C9);
   border-radius: 18px;
   padding: 0;
   box-shadow: 0 4px 20px -6px rgba(0, 0, 0, 0.05);
@@ -283,7 +279,7 @@
   align-items: center;
   gap: 5px;
   background: rgba(114, 27, 41, 0.92);
-  color: #FFFFFF;
+  color: #FFFCFA;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -303,7 +299,7 @@
   align-items: center;
   gap: 5px;
   background: rgba(255, 255, 255, 0.92);
-  color: var(--c-primary-dark, #721B29);
+  color: #242020;
   font-size: 11.5px;
   font-weight: 600;
   padding: 4px 10px;
@@ -324,7 +320,7 @@
 .spa-benefit-card h2 {
   font-size: 19px;
   font-weight: 700;
-  color: var(--c-text-main, #1F2937);
+  color: var(--c-text-main, #242020);
   line-height: 1.35;
   letter-spacing: -0.015em;
   margin: 0 0 8px 0;
@@ -359,7 +355,7 @@
 
 /* Included Services List */
 .spa-package-items-wrapper {
-  background: #FAF7F8;
+  background: #FFFCFA;
   border: 1px solid #F1E5E9;
   border-radius: 12px;
   padding: 14px 16px;
@@ -390,7 +386,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 13.5px;
-  color: var(--c-text-main, #1F2937);
+  color: var(--c-text-main, #242020);
   gap: 12px;
 }
 
@@ -409,9 +405,9 @@
 .spa-package-item-qty {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--c-primary, #AD3F61);
-  background: #FFFFFF;
-  border: 1px solid var(--c-border, #F0DEE3);
+  color: #242020;
+  background: #FFFCFA;
+  border: 1px solid var(--c-border, #EBC9C9);
   padding: 2px 8px;
   border-radius: 6px;
   white-space: nowrap;
@@ -419,7 +415,7 @@
 
 /* Pricing Footer */
 .spa-package-card-footer {
-  border-top: 1px dashed var(--c-border, #F0DEE3);
+  border-top: 1px dashed var(--c-border, #EBC9C9);
   padding-top: 18px;
   display: flex;
   flex-direction: column;
@@ -435,7 +431,7 @@
 .spa-package-price {
   font-size: 22px;
   font-weight: 800;
-  color: var(--c-primary-dark, #721B29);
+  color: #242020;
   letter-spacing: -0.02em;
 }
 
@@ -447,8 +443,8 @@
 
 .spa-package-buy-btn {
   width: 100%;
-  background: linear-gradient(135deg, var(--c-primary, #AD3F61) 0%, var(--c-primary-hover, #8C2A47) 100%);
-  color: #FFFFFF;
+  background: linear-gradient(135deg, var(--c-primary, #D77F91) 0%, var(--c-primary-hover, #B78A91) 100%);
+  color: #242020;
   border: none;
   padding: 12px 18px;
   border-radius: 10px;
@@ -474,8 +470,8 @@
 .spa-package-guarantees {
   margin-top: 20px;
   padding: clamp(28px, 4vw, 44px);
-  background: #FAF7F8;
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: #FFFCFA;
+  border: 1px solid var(--c-border, #EBC9C9);
   border-radius: 20px;
 }
 
@@ -488,7 +484,7 @@
 .spa-package-guarantees-heading h3 {
   font-size: clamp(20px, 2.5vw, 26px);
   font-weight: 800;
-  color: var(--c-primary-dark, #721B29);
+  color: #242020;
   margin: 0 0 8px 0;
 }
 
@@ -505,8 +501,8 @@
 }
 
 .spa-package-guarantee-card {
-  background: #FFFFFF;
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: #FFFCFA;
+  border: 1px solid var(--c-border, #EBC9C9);
   border-radius: 14px;
   padding: 22px;
   display: flex;
@@ -519,8 +515,8 @@
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: var(--c-primary-light, #FFF0F3);
-  color: var(--c-primary, #AD3F61);
+  background: var(--c-primary-light, #F1DEDA);
+  color: #242020;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -529,7 +525,7 @@
 .spa-package-guarantee-card h4 {
   font-size: 16px;
   font-weight: 700;
-  color: var(--c-primary-dark, #721B29);
+  color: #242020;
   margin: 0;
 }
 
@@ -548,12 +544,12 @@
   display: grid;
   gap: 18px;
   font-size: 14px;
-  color: var(--c-text-main, #1F2937);
+  color: var(--c-text-main, #242020);
 }
 
 .spa-purchase-summary-box {
-  background: linear-gradient(135deg, #FFF9FA 0%, #FFF0F3 100%);
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: linear-gradient(135deg, #FFFCFA 0%, #F1DEDA 100%);
+  border: 1px solid var(--c-border, #EBC9C9);
   border-radius: 12px;
   padding: 18px;
 }
@@ -568,7 +564,7 @@
 .spa-purchase-summary-header strong {
   font-size: 22px;
   font-weight: 800;
-  color: var(--c-primary-dark, #721B29);
+  color: #242020;
 }
 
 .spa-purchase-validity-text {
@@ -584,7 +580,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-top: 1px dashed var(--c-border, #F0DEE3);
+  border-top: 1px dashed var(--c-border, #EBC9C9);
   padding-top: 10px;
 }
 
@@ -596,7 +592,7 @@
 }
 
 .spa-purchase-policy-box {
-  background: #FAF7F8;
+  background: #FFFCFA;
   border: 1px solid #E5E7EB;
   border-radius: 10px;
   padding: 14px 16px;
@@ -620,14 +616,14 @@
   font-size: 13.5px !important;
   cursor: pointer;
   user-select: none;
-  color: var(--c-text-main, #1F2937);
+  color: var(--c-text-main, #242020);
   font-weight: 500;
 }
 
 .spa-purchase-terms-label input[type="checkbox"] {
   width: 18px !important;
   height: 18px !important;
-  accent-color: var(--c-primary, #AD3F61);
+  accent-color: var(--c-primary, #D77F91);
   margin-top: 2px;
   flex-shrink: 0;
 }
@@ -646,8 +642,8 @@
 
 .spa-benefit-form button[type="submit"] {
   width: 100%;
-  background: var(--c-primary, #AD3F61);
-  color: #FFFFFF;
+  background: var(--c-primary, #D77F91);
+  color: #242020;
   border: none;
   padding: 13px 20px;
   border-radius: 10px;
@@ -658,7 +654,7 @@
 }
 
 .spa-benefit-form button[type="submit"]:hover:not(:disabled) {
-  background: var(--c-primary-hover, #8C2A47);
+  background: var(--c-primary-hover, #B78A91);
   box-shadow: 0 4px 14px rgba(173, 63, 97, 0.25);
 }
 
@@ -674,7 +670,7 @@
 .spa-ticket-detail {
   font-size: 13.5px;
   line-height: 1.7;
-  border-top: 1px solid var(--c-border, #F0DEE3);
+  border-top: 1px solid var(--c-border, #EBC9C9);
   margin-top: 14px;
   padding-top: 14px;
 }
@@ -694,8 +690,8 @@
 }
 
 .spa-package-requests button {
-  background: #FFFFFF;
-  border: 1px solid var(--c-border, #F0DEE3);
+  background: #FFFCFA;
+  border: 1px solid var(--c-border, #EBC9C9);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
@@ -703,7 +699,7 @@
 }
 
 .spa-package-requests button:hover {
-  background: var(--c-primary-light, #FFF0F3);
+  background: var(--c-primary-light, #F1DEDA);
 }
 
 /* Responsive queries */

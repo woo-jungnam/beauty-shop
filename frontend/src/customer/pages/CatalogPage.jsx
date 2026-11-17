@@ -278,7 +278,6 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
         <span>DANH MỤC MỸ PHẨM CHÍNH HÃNG</span>
         <h1>{getBannerTitle()}</h1>
         <p>Chọn nhiều danh mục, thương hiệu, vấn đề da và hoạt chất để tìm sản phẩm phù hợp.</p>
-        <a href="#/image-search">Tìm sản phẩm bằng ảnh →</a>
       </div>
 
       <button type="button" className="catalog-mobile-filter-trigger" onClick={() => setMobileFilterOpen(true)} aria-expanded={mobileFilterOpen}>

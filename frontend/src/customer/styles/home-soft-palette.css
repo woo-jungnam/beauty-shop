@@ -1,15 +1,15 @@
 /* Lumiere reference palette. Color overrides only; structure is unchanged. */
 .customer-app .customer-home-page {
-  --home-white: #FFFCFA;
+  --home-white: #FFFFFF;
   --home-pink: #EBC9C9;
   --home-ivory: #F8F4F1;
   --home-peach: #F1DEDA;
   --home-rose: #B78A91;
   --home-ink: #242020;
-  background-color: #FFFCFA;
+  background-color: #FFFFFF;
 }
 .customer-app .customer-home-page.customer-home-page > :is(.hero-slider-container, #flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) {
-  --section-surface: #FFFCFA;
+  --section-surface: #FFFFFF;
   --c-primary: #D77F91;
   --c-primary-dark: #B78A91;
   --c-primary-hover: #B78A91;
@@ -29,12 +29,12 @@
   border-color: #EBC9C9 !important;
 }
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.flash-sale-panel, .recommendations-box, .home-spa-panel) {
-  background: #FFFCFA !important;
+  background: #FFFFFF !important;
   border-color: #EBC9C9 !important;
   box-shadow: 0 12px 32px #70564B0D !important;
 }
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section) :is(.flash-sale-header, .recommendations-header, .section-header-editorial) {
-  background: #F1DEDA;
+  background: #FFFFFF;
   color: #242020;
   border-color: #B78A91 !important;
 }
@@ -72,7 +72,7 @@
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-title, .product-card-title-link, .home-spa-card-body h3, .brand-partner-name) {
   color: #242020 !important;
 }
-.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-meta, .product-card-brand, .home-spa-card-price, .product-card-price > span:first-child) {
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-meta, .home-spa-card-price, .product-card-price > span:first-child) {
   color: #242020 !important;
 }
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-avatar, .brand-partner-box, .brand-partner-card, .spa-service-card, .product-card-resolved) {
@@ -137,9 +137,9 @@
   outline-color: #242020 !important;
 }
 
-/* Cream secondary surfaces separate sections without adding new geometry. */
+/* White section surfaces keep the heading accents in focus. */
 .customer-app .customer-home-page.customer-home-page > :is(#flash-sale, #random-picks, #spa-section) {
-  --section-surface: #F8F4F1;
+  --section-surface: #FFFFFF;
 }
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) :is(.product-card-resolved, .spa-service-card) {
   background: #EBC9C9 !important;
@@ -147,7 +147,7 @@
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) :is(.product-card-body, .home-spa-card-body) {
   background: linear-gradient(#FFFCFA, #F1DEDA);
 }
-.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) :is(.product-card-brand, .product-card-expiry, .product-card-clearance-note) {
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #store-catalog) :is(.product-card-expiry, .product-card-clearance-note) {
   color: #242020 !important;
   background: #EBC9C9 !important;
   border-color: #B78A91;
@@ -167,4 +167,43 @@
 }
 .customer-app .customer-home-page.customer-home-page #flash-sale .flash-tab-indicator.is-active {
   background: #242020 !important;
+}
+
+/* Brand logos sit directly on the section surface. */
+.customer-app .customer-home-page.customer-home-page #brand-partners .brand-logo-tile {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Typography gives section titles emphasis without a marker or underline. */
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) h2.section-title-highlight {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  background: none !important;
+  color: #AD3F61 !important;
+  font-family: var(--font-sans);
+  font-size: clamp(24px, 2.1vw, 32px) !important;
+  font-weight: 800;
+  letter-spacing: -.025em;
+  line-height: 1.25;
+  text-decoration: none;
+  text-wrap: balance;
+  animation: none;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks) :is(.flash-sale-header, .recommendations-header) {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #EBC9C9 !important;
+  border-left: 4px solid #D77F91;
+  border-radius: 0;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks) h2.section-title-highlight {
+  font-size: clamp(26px, 2.4vw, 36px) !important;
+  font-weight: 900;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) .section-title-icon {
+  color: #D77F91 !important;
+}
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.section-header-editorial, .section-title-wrap)::after {
+  display: none;
 }

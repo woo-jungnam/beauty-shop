@@ -1,0 +1,56 @@
+/* Shared Lumière palette for customer purchase and account journeys. */
+.customer-app :is(.spa-benefits, .spa-booking-page, .customer-checkout-page, .pd-page, .customer-profile-page) {
+  --c-primary: #D77F91;
+  --c-primary-hover: #B78A91;
+  --c-primary-dark: #B78A91;
+  --c-primary-light: #F1DEDA;
+  --c-gold: #D77F91;
+  --c-gold-hover: #B78A91;
+  --c-gold-light: #F1DEDA;
+  --c-gold-border: #EBC9C9;
+  --c-text-gold: #242020;
+  --c-canvas: #FFFCFA;
+  --c-canvas-subtle: #F8F4F1;
+  --c-surface: #FFFCFA;
+  --c-border: #EBC9C9;
+  --c-border-subtle: #F1DEDA;
+  --c-text-main: #242020;
+  --c-text-muted: #625653;
+  --c-text-light: #625653;
+  --gradient-rose-gold: #D77F91;
+  --gradient-espresso: #B78A91;
+  --gradient-nude-sheen: #F1DEDA;
+  background-color: var(--c-canvas);
+}
+.customer-app :is(.spa-benefits, .spa-booking-page, .customer-checkout-page, .pd-page, .customer-profile-page) :is(h1, h2, h3, h4) {
+  color: #242020;
+}
+.customer-app :is(.spa-benefits, .spa-booking-page, .customer-checkout-page, .pd-page, .customer-profile-page) :is(.btn-luxury-primary, .btn-luxury-gold, .pf-btn-primary) {
+  background: #D77F91 !important;
+  border-color: #D77F91 !important;
+  color: #242020 !important;
+}
+.customer-app :is(.spa-benefits, .spa-booking-page, .customer-checkout-page, .pd-page, .customer-profile-page) :is(.btn-luxury-primary, .btn-luxury-gold, .pf-btn-primary):hover:not(:disabled) {
+  background: #B78A91 !important;
+  border-color: #B78A91 !important;
+}
+.customer-app .customer-profile-page :is(.pf-bento-header, .profile-card-heading) {
+  background: #F1DEDA;
+  border-color: #EBC9C9;
+}
+.customer-app .customer-profile-page :is(.pf-sidebar, .pf-bento-card, .account-card) {
+  border-color: #EBC9C9;
+}
+.customer-app .customer-profile-page :is(.pf-btn-outline, .pf-order-link, .pf-order-price, .pf-stat-val.is-pink) {
+  color: #242020;
+}
+.customer-app .customer-profile-page .pf-btn-outline { border-color: #B78A91; }
+.customer-app .customer-profile-page .pf-btn-outline:hover { background: #EBC9C9; }
+.customer-app .spa-benefits :is(.spa-benefit-hero, .spa-package-total-badge) { background: #F1DEDA; }
+.customer-app .spa-benefits :is(.spa-benefit-card, .spa-package-card-body) { background: #FFFCFA; }
+.customer-app .pd-page .pd-side-section > header { background: #F1DEDA; border-color: #EBC9C9; }
+.customer-app .pd-page :is(.pd-main-image, .pd-section, .pd-buy-panel) { border-color: #EBC9C9; }
+.customer-app .customer-checkout-page :is(input, select, textarea):focus-visible {
+  outline: 2px solid #B78A91;
+  outline-offset: 2px;
+}

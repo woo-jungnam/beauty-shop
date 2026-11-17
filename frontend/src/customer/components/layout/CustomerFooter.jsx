@@ -97,7 +97,7 @@ export const CustomerFooter = ({ onNavigate }) => {
       <div style={{
         borderBottom: '1px solid rgba(235, 201, 201, 0.2)',
         padding: '32px 0',
-        backgroundColor: '#423431'
+        backgroundColor: '#51413E'
       }}>
         <div className="customer-container">
           <div style={{

@@ -9,6 +9,7 @@ import './styles/home-section-tones.css';
 import './styles/home-soft-palette.css';
 import './styles/home-product-cards.css';
 import './styles/customer-header.css';
+import './styles/customer-lumiere-pages.css';
 import { CustomerHeader } from './components/layout/CustomerHeader';
 import { CustomerFooter } from './components/layout/CustomerFooter';
 import { MiniCartDrawer } from './components/cart/MiniCartDrawer';

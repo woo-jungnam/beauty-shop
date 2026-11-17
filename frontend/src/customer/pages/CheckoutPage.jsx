@@ -319,7 +319,7 @@ export const CheckoutPage = ({ onNavigate }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
             <div style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: '#FFFCFA',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--c-border)',
               padding: '24px'
@@ -377,7 +377,7 @@ export const CheckoutPage = ({ onNavigate }) => {
 
             {user && <details className="account-card"><summary>Chọn hoặc quản lý địa chỉ đã lưu</summary><AddressBook onSelect={row => setFormData(current => ({ ...current, fullName: row.recipientName, phone: row.phone, address: row.address, ward: row.ward, district: row.district || '', city: row.city }))} /></details>}
             <div style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: '#FFFCFA',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--c-border)',
               padding: '24px'
@@ -395,7 +395,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                     autoComplete="address-level1"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
+                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFCFA', outline: 'none' }}
                    required maxLength={100} />
                 </div>
 
@@ -407,7 +407,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                     autoComplete="address-level2"
                     value={formData.district}
                     onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
+                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFCFA', outline: 'none' }}
                    maxLength={100} />
                 </div>
 
@@ -419,7 +419,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                     autoComplete="address-level3"
                     value={formData.ward}
                     onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
-                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFFFF', outline: 'none' }}
+                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFCFA', outline: 'none' }}
                    required maxLength={100} />
                 </div>
               </div>
@@ -469,7 +469,7 @@ export const CheckoutPage = ({ onNavigate }) => {
             </div>
 
             <div style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: '#FFFCFA',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--c-border)',
               padding: '24px'
@@ -486,7 +486,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                   padding: '14px 16px',
                   borderRadius: 'var(--radius-sm)',
                   border: formData.paymentMethod === 'BANK' ? '2px solid var(--c-gold)' : '1px solid var(--c-border)',
-                  backgroundColor: formData.paymentMethod === 'BANK' ? 'var(--c-gold-light)' : '#FFFFFF',
+                  backgroundColor: formData.paymentMethod === 'BANK' ? 'var(--c-gold-light)' : '#FFFCFA',
                   cursor: 'pointer'
                 }}>
                   <input
@@ -517,7 +517,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                   padding: '14px 16px',
                   borderRadius: 'var(--radius-sm)',
                   border: formData.paymentMethod === 'COD' ? '2px solid var(--c-gold)' : '1px solid var(--c-border)',
-                  backgroundColor: formData.paymentMethod === 'COD' ? 'var(--c-gold-light)' : '#FFFFFF',
+                  backgroundColor: formData.paymentMethod === 'COD' ? 'var(--c-gold-light)' : '#FFFCFA',
                   cursor: 'pointer'
                 }}>
                   <input
@@ -542,7 +542,7 @@ export const CheckoutPage = ({ onNavigate }) => {
           </div>
 
           <div style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: '#FFFCFA',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--c-border)',
             padding: '24px',
@@ -681,7 +681,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                       style={{
                         padding: '9px 16px',
                         backgroundColor: inputVoucher.trim() ? 'var(--c-primary)' : 'var(--c-border)',
-                        color: '#FFFFFF',
+                        color: '#FFFCFA',
                         border: 'none',
                         borderRadius: 'var(--radius-sm)',
                         fontSize: '13px',
@@ -733,7 +733,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: 'var(--c-primary, #721B29)',
+                      color: 'var(--c-primary, #D77F91)',
                       fontSize: '12px',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -829,7 +829,7 @@ export const CheckoutPage = ({ onNavigate }) => {
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: '#FFFCFA',
             borderRadius: 'var(--radius-md, 8px)',
             maxWidth: '520px',
             width: '100%',
@@ -841,7 +841,7 @@ export const CheckoutPage = ({ onNavigate }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--c-border, #E5E7EB)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Tag size={18} color="var(--c-gold, #C5A880)" />
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--c-primary, #721B29)' }}>Mã giảm giá khả dụng</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--c-primary, #D77F91)' }}>Mã giảm giá khả dụng</h3>
               </div>
               <button
                 type="button"
@@ -870,7 +870,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                     border: '1px solid var(--c-border, #E5E7EB)',
                     borderRadius: '6px',
                     padding: '12px 14px',
-                    backgroundColor: isApplicable ? '#FAFAFA' : '#F9FAFB',
+                    backgroundColor: isApplicable ? '#FFFCFA' : '#F8F4F1',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -883,15 +883,15 @@ export const CheckoutPage = ({ onNavigate }) => {
                           fontFamily: 'var(--font-mono, monospace)',
                           fontWeight: 700,
                           fontSize: '13px',
-                          color: 'var(--c-primary, #721B29)',
-                          background: '#FCE7F3',
+                          color: 'var(--c-primary, #D77F91)',
+                          background: '#EBC9C9',
                           padding: '2px 8px',
                           borderRadius: '4px',
                           letterSpacing: '0.5px'
                         }}>
                           {v.code}
                         </span>
-                        <strong style={{ fontSize: '13px', color: '#1F2937' }}>{v.name}</strong>
+                        <strong style={{ fontSize: '13px', color: '#242020' }}>{v.name}</strong>
                       </div>
                       <div style={{ fontSize: '12.5px', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
                         {discountLabel}

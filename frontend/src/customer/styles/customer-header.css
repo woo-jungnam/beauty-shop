@@ -9,15 +9,15 @@
   box-shadow: 0 4px 18px #8C2A470D;
 }
 .customer-app .storefront-announcement {
-  background: #FFFFFF;
-  color: #8C2A47;
-  border-bottom-color: #F1DEDA;
+  background: #51413E;
+  color: #FFFCFA;
+  border-bottom-color: #B6A09B;
 }
 .customer-app .storefront-announcement :is(span, a) {
-  color: #8C2A47;
+  color: #FFFCFA;
 }
 .customer-app .storefront-announcement a:hover {
-  color: #633D47;
+  color: #EBC9C9;
 }
 .customer-app .storefront-header .storefront-brand,
 .customer-app .storefront-header .storefront-brand > span,
@@ -89,6 +89,10 @@
   color: var(--header-deep);
   background: var(--header-blush);
   border-bottom-color: var(--header-berry);
+}
+.customer-app .storefront-header .storefront-nav-link,
+.customer-app .storefront-header .storefront-nav-link:is(:hover, :focus, .is-active) {
+  text-decoration: none;
 }
 .customer-app .storefront-header .storefront-dropdown-toggle:is(:hover, [aria-expanded="true"]) {
   background: var(--header-blush);
