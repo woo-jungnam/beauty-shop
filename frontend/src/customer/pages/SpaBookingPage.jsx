@@ -33,6 +33,8 @@ import { useAuth } from "../../app/providers/AuthProvider";
 import { AppointmentFinance } from "../../features/treatments/AppointmentFinance";
 import { BankPaymentInstruction } from "../../shared/ui/BankPaymentInstruction";
 import { Button } from "../../shared/ui/Button";
+import { BOOKING_HERO_POSITION } from "../../features/banners/bannerPositions";
+import { SectionStripBanner } from "../../features/banners/SectionStripBanner";
 import {
   buildGoogleCalendarUrl,
   getVietnamDateString,
@@ -97,6 +99,7 @@ const StepHeading = ({ number, title, description, complete }) => (
 export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTicketId }) => {
   const { user, isAuthenticated } = useAuth();
   const [services, setServices] = useState([]);
+  const [bookingBanners, setBookingBanners] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [serviceError, setServiceError] = useState(false);
   const [serviceVersion, setServiceVersion] = useState(0);
@@ -142,6 +145,16 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     address: "123 Đồng Khởi, Quận 1, TP.HCM",
     hotline: "1800 6324",
   });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    apiClient.get(`/api/v1/banners?position=${BOOKING_HERO_POSITION}`, { signal: controller.signal })
+      .then(response => {
+        const banners = readData(response);
+        if (!controller.signal.aborted && Array.isArray(banners)) setBookingBanners(banners);
+      }).catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     apiClient
@@ -1012,6 +1025,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           <span>Đặt lịch Spa</span>
         </div>
 
+        <SectionStripBanner banners={bookingBanners} position={BOOKING_HERO_POSITION}
+          className="booking-hero-photo" priority />
         <section className="booking-hero" aria-labelledby="spa-booking-title">
           <div className="booking-hero-copy">
             <h1 id="spa-booking-title">
@@ -1047,15 +1062,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 Lộ trình chăm sóc da chuyên sâu →
               </a>
             </div>
-          </div>
-          <div className="booking-hero-photo">
-            <img
-              src="/images/spa/spa-ritual.jpg"
-              alt="Không gian thư giãn tại BeautyShop Spa"
-              width="600"
-              height="300"
-              loading="lazy"
-            />
           </div>
         </section>
 

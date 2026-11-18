@@ -8,10 +8,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../app/providers/AuthProvider";
-import { getAdminSections, getInitials } from "../app/adminNavigation";
+import { adminItemKey, getAdminSections, getInitials } from "../app/adminNavigation";
 
 export const Sidebar = ({
-  activeTab,
+  activeItemKey,
   activeSubTab = null,
   onSelectTab,
   collapsed,
@@ -30,15 +30,15 @@ export const Sidebar = ({
 
   const [expandedItems, setExpandedItems] = useState(() => {
     const initial = {};
-    if (activeTab) initial[activeTab] = true;
+    if (activeItemKey) initial[activeItemKey] = true;
     return initial;
   });
 
   useEffect(() => {
-    if (activeTab) {
-      setExpandedItems((prev) => ({ ...prev, [activeTab]: true }));
+    if (activeItemKey) {
+      setExpandedItems((prev) => ({ ...prev, [activeItemKey]: true }));
     }
-  }, [activeTab]);
+  }, [activeItemKey]);
 
   const toggleExpand = (id, event) => {
     event.stopPropagation();
@@ -143,20 +143,23 @@ export const Sidebar = ({
           {sections.map((section) => (
             <div className="sidebar-section" key={section.label}>
               <p className="sidebar-section-label">{section.label}</p>
-              {section.items.map(({ id, label, icon: Icon, subItems }) => {
+              {section.items.map((item) => {
+                const { id, label, icon: Icon, subTab, subItems } = item;
+                const itemKey = adminItemKey(item);
                 const hasSub = Array.isArray(subItems) && subItems.length > 0;
-                const isExpanded = !!expandedItems[id];
-                const isParentActive = activeTab === id;
+                const isExpanded = !!expandedItems[itemKey];
+                const isParentActive = activeItemKey === itemKey;
+                const isParentCurrent = isParentActive && !subItems?.some(sub => sub.id === activeSubTab);
 
                 if (collapsed || !hasSub) {
                   return (
                     <button
-                      key={id}
+                      key={itemKey}
                       type="button"
-                      className={`sidebar-link ${isParentActive && !activeSubTab ? "is-active" : ""}`}
-                      onClick={() => onSelectTab(id)}
+                      className={`sidebar-link ${isParentActive ? "is-active" : ""}`}
+                      onClick={() => onSelectTab(id, subTab)}
                       aria-label={label}
-                      aria-current={isParentActive && !activeSubTab ? "page" : undefined}
+                      aria-current={isParentActive ? "page" : undefined}
                       title={collapsed ? label : undefined}
                     >
                       <span className="nav-icon">
@@ -170,18 +173,18 @@ export const Sidebar = ({
 
                 return (
                   <div
-                    key={id}
+                    key={itemKey}
                     className={`sidebar-split-item ${isParentActive ? "is-parent-active" : ""}`}
                   >
                     <div
-                      className={`sidebar-split-row ${isParentActive && !activeSubTab ? "is-active" : ""}`}
+                      className={`sidebar-split-row ${isParentCurrent ? "is-active" : ""}`}
                     >
                       <button
                         type="button"
                         className="sidebar-split-main"
-                        onClick={() => onSelectTab(id)}
+                        onClick={() => onSelectTab(id, subTab)}
                         aria-label={label}
-                        aria-current={isParentActive && !activeSubTab ? "page" : undefined}
+                        aria-current={isParentCurrent ? "page" : undefined}
                         title={`Vào không gian ${label}`}
                       >
                         <span className="nav-icon">
@@ -192,7 +195,7 @@ export const Sidebar = ({
                       <button
                         type="button"
                         className={`sidebar-split-arrow ${isExpanded ? "is-expanded" : ""}`}
-                        onClick={(e) => toggleExpand(id, e)}
+                        onClick={(e) => toggleExpand(itemKey, e)}
                         aria-label={
                           isExpanded
                             ? `Thu gọn menu con ${label}`

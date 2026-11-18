@@ -6,6 +6,7 @@ import {
   Clock,
   Zap,
   Award,
+  Filter,
   Search,
   Ticket,
   Package
@@ -314,6 +315,7 @@ export const HomePage = ({ onNavigate }) => {
   useEffect(() => {
     if (catalogCategoryFilter === 'ALL') {
       setCategoryProducts(null);
+      setLoadingCategoryProducts(false);
       return;
     }
     let isCancelled = false;
@@ -390,13 +392,10 @@ export const HomePage = ({ onNavigate }) => {
 
   const dynamicCatalogCategories = useMemo(() => {
     const countLabel = totalProductCount ?? products.length;
-    const list = [{ id: 'ALL', label: `Tất cả sản phẩm (${countLabel})` }];
-    if (categories.length > 0) {
-      categories.slice(0, 7).forEach(cat => {
-        list.push({ id: String(cat.id), label: cat.name });
-      });
-    }
-    return list;
+    return [
+      { id: 'ALL', label: `Tất cả sản phẩm (${countLabel})` },
+      ...categories.map(category => ({ id: String(category.id), label: category.name })),
+    ];
   }, [categories, products.length, totalProductCount]);
 
   const categoryProductCounts = useMemo(() => {
@@ -1036,84 +1035,41 @@ export const HomePage = ({ onNavigate }) => {
 
         <SectionStripBanner banners={backendBanners} position="SECTION_CATALOG" />
 
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '12px',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          marginBottom: '28px',
-          paddingBottom: '20px',
-          borderBottom: '1px solid var(--c-border)'
-        }}>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={15} color="var(--c-text-light)" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
+        <div className="home-catalog-filters">
+          <div className="home-catalog-field">
+            <Search size={15} aria-hidden="true" />
             <input
               type="text"
+              aria-label="Tìm nhanh sản phẩm"
               placeholder="Tìm nhanh mỹ phẩm, thương hiệu..."
               value={catalogSearchTerm}
-              onChange={(e) => setCatalogSearchTerm(e.target.value)}
-              style={{
-                padding: '9px 12px 9px 36px',
-                borderRadius: 'var(--radius-pill)',
-                border: '1px solid var(--c-border)',
-                fontSize: '13px',
-                outline: 'none',
-                backgroundColor: '#FFFFFF',
-                width: '280px',
-                transition: 'border-color 0.15s ease'
-              }}
+              onChange={(event) => setCatalogSearchTerm(event.target.value)}
             />
           </div>
 
+          <div className="home-catalog-field">
+            <Filter size={15} aria-hidden="true" />
+            <select
+              aria-label="Lọc danh mục sản phẩm"
+              value={catalogCategoryFilter}
+              onChange={(event) => setCatalogCategoryFilter(event.target.value)}
+            >
+              {dynamicCatalogCategories.map(({ id, label }) => (
+                <option key={id} value={id}>{label}</option>
+              ))}
+            </select>
+          </div>
+
           <select
+            aria-label="Sắp xếp sản phẩm"
             value={catalogSortBy}
-            onChange={(e) => setCatalogSortBy(e.target.value)}
-            style={{
-              padding: '9px 14px',
-              borderRadius: 'var(--radius-pill)',
-              border: '1px solid var(--c-border)',
-              fontSize: '13px',
-              backgroundColor: '#FFFFFF',
-              outline: 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              color: 'var(--c-primary)'
-            }}
+            onChange={(event) => setCatalogSortBy(event.target.value)}
           >
             <option value="DEFAULT">Sắp xếp: Mặc định</option>
             <option value="PRICE_ASC">Giá: Thấp đến cao</option>
             <option value="PRICE_DESC">Giá: Cao đến thấp</option>
             <option value="RATING">Đánh giá cao nhất</option>
           </select>
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '28px' }}>
-          {dynamicCatalogCategories.map((tab) => {
-            const active = catalogCategoryFilter === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setCatalogCategoryFilter(tab.id);
-                }}
-                className={`tab-filter-btn ${active ? 'active' : ''}`}
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  borderRadius: 'var(--radius-pill)',
-                  border: active ? '1.5px solid var(--c-gold)' : '1px solid var(--c-border)',
-                  backgroundColor: active ? 'var(--c-gold-light)' : '#FFFFFF',
-                  color: active ? 'var(--c-gold-hover)' : 'var(--c-primary)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
         </div>
 
         {loading || loadingCategoryProducts ? (

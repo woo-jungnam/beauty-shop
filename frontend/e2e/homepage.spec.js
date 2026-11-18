@@ -95,6 +95,45 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     await expect(flashSection.locator('.countdown-digit-val')).toHaveCount(0);
   });
 
+  test('Flash Sale centers short rows and aligns campaign and clearance cards', async ({ page }) => {
+    const item = { productId: 1, productVariantId: 11, productName: 'Giờ vàng', sku: 'FLASH-1',
+      flashPrice: 1900000, originalPrice: 2750000, quantityQuota: 20, quantitySold: 0, remainingQuota: 20 };
+    await page.route('**/api/v1/flash-sales/current', route => route.fulfill({ json: { data: {
+      currentSlotId: 1, items: [item, { ...item, productId: 2, productVariantId: 12, flashPrice: 110000, originalPrice: 165000 }],
+    } } }));
+    await page.route('**/api/v1/products/expiring-soon?**', route => route.fulfill({ json: { data: [{
+      id: 3, name: 'Sản phẩm cận date', earliestExpirationDate: '2027-01-04', clearanceStock: 5,
+      clearanceVariant: { id: 13, sku: 'EXP-1', price: 389000, discountPrice: 269000, stockQuantity: 5, isActive: true },
+    }] } }));
+    await page.goto(BASE);
+    const cards = page.locator('#flash-sale .flash-sale-grid > .product-card-resolved');
+    const grid = page.locator('#flash-sale .flash-sale-grid').filter({ has: page.locator('.product-card-resolved') });
+    await expect(cards).toHaveCount(3);
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect.poll(() => cards.evaluateAll(elements => {
+        const bottoms = elements.map(element => element.getBoundingClientRect().bottom);
+        const prices = elements.map(element => element.querySelector('.product-card-price > span').getBoundingClientRect().top);
+        return Math.max(Math.max(...bottoms) - Math.min(...bottoms), Math.max(...prices) - Math.min(...prices));
+      })).toBeLessThan(1);
+      const { leftGap, rightGap, overflow } = await grid.evaluate(element => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          leftGap: element.firstElementChild.getBoundingClientRect().left - bounds.left,
+          rightGap: bounds.right - element.lastElementChild.getBoundingClientRect().right,
+          overflow: element.scrollWidth - element.clientWidth,
+        };
+      });
+      if (width === 1440) {
+        expect(leftGap).toBeGreaterThan(0);
+        expect(Math.abs(leftGap - rightGap)).toBeLessThan(1);
+      } else {
+        expect(leftGap).toBeGreaterThanOrEqual(-1);
+        expect(overflow).toBeGreaterThan(0);
+      }
+    }
+  });
+
   test('1.8 Section "10 sản phẩm ngẫu nhiên" hiển thị', async ({ page }) => {
     await page.goto(BASE);
     await waitForAppReady(page);
@@ -125,18 +164,26 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     console.log('Store catalog section ✓');
   });
 
-  test('1.10 Category filter pills hiển thị trong catalog', async ({ page }) => {
+  test('1.10 Bộ lọc danh mục trên trang chủ giữ lựa chọn khi mở catalog', async ({ page }) => {
+    await page.route('**/api/v1/categories', route => route.fulfill({ json: { data:
+      Array.from({ length: 8 }, (_, index) => ({ id: index + 1, name: `Danh mục ${index + 1}` })),
+    } }));
+    await page.route('**/api/v1/products?size=60', route => route.fulfill({ json: {
+      data: { content: [{ id: 1, name: 'Kem dưỡng' }], totalElements: 1 },
+    } }));
+    await page.route('**/api/v1/products/category/8?size=60', route => route.fulfill({ json: {
+      data: { content: [{ id: 2, name: 'Serum kiểm thử' }] },
+    } }));
     await page.goto(BASE);
-    await waitForAppReady(page);
     const catalogSection = page.locator('#store-catalog');
-    await catalogSection.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1000);
-    const pills = catalogSection.locator('.tab-filter-btn');
-    const pillCount = await pills.count();
-    console.log('Category filter pills:', pillCount);
-    expect(pillCount).toBeGreaterThanOrEqual(1);
-    const firstPill = await pills.first().textContent();
-    console.log('First pill text:', firstPill?.trim());
+    const filter = catalogSection.getByRole('combobox', { name: 'Lọc danh mục sản phẩm' });
+    await expect(filter).toHaveValue('ALL');
+    await filter.selectOption('8');
+    await catalogSection.getByRole('textbox', { name: 'Tìm nhanh sản phẩm' }).fill('Serum');
+    await catalogSection.getByRole('combobox', { name: 'Sắp xếp sản phẩm' }).selectOption('PRICE_ASC');
+    await expect(catalogSection.getByRole('link', { name: 'Serum kiểm thử', exact: true })).toBeVisible();
+    await catalogSection.getByRole('button', { name: 'Xem tất cả sản phẩm', exact: true }).click();
+    await expect(page).toHaveURL(/#\/products\?categoryId=8&search=Serum&sort=price_asc$/);
   });
 
   test('1.11 Spa services section hiển thị', async ({ page }) => {

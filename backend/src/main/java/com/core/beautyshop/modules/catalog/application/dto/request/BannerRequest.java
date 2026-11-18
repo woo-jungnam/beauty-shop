@@ -60,7 +60,7 @@ public class BannerRequest {
 
     @NotBlank(message = "Vị trí hiển thị không được để trống")
     @Size(max = 50, message = "Vị trí không quá 50 ký tự")
-    @Schema(description = "Vị trí hiển thị: HERO_SLIDE, HERO_SIDE, SECTION_FLASH_SALE, SECTION_CATEGORIES, SECTION_BRANDS, SECTION_RECOMMENDATIONS, SECTION_CATALOG, SECTION_SPA, PROMO", example = "HERO_SLIDE")
+    @Schema(description = "Vị trí hiển thị: HERO_SLIDE, HERO_SIDE, SECTION_FLASH_SALE, SECTION_CATEGORIES, SECTION_BRANDS, SECTION_RECOMMENDATIONS, SECTION_CATALOG, SECTION_SPA, TREATMENT_HERO, CATALOG_HERO, BOOKING_HERO, PROMO", example = "HERO_SLIDE")
     @Builder.Default
     private String position = "HERO_SLIDE";
 

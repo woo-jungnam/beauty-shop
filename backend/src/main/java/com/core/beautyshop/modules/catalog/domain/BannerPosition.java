@@ -20,6 +20,9 @@ public final class BannerPosition {
     public static final String SECTION_RECOMMENDATIONS = "SECTION_RECOMMENDATIONS";
     public static final String SECTION_CATALOG = "SECTION_CATALOG";
     public static final String SECTION_SPA = "SECTION_SPA";
+    public static final String TREATMENT_HERO = "TREATMENT_HERO";
+    public static final String CATALOG_HERO = "CATALOG_HERO";
+    public static final String BOOKING_HERO = "BOOKING_HERO";
     public static final String PROMO = "PROMO";
 
     private static final Map<String, String> POSITION_LABELS;
@@ -34,6 +37,9 @@ public final class BannerPosition {
         map.put(SECTION_RECOMMENDATIONS, "Banner dài đầu mục Gợi Ý Cho Bạn");
         map.put(SECTION_CATALOG, "Banner dài đầu mục Tất Cả Sản Phẩm");
         map.put(SECTION_SPA, "Banner dài đầu mục Dịch Vụ Spa Làm Đẹp");
+        map.put(TREATMENT_HERO, "Ảnh đầu trang Lộ trình chăm sóc");
+        map.put(CATALOG_HERO, "Ảnh đầu trang Danh sách sản phẩm");
+        map.put(BOOKING_HERO, "Ảnh đầu trang Đặt lịch Spa");
         map.put(PROMO, "Khuyến mãi khác / Promo");
         POSITION_LABELS = Collections.unmodifiableMap(map);
     }

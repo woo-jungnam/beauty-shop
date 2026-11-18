@@ -9,6 +9,12 @@
   --product-quick-add-bg: var(--filter-rose);
   --product-quick-add-ink: var(--filter-ink);
 }
+.catalog-page .catalog-page-banner :is(.section-strip-banner-link, .section-strip-banner-static) {
+  height: clamp(104px, 17vw, 265px);
+}
+.catalog-page #catalog-results {
+  scroll-margin-top: calc(var(--customer-header-height, 140px) + 12px);
+}
 .customer-app .catalog-page .catalog-facet-panel {
   padding: 0;
   background: var(--filter-surface);

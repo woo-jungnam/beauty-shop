@@ -38,7 +38,8 @@ class BannerRequestTest {
 
             for (String pos : new String[]{
                     "HERO_SLIDE", "HERO_SIDE", "SECTION_FLASH_SALE", "SECTION_CATEGORIES",
-                    "SECTION_BRANDS", "SECTION_RECOMMENDATIONS", "SECTION_CATALOG", "SECTION_SPA", "PROMO"
+                    "SECTION_BRANDS", "SECTION_RECOMMENDATIONS", "SECTION_CATALOG", "SECTION_SPA",
+                    "TREATMENT_HERO", "CATALOG_HERO", "BOOKING_HERO", "PROMO"
             }) {
                 validRequest.setPosition(pos);
                 assertTrue(validator.validate(validRequest).isEmpty(), "Position should be valid: " + pos);

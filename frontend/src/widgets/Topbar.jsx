@@ -27,7 +27,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { useAuth } from "../app/providers/AuthProvider";
-import { getInitials, normalizeSearch } from "../app/adminNavigation";
+import { adminItemKey, getInitials, normalizeSearch } from "../app/adminNavigation";
 import { Button } from "../shared/ui/Button";
 import { Modal } from "../shared/ui/Modal";
 import { Badge } from "../shared/ui/Badge";
@@ -36,7 +36,7 @@ import { ENDPOINTS } from "../shared/api/endpoints";
 
 export const Topbar = ({
   currentTitle,
-  activeTab,
+  activeItemKey,
   navigationItems = [],
   onNavigate,
   onOpenMenu,
@@ -79,9 +79,9 @@ export const Topbar = ({
   );
 
   useEffect(() => {
-    if (commandOpen)
+    if (commandOpen && filteredItems[selected])
       document
-        .getElementById(`admin-command-${filteredItems[selected]?.id}`)
+        .getElementById(`admin-command-${adminItemKey(filteredItems[selected])}`)
         ?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [commandOpen, selected, filteredItems]);
 
@@ -190,7 +190,7 @@ export const Topbar = ({
   const navigateFromSearch = (item) => {
     if (!item) return;
     setCommandOpen(false);
-    onNavigate(item.id);
+    onNavigate(item.id, item.subTab);
   };
   const handleSearchKey = (event) => {
     if (event.key === "ArrowDown") {
@@ -382,7 +382,7 @@ export const Topbar = ({
               aria-controls="admin-command-results"
               aria-activedescendant={
                 filteredItems[selected]
-                  ? `admin-command-${filteredItems[selected].id}`
+                  ? `admin-command-${adminItemKey(filteredItems[selected])}`
                   : undefined
               }
             />
@@ -400,10 +400,11 @@ export const Topbar = ({
           >
             {filteredItems.map((item, index) => {
               const Icon = item.icon;
+              const itemKey = adminItemKey(item);
               return (
                 <button
-                  key={item.id}
-                  id={`admin-command-${item.id}`}
+                  key={itemKey}
+                  id={`admin-command-${itemKey}`}
                   role="option"
                   tabIndex={-1}
                   aria-selected={index === selected}
@@ -419,7 +420,7 @@ export const Topbar = ({
                     <strong>{item.label}</strong>
                     <small>{item.description}</small>
                   </span>
-                  {activeTab === item.id ? (
+                  {activeItemKey === itemKey ? (
                     <span className="command-current">
                       <Check size={13} />
                       Hiện tại

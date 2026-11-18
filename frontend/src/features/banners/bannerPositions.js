@@ -1,3 +1,7 @@
+export const TREATMENT_HERO_POSITION = 'TREATMENT_HERO';
+export const CATALOG_HERO_POSITION = 'CATALOG_HERO';
+export const BOOKING_HERO_POSITION = 'BOOKING_HERO';
+
 export const BANNER_POSITIONS = [
   {
     value: 'HERO_SLIDE',
@@ -62,6 +66,36 @@ export const BANNER_POSITIONS = [
     group: 'Banner Section (Dưới H2)',
     isSectionBanner: true,
     recommendedRatio: 'Full section width (~1600 x 332px)',
+  },
+  {
+    value: TREATMENT_HERO_POSITION,
+    label: 'Ảnh đầu trang Lộ trình chăm sóc',
+    shortLabel: 'Lộ trình chăm sóc',
+    group: 'Trang Lộ trình chăm sóc',
+    isSectionBanner: false,
+    recommendedRatio: '12:5 (~1200 × 500 px)',
+    pageAnchor: '#treatment-catalog',
+    previewAspectRatio: '12 / 5',
+  },
+  {
+    value: CATALOG_HERO_POSITION,
+    label: 'Ảnh đầu trang Danh sách sản phẩm',
+    shortLabel: 'Danh sách sản phẩm',
+    group: 'Trang Danh sách sản phẩm',
+    isSectionBanner: false,
+    recommendedRatio: 'Khoảng 1600 × 332 px',
+    pageAnchor: '#catalog-results',
+    previewAspectRatio: '1600 / 332',
+  },
+  {
+    value: BOOKING_HERO_POSITION,
+    label: 'Ảnh đầu trang Đặt lịch Spa',
+    shortLabel: 'Đặt lịch Spa',
+    group: 'Trang Đặt lịch Spa',
+    isSectionBanner: false,
+    recommendedRatio: 'Khoảng 1600 × 360 px',
+    pageAnchor: '#spa-booking-form',
+    previewAspectRatio: '1600 / 360',
   },
   {
     value: 'PROMO',

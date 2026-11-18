@@ -116,6 +116,18 @@
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #store-catalog) .product-card-body .product-card-brand {
   color: #D77F91 !important;
 }
+.customer-app .customer-home-page #flash-sale .flash-sale-grid > .product-card-resolved {
+  height: auto !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-grid > .product-card-resolved:hover {
+  transform: none !important;
+}
+.customer-app .customer-home-page #flash-sale .flash-sale-grid .product-card-price {
+  display: grid !important;
+  grid-template-rows: auto minmax(1rem, auto);
+  align-items: start !important;
+  line-height: 1.25;
+}
 @media (max-width: 639px) {
   .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #store-catalog) {
     & .product-card-body { padding: 10px !important; }

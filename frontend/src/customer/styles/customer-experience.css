@@ -396,6 +396,7 @@
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   align-items: stretch !important;
+  justify-content: safe center;
   overflow-x: auto !important;
   overflow-y: hidden !important;
   scroll-behavior: smooth;

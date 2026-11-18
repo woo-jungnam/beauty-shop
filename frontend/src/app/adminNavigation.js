@@ -11,6 +11,8 @@ import {
   HeartHandshake,
   SlidersHorizontal,
   UserCheck,
+  Image,
+  Wallet,
 } from "lucide-react";
 
 export const ADMIN_SECTIONS = [
@@ -39,29 +41,6 @@ export const ADMIN_SECTIONS = [
         keywords: "order đơn hàng giao vận bán hàng",
         subItems: [
           { id: "PENDING", label: "Chờ xác nhận" },
-          { id: "CONFIRMED", label: "Đã xác nhận" },
-          { id: "PROCESSING", label: "Đang chuẩn bị hàng" },
-          { id: "SHIPPED", label: "Đang giao vận" },
-          { id: "DELIVERED", label: "Đã giao thành công" },
-          { id: "CANCELLED", label: "Đã hủy đơn" },
-        ],
-      },
-      {
-        id: "products",
-        label: "Danh mục sản phẩm",
-        description: "Sản phẩm, phân loại mẫu mã & đặc tính",
-        icon: Package,
-        role: "ROLE_STAFF",
-        keywords:
-          "catalog sku mỹ phẩm danh mục thương hiệu thuộc tính attribute tag thẻ nhãn hoạt chất thành phần da liễu",
-        subItems: [
-          { id: "products", label: "Sản phẩm & Biến thể" },
-          { id: "categories", label: "Danh mục sản phẩm" },
-          { id: "brands", label: "Thương hiệu đối tác" },
-          { id: "ingredients", label: "Hoạt chất da liễu" },
-          { id: "attributes", label: "Đặc tính & Thuộc tính" },
-          { id: "tags", label: "Thẻ phân loại nhãn" },
-          { id: "banners", label: "Ảnh bìa & Banner" },
         ],
       },
       {
@@ -92,7 +71,42 @@ export const ADMIN_SECTIONS = [
     ],
   },
   {
-    label: "Dịch vụ Spa & Khách hàng",
+    label: "Sản phẩm",
+    items: [
+      {
+        id: "products",
+        label: "Quản lý sản phẩm",
+        description: "Sản phẩm, biến thể, danh mục và thuộc tính",
+        icon: Package,
+        role: "ROLE_STAFF",
+        keywords: "catalog sku mỹ phẩm thương hiệu attribute tag thẻ nhãn hoạt chất thành phần da liễu",
+        subItems: [
+          { id: "products", label: "Sản phẩm & Biến thể" },
+          { id: "categories", label: "Danh mục sản phẩm" },
+          { id: "brands", label: "Thương hiệu đối tác" },
+          { id: "ingredients", label: "Hoạt chất da liễu" },
+          { id: "attributes", label: "Đặc tính & Thuộc tính" },
+          { id: "tags", label: "Thẻ phân loại nhãn" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Nội dung cửa hàng",
+    items: [
+      {
+        id: "products",
+        subTab: "banners",
+        label: "Ảnh bìa & Banner",
+        description: "Ảnh hiển thị trên trang chủ, danh sách sản phẩm, đặt lịch Spa và lộ trình",
+        icon: Image,
+        role: "ROLE_STAFF",
+        keywords: "banner hero ảnh bìa nội dung cửa hàng",
+      },
+    ],
+  },
+  {
+    label: "Vận hành Spa",
     items: [
       {
         id: "spa-reception",
@@ -112,6 +126,7 @@ export const ADMIN_SECTIONS = [
         keywords:
           "spa appointment dịch vụ lịch hẹn nhân viên kỹ thuật viên buồng phòng giường máy móc bảo trì khảo sát an toàn vé liệu trình",
         subItems: [
+          { id: "appointments", label: "Lịch hẹn Spa" },
           { id: "services", label: "Dịch vụ & Gói Liệu trình" },
           { id: "categories", label: "Danh mục dịch vụ" },
           { id: "facilities", label: "Phòng & Thiết bị" },
@@ -122,6 +137,19 @@ export const ADMIN_SECTIONS = [
         ],
       },
       {
+        id: "treatments",
+        label: "Liệu trình chuyên sâu",
+        description: "Hồ sơ buổi điều trị, tiến độ & ảnh lâm sàng",
+        icon: ClipboardList,
+        role: "ROLE_STAFF",
+        keywords: "treatment lộ trình điều trị buổi tiến độ tiếp nhận phiên bản gia hạn hoàn tiền",
+      },
+    ],
+  },
+  {
+    label: "Khách hàng & Đánh giá",
+    items: [
+      {
         id: "crm",
         label: "Hồ sơ khách hàng",
         description: "Thông tin, lịch sử dịch vụ & chăm sóc khách",
@@ -130,13 +158,18 @@ export const ADMIN_SECTIONS = [
         keywords: "crm customer hồ sơ chăm sóc khách khách hàng",
       },
       {
-        id: 'treatments',
-        label: 'Liệu trình chuyên sâu',
-        description: 'Hồ sơ buổi điều trị, tiến độ & ảnh lâm sàng',
-        icon: ClipboardList,
-        role: 'ROLE_STAFF',
-        keywords: 'treatment lộ trình điều trị buổi tiến độ tiếp nhận phiên bản gia hạn hoàn tiền',
+        id: "reviews",
+        label: "Đánh giá của khách",
+        description: "Kiểm duyệt & phản hồi đánh giá",
+        icon: MessageSquareText,
+        role: "ROLE_STAFF",
+        keywords: "review nhận xét phản hồi kiểm duyệt đánh giá",
       },
+    ],
+  },
+  {
+    label: "Khuyến mãi",
+    items: [
       {
         id: "vouchers",
         label: "Mã giảm giá & Ưu đãi",
@@ -149,13 +182,18 @@ export const ADMIN_SECTIONS = [
           { id: "flash-sales", label: "Chiến dịch Flash Sale" },
         ],
       },
+    ],
+  },
+  {
+    label: "Tài chính",
+    items: [
       {
-        id: "reviews",
-        label: "Đánh giá của khách",
-        description: "Kiểm duyệt & phản hồi đánh giá",
-        icon: MessageSquareText,
-        role: "ROLE_STAFF",
-        keywords: "review nhận xét phản hồi kiểm duyệt đánh giá",
+        id: "operations",
+        subTab: "payments",
+        label: "Thanh toán & Đối soát",
+        description: "Theo dõi giao dịch và đối soát thanh toán",
+        icon: Wallet,
+        keywords: "finance tài chính thanh toán giao dịch đối soát",
       },
     ],
   },
@@ -175,13 +213,13 @@ export const ADMIN_SECTIONS = [
       },
       {
         id: "operations",
+        subTab: "audit",
         label: "Lịch sử thao tác & Cấu hình",
-        description: "Tài chính, nhật ký thao tác & trợ lý AI",
+        description: "Nhật ký thao tác, cấu hình hệ thống và trợ lý AI",
         icon: SlidersHorizontal,
         keywords:
-          "system audit payment tài chính thanh toán cấu hình kiểm toán chatbot ai rag vector qdrant nlu thao tác",
+          "system audit cấu hình kiểm toán chatbot ai rag vector qdrant nlu thao tác",
         subItems: [
-          { id: "payments", label: "Thanh toán & Đối soát" },
           { id: "audit", label: "Nhật ký thao tác (Audit)" },
           { id: "config", label: "Chỉ tiêu & Cấu hình" },
           { id: "chatbot", label: "Trợ lý tư vấn AI" },
@@ -230,6 +268,16 @@ export const normalizeSearch = (value = "") =>
     .replace(/Đ/g, "D")
     .toLowerCase()
     .trim();
+
+export const adminItemKey = ({ id, subTab }) => subTab ? `${id}-${subTab}` : id;
+
+export const activeAdminItem = (items, tab, subTab) => {
+  const currentSubTab = subTab || (tab === "operations" ? "payments" : null);
+  const candidates = items.filter(item => item.id === tab);
+  return candidates.find(item => currentSubTab && (
+    item.subTab === currentSubTab || item.subItems?.some(sub => sub.id === currentSubTab)
+  )) || candidates.find(item => !item.subTab) || candidates[0];
+};
 export const getInitials = (name = "") =>
   name
     .trim()

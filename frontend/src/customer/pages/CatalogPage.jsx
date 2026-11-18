@@ -4,6 +4,8 @@ import { ProductCard } from '../components/product/ProductCard';
 import { ProductGridSkeleton } from '../components/product/ProductCardSkeleton';
 import { apiClient } from '../../shared/api/client';
 import { cleanDisplayName } from '../../shared/utils/formatters';
+import { CATALOG_HERO_POSITION } from '../../features/banners/bannerPositions';
+import { SectionStripBanner } from '../../features/banners/SectionStripBanner';
 import { useCustomerDialog } from '../components/ui/useCustomerDialog';
 import {
   ACTIVE_INGREDIENT_FILTERS, SKIN_TYPES, PRICE_RANGES, RATING_OPTIONS, GENDER_OPTIONS,
@@ -103,6 +105,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
   const routeFilters = useMemo(() => readCatalogFilters(initialQuery), [initialQuery]);
   const [keyword, setKeyword] = useState(routeFilters.keyword);
   const [products, setProducts] = useState([]);
+  const [catalogBanners, setCatalogBanners] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [skinConcerns, setSkinConcerns] = useState([]);
@@ -143,6 +146,16 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
   };
 
   useEffect(() => { setKeyword(routeFilters.keyword); }, [routeFilters.keyword]);
+  useEffect(() => {
+    const controller = new AbortController();
+    apiClient.get(`/api/v1/banners?position=${CATALOG_HERO_POSITION}`, { signal: controller.signal })
+      .then(response => {
+        const banners = response?.data ?? response;
+        if (!controller.signal.aborted && Array.isArray(banners)) setCatalogBanners(banners);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   useEffect(() => {
     setCustomMinPrice(routeFilters.minPrice);
     setCustomMaxPrice(routeFilters.maxPrice);
@@ -274,6 +287,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
         <span aria-hidden="true">/</span>
         <span style={{ color: 'var(--c-primary, #721B29)', fontWeight: 600 }}>Sản phẩm</span>
       </nav>
+      <SectionStripBanner banners={catalogBanners} position={CATALOG_HERO_POSITION} className="catalog-page-banner" priority />
       <div className="catalog-page-heading">
         <span>DANH MỤC MỸ PHẨM CHÍNH HÃNG</span>
         <h1>{getBannerTitle()}</h1>
@@ -414,7 +428,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
           </button>
         </aside>
 
-        <div className="catalog-results">
+        <div id="catalog-results" className="catalog-results">
           <div className="catalog-result-toolbar catalog-facet-toolbar">
             <div role="status" aria-live="polite">
               {loading ? 'Đang tìm sản phẩm…' : loadError ? 'Chưa tải được danh sách sản phẩm' : <>Tìm thấy <strong>{totalElements}</strong> sản phẩm phù hợp</>}

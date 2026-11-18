@@ -101,6 +101,43 @@ test('USER buys a published treatment and retries the same purchase idempotency 
   expect(pageErrors).toEqual([]);
 });
 
+test('Customer views use store media and show the recorded session and notification states', async ({ page }) => {
+  const { state, pageErrors } = await fixture(page, 'USER');
+  const image = '/images/spa/facial-care.jpg';
+  await page.route('**/api/v1/spa/services', route => route.fulfill({ json: { data: [{ id: 9, thumbnailUrl: image }] } }));
+  await page.route('**/api/v1/banners?position=TREATMENT_HERO', route => route.fulfill({ json: { data: [
+    { id: 4, position: 'TREATMENT_HERO', isActive: true, imageUrl: image, sortOrder: 2 },
+    { id: 5, position: 'TREATMENT_HERO', isActive: false, imageUrl: '/hidden.webp', sortOrder: 0 },
+    { id: 6, position: 'SECTION_SPA', isActive: true, imageUrl: '/spa.webp', sortOrder: 0 },
+  ] } }));
+  await page.clock.setFixedTime(new Date('2026-11-18T03:00:00Z'));
+  Object.assign(state.course, { status: 'ACTIVE', completedSessions: 1 });
+  state.course.sessions[0].status = 'COMPLETED';
+  Object.assign(state.course.sessions[1], { status: 'SCHEDULED' });
+  Object.assign(state.course.sessions[1].items[0], {
+    appointmentId: 701, appointmentStatus: 'CONFIRMED', appointmentDate: '2026-11-20', startTime: '09:00:00',
+  });
+  await page.goto('/#/treatments');
+  await expect(page.locator('.customer-treatment-hero-image')).toHaveAttribute('src', /facial-care\.jpg$/);
+  const templateCard = page.locator('[data-treatment-template-id="11"]');
+  await expect(templateCard.locator('.customer-treatment-cover')).toHaveAttribute('src', /facial-care\.jpg$/);
+  await expect(templateCard.getByRole('listitem')).toHaveCount(2);
+  await expect(templateCard).toContainText(plan.sessions[1].title);
+  await page.getByRole('button', { name: 'Lộ trình của tôi', exact: true }).click();
+  await expect(page.locator('.customer-treatment-upcoming')).toContainText('Phục hồi da');
+  const progress = page.locator('.customer-treatment-progress');
+  await expect(progress.locator('[data-status="COMPLETED"]')).toHaveCount(1);
+  await expect(progress.locator('[data-status="SCHEDULED"]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Thông báo (1)', exact: true }).click();
+  const notification = page.locator('.customer-treatment-event');
+  await expect(notification).toContainText('Đã cấp hồ sơ điều trị');
+  await expect(notification).toContainText('Chưa đọc');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(notification.getByRole('button', { name: 'Mở hồ sơ #41' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  expect(pageErrors).toEqual([]);
+});
+
 test('USER books a session using its purchased ticket and treatment item', async ({ page }) => {
   const { state, pageErrors } = await fixture(page, 'USER');
   await page.goto('/#/treatments?course=41');

@@ -302,6 +302,8 @@ export const getReviewStatusBadge = (status) => {
 
 export const resolveMediaUrl = (url) => {
   if (!url) return '';
+  // The default booking banner is bundled with the storefront.
+  if (url === '/images/spa/spa-ritual.jpg') return url;
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
     return url;
   }

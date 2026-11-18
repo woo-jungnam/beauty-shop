@@ -1,0 +1,245 @@
+.customer-app:has(.treatment-workspace.is-customer) > main {
+  background: linear-gradient(180deg, #fff8f4, #fdf9f6 350px, #fff);
+}
+.treatment-workspace.is-customer {
+  --tc-ink: #472a2d;
+  --tc-muted: #6e5555;
+  --tc-accent: #8e3050;
+  --tc-line: #ebd6d7;
+  --tc-blush: #f6e7e7;
+  max-width: 1280px;
+  padding-block: 24px 48px;
+}
+.is-customer .customer-treatment-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--tc-line);
+  background: radial-gradient(ellipse at top right, #e6bbb9 0, transparent 62%), linear-gradient(135deg, #fdf5f1, #f3dddc);
+}
+.customer-treatment-hero:has(.customer-treatment-hero-image) {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+}
+.customer-treatment-hero-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: 2.4;
+  object-fit: cover;
+}
+.customer-treatment-hero-link { min-width: 0; }
+.customer-treatment-hero-link:focus-visible { outline-offset: -5px; }
+.customer-treatment-hero-copy {
+  align-self: center;
+  padding: clamp(22px, 4vw, 48px);
+}
+.customer-treatment-hero-copy h1 {
+  margin: 0;
+  color: #6a2037;
+  font-size: clamp(26px, 3.2vw, 42px);
+  line-height: 1.15;
+  letter-spacing: -.035em;
+}
+.customer-treatment-hero-copy p {
+  max-width: 44ch;
+  margin: 10px 0 0;
+  color: var(--tc-muted);
+}
+.is-customer .customer-treatment-hero.is-compact {
+  background: #fff7f5;
+}
+.customer-treatment-hero.is-compact .customer-treatment-hero-copy { padding: 18px 22px; }
+.customer-treatment-hero.is-compact h1 { font-size: clamp(22px, 2.5vw, 30px); }
+.is-customer .treatment-toolbar { gap: 10px 16px; margin-bottom: 18px; }
+.is-customer .treatment-toolbar :is(input, select) {
+  border-color: var(--tc-line) !important;
+  color: var(--tc-ink);
+  max-width: 100%;
+}
+.is-customer .treatment-tabs { background: #f2e6e5; }
+.is-customer .treatment-tabs button { color: var(--tc-ink); }
+.is-customer .treatment-tabs button[aria-pressed=true] { color: var(--tc-accent); }
+.is-customer .customer-treatment-refresh { margin-inline-start: auto; }
+.is-customer .treatment-card {
+  border-color: var(--tc-line);
+  box-shadow: 0 5px 16px rgb(81 38 45 / 5%);
+}
+.is-customer .customer-treatment-catalog {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  scroll-margin-top: calc(var(--customer-header-height, 140px) + 12px);
+}
+.customer-treatment-catalog > .treatment-empty { grid-column: 1 / -1; }
+.is-customer .customer-treatment-plan {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.customer-treatment-cover {
+  width: 100%;
+  aspect-ratio: 1.85;
+  object-fit: cover;
+  background: var(--tc-blush);
+}
+.customer-treatment-plan-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: clamp(16px, 2vw, 23px);
+  border-block-start: 3px solid #e6bfc2;
+}
+.customer-treatment-plan-body h2 { color: var(--tc-ink); }
+.customer-treatment-plan-body .treatment-price { color: var(--tc-accent); margin: 4px 0 0; }
+.customer-treatment-plan-body .treatment-actions { margin-top: auto; padding-top: 16px; }
+.customer-treatment-plan-body .treatment-actions button {
+  width: 100%;
+  border-color: #8e3050;
+  border-radius: 999px;
+  background: #8e3050;
+  color: #fff;
+}
+.customer-treatment-plan-body .treatment-actions button:hover { background: #6a2037; }
+.customer-treatment-plan-body details { font-size: 13px; }
+.customer-treatment-plan-body summary { color: var(--tc-accent); cursor: pointer; }
+.customer-treatment-timeline {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  margin: 4px 0 14px;
+  padding: 0;
+}
+.customer-treatment-timeline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 10px;
+  padding-bottom: 12px;
+  font-size: 13px;
+}
+.customer-treatment-timeline li:last-child { padding-bottom: 0; }
+.customer-treatment-timeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: -14px;
+  inset-inline-start: 13px;
+  width: 2px;
+  background: var(--tc-line);
+}
+.customer-treatment-number {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #efd2d5;
+  color: #6a2037;
+  font-size: 12px;
+  font-weight: 750;
+}
+.customer-treatment-timeline li strong { display: block; padding-top: 4px; }
+.customer-treatment-timeline li small { display: block; color: var(--tc-muted); }
+.customer-treatment-records > h2 { margin: 0; font-size: 20px; }
+.customer-treatment-record h3 { color: var(--tc-ink); }
+.customer-treatment-record .treatment-badge[data-status=ACTIVE] { background: #8e3050; color: #fff; }
+.customer-treatment-record .treatment-badge[data-status=PENDING_INTAKE] { background: #f8e5cf; color: #773d13; }
+.customer-treatment-record .treatment-actions { margin-top: 12px; }
+.customer-treatment-progress {
+  display: flex;
+  list-style: none;
+  padding: 0 0 5px;
+  margin: 14px 0 0;
+  overflow-x: auto;
+}
+.customer-treatment-progress li {
+  position: relative;
+  display: grid;
+  flex: 1 0 105px;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  padding-inline: 5px;
+  font-size: 12px;
+  text-align: center;
+}
+.customer-treatment-progress li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inset: 13px -50% auto 50%;
+  height: 2px;
+  background: var(--tc-line);
+}
+.customer-treatment-progress small { color: var(--tc-muted); }
+.customer-treatment-progress li[data-status=COMPLETED] .customer-treatment-number { background: #8e3050; color: #fff; }
+.customer-treatment-progress li:is([data-status=BOOKED], [data-status=SCHEDULED], [data-status=IN_PROGRESS]) .customer-treatment-number {
+  box-shadow: 0 0 0 2px #8e3050;
+}
+.customer-treatment-progress li[data-status=COMPLETED]:has(+ li[data-status=COMPLETED])::before { background: #8e3050; }
+.customer-treatment-event,
+.customer-treatment-upcoming {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.is-customer .customer-treatment-event[data-unread=true] { border-inline-start: 4px solid var(--tc-accent); }
+.customer-treatment-event h2,
+.customer-treatment-upcoming h2 { margin: 0 0 3px; }
+.customer-treatment-event p,
+.customer-treatment-upcoming p { margin: 0 0 4px; }
+.customer-treatment-event small { color: var(--tc-muted); }
+.customer-treatment-event-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: var(--tc-accent);
+  background: var(--tc-blush);
+  border-radius: 50%;
+}
+.customer-treatment-event-actions { display: grid; justify-items: end; gap: 8px; }
+.customer-treatment-ticket-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  color: #fff8f6;
+  background: radial-gradient(ellipse at top right, #b4526c, transparent 65%), #6d203b;
+}
+.customer-treatment-ticket-heading h3 { color: inherit; margin: 4px 0; }
+.customer-treatment-ticket-heading div > span { font-size: 12px; }
+.customer-treatment-usage {
+  flex: 0 0 68px;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(#efbfc3 var(--usage), #ffffff38 0);
+}
+.customer-treatment-usage > span {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  width: 57px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #7a2845;
+}
+@media (max-width: 900px) {
+  .is-customer .customer-treatment-catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 580px) {
+  .is-customer .customer-treatment-catalog,
+  .customer-treatment-hero:has(.customer-treatment-hero-image) { grid-template-columns: 1fr; }
+  .customer-treatment-event,
+  .customer-treatment-upcoming { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .customer-treatment-event-actions,
+  .customer-treatment-upcoming > button { grid-column: 2; justify-self: start; justify-items: start; }
+}

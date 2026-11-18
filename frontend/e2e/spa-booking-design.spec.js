@@ -84,6 +84,9 @@ async function spaStorefront(
     let data = [];
     if (path.endsWith("/auth/profile")) data = customer;
     else if (path.endsWith("/auth/login")) data = { ...customer, accessToken: "spa-ui-test-token" };
+    else if (path === "/api/v1/banners" && url.searchParams.get("position") === "BOOKING_HERO")
+      data = [{ id: 1, position: "BOOKING_HERO", title: "Đặt lịch Spa",
+        imageUrl: "/images/spa/spa-ritual.jpg", targetUrl: "#spa-booking-form", isActive: true }];
     else if (path === "/api/v1/spa/services") {
       if (failServices)
         return route.fulfill({
@@ -396,7 +399,9 @@ for (const width of [320, 390, 768, 1440]) {
     await expect(
       page.getByRole("heading", { name: /Một chút thời gian/ }),
     ).toBeVisible();
-    await expect(page.locator(".booking-hero-photo > img")).toBeVisible();
+    const bannerPhoto = page.locator(".booking-hero-photo img");
+    await expect(bannerPhoto).toBeVisible();
+    await expect(bannerPhoto).toHaveAttribute("src", "/images/spa/spa-ritual.jpg");
     await page
       .getByRole("button", {
         name: "Chọn dịch vụ Chăm sóc da phục hồi",

@@ -34,6 +34,10 @@ import { AlertBanner } from '../shared/ui/AlertBanner';
 import { bannerHref } from '../features/banners/bannerLinks';
 import {
   BANNER_POSITIONS,
+  BANNER_POSITION_MAP,
+  BOOKING_HERO_POSITION,
+  CATALOG_HERO_POSITION,
+  TREATMENT_HERO_POSITION,
   getBannerPositionLabel,
   isSectionBanner,
 } from '../features/banners/bannerPositions';
@@ -972,13 +976,13 @@ export const ProductsPage = () => {
       badge: '',
       description: '',
       imageUrl: '',
-      targetUrl: initialPosition === 'SECTION_FLASH_SALE' ? '#flash-sale'
+      targetUrl: BANNER_POSITION_MAP[initialPosition]?.pageAnchor || (initialPosition === 'SECTION_FLASH_SALE' ? '#flash-sale'
         : initialPosition === 'SECTION_CATEGORIES' ? '#categories-section'
         : initialPosition === 'SECTION_BRANDS' ? '#brand-partners'
         : initialPosition === 'SECTION_RECOMMENDATIONS' ? '#random-picks'
         : initialPosition === 'SECTION_CATALOG' ? '#store-catalog'
         : initialPosition === 'SECTION_SPA' ? 'booking'
-        : 'products',
+        : 'products'),
       ctaText: 'Mua Sắm Ngay',
       position: initialPosition,
       sortOrder: (banners.length || 0) + 1,
@@ -2058,7 +2062,6 @@ export const ProductsPage = () => {
                   value={bannerFilterPosition}
                   onChange={(e) => setBannerFilterPosition(e.target.value)}
                   options={[
-                    { label: '--- Chọn lọc cụ thể vị trí ---', value: 'ALL' },
                     { label: `Tất cả vị trí (${banners.length})`, value: 'ALL' },
                     { label: `Chỉ banner dài Section (${banners.filter((b) => isSectionBanner(b.position)).length})`, value: 'SECTIONS' },
                     ...BANNER_POSITIONS.map((p) => ({
@@ -3170,17 +3173,20 @@ export const ProductsPage = () => {
             required
             placeholder="VD: Mỹ Phẩm Chính Hãng 100%"
           />
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Tên dùng để quản lý và hỗ trợ đọc ảnh. Trang chủ chỉ hiển thị ảnh, không phủ chữ hoặc nút lên banner.</p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Tên dùng để quản lý và mô tả ảnh cho trình đọc màn hình.</p>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Select
               label="Vị trí hiển thị banner *"
               value={bannerForm.position}
               onChange={(e) => {
                 const newPos = e.target.value;
+                const pageAnchor = BANNER_POSITION_MAP[newPos]?.pageAnchor;
                 setBannerForm((prev) => ({
                   ...prev,
                   position: newPos,
-                  targetUrl: prev.targetUrl || (
+                  targetUrl: pageAnchor && (!prev.targetUrl || prev.targetUrl === 'products' || prev.targetUrl === BANNER_POSITION_MAP[prev.position]?.pageAnchor)
+                    ? pageAnchor
+                    : prev.targetUrl || (
                     newPos === 'SECTION_FLASH_SALE' ? '#flash-sale'
                     : newPos === 'SECTION_CATEGORIES' ? '#categories-section'
                     : newPos === 'SECTION_BRANDS' ? '#brand-partners'
@@ -3206,7 +3212,9 @@ export const ProductsPage = () => {
                 className="media-preview-box"
                 style={{
                   width: '100%',
-                  aspectRatio: ['SECTION_CATEGORIES', 'SECTION_BRANDS'].includes(bannerForm.position) ? '3 / 1' : isSectionBanner(bannerForm.position) ? '1600 / 332' : '32 / 15',
+                  aspectRatio: BANNER_POSITION_MAP[bannerForm.position]?.previewAspectRatio
+                    || (['SECTION_CATEGORIES', 'SECTION_BRANDS'].includes(bannerForm.position) ? '3 / 1'
+                    : isSectionBanner(bannerForm.position) ? '1600 / 332' : '32 / 15'),
                   height: 'auto',
                   borderRadius: '8px',
                   overflow: 'hidden',
@@ -3280,7 +3288,13 @@ export const ProductsPage = () => {
             />
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
-            {bannerForm.position === 'SECTION_BRANDS'
+            {bannerForm.position === TREATMENT_HERO_POSITION
+              ? 'Lộ trình chăm sóc: Dùng ảnh ngang khoảng 1200 × 500 px. Trang hiển thị một banner đang bật, ưu tiên thứ tự nhỏ nhất. Dùng #treatment-catalog để cuộn tới danh sách lộ trình.'
+              : bannerForm.position === CATALOG_HERO_POSITION
+              ? 'Danh sách sản phẩm: Dùng ảnh ngang khoảng 1600 × 332 px. Trang hiển thị một banner đang bật, ưu tiên thứ tự nhỏ nhất. Dùng #catalog-results để cuộn tới danh sách.'
+              : bannerForm.position === BOOKING_HERO_POSITION
+              ? 'Đặt lịch Spa: Dùng ảnh ngang khoảng 1600 × 360 px. Banner xuất hiện phía trên phần giới thiệu. Dùng #spa-booking-form để cuộn tới bước chọn dịch vụ.'
+              : bannerForm.position === 'SECTION_BRANDS'
               ? 'Thương hiệu: Tạo 3 banner riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 banner đang bật theo thứ tự tăng dần, dưới tiêu đề thương hiệu. Mỗi banner có ảnh và liên kết riêng.'
               : bannerForm.position === 'SECTION_CATEGORIES'
               ? 'Danh mục: Tạo 3 banner riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 banner đang bật theo thứ tự tăng dần, ngay dưới tiêu đề H2 danh mục. Mỗi banner có ảnh và liên kết riêng.'

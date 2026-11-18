@@ -4,7 +4,7 @@ import { Sidebar } from "../widgets/Sidebar";
 import { Topbar } from "../widgets/Topbar";
 import { LoginPage } from "../pages/LoginPage";
 import { Loader2 } from "lucide-react";
-import { getAdminSections } from "./adminNavigation";
+import { activeAdminItem, adminItemKey, getAdminSections } from "./adminNavigation";
 
 const CustomerApp = lazy(() =>
   import("../customer/CustomerApp").then((module) => ({
@@ -100,8 +100,9 @@ const AdminShell = ({ tabName, activeSubTab, navigationItems }) => {
   const mainRef = useRef(null);
   const previousTab = useRef(tabName);
   const Page = ADMIN_PAGES[tabName] || ADMIN_PAGES.dashboard;
-  const currentTitle =
-    navigationItems.find((item) => item.id === tabName)?.label || "Quản trị";
+  const currentItem = activeAdminItem(navigationItems, tabName, activeSubTab);
+  const currentTitle = currentItem?.label || "Quản trị";
+  const currentItemKey = currentItem ? adminItemKey(currentItem) : null;
 
   useEffect(() => {
     if (previousTab.current !== tabName) {
@@ -169,7 +170,7 @@ const AdminShell = ({ tabName, activeSubTab, navigationItems }) => {
       </a>
       <div className="admin-ambient" aria-hidden="true" />
       <Sidebar
-        activeTab={tabName}
+        activeItemKey={currentItemKey}
         activeSubTab={activeSubTab}
         onSelectTab={navigate}
         collapsed={collapsed}
@@ -180,7 +181,7 @@ const AdminShell = ({ tabName, activeSubTab, navigationItems }) => {
       <div className="main-viewport" inert={mobileOpen || undefined}>
         <Topbar
           currentTitle={currentTitle}
-          activeTab={tabName}
+          activeItemKey={currentItemKey}
           navigationItems={navigationItems}
           onNavigate={navigate}
           onOpenMenu={() => setMobileOpen(true)}

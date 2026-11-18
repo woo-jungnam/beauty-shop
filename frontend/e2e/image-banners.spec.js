@@ -16,7 +16,11 @@ async function setup(page, admin = false) {
     const path = new URL(route.request().url()).pathname;
     let data = [];
     if (path.endsWith('/auth/profile')) data = profile;
-    else if (path.endsWith('/admin/banners') || /\/admin\/banners\/\d+$/.test(path)) {
+    else if (/\/admin\/banners\/\d+\/toggle$/.test(path)) {
+      const id = Number(path.split('/').at(-2));
+      state.banners = state.banners.map(row => row.id === id ? { ...row, isActive: !row.isActive } : row);
+      data = state.banners.find(row => row.id === id);
+    } else if (path.endsWith('/admin/banners') || /\/admin\/banners\/\d+$/.test(path)) {
       if (route.request().method() !== 'GET') {
         const body = route.request().postDataJSON(); state.saves.push(body);
         const id = Number(path.split('/').at(-1)) || 5;
@@ -95,3 +99,44 @@ test('turning off configured banners does not display hard-coded promotions', as
   await expect(page.getByLabel('Banner nổi bật', { exact: true })).toHaveCount(0);
   await expect(page.locator('.home-banner-main-content')).toHaveCount(0);
 });
+
+for (const { position, route, anchor, heading, imageClass } of [
+  { position: 'TREATMENT_HERO', route: 'treatments', anchor: '#treatment-catalog', heading: 'Điều trị theo lộ trình', imageClass: '.customer-treatment-hero-image' },
+  { position: 'CATALOG_HERO', route: 'products', anchor: '#catalog-results', heading: 'Mỹ Phẩm Khoa Học & Phục Hồi Làn Da', imageClass: '.catalog-page-banner img' },
+  { position: 'BOOKING_HERO', route: 'booking', anchor: '#spa-booking-form', heading: /Đặt lịch dịch vụ Spa/, imageClass: '.booking-hero-photo img' },
+]) {
+  test(`admin can manage and hide the page banner for ${position}`, async ({ page }) => {
+    const state = await setup(page, true);
+    await page.goto('/#/admin/products?tab=banners');
+    await page.getByRole('button', { name: 'Thêm banner mới' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Tên banner / mô tả ảnh *', { exact: true }).fill('Banner kiểm thử');
+    await dialog.getByLabel('Vị trí hiển thị banner *', { exact: true }).selectOption(position);
+    await expect(dialog.getByLabel('Trang đích khi nhấp vào ảnh *', { exact: true })).toHaveValue(anchor);
+    await dialog.getByPlaceholder('Hoặc dán URL ảnh trực tiếp (/uploads/... hoặc https://...)').fill('/test-banner-5.svg');
+    await dialog.getByRole('button', { name: 'Lưu banner', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(state.saves[0]).toMatchObject({ position, imageUrl: '/test-banner-5.svg', isActive: true });
+    await page.goto(`/#/${route}`);
+    const link = page.getByRole('link', { name: 'Banner kiểm thử' });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('href', anchor);
+    if (position !== 'TREATMENT_HERO') {
+      const bannerBounds = await link.boundingBox();
+      const headingBounds = await page.getByRole('heading', { name: heading, exact: true }).boundingBox();
+      expect(await link.innerText()).toBe('');
+      expect(bannerBounds.y + bannerBounds.height).toBeLessThanOrEqual(headingBounds.y);
+    }
+    await link.click();
+    await expect(page.locator(anchor)).toBeInViewport();
+    await expect(page).toHaveURL(url => url.hash === `#/${route}`);
+    await page.goto('/#/admin/products?tab=banners');
+    const row = page.getByRole('row').filter({ hasText: 'Banner kiểm thử' });
+    await row.getByTitle('Bấm để Tắt banner này trên giao diện').click();
+    await expect(row.getByTitle('Bấm để Bật banner này')).toBeVisible();
+    await page.goto(`/#/${route}`);
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+    await expect(page.locator(imageClass)).toHaveCount(0);
+    expect(state.errors).toEqual([]);
+  });
+}

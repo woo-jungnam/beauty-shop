@@ -36,14 +36,52 @@
 .customer-app .customer-home-page #categories-section .category-tile-avatar {
   border-color: #AA6177 !important;
 }
-.customer-app .customer-home-page #store-catalog .tab-filter-btn:not(.active) {
-  color: #7A223B !important;
-  background: #FFFFFF !important;
-  border-color: #AA6177 !important;
-  font-weight: 750;
+.customer-home-page .home-catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--c-border);
 }
-.customer-app .customer-home-page #store-catalog .tab-filter-btn:not(.active):hover {
-  background: #FFF1F2 !important;
+.customer-home-page .home-catalog-field {
+  position: relative;
+  width: 280px;
+  max-width: 100%;
+}
+.customer-home-page .home-catalog-field svg {
+  position: absolute;
+  inset: 50% auto auto 13px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--c-text-muted);
+}
+.customer-home-page .home-catalog-filters :is(input, select) {
+  min-height: 40px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--item-border);
+  border-radius: var(--radius-pill);
+  background: #FFFFFF;
+  color: var(--item-ink);
+  font-size: 13px;
+}
+.customer-home-page .home-catalog-field :is(input, select) {
+  width: 100%;
+  padding-inline-start: 36px;
+  text-overflow: ellipsis;
+}
+.customer-home-page .home-catalog-filters select {
+  cursor: pointer;
+}
+.customer-home-page .home-catalog-filters select:hover {
+  border-color: var(--item-accent);
+}
+@media (max-width: 639px) {
+  .customer-home-page .home-catalog-filters :is(.home-catalog-field, select) {
+    width: 100%;
+  }
 }
 .customer-app .customer-home-page #store-catalog .product-card-price > span:first-child {
   color: #A1193D !important;

@@ -147,6 +147,8 @@ async function mockApi(page, { roles = ["ROLE_ADMIN"], failure = false } = {}) {
             )
           : revenue;
     } else if (path.endsWith("/dashboard/top-products")) data = topProducts;
+    else if (path.endsWith("/dashboard/spa-performance"))
+      data = { services: [], performedItemsMissingTime: 0, excludedLegacyItems: 0 };
     else if (path.endsWith("/dashboard/spa-occupancy"))
       data = {
         scheduledMinutes: 4800,
@@ -222,7 +224,7 @@ test("Desktop workspace renders real API metrics with a custom visual system", a
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/#/admin/dashboard");
   await expect(page.locator(".atelier-dashboard")).toBeVisible();
-  await expect(page.locator(".sidebar-link")).toHaveCount(11);
+  await expect(page.locator(".sidebar-nav :is(.sidebar-link, .sidebar-split-main)")).toHaveCount(15);
   await expect(
     page.locator('.sidebar-link[aria-current="page"]'),
   ).toContainText("Tổng quan");
@@ -257,11 +259,11 @@ test("Command search supports unaccented Vietnamese, Enter, Escape and focus res
   await page.keyboard.press("Control+k");
   const search = page.getByRole("combobox", { name: "Tìm phân hệ quản trị" });
   await expect(search).toBeFocused();
-  await search.fill("san pham");
+  await search.fill("quan ly san pham");
   await expect(page.locator(".command-result")).toHaveCount(1);
   await search.press("Enter");
   await expect(page).toHaveURL(/admin\/products/);
-  await expect(page.locator(".page-title")).toContainText("Sản phẩm");
+  await expect(page.getByRole("main", { name: "Quản lý sản phẩm" })).toBeVisible();
   await page
     .getByRole("button", { name: "Tìm nhanh phân hệ quản trị", exact: true })
     .click();
@@ -274,6 +276,39 @@ test("Command search supports unaccented Vietnamese, Enter, Escape and focus res
       exact: true,
     }),
   ).toBeFocused();
+});
+
+test("Regrouped admin menu opens the existing routes and marks the correct destination", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/#/admin/dashboard");
+  const nav = page.getByRole("navigation", { name: "Các phân hệ quản trị" });
+  const menuSection = label => nav.locator(".sidebar-section").filter({ hasText: label });
+  const clickMenu = async (group, name, destination) => {
+    const button = menuSection(group).getByRole("button", { name, exact: true });
+    await button.click();
+    await expect(page).toHaveURL(url => url.hash === destination);
+    await expect(button).toHaveAttribute("aria-current", "page");
+  };
+
+  await clickMenu("Nội dung cửa hàng", "Ảnh bìa & Banner", "#/admin/products?tab=banners");
+  await expect(menuSection("Sản phẩm").getByRole("button", { name: "Quản lý sản phẩm", exact: true }))
+    .not.toHaveAttribute("aria-current", "page");
+  await clickMenu("Tài chính", "Thanh toán & Đối soát", "#/admin/operations?tab=payments");
+  await menuSection("Hệ thống & Cài đặt").getByRole("button", { name: "Mở rộng menu con Lịch sử thao tác & Cấu hình", exact: true }).click();
+  await clickMenu("Hệ thống & Cài đặt", "Nhật ký thao tác (Audit)", "#/admin/operations?tab=audit");
+  await menuSection("Vận hành Spa").getByRole("button", { name: "Mở rộng menu con Lịch hẹn & Kỹ thuật viên", exact: true }).click();
+  await clickMenu("Vận hành Spa", "Lịch hẹn Spa", "#/admin/spa?tab=appointments");
+  await menuSection("Khuyến mãi").getByRole("button", { name: "Mở rộng menu con Mã giảm giá & Ưu đãi", exact: true }).click();
+  await clickMenu("Khuyến mãi", "Chiến dịch Flash Sale", "#/admin/vouchers?tab=flash-sales");
+  await menuSection("Bán hàng & Kho vận").getByRole("button", { name: "Mở rộng menu con Đơn hàng bán", exact: true }).click();
+  await clickMenu("Bán hàng & Kho vận", "Chờ xác nhận", "#/admin/orders?tab=PENDING");
+  await expect(menuSection("Bán hàng & Kho vận").getByRole("button", { name: "Đang giao vận", exact: true })).toHaveCount(0);
+
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("combobox", { name: "Tìm phân hệ quản trị" });
+  await search.fill("banner");
+  await search.press("Enter");
+  await expect(page).toHaveURL(/\/admin\/products\?tab=banners$/);
 });
 
 test("Sidebar and motion preferences persist after reload", async ({
