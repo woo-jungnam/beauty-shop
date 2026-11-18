@@ -126,6 +126,18 @@ class ProductReviewServiceIntegrationTest {
         assertEquals(ReviewStatus.APPROVED, reviews.findById(negative.getId()).orElseThrow().getStatus());
         var publicReview = service.publicReviews(product.getId(), PageRequest.of(0, 10)).getContent().getFirst();
         assertFalse(mapper.valueToTree(publicReview).has("sentiment"));
+
+        assertEquals(ReviewStatus.REJECTED, service.moderate(negative.getId(), ReviewStatus.REJECTED).status());
+        assertEquals(List.of(pending.getId()), service.publicReviews(product.getId(), PageRequest.of(0, 10))
+                .map(ProductReviewService.ReviewView::id).getContent());
+        assertAggregate(product.getId(), 5.0, 1);
+        assertEquals("COMPLETED", service.adminReviews(ReviewStatus.REJECTED, ReviewSentiment.NEGATIVE,
+                PageRequest.of(0, 10)).getContent().getFirst().sentimentStatus());
+
+        assertEquals(ReviewStatus.APPROVED, service.moderate(negative.getId(), ReviewStatus.APPROVED).status());
+        assertEquals(2, service.publicReviews(product.getId(), PageRequest.of(0, 10)).getTotalElements());
+        assertAggregate(product.getId(), 3.0, 2);
+        assertEquals(ReviewSentiment.NEGATIVE, reviews.findById(negative.getId()).orElseThrow().getSentimentState());
     }
 
 

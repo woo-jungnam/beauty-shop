@@ -27,7 +27,7 @@ public class ReviewSentimentWorker {
     private final RestClient client;
 
     public ReviewSentimentWorker(ProductReviewRepository repository,
-            @Value("${review.sentiment.url:http://review-sentiment:8002}") String serviceUrl) {
+            @Value("${review.sentiment.url}") String serviceUrl) {
         this.repository = repository;
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(2_000);
@@ -38,9 +38,10 @@ public class ReviewSentimentWorker {
                     return execution.execute(request, body);
                 })
                 .build();
+        log.info("Review sentiment worker enabled");
     }
 
-    @Scheduled(fixedDelayString = "${review.sentiment.poll-delay-ms:5000}")
+    @Scheduled(fixedDelayString = "${review.sentiment.poll-delay-ms}")
     public void analyzePendingReviews() {
         // The committed review row is also the durable job, including for historical reviews.
         List<ProductReview> reviews = repository.findSentimentBatch(

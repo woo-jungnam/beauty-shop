@@ -129,6 +129,12 @@ management:
     tags:
       application: ${spring.application.name}
 
+review:
+  sentiment:
+    enabled: ${REVIEW_SENTIMENT_ENABLED:false}
+    url: ${REVIEW_SENTIMENT_URL:http://review-sentiment:8002}
+    poll-delay-ms: ${REVIEW_SENTIMENT_POLL_DELAY_MS:5000}
+
 app:
   customer-url: ${CUSTOMER_APP_URL:http://localhost}
   cors:

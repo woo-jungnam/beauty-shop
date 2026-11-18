@@ -239,7 +239,7 @@ services:
       SEPAY_BANK_BIN: ${SEPAY_BANK_BIN:-970422}
       MEDIA_UPLOAD_DIR: /app/uploads
       REVIEW_SENTIMENT_ENABLED: ${REVIEW_SENTIMENT_ENABLED:-true}
-      REVIEW_SENTIMENT_URL: http://review-sentiment:8002
+      REVIEW_SENTIMENT_URL: ${REVIEW_SENTIMENT_URL:-http://review-sentiment:8002}
       CHATBOT_SERVICE_URL: http://chatbot:8000
       CHATBOT_INTERNAL_TOKEN: ${CHATBOT_INTERNAL_TOKEN:-}
       IMAGE_SEARCH_ENABLED: ${IMAGE_SEARCH_ENABLED:-false}
@@ -270,6 +270,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      review-sentiment:
+        condition: service_started
     networks:
       - beautyshop_net
     healthcheck:
