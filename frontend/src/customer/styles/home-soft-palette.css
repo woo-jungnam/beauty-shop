@@ -59,12 +59,12 @@
   border-color: #B78A91;
   box-shadow: none;
 }
-.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-header > p,
+.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-note,
 .customer-app .customer-home-page.customer-home-page #flash-sale .flash-sale-header p {
   color: #625653 !important;
   border-color: #B78A91;
 }
-.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-header > div > span {
+.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-badge {
   color: #242020 !important;
   background: #EBC9C9 !important;
   border-color: #B78A91 !important;
@@ -75,7 +75,7 @@
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-meta, .home-spa-card-price, .product-card-price > span:first-child) {
   color: #242020 !important;
 }
-.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-avatar, .brand-partner-box, .brand-partner-card, .spa-service-card, .product-card-resolved) {
+.customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #store-catalog) :is(.category-tile-avatar, .spa-service-card, .product-card-resolved) {
   background: #FFFCFA !important;
   border-color: #EBC9C9 !important;
   box-shadow: 0 5px 15px #70564B0D !important;
@@ -167,12 +167,6 @@
 }
 .customer-app .customer-home-page.customer-home-page #flash-sale .flash-tab-indicator.is-active {
   background: #242020 !important;
-}
-
-/* Brand logos sit directly on the section surface. */
-.customer-app .customer-home-page.customer-home-page #brand-partners .brand-logo-tile {
-  border: 0 !important;
-  box-shadow: none !important;
 }
 
 /* Typography gives section titles emphasis without a marker or underline. */

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-async function storefront(page, configs, status = 200) {
+async function storefront(page, configs, status = 200, user) {
   await page.route('**/fonts.googleapis.com/**', route => route.abort());
   await page.route('**/fonts.gstatic.com/**', route => route.abort());
   await page.route('**/api/v1/**', async route => {
@@ -9,6 +9,11 @@ async function storefront(page, configs, status = 200) {
       return route.fulfill({ status, json: status === 200 ? { success: true, data: configs } : { message: 'Unavailable' } });
     }
     let data = [];
+    if (user && path === '/api/v1/auth/login') {
+      data = { ...user, accessToken: 'storefront-test-token' };
+    } else if (user && path === '/api/v1/auth/profile') {
+      data = user;
+    }
     if (path === '/api/v1/cart') data = { id: 1, items: [], totalPrice: 0 };
     else if (path === '/api/v1/products/search' || path === '/api/v1/products' || path === '/api/v1/brands') {
       data = { content: [], totalElements: 0, totalPages: 0 };
@@ -57,3 +62,27 @@ test('footer rejects malformed or non-text contact values instead of creating un
   await expect(footer.getByText('Email liên hệ: Chưa cập nhật.', { exact: true })).toBeVisible();
   await expect(footer.locator('a[href^="tel:"], a[href^="mailto:"], a[href*="google.com/maps"]')).toHaveCount(0);
 });
+
+for (const role of ['ROLE_CUSTOMER', 'ROLE_ADMIN']) {
+  test(`storefront login and footer Spa links stay in the storefront for ${role}`, async ({ page }) => {
+    await storefront(page, {}, 200, { id: 5, username: 'test-user', roles: [role] });
+    await page.goto('/#/login');
+    await page.locator('#customer-auth-username').fill('test-user');
+    await page.locator('#customer-auth-password').fill('test-password');
+    await page.locator('.auth-slide-pane.active form').locator('[type="submit"]').click();
+    await expect(page).toHaveURL(/#\/$/);
+    await expect(page.locator('.customer-home-page')).toBeVisible();
+
+    const footer = page.getByRole('contentinfo');
+    for (const [name, hash] of [
+      [/^Dịch Vụ Spa/, '#/spa'],
+      ['Xem Danh Sách Dịch Vụ', '#/spa'],
+      ['Chọn Nhân Viên Và Giờ Trống', '#/booking'],
+      ['Đăng Ký Đặt Lịch Hẹn Trực Tuyến', '#/booking'],
+    ]) {
+      await footer.getByRole('link', { name }).click();
+      await expect(page).toHaveURL(url => url.hash === hash);
+      await expect(page.locator('#spa-booking-title')).toBeVisible();
+    }
+  });
+}

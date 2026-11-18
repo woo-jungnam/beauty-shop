@@ -217,8 +217,12 @@
   transition: background-color 0.15s ease;
 }
 
-.spa-booking-page .booking-stepper > button:hover {
+.spa-booking-page .booking-stepper > button:hover:not(:disabled) {
   background: var(--booking-rose-light);
+}
+.spa-booking-page .booking-stepper > button:disabled {
+  cursor: default;
+  opacity: 0.65;
 }
 
 .spa-booking-page .booking-stepper > button + button {
@@ -296,6 +300,7 @@
 
 .spa-booking-page .booking-section {
   min-width: 0;
+  scroll-margin-top: calc(var(--customer-header-height, 160px) + 12px);
   padding: 30px;
   border: 1px solid var(--booking-line);
   border-radius: 20px;
@@ -305,6 +310,25 @@
 
 .spa-booking-page .booking-section:focus {
   outline: none;
+}
+.spa-booking-page .booking-back-button {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--booking-line);
+  border-radius: 10px;
+  background: var(--booking-card);
+  color: var(--booking-ink);
+  font-weight: 650;
+}
+.spa-booking-page .booking-back-button:hover:not(:disabled) {
+  background: var(--booking-rose-light);
+}
+.spa-booking-page .booking-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .spa-booking-page .booking-section-heading {
@@ -349,7 +373,13 @@
   color: var(--booking-muted);
 }
 
-/* Service Search Input */
+.spa-booking-page .booking-service-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
 .spa-booking-page .booking-service-search {
   display: flex;
   align-items: center;
@@ -359,7 +389,6 @@
   border-radius: 12px;
   background: var(--booking-bg);
   min-height: 46px;
-  margin-bottom: 16px;
   transition: border-color 0.15s ease;
 }
 
@@ -393,35 +422,48 @@
   padding: 4px;
 }
 
-/* Category Filter Pills */
-.spa-booking-page .booking-category-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 22px;
+.spa-booking-page .booking-category-filter {
+  position: relative;
+  min-width: 0;
 }
 
-.spa-booking-page .booking-category-pills button {
+.spa-booking-page .booking-category-filter select {
+  appearance: none;
+  width: 100%;
+  min-height: 46px;
   border: 1px solid var(--booking-line);
-  background: var(--booking-card);
-  padding: 9px 16px;
-  border-radius: 999px;
-  color: var(--booking-muted);
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.15s ease;
+  border-radius: 12px;
+  padding: 10px 36px;
+  background: var(--booking-bg);
+  color: var(--booking-ink);
+  font: inherit;
+  font-size: 14px;
+  text-overflow: ellipsis;
 }
 
-.spa-booking-page .booking-category-pills button:hover {
-  border-color: var(--booking-rose);
-  color: #242020;
+.spa-booking-page .booking-category-filter select:not(:disabled) {
+  cursor: pointer;
 }
 
-.spa-booking-page .booking-category-pills button[aria-pressed="true"] {
-  background: var(--booking-rose);
-  color: #242020;
+.spa-booking-page .booking-category-filter select:hover:not(:disabled) {
   border-color: var(--booking-rose);
-  font-weight: 600;
+}
+
+.spa-booking-page .booking-category-filter svg {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--booking-subtle);
+  pointer-events: none;
+}
+
+.spa-booking-page .booking-category-filter svg:first-child { left: 13px; }
+.spa-booking-page .booking-category-filter svg:last-child { right: 13px; }
+
+@media (max-width: 767px) {
+  .spa-booking-page .booking-service-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* Service Cards Grid */
@@ -1168,6 +1210,12 @@
 
 /* Sticky Booking Summary Sidebar */
 .spa-booking-page .booking-summary {
+  --booking-ink: #432821;
+  --booking-muted: #62443A;
+  --booking-subtle: #6B4A41;
+  --booking-card: #FCEEF1;
+  --booking-bg: #FFF5F7;
+  color: var(--booking-ink);
   position: sticky;
   top: calc(var(--customer-header-height, 160px) + 20px);
   border: 1px solid var(--booking-line);
@@ -1180,19 +1228,19 @@
 
 .spa-booking-page .booking-summary-heading {
   padding: 22px 24px;
-  background: var(--booking-rose);
-  color: #242020;
+  background: var(--booking-line);
+  color: var(--booking-ink);
 }
 
 .spa-booking-page .booking-summary-heading .booking-eyebrow {
   font-size: 11px;
   letter-spacing: 0.1em;
   font-weight: 700;
-  color: #F8D0DA;
+  color: var(--booking-muted);
 }
 
 .spa-booking-page .booking-summary-heading h2 {
-  color: #FFFCFA;
+  color: var(--booking-ink);
   font-size: 20px;
   font-weight: 700;
   line-height: 1.3;
@@ -1200,7 +1248,7 @@
 }
 
 .spa-booking-page .booking-summary-heading p {
-  color: #F8D0DA;
+  color: var(--booking-muted);
   font-size: 12px;
   margin: 0;
 }
@@ -1230,7 +1278,7 @@
 .spa-booking-page .booking-summary-service small {
   display: block;
   font-size: 11px;
-  color: #242020;
+  color: var(--booking-ink);
   font-weight: 600;
   text-transform: uppercase;
   margin-bottom: 3px;
@@ -1303,7 +1351,7 @@
 }
 
 .spa-booking-page .booking-summary-details .is-ready {
-  color: #242020;
+  color: var(--booking-ink);
   font-size: 15px;
   font-weight: 700;
 }
@@ -1352,7 +1400,7 @@
 }
 
 .spa-booking-page .booking-total b {
-  color: #242020;
+  color: var(--booking-ink);
   font-size: 22px;
   font-weight: 750;
   white-space: nowrap;
@@ -1397,7 +1445,7 @@
 
 .spa-booking-page .booking-payment-card.is-selected {
   border-color: var(--booking-rose);
-  background: rgba(184, 80, 106, 0.04);
+  background: #F8DFE5;
 }
 
 .spa-booking-page .booking-payment-card input[type="radio"] {
@@ -1505,6 +1553,7 @@
 .spa-booking-page .booking-summary > .booking-primary-button {
   width: calc(100% - 48px);
   margin: 20px 24px 12px;
+  color: var(--booking-ink);
 }
 
 .spa-booking-page .booking-summary-footer {
@@ -1537,7 +1586,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #242020;
+  color: var(--booking-ink);
   text-decoration: none;
   font-size: 13px;
   font-weight: 700;
@@ -1844,6 +1893,12 @@
 }
 
 @media (max-width: 767px) {
+  .spa-booking-page .booking-summary > .booking-primary-button {
+    display: none;
+  }
+  .spa-booking-page .booking-summary-footer {
+    margin-top: 14px;
+  }
   .customer-app:has(.spa-booking-page:not(.booking-success-page)) {
     padding-bottom: 84px !important;
   }

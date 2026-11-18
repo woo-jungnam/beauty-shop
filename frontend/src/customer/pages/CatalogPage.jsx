@@ -290,7 +290,7 @@ export const CatalogPage = ({ onNavigate, initialQuery = '' }) => {
         <aside ref={filterPanelRef} role={mobileFilterOpen ? 'dialog' : undefined} aria-modal={mobileFilterOpen ? 'true' : undefined}
           aria-label="Bộ lọc sản phẩm" tabIndex={-1} className={`catalog-filter-panel catalog-facet-panel ${mobileFilterOpen ? 'is-open' : ''}`}>
           <div className="catalog-filter-heading">
-            <strong><Filter size={16} /> Bộ Lọc Chuyên Sâu</strong>
+            <strong><Filter size={16} /> Bộ lọc</strong>
             {hasActiveFilters && <button type="button" className="catalog-filter-reset" onClick={clearAllFilters}>Đặt lại</button>}
             <button type="button" className="catalog-filter-close" onClick={() => setMobileFilterOpen(false)} aria-label="Đóng bộ lọc"><X size={20} /></button>
           </div>

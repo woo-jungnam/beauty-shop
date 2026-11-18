@@ -79,6 +79,111 @@
   opacity: 1;
   transform: scale(1);
 }
+.auth-slider-track[hidden] {
+  display: none;
+}
+.auth-slide-pane.auth-recovery {
+  width: 100%;
+}
+.auth-recovery-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: #FFF0F3;
+  color: #AD3F61;
+}
+.auth-recovery h1 {
+  margin: 0;
+  color: #1F2937;
+  font-size: 22px;
+}
+.auth-recovery-description {
+  margin: 6px 0 22px;
+  color: #5F6572;
+  font-size: 13px;
+}
+.auth-recovery form {
+  display: grid;
+  gap: 16px;
+}
+.auth-recovery label {
+  display: grid;
+  gap: 6px;
+  color: #4B5563;
+  font-size: 12px;
+  font-weight: 700;
+}
+.auth-recovery input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid #F0DEE3;
+  border-radius: 10px;
+  background: #FAF7F8;
+  color: #1F2937;
+  font-size: 14px;
+}
+.auth-recovery-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #B84365;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 4px 14px #D45D7940;
+  transition: background-color 180ms ease;
+}
+.auth-recovery-submit:hover:not(:disabled) { background: #8C2A47; }
+.auth-recovery-submit:disabled { opacity: 0.65; cursor: wait; }
+.auth-recovery-feedback {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #EEF7F0;
+  color: #285E3A;
+  font-size: 13px;
+}
+.auth-recovery-feedback.is-error {
+  background: #FFF1F2;
+  color: #9F1239;
+}
+.auth-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 18px;
+}
+.auth-recovery-actions button,
+.user-auth-fullscreen :is(.auth-recovery-actions a, .auth-forgot-link) {
+  color: #8C2A47;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-recovery-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.auth-forgot-link {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+}
 .beauty-floating-card {
   position: absolute;
   background: rgba(255, 255, 255, 0.85);

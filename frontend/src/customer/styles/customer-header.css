@@ -19,6 +19,9 @@
 .customer-app .storefront-announcement a:hover {
   color: #EBC9C9;
 }
+.customer-app .storefront-header a.storefront-brand:hover {
+  text-decoration: none;
+}
 .customer-app .storefront-header .storefront-brand,
 .customer-app .storefront-header .storefront-brand > span,
 .customer-app .storefront-header .storefront-brand > span > span,
@@ -49,6 +52,7 @@
 }
 .customer-app .storefront-header :is(.storefront-search-clear, .storefront-search-camera-btn, .storefront-action) {
   color: var(--header-berry);
+  transition: background-color 160ms ease, color 160ms ease;
 }
 .customer-app .storefront-header :is(.storefront-search-camera-btn, .storefront-action):hover {
   background: var(--header-blush);
@@ -57,6 +61,7 @@
 .customer-app .storefront-header .storefront-search-submit {
   background: var(--header-berry);
   color: #FFFFFF;
+  transition: background-color 160ms ease;
 }
 .customer-app .storefront-header .storefront-search-submit:hover {
   background: var(--header-deep);
@@ -66,11 +71,14 @@
   color: #FFFFFF;
   border-color: var(--header-berry);
   box-shadow: 0 3px 8px #AD3F611A;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 .customer-app .storefront-header .storefront-booking:hover {
   background: var(--header-deep);
   color: #FFFFFF;
   border-color: var(--header-deep);
+  box-shadow: 0 4px 10px #8C2A4726;
+  transform: none;
 }
 .customer-app .storefront-header .storefront-cart b {
   background: var(--header-berry);
@@ -84,19 +92,62 @@
 .customer-app .storefront-header .storefront-nav :is(.storefront-nav-link, .storefront-dropdown-toggle, .storefront-nav-note) {
   color: var(--header-deep);
 }
-.customer-app .storefront-header .storefront-nav-link:hover,
-.customer-app .storefront-header .storefront-nav-link.is-active {
-  color: var(--header-deep);
-  background: var(--header-blush);
-  border-bottom-color: var(--header-berry);
+.customer-app .storefront-header .storefront-nav-group::before,
+.customer-app .storefront-header .storefront-nav-group::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
 }
-.customer-app .storefront-header .storefront-nav-link,
-.customer-app .storefront-header .storefront-nav-link:is(:hover, :focus, .is-active) {
+.customer-app .storefront-header .storefront-nav-group::before {
+  inset: 6px -8px;
+  border-radius: 10px;
+  background: var(--header-blush);
+  transition: opacity 160ms ease;
+}
+.customer-app .storefront-header .storefront-nav-group::after {
+  inset: auto 0 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--header-berry);
+  transform: scaleX(0);
+  transition: opacity 160ms ease, transform 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.customer-app .storefront-header .storefront-nav-group:has(> [aria-expanded="true"])::before {
+  opacity: 1;
+}
+.customer-app .storefront-header .storefront-nav-group:has(> [aria-current="page"], > [aria-expanded="true"])::after {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .customer-app .storefront-header .storefront-nav-group:hover::before {
+    opacity: 0.65;
+  }
+  .customer-app .storefront-header .storefront-nav-group:hover::after {
+    opacity: 1;
+    transform: none;
+  }
+  .customer-app .storefront-header .storefront-nav-group:hover:has(> [aria-expanded="true"])::before {
+    opacity: 1;
+  }
+}
+.customer-app .storefront-header .storefront-nav-link {
+  position: relative;
+  border-bottom-color: transparent;
+  font-weight: 600;
   text-decoration: none;
+  transition: color 160ms ease;
 }
-.customer-app .storefront-header .storefront-dropdown-toggle:is(:hover, [aria-expanded="true"]) {
-  background: var(--header-blush);
-  color: var(--header-deep);
+.customer-app .storefront-header .storefront-dropdown-toggle {
+  position: relative;
+  background: transparent;
+}
+.customer-app .storefront-header .storefront-dropdown-toggle svg {
+  transition: transform 200ms ease;
+}
+.customer-app .storefront-header .storefront-dropdown-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
 }
 .customer-app .storefront-header .storefront-dropdown {
   border-color: var(--header-border);
@@ -105,9 +156,30 @@
 .customer-app .storefront-header .storefront-dropdown :is(a, button, strong) {
   color: var(--header-deep);
 }
+.customer-app .storefront-header .storefront-dropdown :is(a, button) {
+  text-decoration: none;
+  transition: background-color 160ms ease;
+}
 .customer-app .storefront-header .storefront-dropdown :is(a, button):hover {
   background: var(--header-blush);
   color: var(--header-deep);
+}
+.customer-app .storefront-header .storefront-nav .storefront-dropdown {
+  animation: storefront-dropdown-enter 160ms ease-out both;
+}
+@keyframes storefront-dropdown-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-app .storefront-header :is(.storefront-nav-link, .storefront-dropdown-toggle svg, .storefront-dropdown a, .storefront-dropdown button, .storefront-action, .storefront-search-clear, .storefront-search-camera-btn, .storefront-search-submit, .storefront-booking),
+  .customer-app .storefront-header .storefront-nav-group::before,
+  .customer-app .storefront-header .storefront-nav-group::after {
+    transition: none;
+  }
+  .customer-app .storefront-header .storefront-nav .storefront-dropdown {
+    animation: none;
+  }
 }
 .customer-app .storefront-header .storefront-mobile-panel {
   background: #FFFFFF;

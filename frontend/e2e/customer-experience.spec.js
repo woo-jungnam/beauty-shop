@@ -112,6 +112,27 @@ test('Desktop category dropdown is keyboard accessible and uses catalog IDs', as
   await expect(page.getByRole('heading', { name: 'Serum', exact: true })).toBeVisible();
 });
 
+test('Desktop navigation hover highlights the group without moving its controls', async ({ page }) => {
+  await storefront(page);
+  await page.goto('/');
+  const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+  const group = nav.locator('.storefront-nav-group').filter({ has: page.getByRole('link', { name: 'Sản phẩm', exact: true }) });
+  const toggle = group.getByRole('button', { name: 'Mở danh sách sản phẩm' });
+  const before = await toggle.boundingBox();
+  await group.getByRole('link').first().hover();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(toggle).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  expect(await toggle.boundingBox()).toEqual(before);
+  await expect.poll(() => group.evaluate(element => getComputedStyle(element, '::before').opacity)).toBe('1');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(group.locator('.storefront-dropdown')).toHaveCSS('animation-name', 'none');
+  await page.keyboard.press('Escape');
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(nav.getByRole('link', { name: 'Trang chủ' })).toHaveAttribute('aria-current', 'page');
+});
+
 test('Catalog failure offers a retry and preserves the current search', async ({ page }) => {
   const api = await storefront(page, { catalogFailure: true });
   await page.goto('/#/products?search=B5');

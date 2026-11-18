@@ -33,8 +33,7 @@
   color: #7A223B !important;
   font-weight: 750;
 }
-.customer-app .customer-home-page #categories-section .category-tile-avatar,
-.customer-app .customer-home-page #brand-partners :is(.brand-partner-box, .brand-partner-card) {
+.customer-app .customer-home-page #categories-section .category-tile-avatar {
   border-color: #AA6177 !important;
 }
 .customer-app .customer-home-page #store-catalog .tab-filter-btn:not(.active) {
@@ -118,11 +117,11 @@
 .customer-app .customer-home-page :is(#flash-sale, #random-picks) .section-title-wrap::after {
   background: var(--item-highlight) !important;
 }
-.customer-app .customer-home-page #random-picks .recommendations-header > p {
+.customer-app .customer-home-page #random-picks .recommendations-note {
   color: #FFFFFF !important;
   border-left-color: var(--item-highlight);
 }
-.customer-app .customer-home-page #random-picks .recommendations-header > div > span {
+.customer-app .customer-home-page #random-picks .recommendations-badge {
   color: var(--item-ink) !important;
   background: var(--item-highlight) !important;
   border-color: var(--item-border) !important;

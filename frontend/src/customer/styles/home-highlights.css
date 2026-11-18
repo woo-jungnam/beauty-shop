@@ -9,6 +9,13 @@
   flex-direction: column;
   align-items: flex-start !important;
 }
+.customer-app .customer-home-page .home-section-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 .customer-app .customer-home-page #flash-sale .flash-sale-header-actions {
   justify-content: flex-end;
   max-width: 420px;
@@ -93,10 +100,25 @@
   background: #FFE5D9;
   color: #4A3535 !important;
 }
-.customer-app #random-picks .recommendations-header > p {
+.customer-app #random-picks .recommendations-heading {
+  width: 100%;
+  min-width: 0;
+}
+.customer-app #random-picks .home-section-title-row {
+  align-self: stretch;
+}
+.customer-app #random-picks .recommendations-note {
+  margin: 0 0 0 auto;
+  font-size: 13px;
   padding: 8px 12px;
   border-left: 3px solid #F3BCD1;
   color: #FFF1F6 !important;
+}
+@media (max-width: 767px) {
+  .customer-app #random-picks .recommendations-note {
+    flex-basis: 100%;
+    margin-inline-start: 0;
+  }
 }
 .customer-app .customer-home-page :is(#flash-sale, #random-picks) h2.section-title-highlight {
   color: #FFFFFF !important;

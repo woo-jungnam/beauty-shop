@@ -42,6 +42,11 @@ const ids = (params, key) => (params.get(key) || '').split(',').filter(Boolean).
 test('Filter accordion preserves selected categories while collapsed', async ({ page }) => {
   await catalog(page);
   await page.goto('/#/products');
+  const heading = page.locator('.catalog-filter-heading');
+  await expect(heading.getByText('Bộ lọc', { exact: true })).toBeVisible();
+  await page.locator('.product-card-resolved').first().hover();
+  await expect(page.locator('.product-card-quick-add button').first())
+    .toHaveCSS('background-color', await heading.evaluate(element => getComputedStyle(element).backgroundColor));
   const group = categoryGroup(page);
   const option = group.getByRole('checkbox', { name: 'Serum', exact: true });
   await expect(option).toBeHidden();

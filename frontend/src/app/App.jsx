@@ -269,7 +269,12 @@ export const App = () => {
   }
 
   if (currentHash === "login" || currentHash === "admin/login") {
-    return <LoginPage />;
+    return <LoginPage isAdminRoute={currentHash === "admin/login"} />;
+  }
+
+  const [authPath, authQuery] = currentHash.split("?");
+  if (authPath === "recover-password" || authPath === "reset-password") {
+    return <LoginPage recoveryMode={authPath} recoveryToken={new URLSearchParams(authQuery).get("token") || ""} />;
   }
 
   const isStaffOrAdminRoute =
@@ -277,7 +282,8 @@ export const App = () => {
     currentHash === "staff" ||
     currentHash.startsWith("staff/") ||
     currentHash === "reception" ||
-    (currentHash !== "products" && currentHash !== "treatments" && Object.keys(ADMIN_PAGES).includes(currentHash));
+    (currentHash !== "products" && currentHash !== "treatments" && currentHash !== "spa"
+      && Object.hasOwn(ADMIN_PAGES, currentHash));
 
   if (!isStaffOrAdminRoute) {
     return (
@@ -305,7 +311,7 @@ export const App = () => {
   }
 
   if (!isAuthenticated || !isOperator) {
-    return <LoginPage />;
+    return <LoginPage isAdminRoute />;
   }
 
   if (!allowedTabs.length) {

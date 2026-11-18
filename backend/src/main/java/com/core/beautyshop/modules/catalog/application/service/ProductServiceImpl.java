@@ -787,10 +787,19 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public List<ProductListResponse> getExpiringSoonProducts(int thresholdDays, int limit) {
+        return findExpiringSoonProducts(thresholdDays, Math.max(1, Math.min(limit, 50)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductListResponse> getAllExpiringSoonProducts(int thresholdDays) {
+        return findExpiringSoonProducts(thresholdDays, Integer.MAX_VALUE);
+    }
+
+    private List<ProductListResponse> findExpiringSoonProducts(int thresholdDays, int limit) {
         LocalDate businessDate = BusinessTime.today();
         int safeThreshold = Math.max(InventoryExpiryPolicy.MIN_REMAINING_DAYS + 1,
                 Math.min(thresholdDays, InventoryExpiryPolicy.MAX_CLEARANCE_DAYS));
-        int safeLimit = Math.max(1, Math.min(limit, 50));
         int pageSize = 100;
         Comparator<ProductListResponse> order = Comparator.comparing(ProductListResponse::getEarliestExpirationDate)
                 .thenComparing(ProductListResponse::getTotalSold, Comparator.nullsLast(Comparator.reverseOrder()))
@@ -813,8 +822,10 @@ public class ProductServiceImpl implements ProductService {
                 if (expiry == null || !InventoryExpiryPolicy.isSellable(expiry, businessDate)
                         || expiry.isAfter(businessDate.plusDays(safeThreshold))
                         || stock.getAvailableQuantity() == null || stock.getAvailableQuantity() <= 0) continue;
-                ProductListResponse last = selected.values().stream().max(order).orElse(null);
-                if (selected.size() == safeLimit && expiry.isAfter(last.getEarliestExpirationDate())) {
+                ProductListResponse last = selected.size() == limit
+                        ? selected.values().stream().max(order).orElseThrow()
+                        : null;
+                if (last != null && expiry.isAfter(last.getEarliestExpirationDate())) {
                     finished = true;
                     break;
                 }
@@ -829,7 +840,7 @@ public class ProductServiceImpl implements ProductService {
                 ProductListResponse previous = selected.get(product.getId());
                 if (previous != null) {
                     if (order.compare(candidate, previous) < 0) selected.put(product.getId(), candidate);
-                } else if (selected.size() < safeLimit) {
+                } else if (last == null) {
                     selected.put(product.getId(), candidate);
                 } else if (order.compare(candidate, last) < 0) {
                     selected.remove(last.getId());

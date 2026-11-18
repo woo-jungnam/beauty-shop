@@ -82,6 +82,15 @@ export const CustomerFooter = ({ onNavigate }) => {
   const emailHref = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(storeContact.email)
     ? `mailto:${encodeURIComponent(storeContact.email).replace('%40', '@')}` : null;
   const contactLinkStyle = { color: 'inherit', textDecoration: 'underline' };
+  const serviceLinkStyle = { color: 'inherit', textDecoration: 'none' };
+  const handleServiceLinkClick = (event) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const { hash } = event.currentTarget;
+    if (hash === window.location.hash) {
+      event.preventDefault();
+      onNavigate(hash.slice(2));
+    }
+  };
   const [newsletterConsent, setNewsletterConsent] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterFeedback, setNewsletterFeedback] = useState('');
@@ -186,9 +195,10 @@ export const CustomerFooter = ({ onNavigate }) => {
               </div>
             </div>
 
-            <div
-              style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', cursor: 'pointer' }}
-              onClick={() => onNavigate('spa')}
+            <a
+              href="#/spa"
+              onClick={handleServiceLinkClick}
+              style={{ ...serviceLinkStyle, display: 'flex', alignItems: 'flex-start', gap: '14px' }}
               title="Khám phá dịch vụ Spa"
             >
               <div style={{
@@ -211,7 +221,7 @@ export const CustomerFooter = ({ onNavigate }) => {
                   Xem dịch vụ, nhân viên và khung giờ còn trống trước khi đặt lịch.
                 </p>
               </div>
-            </div>
+            </a>
           </div>
         </div>
       </div>
@@ -294,9 +304,9 @@ export const CustomerFooter = ({ onNavigate }) => {
                 Dịch Vụ Làm Đẹp
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#FFFCFA' }}>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('spa')}>Xem Danh Sách Dịch Vụ</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Chọn Nhân Viên Và Giờ Trống</li>
-                <li style={{ cursor: 'pointer' }} onClick={() => onNavigate('booking')}>Đăng Ký Đặt Lịch Hẹn Trực Tuyến</li>
+                <li><a href="#/spa" onClick={handleServiceLinkClick} style={serviceLinkStyle}>Xem Danh Sách Dịch Vụ</a></li>
+                <li><a href="#/booking" onClick={handleServiceLinkClick} style={serviceLinkStyle}>Chọn Nhân Viên Và Giờ Trống</a></li>
+                <li><a href="#/booking" onClick={handleServiceLinkClick} style={serviceLinkStyle}>Đăng Ký Đặt Lịch Hẹn Trực Tuyến</a></li>
               </ul>
             </div>
 

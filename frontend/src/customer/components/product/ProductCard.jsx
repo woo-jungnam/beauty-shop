@@ -179,11 +179,19 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
         }}>
           {discountPercent > 0 && (
             <span className="product-card-discount" style={{
+              display: 'inline-flex',
+              alignSelf: 'flex-start',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxSizing: 'border-box',
+              width: '60px',
+              height: '26px',
               backgroundColor: 'var(--c-deal-red, #E11D48)',
               color: '#FFFFFF',
               fontSize: '11px',
               fontWeight: 800,
-              padding: '2px 7px',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
               borderRadius: '3px',
               fontFamily: 'var(--font-mono)',
               boxShadow: '0 2px 4px rgba(225, 29, 72, 0.35)'
@@ -321,10 +329,10 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
               style={{
                 width: '100%',
                 padding: '9px 14px',
-                backgroundColor: justAdded ? '#059669' : 'var(--c-primary, #D45D79)',
+                backgroundColor: justAdded ? '#059669' : 'var(--product-quick-add-bg, var(--c-primary, #D45D79))',
                 border: 'none',
                 borderRadius: 'var(--radius-sm, 4px)',
-                color: '#FFFFFF',
+                color: justAdded ? '#FFFFFF' : 'var(--product-quick-add-ink, #FFFFFF)',
                 fontSize: '12px',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -342,7 +350,7 @@ export const ProductCard = ({ product, onNavigate, onQuickView, fromSearch = fal
                 </>
               ) : (
                 <>
-                  <ShoppingBag size={14} color="#FFFFFF" />
+                  <ShoppingBag size={14} />
                   <span>{isAdding ? 'Đang thêm…' : 'Thêm vào giỏ'}</span>
                 </>
               )}

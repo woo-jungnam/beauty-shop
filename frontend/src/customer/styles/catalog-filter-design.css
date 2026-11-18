@@ -6,6 +6,8 @@
   --filter-ink: #242020;
   --filter-surface: #FFFCFA;
   --filter-mauve: #B78A91;
+  --product-quick-add-bg: var(--filter-rose);
+  --product-quick-add-ink: var(--filter-ink);
 }
 .customer-app .catalog-page .catalog-facet-panel {
   padding: 0;

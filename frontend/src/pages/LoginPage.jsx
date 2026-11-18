@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck,
   Lock,
@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../app/providers/AuthProvider';
 import { getAdminSections } from '../app/adminNavigation';
 import { Button } from '../shared/ui/Button';
+import { PasswordRecoveryForm } from './PasswordRecoveryForm';
 import '../customer/styles/customer-auth.css';
 
 const getAuthErrorMessage = (err, fallback) => {
@@ -33,32 +34,34 @@ const consumeCustomerRedirect = () => {
   try {
     const target = sessionStorage.getItem('auth_redirect');
     sessionStorage.removeItem('auth_redirect');
-    if (target && ['booking', 'checkout', 'treatments', 'profile', 'service-packages'].includes(target)) {
+    if (target && ['booking', 'checkout', 'treatments', 'service-packages'].includes(target)) {
       return `#/${target}`;
     }
   } catch {}
-  return '#/profile';
+  return '#/';
 };
 
-export const LoginPage = () => {
-  const { login, register, isAuthenticated, isOperator, isAdmin } = useAuth();
-  const route = window.location.hash.replace(/^#\/?/, '');
-  const isAdminRoute = route.startsWith('admin') ||
-    ['dashboard', 'inventory', 'procurement', 'crm', 'operations', 'vouchers', 'reviews', 'users', 'spa-reception', 'treatments', 'orders', 'products', 'spa', 'staff'].includes(route);
+export const LoginPage = ({ isAdminRoute = false, recoveryMode, recoveryToken }) => {
+  const { login, register, isAuthenticated, isOperator, isAdmin, user } = useAuth();
+  const customerRedirected = useRef(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      if (isAdmin) {
-        window.location.hash = '#/admin/dashboard';
-      } else if (isOperator) {
-        window.location.hash = '#/admin';
-      } else {
-        window.location.hash = consumeCustomerRedirect();
-      }
+    if (!isAuthenticated || recoveryMode) return;
+    if (!isAdminRoute) {
+      if (customerRedirected.current) return;
+      customerRedirected.current = true;
+      window.location.hash = consumeCustomerRedirect();
+    } else if (isAdmin) {
+      window.location.hash = '#/admin/dashboard';
+    } else if (isOperator) {
+      const firstTab = getAdminSections(user?.roles, user?.permissions)[0]?.items[0]?.id;
+      window.location.hash = firstTab ? `#/admin/${firstTab}` : '#/admin';
     }
-  }, [isAuthenticated, isAdmin, isOperator]);
+  }, [isAuthenticated, isAdminRoute, isAdmin, isOperator, user, recoveryMode]);
 
   const [authMode, setAuthMode] = useState('login');
+  const loginActive = !recoveryMode && authMode === 'login';
+  const registerActive = !recoveryMode && authMode === 'register';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -75,6 +78,12 @@ export const LoginPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const switchAuthMode = (mode) => {
+    setAuthMode(mode);
+    setError(null);
+    if (recoveryMode) window.location.hash = '#/login';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -128,7 +137,6 @@ export const LoginPage = () => {
           username: cleanUsername,
           password: regPassword,
         });
-        window.location.hash = consumeCustomerRedirect();
       } catch (err) {
         setError(getAuthErrorMessage(err, 'Đăng ký thất bại. Vui lòng thử lại với email/username khác.'));
       } finally {
@@ -144,20 +152,7 @@ export const LoginPage = () => {
 
     setLoading(true);
     try {
-      const loggedUser = await login(username.trim(), password, { requireOperator: isAdminRoute });
-      const roles = loggedUser?.roles || [];
-      const isAdmin = roles.some((r) => r === 'ROLE_ADMIN' || r === 'ADMIN');
-      const isStaff = roles.some((r) => r === 'ROLE_STAFF' || r === 'STAFF');
-
-      if (isAdmin) {
-        window.location.hash = '#/admin/dashboard';
-      } else if (isStaff) {
-        const sections = getAdminSections(roles, loggedUser?.permissions || []);
-        const firstTab = sections[0]?.items[0]?.id;
-        window.location.hash = firstTab ? `#/admin/${firstTab}` : '#/admin';
-      } else {
-        window.location.hash = consumeCustomerRedirect();
-      }
+      await login(username.trim(), password, { requireOperator: isAdminRoute });
     } catch (err) {
       setError(getAuthErrorMessage(err, 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.'));
     } finally {
@@ -498,10 +493,10 @@ export const LoginPage = () => {
           </a>
 
           <span style={{ fontSize: '12px', color: '#6B7280' }}>
-            {authMode === 'login' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
+            {registerActive ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'}
             <button
               type="button"
-              onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setError(null); }}
+              onClick={() => switchAuthMode(registerActive ? 'login' : 'register')}
               style={{
                 background: 'none',
                 border: 'none',
@@ -513,7 +508,7 @@ export const LoginPage = () => {
                 textDecoration: 'underline'
               }}
             >
-              {authMode === 'login' ? 'Đăng ký ngay' : 'Đăng nhập'}
+              {registerActive ? 'Đăng nhập' : 'Đăng ký ngay'}
             </button>
           </span>
         </div>
@@ -528,17 +523,17 @@ export const LoginPage = () => {
           }}>
             <button
               type="button"
-              onClick={() => { setAuthMode('login'); setError(null); }}
+              onClick={() => switchAuthMode('login')}
               style={{
                 flex: 1,
                 padding: '10px 0',
                 border: 'none',
                 borderRadius: '12px',
-                backgroundColor: authMode === 'login' ? '#FFFFFF' : 'transparent',
-                color: authMode === 'login' ? '#D45D79' : '#6B7280',
-                fontWeight: authMode === 'login' ? 800 : 600,
+                backgroundColor: loginActive ? '#FFFFFF' : 'transparent',
+                color: loginActive ? '#D45D79' : '#6B7280',
+                fontWeight: loginActive ? 800 : 600,
                 fontSize: '13.5px',
-                boxShadow: authMode === 'login' ? '0 2px 8px rgba(212, 93, 121, 0.12)' : 'none',
+                boxShadow: loginActive ? '0 2px 8px rgba(212, 93, 121, 0.12)' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 display: 'flex',
@@ -553,17 +548,17 @@ export const LoginPage = () => {
 
             <button
               type="button"
-              onClick={() => { setAuthMode('register'); setError(null); }}
+              onClick={() => switchAuthMode('register')}
               style={{
                 flex: 1,
                 padding: '10px 0',
                 border: 'none',
                 borderRadius: '12px',
-                backgroundColor: authMode === 'register' ? '#FFFFFF' : 'transparent',
-                color: authMode === 'register' ? '#D45D79' : '#6B7280',
-                fontWeight: authMode === 'register' ? 800 : 600,
+                backgroundColor: registerActive ? '#FFFFFF' : 'transparent',
+                color: registerActive ? '#D45D79' : '#6B7280',
+                fontWeight: registerActive ? 800 : 600,
                 fontSize: '13.5px',
-                boxShadow: authMode === 'register' ? '0 2px 8px rgba(212, 93, 121, 0.12)' : 'none',
+                boxShadow: registerActive ? '0 2px 8px rgba(212, 93, 121, 0.12)' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
                 display: 'flex',
@@ -577,8 +572,17 @@ export const LoginPage = () => {
             </button>
           </div>
 
+          {recoveryMode && (
+            <PasswordRecoveryForm
+              key={`${recoveryMode}:${recoveryToken}`}
+              reset={recoveryMode === 'reset-password' || Boolean(recoveryToken)}
+              initialToken={recoveryToken}
+              onBack={() => switchAuthMode('login')}
+            />
+          )}
           <div
             className="auth-slider-track"
+            hidden={Boolean(recoveryMode)}
             style={{
               transform: authMode === 'login' ? 'translateX(0%)' : 'translateX(-50%)'
             }}
@@ -770,7 +774,7 @@ export const LoginPage = () => {
                       </>
                     )}
                   </button>
-                  <a href="#/recover-password" style={{ display: 'block', textAlign: 'center', marginTop: 14 }}>Quên mật khẩu?</a>
+                  <a href="#/recover-password" className="auth-forgot-link">Quên mật khẩu?</a>
                 </form>
               </div>
             </div>

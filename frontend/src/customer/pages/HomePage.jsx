@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { ProductCard } from '../components/product/ProductCard';
 import { ProductCardSkeleton } from '../components/product/ProductCardSkeleton';
-import { ScrollProgressTop } from '../components/ui/ScrollProgressTop';
 import { QuickViewModal } from '../components/product/QuickViewModal';
 import { ToastNotification } from '../components/ui/ToastNotification';
 import { useCustomerCart } from '../stores/customerCartStore';
@@ -86,11 +85,11 @@ export const HomePage = ({ onNavigate }) => {
 
 
   const [clearanceProducts, setClearanceProducts] = useState([]);
-  const [curatedFlashProducts, setCuratedFlashProducts] = useState([]);
   const [campaignFlashProducts, setCampaignFlashProducts] = useState([]);
   const [flashOverview, setFlashOverview] = useState(null);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
-  const [flashFilterType, setFlashFilterType] = useState('ALL'); // 'ALL' | 'CAMPAIGN' | 'CURATED' | 'CLEARANCE'
+  const slotRequestId = useRef(0);
+  const [selectedFlashFilter, setFlashFilterType] = useState('ALL');
   const [flashCountdown, setFlashCountdown] = useState({ hours: '00', minutes: '00', seconds: '00' });
   const [clearanceLoading, setClearanceLoading] = useState(true);
   const [clearanceError, setClearanceError] = useState('');
@@ -144,28 +143,21 @@ export const HomePage = ({ onNavigate }) => {
     return () => clearInterval(timer);
   }, [countdownTarget]);
 
-  const allFlashProducts = useMemo(() => {
-    if (flashFilterType === 'CAMPAIGN') return campaignFlashProducts;
-    if (flashFilterType === 'CLEARANCE') return clearanceProducts;
-    if (flashFilterType === 'CURATED') return curatedFlashProducts;
-    const seen = new Set();
-    const merged = [];
-    // Only mix in curated catalog deals if there is an active flash sale campaign
-    const baseList = campaignFlashProducts.length > 0
-      ? [...campaignFlashProducts, ...curatedFlashProducts, ...clearanceProducts]
-      : [...clearanceProducts];
-    for (const p of baseList) {
-      if (p?.id && !seen.has(p.id)) {
-        seen.add(p.id);
-        merged.push(p);
-      }
-    }
-    return merged;
-  }, [campaignFlashProducts, clearanceProducts, curatedFlashProducts, flashFilterType]);
+  const allFlashProducts = useMemo(
+    () => [...campaignFlashProducts, ...clearanceProducts],
+    [campaignFlashProducts, clearanceProducts],
+  );
+  const flashFilters = [
+    { id: 'ALL', label: 'Tất cả', products: allFlashProducts },
+    { id: 'CAMPAIGN', label: 'Giờ vàng', products: campaignFlashProducts },
+    { id: 'CLEARANCE', label: 'Khuyến mãi', products: clearanceProducts },
+  ].filter(({ id, products }) => id === 'ALL' || products.length > 0);
+  const activeFlashFilter = flashFilters.find(({ id }) => id === selectedFlashFilter) ?? flashFilters[0];
+  const { id: flashFilterType, products: filteredFlashProducts } = activeFlashFilter;
 
   const totalFlashTabs = useMemo(() => {
-    return Math.max(1, Math.ceil(allFlashProducts.length / FLASH_PAGE_SIZE));
-  }, [allFlashProducts.length]);
+    return Math.max(1, Math.ceil(filteredFlashProducts.length / FLASH_PAGE_SIZE));
+  }, [filteredFlashProducts.length]);
 
   useEffect(() => {
     if (currentFlashTab >= totalFlashTabs) {
@@ -182,10 +174,9 @@ export const HomePage = ({ onNavigate }) => {
   }, [totalFlashTabs, isFlashHovered]);
 
   const currentFlashProducts = useMemo(() => {
-    if (!allFlashProducts || allFlashProducts.length === 0) return [];
     const start = currentFlashTab * FLASH_PAGE_SIZE;
-    return allFlashProducts.slice(start, start + FLASH_PAGE_SIZE);
-  }, [allFlashProducts, currentFlashTab]);
+    return filteredFlashProducts.slice(start, start + FLASH_PAGE_SIZE);
+  }, [filteredFlashProducts, currentFlashTab]);
 
   const marqueeBrands = useMemo(() => {
     if (!brands || brands.length === 0) return [];
@@ -251,21 +242,22 @@ export const HomePage = ({ onNavigate }) => {
 
   useEffect(() => {
     const controller = new AbortController();
+    slotRequestId.current += 1;
     setClearanceLoading(true);
     setClearanceError('');
     Promise.allSettled([
-      apiClient.get('/api/v1/products/expiring-soon?limit=12&thresholdDays=90', { signal: controller.signal }),
-      apiClient.get('/api/v1/products/search?onSale=true&size=12', { signal: controller.signal }),
+      apiClient.get('/api/v1/products/expiring-soon?all=true&thresholdDays=90', { signal: controller.signal }),
       apiClient.get('/api/v1/flash-sales/current', { signal: controller.signal }),
     ])
-      .then(([expiringRes, onSaleRes, flashRes]) => {
+      .then(([expiringRes, flashRes]) => {
         if (controller.signal.aborted) return;
+        const fData = flashRes.status === 'fulfilled' ? (flashRes.value?.data ?? flashRes.value) : null;
+        setFlashOverview(fData);
+        setSelectedSlotId(fData?.currentSlotId ?? null);
         const allFailed = expiringRes.status === 'rejected'
-          && onSaleRes.status === 'rejected'
           && flashRes.status === 'rejected';
         if (allFailed) {
           setClearanceProducts([]);
-          setCuratedFlashProducts([]);
           setCampaignFlashProducts([]);
           setClearanceError('Chưa tải được sản phẩm Flash Sale. Vui lòng thử lại.');
           return;
@@ -275,50 +267,35 @@ export const HomePage = ({ onNavigate }) => {
         const expiringList = Array.isArray(expiringData) ? expiringData : expiringData?.content || [];
         setClearanceProducts(expiringList);
 
-        const onSaleData = onSaleRes.status === 'fulfilled' ? (onSaleRes.value?.data ?? onSaleRes.value) : [];
-        const onSaleList = Array.isArray(onSaleData) ? onSaleData : onSaleData?.content || [];
-        setCuratedFlashProducts(onSaleList);
-
-        if (flashRes.status === 'fulfilled') {
-          const fData = flashRes.value?.data ?? flashRes.value;
-          if (fData) {
-            setFlashOverview(fData);
-            if (fData.currentSlotId) setSelectedSlotId(fData.currentSlotId);
-            if (Array.isArray(fData.items) && fData.items.length > 0) {
-              const mapped = fData.items.map((it) => ({
-                id: it.productId,
-                name: it.productName,
-                slug: `product-${it.productId}`,
-                thumbnailUrl: it.thumbnailUrl,
-                minPrice: it.flashPrice,
-                price: it.flashPrice,
-                originalPrice: it.originalPrice,
-                discountPrice: it.flashPrice,
-                isFeatured: true,
-                onSale: true,
-                status: 'ACTIVE',
-                totalStock: it.remainingQuota,
-                totalSold: it.quantitySold,
-                flashQuota: it.quantityQuota,
-                flashSold: it.quantitySold,
-                flashPercent: it.soldPercent,
-                variants: [{
-                  id: it.productVariantId,
-                  sku: it.sku,
-                  variantName: it.variantName,
-                  price: it.originalPrice,
-                  discountPrice: it.flashPrice,
-                  stockQuantity: it.remainingQuota,
-                  isActive: true,
-                }],
-              }));
-              setCampaignFlashProducts(mapped);
-            } else {
-              setCampaignFlashProducts([]);
-            }
-          } else {
-            setCampaignFlashProducts([]);
-          }
+        if (Array.isArray(fData?.items)) {
+        const mapped = fData.items.map((it) => ({
+          id: it.productId,
+          name: it.productName,
+          slug: `product-${it.productId}`,
+          thumbnailUrl: it.thumbnailUrl,
+          minPrice: it.flashPrice,
+          price: it.flashPrice,
+          originalPrice: it.originalPrice,
+          discountPrice: it.flashPrice,
+          isFeatured: true,
+          onSale: true,
+          status: 'ACTIVE',
+          totalStock: it.remainingQuota,
+          totalSold: it.quantitySold,
+          flashQuota: it.quantityQuota,
+          flashSold: it.quantitySold,
+          flashPercent: it.soldPercent,
+          variants: [{
+            id: it.productVariantId,
+            sku: it.sku,
+            variantName: it.variantName,
+            price: it.originalPrice,
+            discountPrice: it.flashPrice,
+            stockQuantity: it.remainingQuota,
+            isActive: true,
+          }],
+        }));
+          setCampaignFlashProducts(mapped);
         } else {
           setCampaignFlashProducts([]);
         }
@@ -326,7 +303,6 @@ export const HomePage = ({ onNavigate }) => {
       .catch(() => {
         if (!controller.signal.aborted) {
           setClearanceProducts([]);
-          setCuratedFlashProducts([]);
           setCampaignFlashProducts([]);
           setClearanceError('Chưa tải được sản phẩm Flash Sale. Vui lòng thử lại.');
         }
@@ -507,9 +483,8 @@ export const HomePage = ({ onNavigate }) => {
     return spaServices.filter(s => String(s.categoryId) === String(activeSpaCategory)).slice(0, sectionLimits.spa);
   };
 
-  const hasFlashCampaign = campaignFlashProducts.length > 0 || Boolean(flashOverview?.slots && flashOverview.slots.length > 0);
-  const hasAnyFlashProducts = hasFlashCampaign || clearanceProducts.length > 0;
-  const showFlashSection = clearanceLoading || Boolean(clearanceError) || hasAnyFlashProducts;
+  const showFlashSection = clearanceLoading || Boolean(clearanceError)
+    || allFlashProducts.length > 0 || Boolean(flashOverview?.slots?.length);
 
   return (
     <div ref={homePageRef} className="customer-home-page" style={{ display: 'flex', flexDirection: 'column', gap: '0px', paddingBottom: '0px' }}>
@@ -550,64 +525,47 @@ export const HomePage = ({ onNavigate }) => {
               borderBottom: '1px solid #FFE5D9'
             }}>
               <div className="flash-sale-heading-group" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <div className="section-title-wrap">
-                    <span className="campaign-eyebrow"><Zap size={12} /> ƯU ĐÃI GIỚI HẠN</span>
+                <div className="section-title-wrap">
+                  <span className="campaign-eyebrow"><Zap size={12} /> ƯU ĐÃI GIỚI HẠN</span>
+                  <div className="home-section-title-row">
                     <h2 className="section-title-highlight">
                       <Zap size={22} className="section-title-icon" />
                       FLASH SALE GIỜ VÀNG • GIÁ SỐC ONLINE
                     </h2>
+                    {/* Real-time Countdown Timer */}
+                    {countdownTarget && (
+                      <div className="flash-sale-countdown" style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        background: '#FFE5D9',
+                        border: '1px solid #FFB4A2',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        color: '#4A3535'
+                      }}>
+                        <Clock size={13} color="#E5989B" />
+                        <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>
+                          {activeFlashSlot && !activeFlashSlot.isCurrent ? 'Bắt đầu sau:' : 'Kết thúc trong:'}
+                        </span>
+                        <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.hours}</span>
+                        <span>:</span>
+                        <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.minutes}</span>
+                        <span>:</span>
+                        <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.seconds}</span>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Real-time Countdown Timer */}
-                  {countdownTarget && (
-                    <div className="flash-sale-countdown" style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      background: '#FFE5D9',
-                      border: '1px solid #FFB4A2',
-                      padding: '3px 10px',
-                      borderRadius: '6px',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      color: '#4A3535'
-                    }}>
-                      <Clock size={13} color="#E5989B" />
-                      <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>
-                        {activeFlashSlot && !activeFlashSlot.isCurrent ? 'Bắt đầu sau:' : 'Kết thúc trong:'}
-                      </span>
-                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.hours}</span>
-                      <span>:</span>
-                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.minutes}</span>
-                      <span>:</span>
-                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.seconds}</span>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flash-sale-filters" style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FFE5D9', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    aria-pressed={flashFilterType === 'ALL'}
-                    style={{
-                      border: 0,
-                      padding: '4px 10px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      backgroundColor: flashFilterType === 'ALL' ? '#FFB4A2' : 'transparent',
-                      color: flashFilterType === 'ALL' ? '#FFFFFF' : '#4A3535',
-                    }}
-                    onClick={() => { setFlashFilterType('ALL'); setCurrentFlashTab(0); }}
-                  >
-                    Tất cả ({allFlashProducts.length})
-                  </button>
-                  {campaignFlashProducts.length > 0 && (
+                  {flashFilters.map(({ id, label, products }) => (
                     <button
+                      key={id}
                       type="button"
-                    aria-pressed={flashFilterType === 'CAMPAIGN'}
+                      aria-pressed={flashFilterType === id}
                       style={{
                         border: 0,
                         padding: '4px 10px',
@@ -615,52 +573,14 @@ export const HomePage = ({ onNavigate }) => {
                         fontSize: '12px',
                         fontWeight: 700,
                         cursor: 'pointer',
-                        backgroundColor: flashFilterType === 'CAMPAIGN' ? '#FFB4A2' : 'transparent',
-                        color: flashFilterType === 'CAMPAIGN' ? '#FFFFFF' : '#4A3535',
+                        backgroundColor: flashFilterType === id ? '#FFB4A2' : 'transparent',
+                        color: flashFilterType === id ? '#FFFFFF' : '#4A3535',
                       }}
-                      onClick={() => { setFlashFilterType('CAMPAIGN'); setCurrentFlashTab(0); }}
+                      onClick={() => { setFlashFilterType(id); setCurrentFlashTab(0); }}
                     >
-                      Khung giờ vàng ({campaignFlashProducts.length})
+                      {label} ({products.length})
                     </button>
-                  )}
-                  {campaignFlashProducts.length > 0 && curatedFlashProducts.length > 0 && (
-                    <button
-                      type="button"
-                    aria-pressed={flashFilterType === 'CURATED'}
-                      style={{
-                        border: 0,
-                        padding: '4px 10px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        backgroundColor: flashFilterType === 'CURATED' ? '#FFB4A2' : 'transparent',
-                        color: flashFilterType === 'CURATED' ? '#FFFFFF' : '#4A3535',
-                      }}
-                      onClick={() => { setFlashFilterType('CURATED'); setCurrentFlashTab(0); }}
-                    >
-                      Flash Sale tuyển chọn ({curatedFlashProducts.length})
-                    </button>
-                  )}
-                  {clearanceProducts.length > 0 && (
-                    <button
-                      type="button"
-                    aria-pressed={flashFilterType === 'CLEARANCE'}
-                      style={{
-                        border: 0,
-                        padding: '4px 10px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        backgroundColor: flashFilterType === 'CLEARANCE' ? '#FFB4A2' : 'transparent',
-                        color: flashFilterType === 'CLEARANCE' ? '#FFFFFF' : '#4A3535',
-                      }}
-                      onClick={() => { setFlashFilterType('CLEARANCE'); setCurrentFlashTab(0); }}
-                    >
-                      Cận date ({clearanceProducts.length})
-                    </button>
-                  )}
+                  ))}
                 </div>
               </div>
 
@@ -713,7 +633,8 @@ export const HomePage = ({ onNavigate }) => {
             <SectionStripBanner banners={backendBanners} position="SECTION_FLASH_SALE" priority />
 
             {/* Time Slot navigation pills */}
-            {flashOverview?.slots && flashOverview.slots.length > 1 && (
+            {(flashOverview?.slots?.length > 1
+              || flashOverview?.slots?.some((slot) => !slot.isCurrent)) && (
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', marginBottom: '8px' }}>
                 {flashOverview.slots.map((s) => {
                   const isSelected = s.campaignId === (selectedSlotId || flashOverview.currentSlotId);
@@ -727,12 +648,14 @@ export const HomePage = ({ onNavigate }) => {
                     <button
                       key={s.campaignId}
                       type="button"
+                      disabled={clearanceLoading}
                       onClick={async () => {
-                        setSelectedSlotId(s.campaignId);
+                        const requestId = ++slotRequestId.current;
                         setFlashFilterType('CAMPAIGN');
                         setCurrentFlashTab(0);
                         try {
                           const res = await apiClient.get(ENDPOINTS.FLASH_SALES.PUBLIC_CAMPAIGN_ITEMS(s.campaignId));
+                          if (requestId !== slotRequestId.current) return;
                           const items = res?.data ?? res ?? [];
                           if (Array.isArray(items)) {
                             const mapped = items.map((it) => ({
@@ -763,6 +686,7 @@ export const HomePage = ({ onNavigate }) => {
                                 isActive: true,
                               }],
                             }));
+                            setSelectedSlotId(s.campaignId);
                             setCampaignFlashProducts(mapped);
                           }
                         } catch (err) {
@@ -806,7 +730,7 @@ export const HomePage = ({ onNavigate }) => {
                 <p>{clearanceError}</p>
                 <button type="button" className="btn-luxury-outline" onClick={() => setClearanceAttempt(value => value + 1)}>Thử lại sản phẩm xả kho</button>
               </div>
-            ) : allFlashProducts.length === 0 ? (
+            ) : filteredFlashProducts.length === 0 ? (
               <p role="status">Hiện chưa có sản phẩm Flash Sale hoặc xả kho khả dụng.</p>
             ) : (
               <div className="horizontal-carousel-wrapper">
@@ -826,7 +750,12 @@ export const HomePage = ({ onNavigate }) => {
                   style={{ animation: 'fadeInFlashTab 0.35s ease' }}
                 >
                   {currentFlashProducts.map(prod => (
-                    <ProductCard key={prod.id} product={prod} onNavigate={onNavigate} onQuickView={setQuickViewProduct} />
+                    <ProductCard
+                      key={prod.clearanceVariant ? `clearance-${prod.id}` : `campaign-${prod.variants[0].id}`}
+                      product={prod}
+                      onNavigate={onNavigate}
+                      onQuickView={setQuickViewProduct}
+                    />
                   ))}
                 </div>
                 {totalFlashTabs > 1 && (
@@ -841,9 +770,11 @@ export const HomePage = ({ onNavigate }) => {
                 )}
               </div>
             )}
-            <p style={{ margin: '16px 0 0', fontSize: '12px', color: 'var(--c-text-muted)' }}>
-              HSD là ngày gần nhất của tồn cận hạn tại lúc tải. Số lượng có thể thay đổi; giỏ hàng chưa giữ chỗ hoặc cam kết một lô cụ thể.
-            </p>
+            {flashFilterType !== 'CAMPAIGN' && clearanceProducts.length > 0 && (
+              <p style={{ margin: '16px 0 0', fontSize: '12px', color: 'var(--c-text-muted)' }}>
+                HSD là ngày gần nhất của tồn cận hạn tại lúc tải. Số lượng có thể thay đổi; giỏ hàng chưa giữ chỗ hoặc cam kết một lô cụ thể.
+              </p>
+            )}
           </div>
         </section>
       )}
@@ -976,17 +907,16 @@ export const HomePage = ({ onNavigate }) => {
           ) : (
             <div className="brands-marquee-track brands-grid-12">
               {marqueeBrands.map((brand, idx) => (
-                <div
+                <button
+                  type="button"
                   key={`${brand.id}-${idx}`}
-                  className="brand-logo-tile brand-partner-box"
+                  className={`brand-logo-tile${idx >= brands.length ? ' is-repeat' : ''}`}
                   onClick={() => onNavigate(`products?brandId=${brand.id}&brandName=${encodeURIComponent(brand.name)}`)}
-                  role="button"
-                  tabIndex={0}
                   title={brand.name}
                   aria-label={brand.name}
                 >
                   <BrandCardLogo brand={brand} logoUrl={getBrandImage(brand)} />
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -1023,31 +953,29 @@ export const HomePage = ({ onNavigate }) => {
             paddingBottom: '16px',
             borderBottom: '1px solid rgba(229, 152, 155, 0.25)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <div className="section-title-wrap">
-                <span className="campaign-eyebrow"><Sparkles size={12} /> BEAUTY SELECTION</span>
+            <div className="section-title-wrap recommendations-heading">
+              <span className="campaign-eyebrow"><Sparkles size={12} /> BEAUTY SELECTION</span>
+              <div className="home-section-title-row">
                 <h2 className="section-title-highlight">
                   <Sparkles size={22} className="section-title-icon" />
                   GỢI Ý DÀNH CHO BẠN
                 </h2>
+                <span className="recommendations-badge" style={{
+                  backgroundColor: '#FAD2E1',
+                  color: '#8C2A47',
+                  border: '1px solid #F4ACB7',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase'
+                }}>
+                  Dành riêng cho bạn
+                </span>
+                <p className="recommendations-note">Cá nhân loại sản phẩm</p>
               </div>
-              <span style={{
-                backgroundColor: '#FAD2E1',
-                color: '#8C2A47',
-                border: '1px solid #F4ACB7',
-                padding: '3px 10px',
-                borderRadius: '9999px',
-                fontSize: '11px',
-                fontWeight: 800,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase'
-              }}>
-                Dành riêng cho bạn
-              </span>
             </div>
-            <p style={{ margin: 0, fontSize: '13px', color: '#7A666D' }}>
-              Cá nhân loại sản phẩm
-            </p>
           </div>
 
           <SectionStripBanner banners={backendBanners} position="SECTION_RECOMMENDATIONS" />
@@ -1443,7 +1371,6 @@ export const HomePage = ({ onNavigate }) => {
         onDismiss={removeToast}
       />
 
-      <ScrollProgressTop />
 
     </div>
   );

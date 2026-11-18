@@ -108,6 +108,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
     };
     const closeOnEscape = (event) => {
       if (event.key !== 'Escape') return;
+      clearTimeout(hoverTimer.current);
       if (openDropdown) {
         headerRef.current?.querySelector(`[data-dropdown="${openDropdown}"]`)?.focus();
       }
@@ -127,6 +128,7 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
   }, [openDropdown]);
 
   const handleNavMouseEnter = (dropdown) => {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     if (!dropdown) {
       if (hoverTimer.current) clearTimeout(hoverTimer.current);
       hoverTimer.current = setTimeout(() => {
@@ -291,7 +293,11 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
               onMouseLeave={handleNavMouseLeave}
             >
               <a className={`storefront-nav-link ${isActive(link) ? 'is-active' : ''}`} href={`#/${link.route}`} aria-current={isActive(link) ? 'page' : undefined}>{link.Icon && <link.Icon size={16} aria-hidden="true" />}{link.label}</a>
-              {link.dropdown && <button type="button" className="storefront-dropdown-toggle" data-dropdown={link.dropdown} aria-label={`Mở danh sách ${link.label.toLowerCase()}`} aria-expanded={openDropdown === link.dropdown} aria-controls={`storefront-${link.dropdown}`} onClick={() => { setSearchOpen(false); setOpenDropdown(openDropdown === link.dropdown ? null : link.dropdown); }}><ChevronDown size={14} /></button>}
+              {link.dropdown && <button type="button" className="storefront-dropdown-toggle" data-dropdown={link.dropdown} aria-label={`Mở danh sách ${link.label.toLowerCase()}`} aria-expanded={openDropdown === link.dropdown} aria-controls={`storefront-${link.dropdown}`} onClick={() => {
+                clearTimeout(hoverTimer.current);
+                setSearchOpen(false);
+                setOpenDropdown((current) => current === link.dropdown ? null : link.dropdown);
+              }}><ChevronDown size={14} /></button>}
               {openDropdown === link.dropdown && link.dropdown && renderDropdown(link.dropdown)}
             </div>
           ))}

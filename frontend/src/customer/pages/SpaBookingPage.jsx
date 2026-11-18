@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Clock,
   Copy,
+  Filter,
   Info,
   Leaf,
   LoaderCircle,
@@ -102,6 +103,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const [category, setCategory] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedService, setSelectedService] = useState(null);
+  const [activeStep, setActiveStep] = useState(1);
   const [staff, setStaff] = useState([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [staffError, setStaffError] = useState(false);
@@ -166,6 +168,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const [copied, setCopied] = useState(false);
   const formRef = useRef(null);
   const successRef = useRef(null);
+  const stepToFocus = useRef(null);
 
   const today = getVietnamDateString();
   const slotContext = `${selectedService?.id || ""}/${selectedDate}/${selectedStaff}`;
@@ -179,7 +182,21 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const contactComplete = Boolean(
     contact.fullName.trim() && contact.phone.trim(),
   );
-  const currentStep = !selectedService ? 1 : !validSlot ? 2 : 3;
+  const lastAvailableStep = !selectedService ? 1 : !validSlot ? 2 : 3;
+  const currentStep = Math.min(activeStep, lastAvailableStep);
+
+  useEffect(() => {
+    if (stepToFocus.current !== currentStep) return;
+    stepToFocus.current = null;
+    const section = document.getElementById(`spa-step-${currentStep}`);
+    section?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "start",
+    });
+    section?.focus({ preventScroll: true });
+  }, [currentStep]);
   const servicePrice =
     selectedService?.basePrice ?? selectedService?.price ?? 0;
   const tierDiscountPercent = {
@@ -214,8 +231,14 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         restoredBookingRef.current = parsed;
         if (parsed.selectedDate && parsed.selectedDate >= today) setSelectedDate(parsed.selectedDate);
         if (parsed.selectedStaff) setSelectedStaff(String(parsed.selectedStaff));
+        if (parsed.selectedFacilityId) setSelectedFacilityId(String(parsed.selectedFacilityId));
         if (Array.isArray(parsed.skinTags)) setSkinTags(parsed.skinTags);
-        if (parsed.note) setContact(c => ({ ...c, note: parsed.note }));
+        setContact((previous) => ({
+          ...previous,
+          ...parsed.contact,
+          note: parsed.contact?.note ?? parsed.note ?? previous.note,
+        }));
+        if (parsed.paymentOption === "PAY_FULL") setPaymentOption(parsed.paymentOption);
         sessionStorage.removeItem('spa_pending_booking');
       }
     } catch {}
@@ -227,9 +250,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         selectedServiceId: selectedService?.id,
         selectedDate,
         selectedStaff,
+        selectedFacilityId,
         selectedSlot,
         skinTags,
-        note: contact.note
+        contact,
+        paymentOption,
       }));
       sessionStorage.setItem('auth_redirect', 'booking');
     } catch {}
@@ -273,7 +298,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               (service) => restoredServiceId != null && String(service.id) === String(restoredServiceId),
             ) ||
             list.find((service) => service.id === previous?.id) ||
-            list[0] ||
             null,
         );
       })
@@ -436,10 +460,15 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         }
         setSlots(validSlots);
         setLoadedSlotContext(slotContext);
-        if (restoredBookingRef.current?.selectedSlot) {
-          const pendingSlot = restoredBookingRef.current.selectedSlot;
-          if (validSlots.includes(pendingSlot)) {
-            setSelectedSlot(pendingSlot);
+        if (restoredBookingRef.current) {
+          const pending = restoredBookingRef.current;
+          const pendingSlot = pending.selectedSlot;
+          if (String(pending.selectedServiceId) === String(selectedService.id)) {
+            const canRestoreSlot = pending.selectedDate === selectedDate && validSlots.includes(pendingSlot);
+            if (canRestoreSlot) setSelectedSlot(pendingSlot);
+            const restoredStep = canRestoreSlot ? 3 : 2;
+            stepToFocus.current = restoredStep;
+            setActiveStep(restoredStep);
           }
           restoredBookingRef.current = null;
         }
@@ -568,16 +597,12 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   );
 
   const goToStep = (step) => {
-    const element = document.getElementById(`spa-step-${step}`);
-    element?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "instant"
-        : "smooth",
-      block: "start",
-    });
-    element?.focus({ preventScroll: true });
+    if (submitting || step > lastAvailableStep || step === currentStep) return;
+    stepToFocus.current = step;
+    setActiveStep(step);
   };
   const chooseService = (service) => {
+    if (selectedService?.id === service.id) return;
     setSelectedService(service);
     setSelectedStaff("AUTO");
     setSelectedSlot("");
@@ -601,12 +626,9 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     event.preventDefault();
     if (submitting) return;
     setBookingError("");
+    if (currentStep !== 3) return continueBooking();
     if (!isAuthenticated) return handleLoginToBook();
-    if (!selectedService || !validSlot) {
-      if (!selectedService) goToStep(1);
-      else if (!validSlot) goToStep(2);
-      return;
-    }
+    if (!contactComplete) return focusMissingContact();
     setSubmitting(true);
     try {
       if (!financialPolicy)
@@ -706,6 +728,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           "Chưa thể đặt lịch. Vui lòng thử lại.",
       );
       if ((error.status || error.response?.status) === 409) {
+        setActiveStep(2);
         setSelectedSlot("");
         setSlotVersion((version) => version + 1);
       }
@@ -714,25 +737,23 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     }
   };
 
+  const focusMissingContact = () => {
+    document
+      .getElementById(!contact.fullName.trim() ? "spa-full-name" : "spa-phone")
+      ?.focus();
+  };
   const continueBooking = () => {
-    if (!selectedService) return goToStep(1);
-    if (!validSlot) return goToStep(2);
+    if (currentStep < 3) return goToStep(currentStep + 1);
     if (!isAuthenticated) return handleLoginToBook();
-    if (!contactComplete) {
-      goToStep(3);
-      document
-        .getElementById(
-          !contact.fullName.trim() ? "spa-full-name" : "spa-phone",
-        )
-        ?.focus({ preventScroll: true });
-      return;
-    }
+    if (!contactComplete) return focusMissingContact();
     formRef.current?.requestSubmit();
   };
-  const actionLabel = !selectedService
-    ? "Chọn dịch vụ"
-    : !validSlot
-      ? "Chọn giờ hẹn"
+  const actionDisabled = submitting || loadingServices || serviceError
+    || (currentStep === 1 && !selectedService) || (currentStep === 2 && !validSlot);
+  const actionLabel = currentStep === 1
+    ? "Tiếp tục chọn giờ"
+    : currentStep === 2
+      ? "Tiếp tục điền thông tin"
       : !isAuthenticated
         ? "Đăng nhập để đặt lịch"
         : !contactComplete
@@ -812,6 +833,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   await apiClient.put(`/api/v1/appointments/${paymentWaiting.appointmentId}/cancel`);
                   setPaymentWaiting(null);
                   setSelectedSlot("");
+                  setActiveStep(2);
                   setSlotVersion((v) => v + 1);
                 } catch (e) {
                   setPaymentError(e.message || "Chưa hủy được lịch hẹn. Vui lòng thử lại hoặc kiểm tra trong Hồ sơ.");
@@ -1055,7 +1077,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               number: 3,
               title: "Thông tin & xác nhận",
               subtitle: "Hoàn tất cuộc hẹn",
-              complete: contactComplete && validSlot,
+              complete: false,
             },
           ].map((step) => (
             <button
@@ -1063,6 +1085,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               key={step.number}
               className={`${currentStep === step.number ? "is-current" : ""} ${step.complete ? "is-complete" : ""}`}
               aria-current={currentStep === step.number ? "step" : undefined}
+              disabled={submitting || step.number > lastAvailableStep}
               onClick={() => goToStep(step.number)}
             >
               <span>
@@ -1084,7 +1107,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
           onSubmit={confirmBooking}
         >
           <div className="booking-form-sections">
-            <section
+            {currentStep === 1 && <section
               id="spa-step-1"
               className="booking-section"
               tabIndex={-1}
@@ -1101,48 +1124,41 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 complete={Boolean(selectedService)}
               />
 
-              <div className="booking-service-search">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Tìm tên dịch vụ, liệu trình..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="Tìm kiếm dịch vụ"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    aria-label="Xóa tìm kiếm"
+              <div className="booking-service-filters">
+                <div className="booking-service-search">
+                  <Search size={16} aria-hidden="true" />
+                  <input
+                    type="text"
+                    placeholder="Tìm tên dịch vụ, liệu trình..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    aria-label="Tìm kiếm dịch vụ"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Xóa tìm kiếm"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <div className="booking-category-filter">
+                  <Filter size={16} aria-hidden="true" />
+                  <select
+                    aria-label="Lọc danh mục dịch vụ"
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                    disabled={loadingServices || categories.length === 0}
                   >
-                    ×
-                  </button>
-                )}
-              </div>
-
-              <div
-                className="booking-category-pills"
-                role="group"
-                aria-label="Lọc danh mục dịch vụ"
-              >
-                <button
-                  type="button"
-                  aria-pressed={category === "ALL"}
-                  onClick={() => setCategory("ALL")}
-                >
-                  Tất cả dịch vụ
-                </button>
-                {categories.map((name) => (
-                  <button
-                    type="button"
-                    key={name}
-                    aria-pressed={category === name}
-                    onClick={() => setCategory(name)}
-                  >
-                    {name}
-                  </button>
-                ))}
+                    <option value="ALL">Tất cả dịch vụ</option>
+                    {categories.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={15} aria-hidden="true" />
+                </div>
               </div>
 
               {loadingServices ? (
@@ -1262,9 +1278,9 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   </label>
                 </div>
               )}
-            </section>
+            </section>}
 
-            <section
+            {currentStep === 2 && <section
               id="spa-step-2"
               className="booking-section"
               tabIndex={-1}
@@ -1538,9 +1554,9 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               <p className="booking-schedule-note">
                 <Info size={14} /> Lịch trống được cập nhật theo dịch vụ và chuyên viên bạn chọn.
               </p>
-            </section>
+            </section>}
 
-            <section
+            {currentStep === 3 && <section
               id="spa-step-3"
               className="booking-section"
               tabIndex={-1}
@@ -1659,7 +1675,18 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   Thông tin cá nhân chỉ được sử dụng phục vụ cuộc hẹn tại Spa.
                 </span>
               </div>
-            </section>
+            </section>}
+            {currentStep > 1 && (
+              <button
+                type="button"
+                className="booking-back-button"
+                disabled={submitting}
+                onClick={() => goToStep(currentStep - 1)}
+              >
+                <ArrowLeft size={16} />
+                {currentStep === 2 ? "Quay lại chọn dịch vụ" : "Quay lại chọn giờ"}
+              </button>
+            )}
           </div>
 
           <aside
@@ -1789,7 +1816,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               </div>
             </div>
 
-            {!selectedTicketId && total > 0 && (
+            {currentStep === 3 && !selectedTicketId && total > 0 && (
               <div className="booking-payment-options">
                 <span className="booking-payment-title">Hình thức thanh toán:</span>
                 <label className={`booking-payment-card ${paymentOption === "DEPOSIT_AT_COUNTER" ? "is-selected" : ""}`}>
@@ -1825,7 +1852,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
               </div>
             )}
 
-            {!selectedTicketId &&
+            {currentStep === 3 &&
+              !selectedTicketId &&
               depositDueEstimate > 0 &&
               financialPolicy &&
               [
@@ -1866,12 +1894,10 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             )}
 
             <button
-              type={isAuthenticated && validSlot ? "submit" : "button"}
-              onClick={
-                isAuthenticated && validSlot ? undefined : continueBooking
-              }
+              type="button"
+              onClick={continueBooking}
               className="booking-primary-button"
-              disabled={submitting || loadingServices || serviceError}
+              disabled={actionDisabled}
             >
               {submitting ? (
                 <>
@@ -1880,11 +1906,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 </>
               ) : (
                 <>
-                  {!validSlot
-                    ? actionLabel
-                    : !isAuthenticated
-                      ? "Đăng nhập để đặt lịch"
-                      : "Xác nhận lịch hẹn"}
+                  {actionLabel}
                   <ArrowRight size={17} />
                 </>
               )}
@@ -1892,9 +1914,11 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             <div className="booking-summary-footer">
               <ShieldCheck size={14} />
               <span>
-                {validSlot
-                  ? "Kiểm tra thông tin trước khi xác nhận"
-                  : "Chọn giờ trống để tiếp tục đặt lịch"}
+                {currentStep === 1
+                  ? "Chọn dịch vụ để tiếp tục"
+                  : currentStep === 2
+                    ? "Chọn giờ trống để tiếp tục đặt lịch"
+                    : "Kiểm tra thông tin trước khi xác nhận"}
               </span>
             </div>
             <div className="booking-help">
@@ -1925,7 +1949,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         <button
           type="button"
           className="booking-primary-button"
-          disabled={submitting || loadingServices || serviceError}
+          disabled={actionDisabled}
           onClick={continueBooking}
         >
           {submitting ? "Đang xác nhận…" : actionLabel}

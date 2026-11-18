@@ -65,6 +65,7 @@ async function spaStorefront(
 ) {
   const writes = [];
   const slotRequests = [];
+  await page.clock.setFixedTime(new Date("2026-11-18T00:00:00Z"));
   let slotsFailed = failSlots;
   let holdNextSlots = false;
   let releaseSlots;
@@ -82,6 +83,7 @@ async function spaStorefront(
     if (!path.startsWith("/api/")) return route.continue();
     let data = [];
     if (path.endsWith("/auth/profile")) data = customer;
+    else if (path.endsWith("/auth/login")) data = { ...customer, accessToken: "spa-ui-test-token" };
     else if (path === "/api/v1/spa/services") {
       if (failServices)
         return route.fulfill({
@@ -117,6 +119,10 @@ async function spaStorefront(
       ];
     else if (path === "/api/v1/spa/tickets/my-active-tickets")
       data = withTicket ? [{ id: 77, remainingByService: { 8: 3 } }] : [];
+    else if (path === "/api/v1/spa/financial-policy")
+      data = { version: 1, depositAmount: 0 };
+    else if (path === "/api/v1/spa/appointments/120/finance")
+      data = { entries: [], depositDue: 0, status: "PENDING" };
     else if (path === "/api/v1/appointments/book") {
       const payload = route.request().postDataJSON();
       writes.push(payload);
@@ -160,27 +166,50 @@ async function spaStorefront(
   };
 }
 
+const next = (page, name) => page.getByRole("button", { name, exact: true }).click();
+const chooseFirstService = async (page) => {
+  await next(page, "Chọn dịch vụ Chăm sóc da phục hồi");
+  await next(page, "Tiếp tục chọn giờ");
+};
+
 test("A chosen service, time and notes create a booking with the existing API contract", async ({
   page,
 }) => {
   const api = await spaStorefront(page);
   await page.goto("/#/booking?serviceId=9");
+  const categoryFilter = page.getByRole("combobox", { name: "Lọc danh mục dịch vụ" });
+  const serviceSearch = page.getByRole("textbox", { name: "Tìm kiếm dịch vụ" });
+  await categoryFilter.selectOption("Thư giãn");
+  await expect(page.getByRole("button", { name: "Chọn dịch vụ Massage thư giãn", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Chọn dịch vụ Làm sạch da chuyên sâu", exact: true })).toHaveCount(0);
+  await serviceSearch.fill("Làm sạch");
+  await expect(page.getByText("Chưa tìm thấy dịch vụ phù hợp")).toBeVisible();
+  await categoryFilter.selectOption("ALL");
+  await serviceSearch.clear();
   await expect(
     page.getByRole("button", {
       name: "Chọn dịch vụ Làm sạch da chuyên sâu",
       exact: true,
     }),
   ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#spa-step-2, #spa-step-3")).toHaveCount(0);
+  await next(page, "Tiếp tục chọn giờ");
   const times = page.getByRole("group", { name: "Buổi sáng", exact: true });
+  await expect(page.getByRole("button", { name: "Tiếp tục điền thông tin", exact: true })).toBeDisabled();
   await times.getByRole("button", { name: "10:30", exact: true }).click();
+  await next(page, "Tiếp tục điền thông tin");
+  await expect(page.locator("#spa-step-1, #spa-step-2")).toHaveCount(0);
   await page.getByRole("button", { name: "Da nhạy cảm", exact: true }).click();
   await page
-    .getByLabel("Lời nhắn cho chuyên viên")
+    .getByLabel("Ghi chú thêm cho chuyên viên")
     .fill("Tôi muốn được tư vấn trước khi bắt đầu.");
   await page
     .getByRole("button", { name: "Tiền sử dị ứng", exact: true })
     .click();
-  await expect(page.getByLabel("Lời nhắn cho chuyên viên")).toHaveValue(
+  await next(page, "Quay lại chọn giờ");
+  await expect(times.getByRole("button", { name: "10:30", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await next(page, "Tiếp tục điền thông tin");
+  await expect(page.getByLabel("Ghi chú thêm cho chuyên viên")).toHaveValue(
     "Tôi muốn được tư vấn trước khi bắt đầu.",
   );
   await page
@@ -194,7 +223,7 @@ test("A chosen service, time and notes create a booking with the existing API co
   expect(api.writes).toHaveLength(1);
   expect(api.writes[0].startTime).toBe("10:30:00");
   expect(api.writes[0].items).toEqual([
-    { serviceId: 9, staffId: null, ticketId: null },
+    { serviceId: 9, staffId: null, facilityId: null, ticketId: null },
   ]);
   expect(api.writes[0].notes).toContain("Da nhạy cảm");
   expect(api.writes[0].notes).toContain("Tiền sử dị ứng");
@@ -208,6 +237,7 @@ test("Changing a date clears the previous slot while availability is loading", a
 }) => {
   const api = await spaStorefront(page);
   await page.goto("/#/booking");
+  await chooseFirstService(page);
   await page
     .getByRole("group", { name: "Buổi sáng", exact: true })
     .getByRole("button", { name: "09:00", exact: true })
@@ -241,8 +271,8 @@ test("Choosing a specialist reloads their slots and a prepaid ticket updates the
   const api = await spaStorefront(page, { withTicket: true });
   await page.goto("/#/booking?serviceId=8");
   await page.getByLabel("Áp dụng vé liệu trình").selectOption("77");
-  await expect(page.locator(".booking-total")).toContainText("0 ₫");
-  await page.locator(".booking-provider summary").click();
+  await expect(page.locator(".booking-total b")).toHaveText("0 đ");
+  await next(page, "Tiếp tục chọn giờ");
   await page.getByRole("button", { name: /Ngọc Anh/ }).click();
   await expect
     .poll(() => api.slotRequests.some((request) => request.staff === "21"))
@@ -251,12 +281,13 @@ test("Choosing a specialist reloads their slots and a prepaid ticket updates the
     .getByRole("group", { name: "Buổi chiều & tối", exact: true })
     .getByRole("button", { name: "14:00", exact: true })
     .click();
+  await next(page, "Tiếp tục điền thông tin");
   await page
     .getByRole("button", { name: "Xác nhận lịch hẹn", exact: true })
     .click();
   await expect(page.getByText("SPA-120", { exact: true })).toBeVisible();
   expect(api.writes[0].items).toEqual([
-    { serviceId: 8, staffId: 21, ticketId: 77 },
+    { serviceId: 8, staffId: 21, facilityId: null, ticketId: 77 },
   ]);
 });
 
@@ -265,6 +296,7 @@ test("Availability errors offer retry and remain distinct from an empty schedule
 }) => {
   const api = await spaStorefront(page, { failSlots: true });
   await page.goto("/#/booking");
+  await chooseFirstService(page);
   await expect(
     page.getByText("Chưa kiểm tra được giờ trống", { exact: true }),
   ).toBeVisible();
@@ -283,7 +315,9 @@ test("A booking conflict shows its error and requires choosing a slot again", as
 }) => {
   const api = await spaStorefront(page, { conflict: true });
   await page.goto("/#/booking");
+  await chooseFirstService(page);
   await page.getByRole("button", { name: "10:30", exact: true }).click();
+  await next(page, "Tiếp tục điền thông tin");
   await page
     .getByRole("button", { name: "Xác nhận lịch hẹn", exact: true })
     .click();
@@ -291,6 +325,7 @@ test("A booking conflict shows its error and requires choosing a slot again", as
     "Khung giờ vừa được đặt.",
   );
   await expect(page.locator("#spa-booking-error")).toBeFocused();
+  await expect(page.locator("#spa-step-2")).toBeVisible();
   await expect(page.locator(".booking-summary-details")).toContainText(
     "Bạn chưa chọn giờ",
   );
@@ -300,17 +335,27 @@ test("A booking conflict shows its error and requires choosing a slot again", as
   expect(api.writes).toHaveLength(1);
 });
 
-test("A guest can browse services and times before being directed to login", async ({
+test("A guest resumes the confirmation step after logging in", async ({
   page,
 }) => {
   const api = await spaStorefront(page, { authenticated: false });
   await page.goto("/#/booking");
+  await chooseFirstService(page);
   await page.getByRole("button", { name: "10:30", exact: true }).click();
+  await next(page, "Tiếp tục điền thông tin");
+  await page.locator("#spa-note").fill("Giữ ghi chú sau khi đăng nhập.");
   await page
     .locator(".booking-summary")
     .getByRole("button", { name: "Đăng nhập để đặt lịch", exact: true })
     .click();
   await expect(page).toHaveURL(/#\/login$/);
+  await page.locator("#customer-auth-username").fill(customer.username);
+  await page.locator("#customer-auth-password").fill("test-password");
+  await page.locator(".auth-slide-pane.active form [type=submit]").click();
+  await expect(page).toHaveURL(/#\/booking$/);
+  await expect(page.locator("#spa-step-3")).toBeVisible();
+  await expect(page.locator("#spa-note")).toHaveValue("Giữ ghi chú sau khi đăng nhập.");
+  await expect(page.locator(".booking-summary-details")).toContainText("10:30");
   expect(api.writes).toHaveLength(0);
 });
 
@@ -321,11 +366,11 @@ test("The mobile action guides missing contact information and submits the booki
   const api = await spaStorefront(page);
   await page.goto("/#/booking");
   const action = page.locator(".booking-mobile-bar");
-  await action
-    .getByRole("button", { name: "Chọn giờ hẹn", exact: true })
-    .click();
+  await expect(action.getByRole("button", { name: "Tiếp tục chọn giờ", exact: true })).toBeDisabled();
+  await chooseFirstService(page);
   await expect(page.locator("#spa-step-2")).toBeFocused();
   await page.getByRole("button", { name: "10:30", exact: true }).click();
+  await next(page, "Tiếp tục điền thông tin");
   await page.getByLabel("Số điện thoại *", { exact: true }).fill("");
   await action
     .getByRole("button", { name: "Điền thông tin", exact: true })
@@ -359,6 +404,7 @@ for (const width of [320, 390, 768, 1440]) {
       })
       .focus();
     await page.keyboard.press("Enter");
+    await next(page, "Tiếp tục chọn giờ");
     await page.getByRole("button", { name: "10:30", exact: true }).click();
     await expect(page.locator(".booking-summary-details")).toContainText(
       "10:30",

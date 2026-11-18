@@ -137,8 +137,11 @@ public class ProductController {
     @GetMapping("/expiring-soon")
     public ResponseEntity<ApiResponse<List<ProductListResponse>>> getExpiringSoonProducts(
             @Parameter(description = "Số ngày tối đa, chuẩn hóa trong 31–90; mặc định 90", example = "90") @RequestParam(defaultValue = "90") int thresholdDays,
-            @Parameter(description = "Số lượng sản phẩm tối đa (mặc định 8, tối đa 50)", example = "8") @RequestParam(defaultValue = "8") int limit) {
-        List<ProductListResponse> products = productService.getExpiringSoonProducts(thresholdDays, limit);
+            @Parameter(description = "Số lượng sản phẩm tối đa (mặc định 8, tối đa 50)", example = "8") @RequestParam(defaultValue = "8") int limit,
+            @Parameter(description = "Trả về tất cả sản phẩm đủ điều kiện khi bằng true") @RequestParam(defaultValue = "false") boolean all) {
+        List<ProductListResponse> products = all
+                ? productService.getAllExpiringSoonProducts(thresholdDays)
+                : productService.getExpiringSoonProducts(thresholdDays, limit);
         return ResponseEntity.ok(ApiResponse.success(products));
     }
 

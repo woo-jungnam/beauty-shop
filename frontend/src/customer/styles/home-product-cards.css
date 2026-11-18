@@ -61,8 +61,6 @@
   & .product-card-rating > div:last-child > span { font-size: 11px !important; }
   & .product-card-badges { top: 10px !important; left: 10px !important; align-items: flex-start; gap: 5px !important; }
   & .product-card-discount {
-    min-width: 60px;
-    padding: 4px 9px !important;
     border-radius: 3px !important;
     background: #ed1748 !important;
     color: #fff !important;

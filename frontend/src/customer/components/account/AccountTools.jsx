@@ -588,14 +588,3 @@ export function WishlistPage({ onNavigate, refreshKey = 0 }) {
     {loaded && <Pagination page={page} totalPages={Math.ceil(products.length / 8)} onChange={setPage} disabled={loading} label="Phân trang sản phẩm yêu thích" />}
   </section>;
 }
-
-export function PasswordRecoveryPage() {
-  const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
-  const [token, setToken] = useState(params.get('token') || '');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [reset, setReset] = useState(Boolean(params.get('token')));
-  const [feedback, setFeedback] = useState('');
-  const [busy, setBusy] = useState(false);
-  return <main className="customer-container account-form" style={{ maxWidth: 540, padding: '50px 20px' }}><h1>{reset ? 'Đặt lại mật khẩu' : 'Khôi phục tài khoản'}</h1><form className="account-form" onSubmit={async e => { e.preventDefault(); setBusy(true); try { const response = await apiClient.post(`/api/v1/auth/${reset ? 'reset-password' : 'forgot-password'}`, reset ? { token, newPassword: password } : { email }); setFeedback(response?.message || 'Yêu cầu đã được tiếp nhận. Vui lòng kiểm tra email.'); if (reset) { setPassword(''); setToken(''); } } catch (error) { setFeedback(message(error)); } finally { setBusy(false); } }}>{reset ? <><label>Mã khôi phục<input required value={token} onChange={e => setToken(e.target.value)} /></label><label>Mật khẩu mới<input required type="password" minLength={8} maxLength={128} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></label></> : <label>Email tài khoản<input required type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>}<button disabled={busy} className="btn-luxury-primary">{reset ? 'Đặt lại mật khẩu' : 'Gửi hướng dẫn qua email'}</button></form>{feedback && <p role="status">{feedback}</p>}<button type="button" onClick={() => { setReset(!reset); setFeedback(''); }}>{reset ? 'Gửi lại email khôi phục' : 'Tôi đã có mã khôi phục'}</button><a href="#/login">Về đăng nhập</a></main>;
-}

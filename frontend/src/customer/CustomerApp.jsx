@@ -23,7 +23,6 @@ import { SpaBookingPage } from './pages/SpaBookingPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { OrderSuccessPage } from './pages/OrderSuccessPage';
 import { CustomerProfilePage } from './pages/CustomerProfilePage';
-import { PasswordRecoveryPage } from './components/account/AccountTools';
 import { TreatmentWorkspace } from '../features/treatments/TreatmentWorkspace';
 import { ServicePackages } from '../features/spa/ServicePackages';
 
@@ -83,7 +82,6 @@ export const CustomerApp = () => {
   const renderCurrentPage = () => {
     if (route.split('?')[0] === 'image-search') return <ImageSearch onNavigate={navigate} />;
     if (route.startsWith('order-lookup')) return <OrderLookupPage onNavigate={navigate} />;
-    if (route.startsWith('recover-password') || route.startsWith('reset-password')) return <PasswordRecoveryPage />;
     if (route.startsWith('treatments')) {
       const params = new URLSearchParams(route.split('?')[1] || '');
       return <TreatmentWorkspace role="customer" onNavigate={navigate} initialCourseId={params.get('course')} initialTab={params.get('tab')} />;

@@ -54,10 +54,6 @@
 .customer-app .customer-home-page :is(.product-card-resolved, .spa-service-card) {
   background: var(--home-white) !important;
 }
-.customer-app .customer-home-page #brand-partners :is(.brand-partner-box, .brand-partner-card) {
-  background: var(--home-white) !important;
-  border-color: var(--home-pink) !important;
-}
 .customer-app .customer-home-page #categories-section .category-tile-avatar {
   background: var(--home-white) !important;
   border-color: var(--home-peach) !important;

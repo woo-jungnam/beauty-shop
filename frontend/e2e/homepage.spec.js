@@ -101,9 +101,19 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     const randomSection = page.locator('#random-picks');
     await randomSection.scrollIntoViewIfNeeded();
     await expect(randomSection).toBeVisible({ timeout: 8000 });
-    const heading = await randomSection.locator('h2').first().textContent();
-    console.log('Random picks heading:', heading?.substring(0, 60));
-    expect(heading?.length).toBeGreaterThan(0);
+    const heading = randomSection.getByRole('heading', { name: 'GỢI Ý DÀNH CHO BẠN' });
+    await expect(heading).toBeVisible();
+    const centers = await randomSection.locator('h2, .recommendations-badge, .recommendations-note')
+      .evaluateAll(elements => elements.map(element => {
+        const { top, height } = element.getBoundingClientRect();
+        return top + height / 2;
+      }));
+    expect(centers).toHaveLength(3);
+    expect(Math.max(...centers) - Math.min(...centers)).toBeLessThan(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const note = randomSection.locator('.recommendations-note');
+    expect((await note.boundingBox()).y).toBeGreaterThan((await heading.boundingBox()).y);
   });
 
   test('1.9 Toàn bộ sản phẩm catalog section hiển thị', async ({ page }) => {
@@ -141,15 +151,28 @@ test.describe('1. Trang Chủ (HomePage)', () => {
   });
 
   test('1.12 Brand partners section hiển thị', async ({ page }) => {
+    await page.route('**/api/v1/brands*', route => route.fulfill({ json: { data: { content: [
+      { id: 42, name: 'Thương hiệu kiểm thử', logoUrl: '/brand-home-test.svg' },
+    ] } } }));
+    await page.route('**/brand-home-test.svg', route => route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><circle cx="50" cy="20" r="15" fill="#8c2a47"/></svg>',
+    }));
     await page.goto(BASE);
-    await waitForAppReady(page);
     const brandSection = page.locator('#brand-partners');
     await brandSection.scrollIntoViewIfNeeded();
-    await expect(brandSection).toBeVisible({ timeout: 10000 });
-    const brandBoxes = brandSection.locator('.brand-partner-box');
-    const count = await brandBoxes.count();
-    console.log('Brand partner boxes:', count);
-    expect(count).toBeGreaterThanOrEqual(1);
+    const brand = brandSection.getByRole('button', { name: 'Thương hiệu kiểm thử' }).first();
+    await expect(brand.getByRole('img')).toBeVisible();
+    await brandSection.locator('.brands-marquee-wrapper').hover();
+    await brand.hover();
+    await expect(brand).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(brandSection.locator('.brands-marquee-track')).toHaveCSS('animation-play-state', 'paused');
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(brandSection.locator('.brands-marquee-track')).toHaveCSS('animation-name', 'none');
+    await expect(brandSection.getByRole('button', { name: 'Thương hiệu kiểm thử' })).toHaveCount(1);
+    await brand.press('Enter');
+    await expect(page).toHaveURL(/#\/products\?brandId=42/);
   });
 
   test('1.13 Store info section (#store-about) hiển thị', async ({ page }) => {

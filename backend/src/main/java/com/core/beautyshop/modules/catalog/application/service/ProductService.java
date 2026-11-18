@@ -43,6 +43,8 @@ public interface ProductService {
 
     List<ProductListResponse> getExpiringSoonProducts(int thresholdDays, int limit);
 
+    List<ProductListResponse> getAllExpiringSoonProducts(int thresholdDays);
+
     void recordInteraction(Long userId, String sessionId, Long productId, String actionType);
 
     ProductFilterOptionsResponse getFilterOptions();

@@ -123,11 +123,33 @@ test('address book accepts destinations outside the former hardcoded cities', as
 
 test('password recovery submits email with clear server feedback', async ({ page }) => {
   const requests = await setup(page, false);
-  await page.goto('/#/recover-password');
+  await page.goto('/#/login');
+  await page.locator('#customer-auth-username').fill('an@example.test');
+  await page.getByRole('link', { name: 'Quên mật khẩu?' }).click();
+  await expect(page.locator('.auth-slider-viewport').getByRole('heading', { name: 'Khôi phục tài khoản' })).toBeVisible();
+  await expect(page.locator('#customer-auth-username')).toBeHidden();
   await page.getByLabel('Email tài khoản').fill('an@example.test');
   await page.getByRole('button', { name: 'Gửi hướng dẫn qua email' }).click();
   await expect(page.getByText('Yêu cầu khôi phục đã được tiếp nhận.')).toBeVisible();
   expect(requests.find(row => row.path === '/api/v1/auth/forgot-password').body).toEqual({ email: 'an@example.test' });
+  await page.getByRole('button', { name: 'Về đăng nhập' }).click();
+  await expect(page.locator('#customer-auth-username')).toBeVisible();
+  await expect(page.locator('#customer-auth-username')).toHaveValue('an@example.test');
+});
+
+test('password reset email link opens the shared auth card and submits its token', async ({ page }) => {
+  const requests = await setup(page, false);
+  await page.goto('/#/reset-password?token=example%2Btoken');
+  await expect(page.locator('.auth-slider-viewport').getByRole('heading', { name: 'Đặt lại mật khẩu' })).toBeVisible();
+  await expect(page.getByLabel('Mã khôi phục')).toHaveValue('example+token');
+  await page.getByLabel('Mật khẩu mới').fill('new-test-password');
+  await page.getByRole('button', { name: 'Đặt lại mật khẩu' }).click();
+  await expect(page.getByRole('status')).toHaveText('Success');
+  expect(requests.find(row => row.path === '/api/v1/auth/reset-password').body)
+    .toEqual({ token: 'example+token', newPassword: 'new-test-password' });
+  await page.getByRole('button', { name: 'Đăng Ký Tài Khoản' }).click();
+  await expect(page.locator('.auth-slide-pane.active form')).toBeVisible();
+  await expect(page).toHaveURL(/#\/login$/);
 });
 
 test('payment websocket requires owner-authorized subscription token and uses server deadline', async ({ page }) => {

@@ -168,6 +168,26 @@ class ProductServiceImplTest {
         verify(inventoryFacade).getExpiringVariantStocks(today, 90, 1, 100);
     }
 
+    @Test
+    void allClearanceProductsIncludesEligibleProductsBeyondDefaultCapAndFirstPage() {
+        LocalDate today = BusinessTime.today();
+        var firstPage = IntStream.rangeClosed(1, 100)
+                .mapToObj(id -> stock((long) id, today.plusDays(31), 1)).toList();
+        var variants = IntStream.rangeClosed(1, 100)
+                .mapToObj(id -> clearanceVariant((long) id, 1000L + id, "80000")).toList();
+        var last = clearanceVariant(101L, 5000L, "80000");
+        when(inventoryFacade.getExpiringVariantStocks(today, 90, 0, 100)).thenReturn(firstPage);
+        when(inventoryFacade.getExpiringVariantStocks(today, 90, 1, 100))
+                .thenReturn(List.of(stock(101L, today.plusDays(32), 1)));
+        when(productVariantRepository.findActiveVariantsWithProductAndBrandByIds(any()))
+                .thenReturn(variants).thenReturn(List.of(last));
+
+        var result = productService.getAllExpiringSoonProducts(90);
+
+        assertEquals(101, result.size());
+        assertEquals(5000L, result.getLast().getId());
+    }
+
     private ExpiringVariantStockDto stock(Long variantId, LocalDate expiry, int quantity) {
         return ExpiringVariantStockDto.builder().variantId(variantId).earliestExpirationDate(expiry).availableQuantity(quantity).build();
     }
