@@ -4,12 +4,20 @@ import com.core.beautyshop.modules.catalog.domain.Product;
 import com.core.beautyshop.modules.catalog.domain.ProductRepository;
 import com.core.beautyshop.modules.review.domain.ProductReview;
 import com.core.beautyshop.modules.review.domain.ProductReviewRepository;
+import com.core.beautyshop.modules.review.domain.enums.ReviewSentiment;
 import com.core.beautyshop.modules.review.domain.enums.ReviewStatus;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -68,6 +77,57 @@ class ProductReviewServiceIntegrationTest {
             }
         }
     }
+
+    @Test
+    void sentimentIsIndependentOfModerationAndFiltersBeforePagination() throws Exception {
+        Product product = product();
+        ProductReview negative = review(product.getId(), 1);
+        ProductReview pending = review(product.getId(), 5);
+        service.moderate(negative.getId(), ReviewStatus.APPROVED);
+        service.moderate(pending.getId(), ReviewStatus.APPROVED);
+
+        String version = "a".repeat(64);
+        Instant analyzed = Instant.now();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/predict", exchange -> {
+            try (exchange) {
+                if (exchange.getRequestHeaders().getFirst("Content-Length") == null) {
+                    exchange.sendResponseHeaders(411, -1);
+                    return;
+                }
+                byte[] body = """
+                        {"modelVersion":"%s","results":[{"label":"NEGATIVE","score":1.0},{"label":"POSITIVE","score":-1.0}]}
+                        """.formatted(version).getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+            }
+        });
+        server.start();
+        try {
+            new ReviewSentimentWorker(reviews, "http://127.0.0.1:" + server.getAddress().getPort())
+                    .analyzePendingReviews();
+        } finally {
+            server.stop(0);
+        }
+        assertEquals(ReviewSentiment.POSITIVE, reviews.findById(pending.getId()).orElseThrow().getSentimentState());
+        assertEquals(0, reviews.completeSentimentAttempt(negative.getId(), 0, ReviewSentiment.PENDING,
+                ReviewSentiment.POSITIVE, null, version, analyzed));
+
+        var matches = service.adminReviews(ReviewStatus.APPROVED, ReviewSentiment.NEGATIVE, PageRequest.of(0, 1));
+        assertEquals(1, matches.getTotalElements());
+        var admin = matches.getContent().getFirst();
+        assertEquals(negative.getId(), admin.review().id());
+        assertEquals("COMPLETED", admin.sentimentStatus());
+        var mapper = new ObjectMapper().findAndRegisterModules();
+        var adminJson = mapper.valueToTree(admin);
+        assertEquals(negative.getId().longValue(), adminJson.path("id").asLong());
+        assertEquals("NEGATIVE", adminJson.path("sentiment").asText());
+        assertEquals(ReviewStatus.APPROVED, reviews.findById(negative.getId()).orElseThrow().getStatus());
+        var publicReview = service.publicReviews(product.getId(), PageRequest.of(0, 10)).getContent().getFirst();
+        assertFalse(mapper.valueToTree(publicReview).has("sentiment"));
+    }
+
 
     private Product product() {
         Product row = products.saveAndFlush(Product.builder().name("Review regression")

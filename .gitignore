@@ -40,6 +40,7 @@ backups/*
 /docs/
 !backend/docs/API_ENDPOINTS.md
 !backend/docs/API_GUIDE.md
+!review-sentiment/README.md
 !mobile/README.md
 !mobile/TREATMENT_COURSES.md
 .dart_tool/

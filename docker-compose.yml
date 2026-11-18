@@ -195,6 +195,19 @@ services:
       timeout: 5s
       retries: 3
 
+  review-sentiment:
+    build: ./review-sentiment
+    restart: unless-stopped
+    expose:
+      - "8002"
+    networks:
+      - beautyshop_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
   backend:
     build:
       context: ./backend
@@ -225,6 +238,8 @@ services:
       SEPAY_BANK_ACCOUNT_NUMBER: ${SEPAY_BANK_ACCOUNT_NUMBER:?SEPAY_BANK_ACCOUNT_NUMBER is required}
       SEPAY_BANK_BIN: ${SEPAY_BANK_BIN:-970422}
       MEDIA_UPLOAD_DIR: /app/uploads
+      REVIEW_SENTIMENT_ENABLED: ${REVIEW_SENTIMENT_ENABLED:-true}
+      REVIEW_SENTIMENT_URL: http://review-sentiment:8002
       CHATBOT_SERVICE_URL: http://chatbot:8000
       CHATBOT_INTERNAL_TOKEN: ${CHATBOT_INTERNAL_TOKEN:-}
       IMAGE_SEARCH_ENABLED: ${IMAGE_SEARCH_ENABLED:-false}

@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.review.domain;
 
 import com.core.beautyshop.modules.review.domain.enums.ReviewStatus;
+import com.core.beautyshop.modules.review.domain.enums.ReviewSentiment;
 import com.core.beautyshop.shared.domain.Base;
 import jakarta.persistence.*;
 import lombok.*;
@@ -40,4 +41,16 @@ public class ProductReview extends Base {
     private Instant repliedAt;
     @Column(name = "approved_at")
     private Instant approvedAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sentiment_state", nullable = false, length = 16)
+    @Builder.Default
+    private ReviewSentiment sentimentState = ReviewSentiment.PENDING;
+    @Column(name = "sentiment_attempts", nullable = false)
+    private int sentimentAttempts;
+    @Column(name = "sentiment_next_attempt_at")
+    private Instant sentimentNextAttemptAt;
+    @Column(name = "sentiment_model_version", length = 64)
+    private String sentimentModelVersion;
+    @Column(name = "sentiment_analyzed_at")
+    private Instant sentimentAnalyzedAt;
 }

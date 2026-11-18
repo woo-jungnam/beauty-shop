@@ -6,7 +6,7 @@ FROM (
     FROM banners spa
     WHERE spa.position = 'SECTION_SPA' AND spa.is_active = TRUE AND spa.is_deleted = FALSE
     UNION ALL
-    SELECT service.thumbnail_url, 1 AS source_rank, 0 AS sort_order, template.id
+    SELECT CONVERT(service.thumbnail_url USING utf8mb4) COLLATE utf8mb4_unicode_ci, 1 AS source_rank, 0 AS sort_order, template.id
     FROM treatment_templates template
     JOIN beauty_services service ON service.id = template.service_id
     WHERE template.published_version_id IS NOT NULL AND template.archived = FALSE

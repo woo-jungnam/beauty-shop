@@ -391,12 +391,18 @@
   background: var(--c-deal-red, #E31837);
 }
 
+@media (min-width: 769px) {
+  #flash-sale .horizontal-carousel-wrapper:has(> .carousel-floating-btn) {
+    padding-inline: 34px;
+  }
+}
+
 .customer-app .customer-home-page .flash-sale-grid {
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   align-items: stretch !important;
-  justify-content: safe center;
+  justify-content: flex-start;
   overflow-x: auto !important;
   overflow-y: hidden !important;
   scroll-behavior: smooth;
@@ -432,6 +438,14 @@
   min-width: 240px !important;
   max-width: 240px !important;
   scroll-snap-align: start;
+}
+
+@media (min-width: 1440px) {
+  .customer-app .customer-home-page .flash-sale-grid > * {
+    flex-basis: calc((100% - 80px) / 6) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
 }
 
 @media (max-width: 639px) {

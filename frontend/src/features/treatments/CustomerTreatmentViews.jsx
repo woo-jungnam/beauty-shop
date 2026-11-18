@@ -101,9 +101,9 @@ function nextAppointment(courses) {
   )).filter(appointment => appointment.startsAt > now).sort((first, second) => first.startsAt - second.startsAt)[0];
 }
 
-export function CustomerTreatmentCourses({ courses, onOpen }) {
+export function CustomerTreatmentCourses({ courses, allCourses, onOpen }) {
   if (!courses.length) return null;
-  const upcoming = nextAppointment(courses);
+  const upcoming = nextAppointment(allCourses);
   return (
     <>
       {upcoming && <section className="treatment-card customer-treatment-upcoming">
@@ -115,7 +115,7 @@ export function CustomerTreatmentCourses({ courses, onOpen }) {
         </div>
         <Button variant="outline" onClick={() => onOpen(upcoming.course.id)}>Mở hồ sơ</Button>
       </section>}
-      <section className="treatment-stack customer-treatment-records" aria-label="Hồ sơ và tiến độ">
+      <section id="treatment-records" tabIndex={-1} className="treatment-stack customer-treatment-records" aria-label="Hồ sơ và tiến độ">
         <h2>Hồ sơ và tiến độ</h2>
         {courses.map(course => (
           <article className="treatment-card customer-treatment-record" key={course.id} data-treatment-course-id={course.id}>
@@ -170,7 +170,7 @@ const eventIcons = { SESSION_BOOKED: CalendarDays, SESSION_REMINDER: CalendarDay
 export function CustomerTreatmentNotifications({ notifications, authenticated, loading, onOpen }) {
   if (!authenticated) return <div className="treatment-empty"><h2>Đăng nhập để xem thông báo</h2><a className="treatment-link" href="#/login">Đăng nhập</a></div>;
   return (
-    <div className="treatment-stack customer-treatment-notifications">
+    <div id="treatment-notifications" tabIndex={-1} className="treatment-stack customer-treatment-notifications">
       {notifications.map(item => {
         const Icon = eventIcons[item.kind] || Bell;
         return (

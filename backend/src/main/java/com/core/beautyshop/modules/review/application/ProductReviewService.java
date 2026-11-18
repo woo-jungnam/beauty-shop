@@ -4,6 +4,8 @@ import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.modules.review.domain.*;
 import com.core.beautyshop.modules.review.domain.enums.ReviewStatus;
+import com.core.beautyshop.modules.review.domain.enums.ReviewSentiment;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.core.beautyshop.shared.exception.*;
 import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -83,10 +85,8 @@ public class ProductReviewService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ReviewView> adminReviews(ReviewStatus status, Pageable pageable) {
-        Page<ProductReview> page = status == null ? repository.findByIsDeletedFalse(pageable)
-                : repository.findByStatusAndIsDeletedFalse(status, pageable);
-        return page.map(ReviewView::from);
+    public Page<AdminReviewView> adminReviews(ReviewStatus status, ReviewSentiment sentiment, Pageable pageable) {
+        return repository.findAdminReviews(status, sentiment, pageable).map(AdminReviewView::from);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -110,8 +110,8 @@ public class ProductReviewService {
     }
 
     @Transactional(readOnly = true)
-    public ReviewView get(Long id) {
-        return ReviewView.from(find(id));
+    public AdminReviewView get(Long id) {
+        return AdminReviewView.from(find(id));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -171,6 +171,16 @@ public class ProductReviewService {
             return new ReviewView(review.getId(), review.getProductId(), review.getUserId(), review.getOrderId(),
                     review.getRating(), Boolean.TRUE.equals(review.getIsVerifiedPurchase()), review.getTitle(), review.getContent(), review.getStatus(), review.getAdminReply(),
                     review.getRepliedAt(), review.getApprovedAt(), review.getCreatedAt());
+        }
+    }
+
+    public record AdminReviewView(@JsonUnwrapped ReviewView review, ReviewSentiment sentiment,
+            String sentimentStatus, String sentimentModelVersion, Instant sentimentAnalyzedAt) {
+        static AdminReviewView from(ProductReview review) {
+            ReviewSentiment state = review.getSentimentState();
+            return new AdminReviewView(ReviewView.from(review), state.isLabel() ? state : null,
+                    state.isLabel() ? "COMPLETED" : state.name(), review.getSentimentModelVersion(),
+                    review.getSentimentAnalyzedAt());
         }
     }
 

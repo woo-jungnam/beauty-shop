@@ -70,7 +70,24 @@
 .is-customer .customer-treatment-catalog {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
+}
+.is-customer :is(#treatment-catalog, #treatment-records, #treatment-notifications) {
   scroll-margin-top: calc(var(--customer-header-height, 140px) + 12px);
+}
+.customer-treatment-pagination {
+  margin-top: 20px;
+}
+.customer-treatment-pagination .account-actions {
+  justify-content: center;
+  margin-top: 0;
+  color: var(--tc-muted);
+  font-size: 13px;
+}
+.customer-treatment-pagination button {
+  min-height: 40px;
+}
+.customer-treatment-pagination button:hover:not(:disabled) {
+  background: var(--tc-blush);
 }
 .customer-treatment-catalog > .treatment-empty { grid-column: 1 / -1; }
 .is-customer .customer-treatment-plan {

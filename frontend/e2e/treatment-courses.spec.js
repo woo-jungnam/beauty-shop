@@ -138,6 +138,49 @@ test('Customer views use store media and show the recorded session and notificat
   expect(pageErrors).toEqual([]);
 });
 
+test('Customer treatment tabs paginate their lists and restart filtered results on page one', async ({ page }) => {
+  await fixture(page, 'USER');
+  const templates = Array.from({ length: 4 }, (_, index) => ({
+    ...template, id: 11 + index, name: `Mẫu chăm sóc ${index + 1}`,
+  }));
+  const courses = Array.from({ length: 7 }, (_, index) => ({
+    ...newCourse(), id: 41 + index, name: `Hồ sơ kiểm thử ${index + 1}`,
+  }));
+  const notifications = Array.from({ length: 7 }, (_, index) => ({
+    id: index + 1, courseId: 41, title: `Thông báo kiểm thử ${index + 1}`, readAt: null,
+  }));
+  await page.route('**/api/v1/spa/treatment-templates', route => route.fulfill({ json: { data: templates } }));
+  await page.route('**/api/v1/spa/my-treatments', route => route.fulfill({ json: { data: courses } }));
+  await page.route('**/api/v1/spa/treatment-notifications', route => route.fulfill({ json: { data: notifications } }));
+  await page.goto('/#/treatments');
+
+  const catalog = page.getByRole('navigation', { name: 'Phân trang lộ trình có sẵn' });
+  await expect(page.locator('.customer-treatment-plan')).toHaveCount(3);
+  await expect(catalog.getByRole('button', { name: 'Trang trước' })).toBeDisabled();
+  await catalog.getByRole('button', { name: 'Trang sau' }).click();
+  await expect(catalog.getByRole('status')).toHaveText('Trang 2 / 2');
+  await expect(page.locator('.customer-treatment-plan')).toHaveCount(1);
+  await expect(page.locator('.customer-treatment-plan')).toContainText(templates[3].name);
+  await expect(catalog.getByRole('button', { name: 'Trang sau' })).toBeDisabled();
+  const keyword = page.getByRole('textbox', { name: 'Tìm lộ trình theo tên hoặc mã hồ sơ' });
+  await keyword.fill(templates[0].name);
+  await expect(page.locator('.customer-treatment-plan')).toContainText(templates[0].name);
+  await expect(catalog).toHaveCount(0);
+  await keyword.clear();
+  await expect(catalog.getByRole('status')).toHaveText('Trang 1 / 2');
+
+  await page.getByRole('button', { name: 'Lộ trình của tôi', exact: true }).click();
+  await expect(page.locator('.customer-treatment-record')).toHaveCount(6);
+  await page.getByRole('navigation', { name: 'Phân trang hồ sơ lộ trình' }).getByRole('button', { name: 'Trang sau' }).click();
+  await expect(page.locator('.customer-treatment-record')).toContainText(courses[6].name);
+
+  await page.getByRole('button', { name: 'Thông báo (7)', exact: true }).click();
+  await expect(page.locator('.customer-treatment-event')).toHaveCount(6);
+  await page.getByRole('navigation', { name: 'Phân trang thông báo lộ trình' }).getByRole('button', { name: 'Trang sau' }).click();
+  await expect(page.locator('.customer-treatment-event')).toContainText(notifications[6].title);
+  await expect(page.getByRole('button', { name: 'Thông báo (7)', exact: true })).toBeVisible();
+});
+
 test('USER books a session using its purchased ticket and treatment item', async ({ page }) => {
   const { state, pageErrors } = await fixture(page, 'USER');
   await page.goto('/#/treatments?course=41');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Check,
   X,
@@ -17,12 +17,22 @@ import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { ConfirmModal } from '../shared/ui/ConfirmModal';
 
+const sentimentLabels = {
+  POSITIVE: { label: 'Tích cực', variant: 'success' },
+  NEGATIVE: { label: 'Tiêu cực', variant: 'danger' },
+  PENDING: { label: 'Chưa phân tích', variant: 'default' },
+  FAILED: { label: 'Lỗi phân tích', variant: 'warning' },
+};
+
 export const ReviewsPage = () => {
   const [reviews, setReviews] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
+  const [sentimentFilter, setSentimentFilter] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const latestRequest = useRef(0);
   const [loading, setLoading] = useState(false);
 
   const [replyModalOpen, setReplyModalOpen] = useState(false);
@@ -68,26 +78,35 @@ export const ReviewsPage = () => {
   };
 
   const fetchReviews = async (p = 0) => {
+    const request = ++latestRequest.current;
     setLoading(true);
+    setLoadError('');
     try {
       const params = new URLSearchParams();
       params.append('page', p);
       params.append('size', '15');
       if (statusFilter) params.append('status', statusFilter);
+      if (sentimentFilter) params.append('sentiment', sentimentFilter);
       const res = await apiClient.get(`${ENDPOINTS.REVIEWS.LIST}?${params.toString()}`);
+      if (request !== latestRequest.current) return;
       const pageData = res.data || res;
       setReviews(pageData.content || []);
       setPage(pageData.page ?? p);
       setTotalPages(pageData.totalPages ?? 1);
       setTotalElements(pageData.totalElements ?? 0);
+    } catch {
+      if (request === latestRequest.current) {
+        setLoadError('Không thể tải danh sách đánh giá.');
+      }
     } finally {
-      setLoading(false);
+      if (request === latestRequest.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchReviews(0);
-  }, [statusFilter]);
+    return () => { latestRequest.current += 1; };
+  }, [statusFilter, sentimentFilter]);
 
   const handleModerate = async (id, status) => {
     try {
@@ -135,6 +154,14 @@ export const ReviewsPage = () => {
   };
 
   const columns = [
+    {
+      accessor: 'sentiment',
+      header: 'Cảm xúc',
+      render: (row) => {
+        const badge = sentimentLabels[row.sentiment ?? row.sentimentStatus] ?? sentimentLabels.PENDING;
+        return <Badge variant={badge.variant}>{badge.label}</Badge>;
+      },
+    },
     {
       header: 'ID',
       accessor: 'id',
@@ -282,8 +309,21 @@ export const ReviewsPage = () => {
           <option value="REJECTED">Đã từ chối</option>
           <option value="HIDDEN">Đã ẩn</option>
         </Select>
+        <label htmlFor="admin-review-sentiment" className="form-label">Lọc theo cảm xúc</label>
+        <Select
+          id="admin-review-sentiment"
+          value={sentimentFilter}
+          onChange={(e) => setSentimentFilter(e.target.value)}
+          className="admin-review-status-field"
+        >
+          <option value="">Mọi nhãn cảm xúc</option>
+          {Object.entries(sentimentLabels).map(([value, { label }]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </Select>
       </div>
 
+      {loadError && <p role="alert">{loadError}</p>}
       <DataTable
         columns={columns}
         data={reviews}

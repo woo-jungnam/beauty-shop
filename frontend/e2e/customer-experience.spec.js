@@ -412,3 +412,34 @@ test('navigation breadcrumb: OrderLookupPage, ServicePackages, TreatmentWorkspac
   await profilePromptHomeBtn.click();
   await expect(page).toHaveURL(/#\/?$/);
 });
+
+test('Checkout loads wards for the selected province and keeps manual address entry available', async ({ page }) => {
+  await storefront(page, { withCart: true });
+  const origins = 'https://www.tinhthanhpho.com/api/v1/new-provinces';
+  const headers = { 'access-control-allow-origin': '*' };
+  await page.route(origins + '?*', (route) => route.fulfill({
+    headers, json: { data: [{ code: '01', name: 'Ha Noi' }, { code: '79', name: 'Ho Chi Minh' }], metadata: { total: 2 } },
+  }));
+  await page.route(origins + '/*/wards?*', (route) => {
+    if (route.request().url().includes('/79/')) return route.fulfill({ status: 503, headers });
+    return route.fulfill({
+      headers, json: { data: [{ code: '00001', name: 'Ba Dinh', type: 'Phuong' }], metadata: { total: 1 } },
+    });
+  });
+
+  await page.goto('/#/checkout');
+  const city = page.locator('#checkout-city');
+  const ward = page.locator('#checkout-ward');
+  await expect(ward).toBeDisabled();
+  await city.selectOption('Ha Noi');
+  await ward.selectOption('Phuong Ba Dinh');
+  await expect(ward).toHaveValue('Phuong Ba Dinh');
+
+  await city.selectOption('Ho Chi Minh');
+  await expect(ward).toHaveValue('');
+  await expect(page.getByText('Không tải được danh mục. Bạn có thể nhập địa chỉ trực tiếp.')).toBeVisible();
+  await page.getByRole('button', { name: 'Nhập địa chỉ thủ công' }).click();
+  await ward.fill('Phuong Sai Gon');
+  await city.fill('TP. Ho Chi Minh');
+  await expect(ward).toHaveValue('Phuong Sai Gon');
+});

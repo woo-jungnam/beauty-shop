@@ -1,0 +1,173 @@
+{
+  "dataset": "AIViVN 2019 research CSV",
+  "source": "https://raw.githubusercontent.com/lhkhiem28/Enhancing-Vietnamese-Sentiment-Analysis-with-Ensemble-Networks/f3675c6fca2a697cfea2eec1ddf32fea9905a8f5/data/aivivn/train.csv",
+  "raw_sha256": "6d2a664f776c00427ea750b41cddf24ea8292bbef591fabe287ef87ed47de1fb",
+  "seed": 42,
+  "target_ratios": [
+    0.7,
+    0.15,
+    0.15
+  ],
+  "splits": {
+    "train": {
+      "rows": 10075,
+      "sha256": "f4b516e475f3416432afe07c84c1e30afb707e187d907bf0a12abe2018c3c984",
+      "labels": {
+        "0": 5348,
+        "1": 4727
+      },
+      "negative_fraction": 0.469181141439206,
+      "words": {
+        "count": 10075.0,
+        "mean": 22.077022332506203,
+        "std": 23.487450618922708,
+        "min": 5.0,
+        "50%": 16.0,
+        "95%": 58.0,
+        "max": 625.0
+      }
+    },
+    "validation": {
+      "rows": 2159,
+      "sha256": "7ed8b685ce4f6c604261e62cd2b493544d8c949cf64bd19e6f5365d8c96a49ab",
+      "labels": {
+        "0": 1146,
+        "1": 1013
+      },
+      "negative_fraction": 0.46919870310328854,
+      "words": {
+        "count": 2159.0,
+        "mean": 22.209819360815192,
+        "std": 21.125468685178717,
+        "min": 5.0,
+        "50%": 16.0,
+        "95%": 60.0,
+        "max": 294.0
+      }
+    },
+    "test": {
+      "rows": 2159,
+      "sha256": "0310749712be249b2aa34905664e6e15760af93ee7930cdd7720b0b48a050e70",
+      "labels": {
+        "0": 1146,
+        "1": 1013
+      },
+      "negative_fraction": 0.46919870310328854,
+      "words": {
+        "count": 2159.0,
+        "mean": 21.10097267253358,
+        "std": 18.73529065235608,
+        "min": 5.0,
+        "50%": 16.0,
+        "95%": 52.0,
+        "max": 262.0
+      }
+    }
+  },
+  "labels": {
+    "0": "Positive",
+    "1": "Negative"
+  },
+  "preprocessing": {
+    "unicode": "NFC",
+    "url_replacement": "urltoken",
+    "teencode": {
+      "ko": "không",
+      "khum": "không",
+      "hok": "không",
+      "đc": "được"
+    },
+    "preserve": [
+      "punctuation",
+      "emoji",
+      "negation",
+      "intensifiers",
+      "contrast"
+    ]
+  },
+  "selected_experiment": "tuned_balanced",
+  "configuration": {
+    "rep": {
+      "word": [
+        1,
+        3
+      ]
+    },
+    "model": "LinearSVC",
+    "c": 1,
+    "weight": "balanced"
+  },
+  "vectorizer_defaults": {
+    "min_df": 2,
+    "max_df": 0.99,
+    "max_features": 35000,
+    "sublinear_tf": true,
+    "dtype": "float32"
+  },
+  "segmentation": null,
+  "refit": [
+    "train",
+    "validation"
+  ],
+  "test": "internal holdout",
+  "evaluation": {
+    "accuracy": 0.9439555349698935,
+    "macro_f1": 0.943849094400901,
+    "weighted_f1": 0.9439996964825605,
+    "negative_precision": 0.9239543726235742,
+    "negative_recall": 0.9595261599210266,
+    "negative_f1": 0.9414043583535109,
+    "test_rows": 2159,
+    "score_kind": "decision_function",
+    "average_precision": 0.9862000036164589,
+    "roc_auc": 0.9880196192947183,
+    "confusion_matrix": [
+      [
+        1066,
+        80
+      ],
+      [
+        41,
+        972
+      ]
+    ],
+    "classification_report": {
+      "Positive": {
+        "precision": 0.9629629629629629,
+        "recall": 0.9301919720767888,
+        "f1-score": 0.9462938304482912,
+        "support": 1146.0
+      },
+      "Negative": {
+        "precision": 0.9239543726235742,
+        "recall": 0.9595261599210266,
+        "f1-score": 0.9414043583535109,
+        "support": 1013.0
+      },
+      "accuracy": 0.9439555349698935,
+      "macro avg": {
+        "precision": 0.9434586677932686,
+        "recall": 0.9448590659989078,
+        "f1-score": 0.943849094400901,
+        "support": 2159.0
+      },
+      "weighted avg": {
+        "precision": 0.9446601829658342,
+        "recall": 0.9439555349698935,
+        "f1-score": 0.9439996964825605,
+        "support": 2159.0
+      }
+    }
+  },
+  "model_sha256": "23e4b5761423a812406bcbb3d129050514f01be966d1a4b0bcd4977a889e7e48",
+  "python": "3.10.8",
+  "libraries": {
+    "numpy": "2.2.6",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.7.2",
+    "scipy": "1.15.3",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.9",
+    "underthesea": "9.5.0"
+  }
+}

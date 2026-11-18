@@ -95,7 +95,7 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     await expect(flashSection.locator('.countdown-digit-val')).toHaveCount(0);
   });
 
-  test('Flash Sale centers short rows and aligns campaign and clearance cards', async ({ page }) => {
+  test('Flash Sale left-aligns short rows and aligns campaign and clearance cards', async ({ page }) => {
     const item = { productId: 1, productVariantId: 11, productName: 'Giờ vàng', sku: 'FLASH-1',
       flashPrice: 1900000, originalPrice: 2750000, quantityQuota: 20, quantitySold: 0, remainingQuota: 20 };
     await page.route('**/api/v1/flash-sales/current', route => route.fulfill({ json: { data: {
@@ -116,22 +116,22 @@ test.describe('1. Trang Chủ (HomePage)', () => {
         const prices = elements.map(element => element.querySelector('.product-card-price > span').getBoundingClientRect().top);
         return Math.max(Math.max(...bottoms) - Math.min(...bottoms), Math.max(...prices) - Math.min(...prices));
       })).toBeLessThan(1);
-      const { leftGap, rightGap, overflow } = await grid.evaluate(element => {
+      const { leftGap, overflow } = await grid.evaluate(element => {
         const bounds = element.getBoundingClientRect();
         return {
           leftGap: element.firstElementChild.getBoundingClientRect().left - bounds.left,
-          rightGap: bounds.right - element.lastElementChild.getBoundingClientRect().right,
           overflow: element.scrollWidth - element.clientWidth,
         };
       });
-      if (width === 1440) {
-        expect(leftGap).toBeGreaterThan(0);
-        expect(Math.abs(leftGap - rightGap)).toBeLessThan(1);
-      } else {
-        expect(leftGap).toBeGreaterThanOrEqual(-1);
-        expect(overflow).toBeGreaterThan(0);
-      }
+      expect(Math.abs(leftGap)).toBeLessThan(1);
+      if (width === 390) expect(overflow).toBeGreaterThan(0);
     }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.locator('#flash-sale').getByRole('button', { name: /Khuy.n m.i/ }).click();
+    await expect(cards).toHaveCount(1);
+    await expect.poll(() => grid.evaluate(element => Math.abs(
+      element.firstElementChild.getBoundingClientRect().left - element.getBoundingClientRect().left,
+    ))).toBeLessThan(1);
   });
 
   test('1.8 Section "10 sản phẩm ngẫu nhiên" hiển thị', async ({ page }) => {

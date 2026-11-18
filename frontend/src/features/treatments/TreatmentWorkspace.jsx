@@ -9,12 +9,18 @@ import { TreatmentPurchaseDialog } from './TreatmentPurchaseDialog';
 import { openTreatmentPayment } from './paymentNavigation';
 import { TreatmentTemplateEditor } from './TreatmentTemplateEditor';
 import { TicketDetails } from '../spa/TicketDetails';
+import { Pagination } from '../../customer/components/account/AccountTools';
 import { TREATMENT_HERO_POSITION } from '../banners/bannerPositions';
 import { CustomerTicketHeading, CustomerTreatmentCatalog, CustomerTreatmentCourses, CustomerTreatmentHero, CustomerTreatmentNotifications } from './CustomerTreatmentViews';
 import { dateLabel, errorMessage, hasAction, money, rows, statusLabel, templateRoot, treatmentApi, unwrap } from './treatmentApi';
 import './treatments.css';
 
 const reportFields = { totalCourses: 'Tổng hồ sơ', pendingIntake: 'Chờ tiếp nhận', activeCourses: 'Đang điều trị', pausedCourses: 'Tạm dừng', completedCourses: 'Hoàn thành', expiredCourses: 'Hết hiệu lực', sessionsDue: 'Buổi đến hạn', customersWithoutNextBooking: 'Khách chưa đặt buổi tiếp', collectedAmount: 'Đã thu', refundedAmount: 'Đã hoàn', unusedEntitlementAmount: 'Quyền lợi chưa sử dụng' };
+const customerLists = {
+  catalog: { size: 3, id: 'treatment-catalog', label: 'Phân trang lộ trình có sẵn' },
+  courses: { size: 6, id: 'treatment-records', label: 'Phân trang hồ sơ lộ trình' },
+  notifications: { size: 6, id: 'treatment-notifications', label: 'Phân trang thông báo lộ trình' },
+};
 
 export const TreatmentWorkspace = ({ role = 'customer', onNavigate, initialCourseId = null, initialTab = null }) => {
   const { isAuthenticated, user } = useAuth();
@@ -37,13 +43,14 @@ export const TreatmentWorkspace = ({ role = 'customer', onNavigate, initialCours
   const [notice, setNotice] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState('ALL');
+  const [pages, setPages] = useState({});
   const [editor, setEditor] = useState(null);
   const [purchase, setPurchase] = useState(null);
   const [action, setAction] = useState(null);
   const requestNumber = useRef(0);
   useEffect(() => { setCourseId(initialCourseId); }, [initialCourseId]);
   useEffect(() => { if (initialTab) setTab(initialTab); }, [initialTab]);
-  useEffect(() => { setPurchase(null); setEditor(null); setAction(null); setNotice(null); }, [user?.id]);
+  useEffect(() => { setPurchase(null); setEditor(null); setAction(null); setNotice(null); setPages({}); }, [user?.id]);
   useEffect(() => {
     if (!customer) return;
     const controller = new AbortController();
@@ -105,6 +112,28 @@ export const TreatmentWorkspace = ({ role = 'customer', onNavigate, initialCours
   const matches = row => `${row.name || ''} ${row.id} ${row.userId || ''}`.toLocaleLowerCase('vi').includes(keyword.toLocaleLowerCase('vi')) && (status === 'ALL' || row.status === status);
   const packageTickets = tickets.filter(ticket => !courses.some(item => String(item.id) === String(ticket.treatmentCourseId)));
   const visibleTickets = packageTickets.filter(ticket => matches({ ...ticket, name: ticket.packageName }));
+  const visibleTemplates = templates.filter(matches);
+  const visibleCourses = courses.filter(matches);
+  const list = customer ? customerLists[tab] : null;
+  const listRows = { catalog: visibleTemplates, courses: visibleCourses, notifications }[tab] || [];
+  const totalPages = list ? Math.max(1, Math.ceil(listRows.length / list.size)) : 1;
+  const requestedPage = pages[tab] ?? 0;
+  const page = Math.min(requestedPage, totalPages - 1);
+  const pageRows = list ? listRows.slice(page * list.size, (page + 1) * list.size) : listRows;
+
+  useEffect(() => {
+    if (list && !loading && !courseId && requestedPage !== page) {
+      setPages(previous => ({ ...previous, [tab]: page }));
+    }
+  }, [list, loading, courseId, requestedPage, page, tab]);
+
+  const resetFilteredPages = () => setPages(previous => ({ ...previous, catalog: 0, courses: 0 }));
+  const changePage = (nextPage) => {
+    setPages(previous => ({ ...previous, [tab]: nextPage }));
+    const region = document.getElementById(list.id);
+    region?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    region?.focus({ preventScroll: true });
+  };
   const templateAction = (template, command, label) => setAction({ title: `${label}: ${template.name}`, description: command === 'publish' ? 'Xuất bản làm phiên bản đang bán. Các hồ sơ đã mua tiếp tục sử dụng snapshot đã chấp thuận.' : command === 'archive' ? 'Ngừng bán cho khách mới. Hồ sơ đã mua vẫn giữ nguyên quyền lợi và tiến độ.' : 'Tạo bản nháp mới từ phiên bản hiện tại để chỉnh sửa; phiên bản đã mua được giữ nguyên.', fields: [], submitLabel: label, submit: () => treatmentApi.post(`${templateRoot(true)}/${template.id}/${command}`), success: `Đã ${label.toLowerCase()} lộ trình.` });
   const showNotification = async notification => {
     selectCourse(notification.courseId);
@@ -131,8 +160,8 @@ export const TreatmentWorkspace = ({ role = 'customer', onNavigate, initialCours
     {error && <div className="treatment-notice error" role="alert">{error}<div className="treatment-actions"><Button variant="outline" disabled={refreshing} onClick={() => refresh()}>Thử tải lại</Button></div></div>}
     {loading && <p role="status">Đang tải lộ trình và trạng thái mới nhất…</p>}
     {courseId ? course ? <TreatmentCourseDetail course={course} role={role} refresh={refresh} refreshing={refreshing} onBack={() => selectTab('courses')} /> : !loading && <div className="treatment-empty"><p>Chưa mở được hồ sơ. Vui lòng kiểm tra quyền truy cập hoặc tải lại.</p><Button variant="outline" onClick={() => selectTab('courses')}>Quay về danh sách</Button></div> : <>
-      {(tab === 'catalog' || tab === 'courses') && <div className="treatment-toolbar"><label className="treatment-search" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Search size={16} /><input style={{ padding: '10px 14px', border: '1px solid #d7dce3', borderRadius: 9 }} aria-label="Tìm lộ trình theo tên hoặc mã hồ sơ" placeholder="Tìm tên hoặc mã hồ sơ…" value={keyword} onChange={event => setKeyword(event.target.value)} /></label><select style={{ padding: '10px 14px', border: '1px solid #d7dce3', borderRadius: 9, background: '#fff' }} aria-label="Lọc trạng thái lộ trình" value={status} onChange={event => setStatus(event.target.value)}><option value="ALL">Tất cả trạng thái</option>{[...new Set((tab === 'catalog' ? templates : [...courses, ...packageTickets]).map(row => row.status))].map(value => <option value={value} key={value}>{statusLabel(value)}</option>)}</select></div>}
-      {tab === 'catalog' && (customer ? <CustomerTreatmentCatalog templates={templates.filter(matches)} services={services} loading={loading} onPurchase={template => isAuthenticated ? setPurchase(template) : (window.location.hash = '/login')} /> : <div className="treatment-grid">{templates.filter(matches).map(template => <article className="treatment-card" key={template.id} data-treatment-template-id={template.id}><div className="treatment-card-heading"><span className="treatment-badge"><Sparkles size={13} />Điều trị theo lộ trình</span><small>v{template.versionNumber} · {statusLabel(template.status)}</small></div><h2>{template.name}</h2><p>{template.description}</p><div className="treatment-price">{money(template.price)}</div><div className="treatment-meta"><span><CalendarDays size={14} />{template.sessions?.length || 0} buổi</span><span><Clock size={14} />{template.validityDays} ngày</span></div><ol className="treatment-mini-sessions">{(template.sessions || []).map(session => <li key={session.sequence}>{session.title}<small>{(session.items || []).map(item => item.serviceName || `Dịch vụ #${item.serviceId}`).join(', ')} · Cách tối thiểu {session.minGapDays || 0} ngày</small></li>)}</ol><details><summary>Điều khoản sử dụng</summary><p>{template.terms}</p></details><div className="treatment-actions">{customer && hasAction(template, 'PURCHASE') && <Button onClick={() => isAuthenticated ? setPurchase(template) : (window.location.hash = '/login')}>Xem & đăng ký lộ trình<ArrowRight size={15} /></Button>}{admin && hasAction(template, 'EDIT') && <Button variant="outline" onClick={() => setEditor({ template })}>Sửa bản nháp</Button>}{admin && hasAction(template, 'CREATE_VERSION') && <Button variant="outline" onClick={() => templateAction(template, 'versions', 'Tạo phiên bản mới')}>Tạo phiên bản mới</Button>}{admin && hasAction(template, 'PUBLISH') && <Button onClick={() => templateAction(template, 'publish', 'Xuất bản')}>Xuất bản</Button>}{admin && hasAction(template, 'ARCHIVE') && <Button variant="outline" onClick={() => templateAction(template, 'archive', 'Ngừng bán')}>Ngừng bán</Button>}</div></article>)}{!loading && !templates.filter(matches).length && <div className="treatment-empty"><Sparkles size={32} /><strong>Chưa có lộ trình phù hợp</strong><p>{admin ? 'Tạo dịch vụ loại lộ trình rồi thiết kế mẫu có các buổi cụ thể.' : 'Vui lòng thử lại sau hoặc chọn dịch vụ một lần.'}</p></div>}</div>)}
+      {(tab === 'catalog' || tab === 'courses') && <div className="treatment-toolbar"><label className="treatment-search" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Search size={16} /><input style={{ padding: '10px 14px', border: '1px solid #d7dce3', borderRadius: 9 }} aria-label="Tìm lộ trình theo tên hoặc mã hồ sơ" placeholder="Tìm tên hoặc mã hồ sơ…" value={keyword} onChange={event => { setKeyword(event.target.value); resetFilteredPages(); }} /></label><select style={{ padding: '10px 14px', border: '1px solid #d7dce3', borderRadius: 9, background: '#fff' }} aria-label="Lọc trạng thái lộ trình" value={status} onChange={event => { setStatus(event.target.value); resetFilteredPages(); }}><option value="ALL">Tất cả trạng thái</option>{[...new Set((tab === 'catalog' ? templates : [...courses, ...packageTickets]).map(row => row.status))].map(value => <option value={value} key={value}>{statusLabel(value)}</option>)}</select></div>}
+      {tab === 'catalog' && (customer ? <CustomerTreatmentCatalog templates={pageRows} services={services} loading={loading} onPurchase={template => isAuthenticated ? setPurchase(template) : (window.location.hash = '/login')} /> : <div className="treatment-grid">{visibleTemplates.map(template => <article className="treatment-card" key={template.id} data-treatment-template-id={template.id}><div className="treatment-card-heading"><span className="treatment-badge"><Sparkles size={13} />Điều trị theo lộ trình</span><small>v{template.versionNumber} · {statusLabel(template.status)}</small></div><h2>{template.name}</h2><p>{template.description}</p><div className="treatment-price">{money(template.price)}</div><div className="treatment-meta"><span><CalendarDays size={14} />{template.sessions?.length || 0} buổi</span><span><Clock size={14} />{template.validityDays} ngày</span></div><ol className="treatment-mini-sessions">{(template.sessions || []).map(session => <li key={session.sequence}>{session.title}<small>{(session.items || []).map(item => item.serviceName || `Dịch vụ #${item.serviceId}`).join(', ')} · Cách tối thiểu {session.minGapDays || 0} ngày</small></li>)}</ol><details><summary>Điều khoản sử dụng</summary><p>{template.terms}</p></details><div className="treatment-actions">{customer && hasAction(template, 'PURCHASE') && <Button onClick={() => isAuthenticated ? setPurchase(template) : (window.location.hash = '/login')}>Xem & đăng ký lộ trình<ArrowRight size={15} /></Button>}{admin && hasAction(template, 'EDIT') && <Button variant="outline" onClick={() => setEditor({ template })}>Sửa bản nháp</Button>}{admin && hasAction(template, 'CREATE_VERSION') && <Button variant="outline" onClick={() => templateAction(template, 'versions', 'Tạo phiên bản mới')}>Tạo phiên bản mới</Button>}{admin && hasAction(template, 'PUBLISH') && <Button onClick={() => templateAction(template, 'publish', 'Xuất bản')}>Xuất bản</Button>}{admin && hasAction(template, 'ARCHIVE') && <Button variant="outline" onClick={() => templateAction(template, 'archive', 'Ngừng bán')}>Ngừng bán</Button>}</div></article>)}{!loading && !visibleTemplates.length && <div className="treatment-empty"><Sparkles size={32} /><strong>Chưa có lộ trình phù hợp</strong><p>{admin ? 'Tạo dịch vụ loại lộ trình rồi thiết kế mẫu có các buổi cụ thể.' : 'Vui lòng thử lại sau hoặc chọn dịch vụ một lần.'}</p></div>}</div>)}
       {tab === 'courses' && <div className="treatment-stack">{!isAuthenticated && <div className="treatment-empty"><h2>Đăng nhập để theo dõi lộ trình</h2><a className="treatment-link" href="#/login">Đăng nhập</a></div>}{customer && pendingOrders.length > 0 && <section className="treatment-card"><h2>Đơn Spa chờ thanh toán</h2><p>Đơn chưa thanh toán chưa cấp hồ sơ điều trị. Tiếp tục thanh toán đơn hiện có để tránh mua lại.</p>{pendingOrders.map(order => <div className="treatment-card-heading" key={order.id}><span>#{order.orderNumber || order.id} · {money(order.totalAmount)}{order.paymentDeadline ? ` · Hạn ${dateLabel(order.paymentDeadline)}` : ''}</span><Button size="sm" variant="outline" onClick={() => openTreatmentPayment(order)}>Tiếp tục thanh toán</Button></div>)}</section>}
         {customer && visibleTickets.length > 0 && <section aria-label="Gói dịch vụ đã mua">
           <h2>Gói dịch vụ đã mua</h2>
@@ -143,8 +172,13 @@ export const TreatmentWorkspace = ({ role = 'customer', onNavigate, initialCours
             <TicketDetails ticket={ticket} onNavigate={onNavigate || (destination => { window.location.hash = `#/${destination}`; })} />
           </article>)}</div>
         </section>}
-        {(customer ? <CustomerTreatmentCourses courses={courses.filter(matches)} onOpen={selectCourse} /> : <div className="treatment-grid">{courses.filter(matches).map(item => <article className="treatment-card" key={item.id} data-treatment-course-id={item.id}><div className="treatment-card-heading"><small>Hồ sơ #{item.id}{!customer ? ` · Khách #${item.userId}` : ''}</small><span className="treatment-badge">{statusLabel(item.status)}</span></div><h2>{item.name}</h2><p>{item.completedSessions}/{item.totalSessions} buổi hoàn thành · Phiên bản {item.version}</p><div className="treatment-progress"><span style={{ width: `${item.progressPercent || 0}%` }} /></div><p className="treatment-muted">Hiệu lực đến {dateLabel(item.expiryDate)}</p><div className="treatment-actions"><Button variant="outline" onClick={() => selectCourse(item.id)}>Mở hồ sơ & tiến độ<ArrowRight size={15} /></Button></div></article>)}</div>)}{isAuthenticated && !loading && !courses.filter(matches).length && (!customer || !visibleTickets.length) && <div className="treatment-empty"><CalendarDays size={32} /><strong>Chưa có hồ sơ điều trị phù hợp</strong><p>{customer ? 'Hồ sơ được cấp tự động sau khi thanh toán lộ trình thành công.' : 'Hồ sơ hiển thị theo phạm vi được phân công của tài khoản.'}</p>{customer && <Button variant="outline" onClick={() => selectTab('catalog')}>Khám phá lộ trình có sẵn</Button>}</div>}</div>}
-      {tab === 'notifications' && customer && <CustomerTreatmentNotifications notifications={notifications} authenticated={isAuthenticated} loading={loading} onOpen={showNotification} />}
+        {(customer ? <CustomerTreatmentCourses courses={pageRows} allCourses={visibleCourses} onOpen={selectCourse} /> : <div className="treatment-grid">{visibleCourses.map(item => <article className="treatment-card" key={item.id} data-treatment-course-id={item.id}><div className="treatment-card-heading"><small>Hồ sơ #{item.id}{!customer ? ` · Khách #${item.userId}` : ''}</small><span className="treatment-badge">{statusLabel(item.status)}</span></div><h2>{item.name}</h2><p>{item.completedSessions}/{item.totalSessions} buổi hoàn thành · Phiên bản {item.version}</p><div className="treatment-progress"><span style={{ width: `${item.progressPercent || 0}%` }} /></div><p className="treatment-muted">Hiệu lực đến {dateLabel(item.expiryDate)}</p><div className="treatment-actions"><Button variant="outline" onClick={() => selectCourse(item.id)}>Mở hồ sơ & tiến độ<ArrowRight size={15} /></Button></div></article>)}</div>)}{isAuthenticated && !loading && !visibleCourses.length && (!customer || !visibleTickets.length) && <div className="treatment-empty"><CalendarDays size={32} /><strong>Chưa có hồ sơ điều trị phù hợp</strong><p>{customer ? 'Hồ sơ được cấp tự động sau khi thanh toán lộ trình thành công.' : 'Hồ sơ hiển thị theo phạm vi được phân công của tài khoản.'}</p>{customer && <Button variant="outline" onClick={() => selectTab('catalog')}>Khám phá lộ trình có sẵn</Button>}</div>}</div>}
+      {tab === 'notifications' && customer && <CustomerTreatmentNotifications notifications={pageRows} authenticated={isAuthenticated} loading={loading} onOpen={showNotification} />}
+      {list && !loading && totalPages > 1 && (
+        <div className="customer-treatment-pagination">
+          <Pagination page={page} totalPages={totalPages} onChange={changePage} label={list.label} />
+        </div>
+      )}
       {tab === 'report' && admin && report && <><div className="treatment-report-grid">{Object.entries(reportFields).map(([key, label]) => <article className="treatment-card" key={key}><span className="treatment-muted">{label}</span><strong>{key.endsWith('Amount') ? money(report[key]) : report[key] ?? 0}</strong></article>)}</div><div className="treatment-card" style={{ marginTop: 20 }}><h2>Hồ sơ theo trạng thái</h2><div className="treatment-table-wrap"><table className="treatment-table"><thead><tr><th>Trạng thái</th><th>Số hồ sơ</th></tr></thead><tbody>{Object.entries(report.byStatus || {}).map(([key, count]) => <tr key={key}><td>{statusLabel(key)}</td><td>{count}</td></tr>)}</tbody></table></div></div></>}
     </>}
     {editor && <TreatmentTemplateEditor template={editor.template} onClose={() => setEditor(null)} onSaved={refresh} />}

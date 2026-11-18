@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.review.api;
 
 import com.core.beautyshop.modules.review.application.ProductReviewService;
 import com.core.beautyshop.modules.review.domain.enums.ReviewStatus;
+import com.core.beautyshop.modules.review.domain.enums.ReviewSentiment;
 import com.core.beautyshop.shared.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,13 +24,14 @@ public class AdminReviewController {
 
     @Operation(summary = "Lấy danh sách đánh giá quản trị", description = "ADMIN hoặc STAFF. Không gửi status sẽ lấy mọi trạng thái, chưa xóa; page bắt đầu từ 0.")
     @GetMapping
-    public ApiResponse<PageResponse<ProductReviewService.ReviewView>> list(@Parameter(description = "Bộ lọc PENDING, APPROVED hoặc REJECTED") @RequestParam(required = false) ReviewStatus status, @ParameterObject Pageable pageable) {
-        return ApiResponse.success(PageResponse.of(service.adminReviews(status, pageable)));
+    public ApiResponse<PageResponse<ProductReviewService.AdminReviewView>> list(@Parameter(description = "Bộ lọc PENDING, APPROVED hoặc REJECTED") @RequestParam(required = false) ReviewStatus status,
+            @RequestParam(required = false) ReviewSentiment sentiment, @ParameterObject Pageable pageable) {
+        return ApiResponse.success(PageResponse.of(service.adminReviews(status, sentiment, pageable)));
     }
 
     @Operation(summary = "Xem chi tiết đánh giá theo ID")
     @GetMapping("/{id}")
-    public ApiResponse<ProductReviewService.ReviewView> getById(@PathVariable Long id) {
+    public ApiResponse<ProductReviewService.AdminReviewView> getById(@PathVariable Long id) {
         return ApiResponse.success(service.get(id));
     }
 

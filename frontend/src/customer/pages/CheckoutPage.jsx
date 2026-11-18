@@ -1,3 +1,4 @@
+import CheckoutAddressFields from '../components/CheckoutAddressFields';
 import { AddressBook } from '../components/account/AccountTools';
 import React, { useState, useEffect } from 'react';
 import {
@@ -386,43 +387,12 @@ export const CheckoutPage = ({ onNavigate }) => {
                 2. Địa Chỉ Nhận Hàng
               </h3>
 
-              <div className="customer-address-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
-                <div>
-                  <label htmlFor="checkout-city" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>TỈNH / THÀNH *</label>
-                  <input
-                    id="checkout-city"
-                    name="address-level1"
-                    autoComplete="address-level1"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFCFA', outline: 'none' }}
-                   required maxLength={100} />
-                </div>
-
-                <div>
-                  <label htmlFor="checkout-district" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>QUẬN / HUYỆN (NẾU CÓ)</label>
-                  <input
-                    id="checkout-district"
-                    name="address-level2"
-                    autoComplete="address-level2"
-                    value={formData.district}
-                    onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFCFA', outline: 'none' }}
-                   maxLength={100} />
-                </div>
-
-                <div>
-                  <label htmlFor="checkout-ward" style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>PHƯỜNG / XÃ *</label>
-                  <input
-                    id="checkout-ward"
-                    name="address-level3"
-                    autoComplete="address-level3"
-                    value={formData.ward}
-                    onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
-                    style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--c-border)', backgroundColor: '#FFFCFA', outline: 'none' }}
-                   required maxLength={100} />
-                </div>
-              </div>
+              <CheckoutAddressFields
+                city={formData.city}
+                district={formData.district}
+                ward={formData.ward}
+                onChange={(fields) => setFormData((current) => ({ ...current, ...fields }))}
+              />
 
               <div>
                 <label htmlFor="checkout-address" style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>ĐỊA CHỈ CHI TIẾT (SỐ NHÀ, TÊN ĐƯỜNG) *</label>
