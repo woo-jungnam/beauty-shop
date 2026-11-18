@@ -437,9 +437,17 @@ test('Checkout loads wards for the selected province and keeps manual address en
 
   await city.selectOption('Ho Chi Minh');
   await expect(ward).toHaveValue('');
-  await expect(page.getByText('Không tải được danh mục. Bạn có thể nhập địa chỉ trực tiếp.')).toBeVisible();
+  await ward.selectOption('Phường Sài Gòn');
+  await expect(ward).toHaveValue('Phường Sài Gòn');
   await page.getByRole('button', { name: 'Nhập địa chỉ thủ công' }).click();
   await ward.fill('Phuong Sai Gon');
   await city.fill('TP. Ho Chi Minh');
   await expect(ward).toHaveValue('Phuong Sai Gon');
+
+  await page.route(origins + '**', (route) => route.abort());
+  await page.reload();
+  await expect(city.locator('option')).toHaveCount(35);
+  await city.selectOption('Hồ Chí Minh');
+  await expect(ward.locator('option')).toHaveCount(169);
+  await ward.selectOption('Phường Sài Gòn');
 });

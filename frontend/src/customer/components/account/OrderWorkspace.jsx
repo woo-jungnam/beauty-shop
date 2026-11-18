@@ -1210,6 +1210,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
       onClose={() => { if (!busy) onClose(); }}
       title={order?.orderNumber ? (isSpaOrder ? `Hóa đơn dịch vụ #${order.orderNumber}` : `Chi tiết đơn hàng #${order.orderNumber}`) : `Đơn hàng #${orderId}`}
       maxWidth="860px"
+      portalTarget={document.getElementById('customer-app')}
     >
       <div className="account-stack" style={{ gap: 18 }}>
         {error && (

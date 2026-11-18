@@ -13,6 +13,7 @@ test('admin can filter review sentiment alongside moderation status', async ({ p
     { id: 13, userId: 3, content: 'Cho xu ly', status: 'PENDING', sentimentStatus: 'PENDING' },
   ];
   const requests = [];
+  let supportsSentiment = true;
   await page.route('**/actuator/health', (route) => route.fulfill({ json: { status: 'UP' } }));
   await page.route('**/api/v1/**', async (route) => {
     const { pathname, searchParams } = new URL(route.request().url());
@@ -28,7 +29,8 @@ test('admin can filter review sentiment alongside moderation status', async ({ p
         (!status || review.status === status)
         && (!sentiment || (review.sentiment ?? review.sentimentStatus) === sentiment)
       ));
-      data = { content, page: 0, totalElements: content.length, totalPages: 1 };
+      const responseRows = supportsSentiment ? content : [{ id: 99, content: 'Legacy review' }];
+      data = { content: responseRows, page: 0, totalElements: responseRows.length, totalPages: 1 };
     }
     await route.fulfill({ json: { status: 200, success: true, data } });
   });
@@ -45,4 +47,9 @@ test('admin can filter review sentiment alongside moderation status', async ({ p
   });
   await expect(page.getByRole('cell', { name: 'Ti\u00eau c\u1ef1c', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'T\u00edch c\u1ef1c', exact: true })).toHaveCount(0);
+
+  supportsSentiment = false;
+  await page.locator('#admin-review-sentiment').selectOption('POSITIVE');
+  await expect(page.getByRole('alert')).toContainText('backend');
+  await expect(page.getByText('Legacy review')).toHaveCount(0);
 });

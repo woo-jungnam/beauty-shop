@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import vietnamAddresses from '../data/vietnam-addresses.json';
+
 const PROVINCES_API = 'https://www.tinhthanhpho.com/api/v1/new-provinces';
 
 const fieldStyle = {
@@ -73,11 +75,13 @@ function LocationField({ id, label, value, onChange, options, placeholder, manua
 export default function CheckoutAddressFields({ city, district, ward, onChange }) {
   const [manual, setManual] = useState(false);
   const provinces = useLocations(manual ? null : `${PROVINCES_API}?limit=100`);
-  const selectedProvince = provinces?.data?.find((province) => province.name === city);
+  const provinceOptions = provinces?.data ?? vietnamAddresses.provinces;
+  const selectedProvince = provinceOptions.find((province) => province.name === city);
   const wards = useLocations(!manual && selectedProvince
     ? `${PROVINCES_API}/${encodeURIComponent(selectedProvince.code)}/wards?limit=250`
     : null);
-  const wardOptions = (wards?.data ?? []).map(({ code, type, name }) => ({
+  const localWards = vietnamAddresses.wards[selectedProvince?.code];
+  const wardOptions = (wards?.data ?? localWards ?? []).map(({ code, type, name }) => ({
     code, name: `${type} ${name}`,
   }));
 
@@ -86,25 +90,29 @@ export default function CheckoutAddressFields({ city, district, ward, onChange }
       <div className="customer-address-row"
         style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
         <LocationField id="checkout-city" label="TỈNH / THÀNH *" value={city} required
-          options={provinces?.data ?? []} manual={manual}
-          placeholder={provinces ? 'Chọn tỉnh / thành' : 'Đang tải tỉnh / thành…'}
+          options={provinceOptions} manual={manual}
+          placeholder="Chọn tỉnh / thành"
           onChange={(event) => onChange(manual ? { city: event.target.value } : { city: event.target.value, ward: '', district: '' })} />
         <LocationField id="checkout-ward" label="PHƯỜNG / XÃ / ĐẶC KHU *" value={ward} required
           options={wardOptions} manual={manual} disabled={!ward && !wardOptions.length}
-          placeholder={selectedProvince && !wards ? 'Đang tải phường / xã…' : 'Chọn phường / xã / đặc khu'}
+          placeholder={selectedProvince && !wards && !localWards ? 'Đang tải phường / xã…' : 'Chọn phường / xã / đặc khu'}
           onChange={(event) => onChange(manual ? { ward: event.target.value } : { ward: event.target.value, district: '' })} />
         {(manual || district) && (
           <LocationField id="checkout-district" label="QUẬN / HUYỆN (ĐỊA CHỈ CŨ)" value={district}
             manual onChange={(event) => onChange({ district: event.target.value })} />
         )}
       </div>
-      {(provinces?.error || wards?.error) && (
+      {wards?.error && !localWards && (
         <p role="status" style={{ fontSize: '12px' }}>Không tải được danh mục. Bạn có thể nhập địa chỉ trực tiếp.</p>
       )}
       <button type="button" onClick={() => setManual((current) => !current)}
         style={{ marginTop: '8px', color: 'var(--c-primary)', textDecoration: 'underline', fontSize: '12px' }}>
         {manual ? 'Chọn từ danh mục' : 'Nhập địa chỉ thủ công'}
       </button>
+      <a href="https://www.tinhthanhpho.com/api-docs" target="_blank" rel="noreferrer"
+        style={{ marginInlineStart: '12px', fontSize: '12px', textDecoration: 'underline' }}>
+        Dữ liệu tỉnh thành
+      </a>
     </div>
   );
 }

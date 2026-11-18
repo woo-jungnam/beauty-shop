@@ -143,7 +143,7 @@ export const CustomerApp = () => {
   };
 
   return (
-    <div className="customer-app">
+    <div id="customer-app" className="customer-app">
       <a className="customer-skip-link" href="#customer-main" onClick={(event) => { event.preventDefault(); mainRef.current?.focus(); mainRef.current?.scrollIntoView({ block: 'start' }); }}>Bỏ qua điều hướng, đến nội dung</a>
       <CustomerHeader onNavigate={navigate} currentRoute={route} />
 

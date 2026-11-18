@@ -90,12 +90,27 @@ export const ReviewsPage = () => {
       const res = await apiClient.get(`${ENDPOINTS.REVIEWS.LIST}?${params.toString()}`);
       if (request !== latestRequest.current) return;
       const pageData = res.data || res;
-      setReviews(pageData.content || []);
+      const rows = pageData.content || [];
+      const mismatchedSentiment = sentimentFilter
+        && rows.some((row) => (row.sentiment ?? row.sentimentStatus) !== sentimentFilter);
+      if (mismatchedSentiment) {
+        setReviews([]);
+        setPage(0);
+        setTotalPages(1);
+        setTotalElements(0);
+        setLoadError('Máy chủ trả dữ liệu không khớp bộ lọc cảm xúc. Hãy kiểm tra phiên bản backend.');
+        return;
+      }
+      setReviews(rows);
       setPage(pageData.page ?? p);
       setTotalPages(pageData.totalPages ?? 1);
       setTotalElements(pageData.totalElements ?? 0);
     } catch {
       if (request === latestRequest.current) {
+        setReviews([]);
+        setPage(0);
+        setTotalPages(1);
+        setTotalElements(0);
         setLoadError('Không thể tải danh sách đánh giá.');
       }
     } finally {

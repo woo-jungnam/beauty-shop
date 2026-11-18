@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button } from './Button';
 
@@ -14,6 +15,7 @@ export const Modal = ({
   maxWidth = '560px',
   className = '',
   presentation = 'modal',
+  portalTarget,
 }) => {
   const dialogRef = useRef(null);
   const backdropRef = useRef(null);
@@ -102,7 +104,7 @@ export const Modal = ({
 
   if (!present) return null;
 
-  return (
+  const dialog = (
     <div
       ref={backdropRef}
       className={`modal-backdrop ${isOpen ? 'is-open' : 'is-closing'} ${className} ${presentation === 'drawer' ? 'modal-drawer-backdrop' : ''}`}
@@ -124,4 +126,6 @@ export const Modal = ({
       </div>
     </div>
   );
+
+  return portalTarget ? createPortal(dialog, portalTarget) : dialog;
 };

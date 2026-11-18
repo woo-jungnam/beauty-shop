@@ -115,7 +115,7 @@ test('Customer Order History displays detailed product information and related o
   await page.goto('/#/profile?tab=orders');
 
   // Verify page heading
-  await expect(page.getByRole('heading', { name: 'Lịch sử đơn hàng của tôi' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lịch sử đơn hàng mua sắm' })).toBeVisible();
 
   // Verify filter tabs
   await expect(page.getByRole('button', { name: 'Tất cả' })).toBeVisible();
@@ -125,7 +125,7 @@ test('Customer Order History displays detailed product information and related o
   // Verify first order details
   await expect(page.getByText('ORD-20261109-001')).toBeVisible();
   await expect(page.getByText('Kem Chống Nắng La Roche-Posay Anthelios XL')).toBeVisible();
-  await expect(page.getByText('Phân loại: Chai 50ml')).toBeVisible();
+  await expect(page.getByText('Chai 50ml', { exact: true })).toBeVisible();
   await expect(page.getByText('LRP-ANTHELIOS-50ML')).toBeVisible();
 
   // Verify shipping and carrier info
@@ -134,11 +134,14 @@ test('Customer Order History displays detailed product information and related o
   await expect(page.getByText('123 Đường Nguyễn Huệ').first()).toBeVisible();
 
   // Verify order detail modal
-  const firstDetailBtn = page.getByRole('button', { name: 'Chi tiết & thao tác' }).first();
+  const firstDetailBtn = page.getByRole('button', { name: 'Chi tiết đơn hàng' }).first();
+  await page.addStyleTag({ content: '#customer-main { transform: translateZ(0); }' });
   await firstDetailBtn.click();
 
   const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeInViewport({ ratio: 0.95 });
+  await expect(page.locator('#customer-app > .modal-backdrop')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Đóng cửa sổ' })).toBeInViewport();
   await expect(dialog.getByText('Danh sách sản phẩm trong đơn (1)')).toBeVisible();
   await expect(dialog.getByText('Kem Chống Nắng La Roche-Posay Anthelios XL')).toBeVisible();
   await expect(dialog.getByText('Chai 50ml')).toBeVisible();
@@ -146,7 +149,7 @@ test('Customer Order History displays detailed product information and related o
   await expect(dialog.getByText('GHTK123456789VN')).toBeVisible();
 
   // Check financial breakdown in modal
-  await expect(dialog.getByText('Voucher giảm giá:')).toBeVisible();
+  await expect(dialog.getByText('Giảm giá & ưu đãi:')).toBeVisible();
   await expect(dialog.getByText('Phí vận chuyển:')).toBeVisible();
   await expect(dialog.getByText('Tổng thanh toán:')).toBeVisible();
 
