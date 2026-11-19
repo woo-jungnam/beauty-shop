@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../../../core/network/api_client.dart';
+import 'checkout_address_fields.dart';
 import '../profile/customer_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +24,7 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _placing = false;
+  bool _saveToAddressBook = true;
   String _paymentMethod = 'VIETQR';
   String? _checkoutFingerprint;
   String? _checkoutIdempotencyKey;
@@ -68,11 +71,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
+    final auth = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.getCanvas(context),
       appBar: AppBar(
-        title: const Text('Xác Nhận Đơn Hàng'),
+        title: const Text('Thanh toán đơn hàng'),
         backgroundColor: AppColors.primary,
       ),
       body: SingleChildScrollView(
@@ -80,38 +84,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (context.read<AuthProvider>().isAuthenticated)
-              OutlinedButton(
-                onPressed: () async {
-                  final selected = await Navigator.push<Map<String, dynamic>>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CustomerAccountScreen(
-                        area: 'addresses',
-                        selectAddress: true,
-                      ),
-                    ),
-                  );
-                  if (selected == null || !mounted) return;
-                  _nameController.text = '${selected['recipientName'] ?? ''}';
-                  _phoneController.text = '${selected['phone'] ?? ''}';
-                  _addressController.text = '${selected['address'] ?? ''}';
-                  _wardController.text = '${selected['ward'] ?? ''}';
-                  _districtController.text = '${selected['district'] ?? ''}';
-                  _cityController.text = '${selected['city'] ?? ''}';
-                },
-                child: const Text('Chọn từ sổ địa chỉ'),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email nhận thông báo (không bắt buộc)',
-                ),
-              ),
-            ),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -125,16 +97,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   const Row(
                     children: [
                       Icon(
-                        Icons.location_on,
+                        Icons.person_outline,
                         color: AppColors.primary,
                         size: 20,
                       ),
                       SizedBox(width: 8),
-                      Text(
-                        'Thông tin giao hàng',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: Text(
+                          '1. Thông tin người nhận',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],
@@ -158,41 +132,99 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const SizedBox(height: 10),
                   TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email nhận thông báo vận đơn',
+                      isDense: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (auth.isAuthenticated)
+              OutlinedButton(
+                onPressed: () async {
+                  final selected = await Navigator.push<Map<String, dynamic>>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CustomerAccountScreen(
+                        area: 'addresses',
+                        selectAddress: true,
+                      ),
+                    ),
+                  );
+                  if (selected == null || !mounted) return;
+                  _nameController.text = '${selected['recipientName'] ?? ''}';
+                  _phoneController.text = '${selected['phone'] ?? ''}';
+                  _addressController.text = '${selected['address'] ?? ''}';
+                  _wardController.text = '${selected['ward'] ?? ''}';
+                  _districtController.text = '${selected['district'] ?? ''}';
+                  _cityController.text = '${selected['city'] ?? ''}';
+                },
+                child: const Text('Chọn hoặc quản lý địa chỉ đã lưu'),
+              ),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.getSurface(context),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '2. Địa chỉ nhận hàng',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(color: AppColors.borderSubtle, height: 16),
+                  CheckoutAddressFields(
+                    city: _cityController,
+                    ward: _wardController,
+                    district: _districtController,
+                  ),
+                  TextField(
                     controller: _addressController,
                     decoration: const InputDecoration(
                       labelText: 'Địa chỉ chi tiết (số nhà, tên đường) *',
                       isDense: true,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _wardController,
-                          decoration: const InputDecoration(
-                            labelText: 'Phường/Xã *',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _districtController,
-                          decoration: const InputDecoration(
-                            labelText: 'Quận/Huyện (nếu có)',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  if (auth.isAuthenticated)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: const Text('Lưu địa chỉ vào Sổ địa chỉ'),
+                      value: _saveToAddressBook,
+                      onChanged: _placing
+                          ? null
+                          : (value) => setState(
+                              () => _saveToAddressBook = value ?? false,
+                            ),
+                    ),
                   const SizedBox(height: 10),
                   TextField(
-                    controller: _cityController,
+                    controller: _noteController,
                     decoration: const InputDecoration(
-                      labelText: 'Tỉnh/Thành phố *',
+                      labelText: 'Ghi chú giao hàng',
+                      hintText: 'Ví dụ: Giao giờ hành chính, gọi trước khi đến',
                       isDense: true,
                     ),
                   ),
@@ -259,7 +291,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Phương thức thanh toán:',
+                      '3. Phương thức thanh toán',
                       style: AppTypography.titleMedium,
                     ),
                     const SizedBox(height: 6),
@@ -323,23 +355,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       onChanged: (val) => setState(() => _paymentMethod = val!),
                     ),
                   ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.getSurface(context),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.borderSubtle),
-              ),
-              child: TextField(
-                controller: _noteController,
-                decoration: const InputDecoration(
-                  hintText: 'Ghi chú cho tài xế giao hàng (tùy chọn)...',
-                  isDense: true,
                 ),
               ),
             ),
@@ -485,7 +500,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 : null,
                             'customerName': _nameController.text.trim(),
                             'customerPhone': _phoneController.text.trim(),
-                            'customerEmail': _emailController.text.trim().isEmpty
+                            'customerEmail':
+                                _emailController.text.trim().isEmpty
                                 ? null
                                 : _emailController.text.trim(),
                             'shippingAddress': _addressController.text.trim(),
@@ -505,8 +521,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           if (fingerprint != _checkoutFingerprint ||
                               _checkoutIdempotencyKey == null) {
                             _checkoutFingerprint = fingerprint;
-                            _checkoutIdempotencyKey =
-                                generateIdempotencyKey('ord');
+                            _checkoutIdempotencyKey = generateIdempotencyKey(
+                              'ord',
+                            );
                           }
 
                           final request = CheckoutRequest(
@@ -530,6 +547,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             voucherCode: cart.appliedVoucherCode,
                           );
 
+                          final saveAddress =
+                              auth.isAuthenticated && _saveToAddressBook;
+                          final owner = StorageService.authSessionChanged.value;
+                          final authClearCount =
+                              StorageService.authCleared.value;
                           final createdOrder = await context
                               .read<OrderProvider>()
                               .checkout(request);
@@ -538,12 +560,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           if (createdOrder != null) {
                             _checkoutFingerprint = null;
                             _checkoutIdempotencyKey = null;
-                            await StorageService.setDeliveryDetails({
-                              'address': _addressController.text.trim(),
-                              'ward': _wardController.text.trim(),
-                              'district': _districtController.text.trim(),
-                              'city': _cityController.text.trim(),
-                            });
+                            final delivery = {
+                              'address': request.shippingAddress,
+                              'ward': request.ward,
+                              'district': request.district,
+                              'city': request.city,
+                            };
+                            if (owner ==
+                                    StorageService.authSessionChanged.value &&
+                                authClearCount ==
+                                    StorageService.authCleared.value) {
+                              await StorageService.setDeliveryDetails(delivery);
+                              if (saveAddress && mounted) {
+                                await _saveAddress(
+                                  {
+                                    ...delivery,
+                                    'recipientName': request.customerName,
+                                    'phone': request.customerPhone,
+                                  },
+                                  owner,
+                                  authClearCount,
+                                );
+                              }
+                            }
                             await cart.fetchCart();
                             if (!mounted || !context.mounted) return;
 
@@ -559,7 +598,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               _showSuccessDialog(context, createdOrder);
                             }
                           } else {
-                            final err = context.read<OrderProvider>().errorMessage ??
+                            final err =
+                                context.read<OrderProvider>().errorMessage ??
                                 'Không thể tạo đơn hàng';
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -589,6 +629,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _saveAddress(
+    Map<String, String> address,
+    int authSession,
+    int authClearCount,
+  ) async {
+    const endpoint = '/api/v1/users/addresses';
+    try {
+      final api = ApiClient();
+      final existing = await api.get<dynamic>(endpoint);
+      if (!existing.isSuccess || existing.data is! List) {
+        throw StateError('Address book unavailable');
+      }
+      if ((existing.data as List).whereType<Map>().any(
+        (row) => address.entries.every(
+          (entry) => (row[entry.key]?.toString().trim() ?? '') == entry.value,
+        ),
+      ))
+        return;
+      if (authSession != StorageService.authSessionChanged.value ||
+          authClearCount != StorageService.authCleared.value)
+        return;
+      final result = await api.post<dynamic>(
+        endpoint,
+        data: {...address, 'isDefault': false},
+      );
+      if (!result.isSuccess) throw StateError('Address could not be saved');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã đặt hàng, nhưng chưa lưu được địa chỉ vào sổ.'),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildCostRow(String label, String value, {bool isDiscount = false}) {

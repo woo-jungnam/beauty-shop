@@ -1,0 +1,414 @@
+[
+  {
+    "index": 1,
+    "query": "Hôm nay trời nóng quá, nên ăn gì?",
+    "status": "success",
+    "duration_s": 7.01,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Hôm nay trời nóng quá, nên ăn gì?",
+      "semantic_query": "Hôm nay trời nóng quá, nên ăn gì?",
+      "bm25_query": "Hôm nay trời nóng quá, nên ăn gì?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 2,
+    "query": "Bạn có biết nấu phở không?",
+    "status": "success",
+    "duration_s": 2.18,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Bạn có biết nấu phở không?",
+      "semantic_query": "Bạn có biết nấu phở không?",
+      "bm25_query": "Bạn có biết nấu phở không?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 3,
+    "query": "Cuối tuần nên đi đâu chơi?",
+    "status": "success",
+    "duration_s": 14.54,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Cuối tuần nên đi đâu chơi?",
+      "semantic_query": "Cuối tuần nên đi đâu chơi?",
+      "bm25_query": "Cuối tuần nên đi đâu chơi?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 4,
+    "query": "Tôi đang buồn, kể chuyện vui đi.",
+    "status": "success",
+    "duration_s": 6.72,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Tôi đang buồn, kể chuyện vui đi.",
+      "semantic_query": "Tôi đang buồn, kể chuyện vui đi.",
+      "bm25_query": "Tôi đang buồn, kể chuyện vui đi.",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 5,
+    "query": "Làm sao để học Java tốt hơn?",
+    "status": "success",
+    "duration_s": 8.44,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Làm sao để học Java tốt hơn?",
+      "semantic_query": "Làm sao để học Java tốt hơn?",
+      "bm25_query": "Làm sao để học Java tốt hơn?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 6,
+    "query": "Bạn thích chó hay mèo?",
+    "status": "success",
+    "duration_s": 3.07,
+    "intent": "GENERAL_CHAT",
+    "answer": "Xin chào! Tôi là trợ lý AI chuyên về mỹ phẩm và dịch vụ chăm sóc da tại BeautyShop. Bạn đang quan tâm đến sản phẩm chăm sóc da nào hay cần hỗ trợ gì ạ?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "CHÀO_HỎI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {
+        "target_type": "PRODUCT"
+      },
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Bạn thích chó hay mèo?",
+      "semantic_query": "Bạn thích chó hay mèo?",
+      "bm25_query": "Bạn thích chó hay mèo?",
+      "intent": "GENERAL_CHAT",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 7,
+    "query": "Có cách nào kiếm 10 triệu mỗi tháng không?",
+    "status": "success",
+    "duration_s": 4.29,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Bạn đang muốn biết cách kiếm mười triệu mỗi tháng, nhưng mình không thể hỗ trợ thông tin này. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Có cách nào kiếm 10 triệu mỗi tháng không?",
+      "semantic_query": "Có cách nào kiếm 10 triệu mỗi tháng không?",
+      "bm25_query": "Có cách nào kiếm 10 triệu mỗi tháng không?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 8,
+    "query": "Tại sao con người phải ngủ?",
+    "status": "success",
+    "duration_s": 9.43,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Tại sao con người phải ngủ?",
+      "semantic_query": "Tại sao con người phải ngủ?",
+      "bm25_query": "Tại sao con người phải ngủ?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 9,
+    "query": "Tôi muốn mua một chiếc laptop, nên chọn loại nào?",
+    "status": "success",
+    "duration_s": 9.06,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Bạn đang muốn tìm mua laptop phù hợp, nhưng mình chưa thể hỗ trợ câu hỏi này ngoài các sản phẩm làm đẹp. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Tôi muốn mua một chiếc laptop, nên chọn loại nào?",
+      "semantic_query": "Tôi muốn mua một chiếc laptop, nên chọn loại nào?",
+      "bm25_query": "Tôi muốn mua một chiếc laptop, nên chọn loại nào?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  },
+  {
+    "index": 10,
+    "query": "Bạn có biết hôm nay là thứ mấy không?",
+    "status": "success",
+    "duration_s": 7.93,
+    "intent": "OUT_OF_DOMAIN",
+    "answer": "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình. Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?",
+    "products_count": 0,
+    "products": [],
+    "understanding": {
+      "complexity_level": "MỨC_1_ĐƠN_GIẢN",
+      "information_score": 0.0,
+      "goals": [
+        "TÌM_SẢN_PHẨM"
+      ],
+      "primary_intent": "NGOÀI_PHẠM_VI",
+      "sub_intents": [],
+      "target_type": "PRODUCT",
+      "entities": {},
+      "constraints": {},
+      "preferences": {},
+      "negative_preferences": {},
+      "dialogue_state": {
+        "needs_clarification": false,
+        "clarification_question": null,
+        "missing_information": []
+      },
+      "action_routing": "FAST_PATH",
+      "raw_query": "Bạn có biết hôm nay là thứ mấy không?",
+      "semantic_query": "Bạn có biết hôm nay là thứ mấy không?",
+      "bm25_query": "Bạn có biết hôm nay là thứ mấy không?",
+      "intent": "OUT_OF_DOMAIN",
+      "category": null,
+      "brand": null,
+      "form_factor": null,
+      "missing_information": [],
+      "needs_clarification": false,
+      "clarification_question": null,
+      "target_quantity": null
+    }
+  }
+]

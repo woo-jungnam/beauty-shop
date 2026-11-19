@@ -174,6 +174,38 @@ class ProductProvider extends ChangeNotifier {
 
   Future<void> fetchFlashSaleProducts() async {
     _dealsError = null;
+    final results = await Future.wait([
+      _loadCampaignDeals(),
+      _loadClearanceDeals(),
+    ]);
+    _flashSaleProducts = [for (final deals in results) ...?deals];
+    if (_flashSaleProducts.isEmpty && results.any((deals) => deals == null)) {
+      _dealsError = 'Không thể tải sản phẩm ưu đãi.';
+    }
+    notifyListeners();
+  }
+
+  Future<List<ProductItem>?> _loadCampaignDeals() async {
+    try {
+      final response = await _apiClient.get<List<ProductItem>>(
+        ApiConstants.currentFlashSale,
+        fromJsonT: (json) => (json as Map<String, dynamic>)['items'] is List
+            ? ((json['items']) as List)
+                  .map(
+                    (item) =>
+                        ProductItem.fromFlashSale(item as Map<String, dynamic>),
+                  )
+                  .where((item) => item.dealVariant?.isAvailable == true)
+                  .toList()
+            : <ProductItem>[],
+      );
+      return response.isSuccess ? response.data ?? [] : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<ProductItem>?> _loadClearanceDeals() async {
     try {
       final response = await _apiClient.get<List<ProductItem>>(
         ApiConstants.expiringSoon,
@@ -185,14 +217,10 @@ class ProductProvider extends ChangeNotifier {
       if (!response.isSuccess || response.data == null) {
         throw StateError('Missing clearance products');
       }
-      _flashSaleProducts = response.data!
-          .where((item) => item.isAvailableClearance)
-          .toList();
+      return response.data!.where((item) => item.isAvailableClearance).toList();
     } catch (_) {
-      _flashSaleProducts = [];
-      _dealsError = 'Không thể tải sản phẩm ưu đãi.';
+      return null;
     }
-    notifyListeners();
   }
 
   Future<void> fetchRecommendedProducts() async {

@@ -228,3 +228,49 @@
 @media (prefers-reduced-motion: reduce) {
   .user-auth-fullscreen *, .user-auth-fullscreen *::before, .user-auth-fullscreen *::after { animation: none !important; transition: none !important; }
 }
+.customer-google-sign-in {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0dee3;
+  text-align: center;
+}
+
+.customer-google-sign-in__button {
+  display: flex;
+  justify-content: center;
+}
+
+.customer-google-sign-in form {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.customer-google-sign-in label,
+.customer-google-sign-in input {
+  width: 100%;
+}
+
+.customer-google-sign-in input,
+.customer-google-sign-in button {
+  border: 1px solid #f0dee3;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff;
+}
+
+.customer-google-sign-in button[type="submit"] {
+  color: #fff;
+  background: #b84365;
+}
+
+.customer-google-sign-in p {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.customer-google-sign-in [role="alert"] {
+  color: #a12849;
+}

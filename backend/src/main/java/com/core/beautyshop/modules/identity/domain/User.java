@@ -30,6 +30,9 @@ public class User extends Base {
     @Column(name = "password_hash")
     private String passwordHash;
 
+    @Column(name = "google_subject", length = 255, unique = true)
+    private String googleSubject;
+
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 

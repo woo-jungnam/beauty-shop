@@ -1,190 +1,146 @@
-import os
-import sys
-import io
+"""Compare embeddings on the same labeled triplets without substituting failed vectors."""
+import argparse
+import hashlib
 import json
+import sys
 import time
-import asyncio
 from pathlib import Path
-import numpy as np
+
 import httpx
+import numpy as np
 
-if hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+TRAINING = Path(__file__).resolve().parents[1]
+AGENT = TRAINING.parent / "product-agent"
+sys.path.insert(0, str(AGENT))
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-AGENT_DIR = BASE_DIR.parent / "product-agent"
-EXPORT_DIR = BASE_DIR / "export_model" / "my_cosmetics_embedding"
-
-sys.path.insert(0, str(AGENT_DIR))
 from app.core.config import settings
 
-def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
-    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-9))
+FIELDS = ("anchor", "positive", "negative")
 
-def compute_ranking_metrics(a_vecs, p_vecs, n_vecs):
-    correct_triplets = 0
-    margins = []
-    hit_1 = 0
-    hit_3 = 0
-    reciprocal_ranks = []
-    
-    total = len(a_vecs)
-    corpus_vecs = p_vecs # Positive pool as retrieval corpus
 
-    for i in range(total):
-        sim_pos = cosine_sim(a_vecs[i], p_vecs[i])
-        sim_neg = cosine_sim(a_vecs[i], n_vecs[i])
+def gemini_vectors(texts, batch_size=16, cache_path=None):
+    model = settings.embedding_model_name.removeprefix("models/")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:batchEmbedContents"
+    if not settings.llm_api_key:
+        raise RuntimeError("Gemini API key is missing")
+    cache = json.loads(cache_path.read_bytes()) if cache_path and cache_path.is_file() else {}
+    keys = {text: hashlib.sha256(f"{model}:{settings.vector_dimension}:{text}".encode()).hexdigest()
+            for text in texts}
+    pending = [text for text in dict.fromkeys(texts) if keys[text] not in cache]
+    with httpx.Client(timeout=35, headers={"x-goog-api-key": settings.llm_api_key}) as client:
+        for offset in range(0, len(pending), batch_size):
+            batch = pending[offset:offset + batch_size]
+            payload = {"requests": [
+                {"model": f"models/{model}", "content": {"parts": [{"text": text}]},
+                 "outputDimensionality": settings.vector_dimension}
+                for text in batch
+            ]}
+            for attempt in range(8 if cache_path else 5):
+                response = client.post(url, json=payload)
+                if response.status_code not in (429, 502, 503, 504) or attempt == (7 if cache_path else 4):
+                    break
+                retry_after = response.headers.get("Retry-After", "")
+                delay = int(retry_after) if retry_after.isdigit() else (15 if response.status_code == 429 else 1)
+                time.sleep(min(60, max(delay, 2 ** attempt)))
+            if response.status_code != 200:
+                raise RuntimeError(f"Gemini embedding returned HTTP {response.status_code} at offset {offset}")
+            values = [item["values"] for item in response.json()["embeddings"]]
+            if len(values) != len(batch):
+                raise ValueError("Gemini embedding count differs from input count")
+            cache.update((keys[text], vector) for text, vector in zip(batch, values))
+            if cache_path:
+                temporary = cache_path.with_suffix(".tmp")
+                temporary.write_text(json.dumps(cache), encoding="utf-8")
+                temporary.replace(cache_path)
+    return [cache[keys[text]] for text in texts]
 
-        if sim_pos > sim_neg:
-            correct_triplets += 1
-        margins.append(sim_pos - sim_neg)
 
-        # Ranking against all candidates in corpus
-        sims_all = [cosine_sim(a_vecs[i], corpus_vecs[j]) for j in range(total)]
-        sorted_indices = np.argsort(-np.array(sims_all))
-        rank = list(sorted_indices).index(i) + 1
+def local_vectors(texts, checkpoint):
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer(str(checkpoint), device="cpu", local_files_only=True)
+    model.max_seq_length = min(model.max_seq_length, 128)
+    return model.encode(texts, batch_size=16, show_progress_bar=False)
 
-        reciprocal_ranks.append(1.0 / rank)
-        if rank == 1:
-            hit_1 += 1
-        if rank <= 3:
-            hit_3 += 1
 
+def score(rows, vectors, pool):
+    positive_by_query = {}
+    for row in rows:
+        positive_by_query.setdefault(row["anchor"], set()).add(row["positive"])
+    ranks = []
+    for anchor, expected in positive_by_query.items():
+        similarities = np.stack([vectors[text] for text in pool]) @ vectors[anchor]
+        # Treat equal scores conservatively to avoid favoring catalog order.
+        best = max(similarities[i] for i, text in enumerate(pool) if text in expected)
+        rank = 1 + sum(score >= best for score, text in zip(similarities, pool) if text not in expected)
+        ranks.append(rank)
+    margins = np.asarray([
+        vectors[row["anchor"]] @ vectors[row["positive"]] - vectors[row["anchor"]] @ vectors[row["negative"]]
+        for row in rows
+    ])
+    ranks = np.asarray(ranks)
     return {
-        "triplet_acc": (correct_triplets / total) * 100,
-        "avg_margin": float(np.mean(margins)),
-        "hit_rate_1": (hit_1 / total) * 100,
-        "hit_rate_3": (hit_3 / total) * 100,
-        "mrr": float(np.mean(reciprocal_ranks)),
+        "triplets": len(rows), "queries": len(ranks), "candidates": len(pool),
+        "triplet_accuracy": float(np.mean(margins > 0)),
+        "mean_margin": float(np.mean(margins)),
+        "hit_at_1": float(np.mean(ranks == 1)), "hit_at_3": float(np.mean(ranks <= 3)),
+        "mrr": float(np.mean(1 / ranks)),
     }
 
-async def embed_google_batch(texts: list, apiKey: str, modelName: str = "models/gemini-embedding-2"):
-    url = f"https://generativelanguage.googleapis.com/v1beta/{modelName}:embedContent?key={apiKey}"
-    vectors = []
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        for t in texts:
-            payload = {
-                "model": modelName,
-                "content": {"parts": [{"text": t}]},
-                "outputDimensionality": 768,
-            }
-            try:
-                res = await client.post(url, json=payload)
-                if res.status_code == 200:
-                    vals = res.json().get("embedding", {}).get("values", [])
-                    vectors.append(np.array(vals, dtype=np.float32))
-                else:
-                    vectors.append(np.random.randn(768).astype(np.float32))
-            except Exception:
-                vectors.append(np.random.randn(768).astype(np.float32))
-            await asyncio.sleep(0.05) # Rate limit safety
-    return vectors
 
-async def evaluate_google_api(val_data: list, apiKey: str):
-    print("\n[1/3] Đang đánh giá Google Embedding API (models/gemini-embedding-2)...")
-    anchors = [item["anchor"] for item in val_data]
-    positives = [item["positive"] for item in val_data]
-    negatives = [item["negative"] for item in val_data]
+def evaluate(embed, texts, rows, holdout, pool, dimension=None):
+    start = time.perf_counter()
+    matrix = np.asarray(embed(texts), dtype=np.float32)
+    elapsed = time.perf_counter() - start
+    if matrix.ndim != 2 or matrix.shape[0] != len(texts) or not np.isfinite(matrix).all():
+        raise ValueError("Invalid embedding matrix")
+    if dimension is not None and matrix.shape[1] != dimension:
+        raise ValueError("Unexpected embedding dimension")
+    norms = np.linalg.norm(matrix, axis=1)
+    if not np.all(norms > 0):
+        raise ValueError("Zero embedding")
+    vectors = dict(zip(texts, matrix / norms[:, None]))
+    return {"embedding_seconds": round(elapsed, 3), "dimension": matrix.shape[1],
+            "all_validation": score(rows, vectors, pool),
+            "unseen_anchor_subset": score(holdout, vectors, pool)}
 
-    t0 = time.perf_counter()
-    a_vecs = await embed_google_batch(anchors, apiKey)
-    p_vecs = await embed_google_batch(positives, apiKey)
-    n_vecs = await embed_google_batch(negatives, apiKey)
-    t1 = time.perf_counter()
-    latency_ms = ((t1 - t0) / (len(val_data) * 3)) * 1000
 
-    metrics = compute_ranking_metrics(a_vecs, p_vecs, n_vecs)
-    metrics["latency_ms"] = latency_ms
-    return metrics
-
-def evaluate_local_model(model_path_or_name: str, val_data: list, label: str):
-    from sentence_transformers import SentenceTransformer
-    print(f"\nĐang đánh giá mô hình cục bộ: {label} ({model_path_or_name})...")
-    model = SentenceTransformer(model_path_or_name)
-
-    anchors = [item["anchor"] for item in val_data]
-    positives = [item["positive"] for item in val_data]
-    negatives = [item["negative"] for item in val_data]
-
-    t0 = time.perf_counter()
-    a_vecs = [np.array(v, dtype=np.float32) for v in model.encode(anchors, normalize_embeddings=True)]
-    p_vecs = [np.array(v, dtype=np.float32) for v in model.encode(positives, normalize_embeddings=True)]
-    n_vecs = [np.array(v, dtype=np.float32) for v in model.encode(negatives, normalize_embeddings=True)]
-    t1 = time.perf_counter()
-    latency_ms = ((t1 - t0) / (len(val_data) * 3)) * 1000
-
-    metrics = compute_ranking_metrics(a_vecs, p_vecs, n_vecs)
-    metrics["latency_ms"] = latency_ms
-    return metrics
-
-async def main():
-    val_file = DATA_DIR / "val_triplets.json"
-    with open(val_file, "r", encoding="utf-8") as f:
-        val_data = json.load(f)
-
-    print("=" * 80)
-    print(f"BÁO CÁO THỰC NGHIỆM ĐO HIỆU SUẤT: MÔ HÌNH FINE-TUNED VS GOOGLE EMBEDDING API")
-    print(f"Tập dữ liệu kiểm định độc lập: {len(val_data)} bộ ba Triplet chuyên sâu ngành Mỹ Phẩm & Spa")
-    print("=" * 80)
-
-    # 1. Đánh giá Google API
-    apiKey = settings.llm_api_key
-    google_metrics = await evaluate_google_api(val_data, apiKey)
-
-    # 2. Đánh giá Mô hình Nền Tiếng Việt Gốc (Base Model)
-    base_metrics = evaluate_local_model(
-        "bkai-foundation-models/vietnamese-bi-encoder",
-        val_data,
-        "[2/3] Mô hình Gốc (Pre-trained Baseline)"
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--checkpoint", type=Path, default=TRAINING / "export_model/my_cosmetics_embedding")
+    parser.add_argument("--base-model", help="Optional cached Sentence Transformers baseline")
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+    validation = TRAINING / "data/val_triplets.json"
+    dataset = validation.read_bytes()
+    rows = json.loads(dataset)
+    train = json.loads((TRAINING / "data/train_triplets.json").read_bytes())
+    seen = {row["anchor"] for row in train}
+    holdout = [row for row in rows if row["anchor"] not in seen]
+    pool = sorted({row[k] for row in rows for k in ("positive", "negative")})
+    texts = sorted({row[k] for row in rows for k in FIELDS})
+    results = {"validation_sha256": hashlib.sha256(dataset).hexdigest(),
+               "unique_texts": len(texts), "models": {}}
+    models = results["models"]
+    models[settings.embedding_model_name] = evaluate(
+        gemini_vectors, texts, rows, holdout, pool, settings.vector_dimension
     )
-
-    # 3. Đánh giá Mô hình Fine-tuned
-    ft_path = AGENT_DIR if (AGENT_DIR / "config.json").exists() else EXPORT_DIR
-    if (ft_path / "config.json").exists():
-        ft_metrics = evaluate_local_model(
-            str(ft_path),
-            val_data,
-            "[3/3] Mô hình Chuyên Biệt Sau Fine-tune (Domain Adapted)"
+    if args.base_model:
+        models[args.base_model] = evaluate(
+            lambda data: local_vectors(data, args.base_model), texts, rows, holdout, pool
         )
+    checkpoint = args.checkpoint.expanduser().resolve()
+    if checkpoint.is_dir() and any(
+        p.is_file() for pattern in ("*.safetensors", "pytorch_model*.bin")
+        for p in checkpoint.rglob(pattern)
+    ):
+        models["fine_tuned"] = evaluate(lambda data: local_vectors(data, checkpoint), texts, rows, holdout, pool)
     else:
-        raise FileNotFoundError("Chưa có mô hình fine-tuned. Dừng đánh giá; không tạo số liệu mô phỏng.")
+        models["fine_tuned"] = {"status": "missing_checkpoint"}
+    report = json.dumps(results, indent=2, ensure_ascii=False)
+    if args.output:
+        args.output.write_text(report + "\n", encoding="utf-8")
+    print(report)
 
-    # Xuất bảng so sánh tổng hợp
-    report = f"""# Báo Cáo Thực Nghiệm So Sánh Hiệu Suất Embedding
-*Minh chứng định lượng phục vụ Khóa luận Tốt nghiệp*
-
-### 1. Bảng So Sánh Chỉ Số Khoa Học Định Lượng
-
-| Chỉ số Đo lường Khoa học | Google Embedding API (`gemini-embedding-2`) | Mô hình Nền Tiếng Việt (`bkai-bi-encoder`) | Mô hình Sau Fine-Tune (`my_cosmetics_embedding`) | Mức Vượt Trội so với Google API |
-| :--- | :---: | :---: | :---: | :---: |
-| **Độ chính xác Triplet (Triplet Acc)** | **{google_metrics['triplet_acc']:.2f}%** | **{base_metrics['triplet_acc']:.2f}%** | **{ft_metrics['triplet_acc']:.2f}%** | **+{ft_metrics['triplet_acc'] - google_metrics['triplet_acc']:.2f}%** |
-| **Khoảng cách phân tách (Cosine Margin)** | **{google_metrics['avg_margin']:.4f}** | **{base_metrics['avg_margin']:.4f}** | **{ft_metrics['avg_margin']:.4f}** | **+{ft_metrics['avg_margin'] - google_metrics['avg_margin']:.4f}** |
-| **Tỷ lệ trúng đích Top 1 (Hit Rate@1)** | **{google_metrics['hit_rate_1']:.2f}%** | **{base_metrics['hit_rate_1']:.2f}%** | **{ft_metrics['hit_rate_1']:.2f}%** | **+{ft_metrics['hit_rate_1'] - google_metrics['hit_rate_1']:.2f}%** |
-| **Tỷ lệ trúng đích Top 3 (Hit Rate@3)** | **{google_metrics['hit_rate_3']:.2f}%** | **{base_metrics['hit_rate_3']:.2f}%** | **{ft_metrics['hit_rate_3']:.2f}%** | **+{ft_metrics['hit_rate_3'] - google_metrics['hit_rate_3']:.2f}%** |
-| **Thứ hạng nghịch đảo (MRR@10)** | **{google_metrics['mrr']:.4f}** | **{base_metrics['mrr']:.4f}** | **{ft_metrics['mrr']:.4f}** | **+{ft_metrics['mrr'] - google_metrics['mrr']:.4f}** |
-| **Độ trễ xử lý (Latency / Request)** | **~{google_metrics['latency_ms']:.1f} ms** | **~{base_metrics['latency_ms']:.1f} ms** | **~{ft_metrics['latency_ms']:.1f} ms** | **Nhanh hơn ~{google_metrics['latency_ms'] / max(1.0, ft_metrics['latency_ms']):.1f} lần** |
-| **Chi phí API / Rủi ro Rate Limit** | Tốn phí token, giới hạn 15 RPM | Hoàn toàn miễn phí, vô hạn | Hoàn toàn miễn phí, vô hạn | **0đ, 0 rủi ro gián đoạn** |
-
----
-
-### 2. Phân Tích & Luận Giải Kết Quả (Dành cho Báo cáo / Thuyết trình)
-
-1. **Vì sao mô hình Fine-tuned vượt trội hơn Google Embedding API?**
-   - **Google Embedding API (`gemini-embedding-2`)** là mô hình đa năng tổng quát toàn cầu, được huấn luyện trên kho tri thức bách khoa đa ngôn ngữ. Khi gặp các trường hợp bẫy mỹ phẩm đặc thù (ví dụ: cùng hãng La Roche-Posay nhưng *Gel kiềm dầu* vs *Baume phục hồi cho da khô*, hoặc thuật ngữ *treatment / break-out / finish ráo*), Google API có xu hướng gộp chung các sản phẩm cùng hãng vào gần nhau vì từ khóa hãng chiếm trọng số quá lớn.
-   - **Mô hình Fine-tuned (`my_cosmetics_embedding`)** được tối ưu qua hàm mất mát `MultipleNegativesRankingLoss` với các cặp phủ định khó (*Hard Negatives*), ép không gian vector phải dãn khoảng cách (Cosine Margin tăng **+{ft_metrics['avg_margin'] - google_metrics['avg_margin']:.4f}**) giữa các sản phẩm xung đột loại da, giúp chatbot không bao giờ gợi ý nhầm sản phẩm gây bít tắc cho da dầu mụn.
-
-2. **Lợi ích vượt bậc về Tốc độ và Tính Độc lập Vận hành:**
-   - Mô hình cục bộ chạy trực tiếp trong RAM/CPU/GPU với độ trễ chỉ **~{ft_metrics['latency_ms']:.1f} ms**, nhanh hơn gấp nhiều lần so với gọi mạng sang Google Cloud (**~{google_metrics['latency_ms']:.1f} ms**).
-   - Loại bỏ hoàn toàn lỗi nghẽn *HTTP 429 Too Many Requests* khi hệ thống có hàng trăm người dùng cùng tra cứu đồng thời.
-"""
-
-    print("\n" + report)
-    out_file = BASE_DIR.parent.parent / "docs" / "ai" / "benchmarks" / "benchmark_embedding_google_vs_finetune.md"
-    out_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_file, "w", encoding="utf-8") as f:
-        f.write(report)
-    print(f"\n[+] Đã lưu toàn bộ báo cáo chi tiết vào file: {out_file}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -1,3 +1,4 @@
+import { getGuestSessionId } from '../../../shared/utils/session';
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Bot, ShoppingBag, CalendarCheck } from 'lucide-react';
 import { useCustomerCart } from '../../stores/customerCartStore';
@@ -243,7 +244,7 @@ export const ChatbotSkincareWidget = ({ onNavigate }) => {
     try {
       const url = `${serverBaseUrl(import.meta.env.VITE_API_BASE_URL)}${ENDPOINTS.CHATBOT.STREAM}`;
       const token = localStorage.getItem('beautyshop_admin_token');
-      const guestSessionId = localStorage.getItem('beautyshop_guest_session_id');
+      const guestSessionId = getGuestSessionId();
 
       const headers = {
         'Content-Type': 'application/json',

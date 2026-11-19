@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     chatbot_internal_token: str = ""
+    chatbot_context_secret: str = ""
+    chatbot_session_redis_url: str = ""
     chatbot_cors_allowed_origins: str = ""
 
     database_url: str = f"sqlite:///{DEFAULT_DB_PATH.as_posix()}"

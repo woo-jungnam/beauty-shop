@@ -16,6 +16,8 @@ ARG INSTALL_IMAGE_SEARCH=false
 RUN pip install --no-cache-dir -r requirements.txt \
     && if [ "$INSTALL_IMAGE_SEARCH" = "true" ]; then pip install --no-cache-dir torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu && pip install --no-cache-dir -r requirements-image-search.txt; fi \
     && mkdir -p /app/data
+COPY requirements-session.txt ./
+RUN pip install --no-cache-dir -r requirements-session.txt
 COPY app ./app
 COPY scripts ./scripts
 

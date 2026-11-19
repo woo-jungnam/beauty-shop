@@ -84,7 +84,6 @@ class ProductReviewServiceIntegrationTest {
         ProductReview negative = review(product.getId(), 1);
         ProductReview pending = review(product.getId(), 5);
         service.moderate(negative.getId(), ReviewStatus.APPROVED);
-        service.moderate(pending.getId(), ReviewStatus.APPROVED);
 
         String version = "a".repeat(64);
         Instant analyzed = Instant.now();
@@ -105,7 +104,7 @@ class ProductReviewServiceIntegrationTest {
         });
         server.start();
         try {
-            new ReviewSentimentWorker(reviews, "http://127.0.0.1:" + server.getAddress().getPort())
+            new ReviewSentimentWorker(reviews, service, "http://127.0.0.1:" + server.getAddress().getPort())
                     .analyzePendingReviews();
         } finally {
             server.stop(0);
@@ -140,6 +139,26 @@ class ProductReviewServiceIntegrationTest {
         assertEquals(ReviewSentiment.NEGATIVE, reviews.findById(negative.getId()).orElseThrow().getSentimentState());
     }
 
+
+    @Test
+    void negativeSentimentAutomaticallyRejectsPendingReviewsAndAdminCanOverride() {
+        Product product = product();
+        ProductReview row = review(product.getId(), 5);
+        String version = "a".repeat(64);
+
+        service.applySentiment(row.getId(), 0, ReviewSentiment.NEGATIVE, version);
+
+        assertEquals(ReviewStatus.REJECTED, service.get(row.getId()).review().status());
+        assertEquals(0, service.publicReviews(product.getId(), PageRequest.of(0, 10)).getTotalElements());
+        assertAggregate(product.getId(), 0.0, 0);
+
+        service.moderate(row.getId(), ReviewStatus.APPROVED);
+        service.applySentiment(row.getId(), 0, ReviewSentiment.NEGATIVE, version);
+
+        assertEquals(ReviewStatus.APPROVED, service.get(row.getId()).review().status());
+        assertEquals(ReviewSentiment.NEGATIVE, service.get(row.getId()).sentiment());
+        assertAggregate(product.getId(), 5.0, 1);
+    }
 
     private Product product() {
         Product row = products.saveAndFlush(Product.builder().name("Review regression")

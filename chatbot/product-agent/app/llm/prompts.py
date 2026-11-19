@@ -38,6 +38,9 @@ QUY TẮC PHÂN LOẠI CHI TIẾT:
    - "OUT_OF_DOMAIN" (Ngoài phạm vi nghiệp vụ):
      + Toán học ("1+1", "tính giúp"), lập trình, thời tiết ("hôm nay mưa không"), chính trị, thể thao, chứng khoán/crypto.
      + Kê đơn thuốc uống, kháng sinh hoặc chẩn đoán bệnh lý toàn thân.
+     + Phân loại theo hành động được yêu cầu. "Viết code tính giá kem chống nắng" là OUT_OF_DOMAIN.
+     + Nếu có yêu cầu BeautyShop thực sự, ưu tiên ý đó. "Trời nắng thì shop có kem chống nắng cho da dầu không?" là SEARCH.
+     + "Hôm nay có mưa không? Gợi ý kem chống nắng dưới 500 nghìn" là SEARCH, chỉ giữ tiêu chí mua sắm.
      -> target=null, category=null, brand=null, needs_clarification=false, clarification_question=null.
    - "ORDER" (Hỗ trợ đơn hàng): Tra cứu mã đơn (#DH..., ORD...), tiến độ giao hàng, đổi trả, hủy đơn. target=null, needs_clarification=false.
    - "SEARCH" (Tìm kiếm sản phẩm/dịch vụ): Có nhu cầu tìm mua, gợi ý đồ dưỡng da ("tìm kem chống nắng kiềm dầu dưới 400k", "da rát bôi gì", "gợi ý serum phục hồi").

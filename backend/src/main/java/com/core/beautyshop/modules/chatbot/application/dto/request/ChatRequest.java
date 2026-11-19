@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,11 +21,17 @@ public class ChatRequest {
     @JsonProperty("session_id")
     @JsonAlias({"sessionId", "session_id"})
     @Schema(description = "Mã hội thoại do client chọn; tự động sinh nếu bỏ trống; không phải phiên JWT", example = "sess_9a8f2bc1")
+    @Size(max = 128)
     private String sessionId;
 
     @NotBlank(message = "Nội dung câu hỏi không được để trống")
     @Schema(description = "Nội dung tin nhắn không rỗng", requiredMode = Schema.RequiredMode.REQUIRED, example = "Da tôi dầu mụn và nhạy cảm, bạn có thể gợi ý kem chống nắng kiềm dầu tốt không?")
+    @Size(max = 4000)
     private String message;
+
+    @Schema(hidden = true)
+    @JsonProperty(value = "context_id", access = JsonProperty.Access.READ_ONLY)
+    private String contextId;
 
     public String getSessionId() {
         if (sessionId == null || sessionId.isBlank()) {

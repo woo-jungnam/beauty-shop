@@ -1,3 +1,4 @@
+import re
 from typing import List, Optional
 
 from app.core.logging import LatencyTracker, getLogger
@@ -7,9 +8,20 @@ from app.llm.prompts import buildDermatologyGenerationPrompt
 from app.schemas.query import UnderstandingResult
 from app.schemas.retrieval import RerankedCandidate
 from app.services.agent.guardrail import generationGuardrail
-from app.services.ingestion.cleaning import remove_emojis
+from app.services.ingestion.cleaning import TextCleaner, remove_emojis
 
 logger = getLogger("generationService")
+
+CATALOG_FIELDS = {
+    "usage": ("Cách dùng", r"cách (dùng|sử dụng|thoa|bôi)|dùng (sao|thế nào|như thế nào)|bao lâu|mấy lần"),
+    "ingredients": ("Thành phần", r"thành phần|hoạt chất|chứa|có cồn|có hương liệu"),
+    "benefits": ("Công dụng", r"công dụng|tác dụng|hiệu quả|trị khỏi|chữa khỏi|cam kết"),
+}
+
+
+def requested_catalog_fields(message: str) -> list[str]:
+    return [field for field, (_, pattern) in CATALOG_FIELDS.items()
+            if re.search(pattern, message, re.IGNORECASE)]
 
 
 class ContextBuilder:
@@ -30,17 +42,20 @@ class ContextBuilder:
         for idx, cand in enumerate(candidates[:maxProds], 1):
             p = cand.product
             priceFmt = f"{p.price:,.0f} VND"
-            skins = ", ".join(p.skinType) if p.skinType else "Mọi loại da"
-            concerns = ", ".join(p.concerns) if p.concerns else "Chăm sóc chung"
+            skins = ", ".join(p.skinType) or "Chưa có dữ liệu"
+            concerns = ", ".join(p.concerns) or "Chưa có dữ liệu"
             pType = getattr(p, "targetType", "PRODUCT") or getattr(p, "target_type", "PRODUCT") or "PRODUCT"
             duration = getattr(p, "durationMinutes", 0) or getattr(p, "duration_minutes", 0) or 0
             durationStr = f" ({duration}p)" if duration else ""
-            ingr = (p.ingredients[:80] + "...") if len(p.ingredients) > 80 else p.ingredients
-
             if pType == "SERVICE":
                 block = f"[{idx}] {p.name}{durationStr} | Cơ sở: {p.brand} | Giá: {priceFmt} | Phù hợp: {skins} ({concerns})"
             else:
-                block = f"[{idx}] {p.name} | Hãng: {p.brand} | Giá: {priceFmt} | Da: {skins} | Vấn đề: {concerns} | Hoạt chất: {ingr}"
+                stock = "Còn hàng" if p.inStock else "Hết hàng"
+                block = f"[{idx}] {p.name} | Hãng: {p.brand} | Giá: {priceFmt} | Tồn kho: {stock} | Da: {skins} | Vấn đề: {concerns}"
+            for field, (label, _) in CATALOG_FIELDS.items():
+                evidence = TextCleaner.clean(getattr(p, field, ""))
+                if evidence:
+                    block += f" | {label}: {evidence[:480]}"
             blocks.append(block)
 
         return "\n".join(blocks)
@@ -60,7 +75,7 @@ class ContextBuilder:
         cands = candidates if candidates is not None else kwargs.get("candidates", [])
         convHist = conversationHistory or kwargs.get("conversation_history", "")
 
-        productContext = ContextBuilder.buildProductContext(cands, understanding=und)
+        productContext = ContextBuilder.buildProductContext(cands, maxProducts=len(cands), understanding=und)
         safetyWarnings = ingredientSafetyEngine.checkCandidatesSafety(cands, userMsg)
         return buildDermatologyGenerationPrompt(
             userMessage=userMsg,
@@ -91,9 +106,28 @@ class GroundedGenerationService:
 
         if not cands:
             return (
-                "Hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. "
-                "Bạn có muốn thử điều chỉnh tầm giá hoặc tham khảo các dòng sản phẩm cùng công dụng khác không ạ?"
+                "Hiện tại hệ thống chưa xác nhận được sản phẩm khớp với yêu cầu. "
+                "Bạn có thể kiểm tra lại tên hoặc gửi thêm dung tích, thương hiệu hay mức giá mong muốn."
             )
+
+        fields = requested_catalog_fields(userMsg)
+        asks_price = bool(re.search(r"giá bao nhiêu|bao nhiêu tiền", userMsg, re.IGNORECASE))
+        asks_stock = bool(re.search(r"còn hàng|có hàng không|tồn kho", userMsg, re.IGNORECASE))
+        if fields or asks_price or asks_stock:
+            lines = []
+            for index, candidate in enumerate(cands, 1):
+                product = candidate.product
+                facts = []
+                for field in fields:
+                    label = CATALOG_FIELDS[field][0]
+                    value = TextCleaner.clean(getattr(product, field, ""))
+                    facts.append(f"{label}: {value or 'catalog chưa có thông tin'}")
+                if asks_price or asks_stock:
+                    facts.append(f"Giá: {product.price:,.0f} VND")
+                if asks_stock and product.targetType == "PRODUCT":
+                    facts.append("Còn hàng" if product.inStock else "Hết hàng")
+                lines.append(f"**{product.name}** [{index}] — " + " | ".join(facts))
+            return "\n".join(lines + ingredientSafetyEngine.checkCandidatesSafety(cands, userMsg))
 
         prompt = ContextBuilder.buildGenerationPrompt(
             userMessage=userMsg,
@@ -111,6 +145,7 @@ class GroundedGenerationService:
                         "Tuyệt đối KHÔNG mở đầu sáo rỗng giả trân (như 'rất vui được đồng hành...'). "
                         "Đi thẳng vào trọng tâm, trả lời tối đa 2-3 câu ngắn (dưới 80 từ). "
                         "Trích xuất thông tin liên quan theo đúng câu hỏi (giá, thành phần, cách dùng). "
+                        "Chỉ dùng dữ liệu catalog cho nhận định về sản phẩm. Nếu thiếu, nói rõ chưa có dữ liệu. "
                         "BẮT BUỘC ghi số nguồn tương ứng dạng [1], [2] ngay sau tên sản phẩm hoặc thông tin trích dẫn. "
                         "Tuyệt đối KHÔNG sử dụng bất kỳ emoji hay biểu tượng icon nào trong câu trả lời."
                     ),
@@ -119,7 +154,9 @@ class GroundedGenerationService:
                 )
                 if response:
                     isValid, sanitized, issues = generationGuardrail.verifyResponse(response, cands)
-                    return remove_emojis(sanitized)
+                    if isValid:
+                        return remove_emojis(sanitized)
+                    logger.warning("Generated response rejected: %s", issues)
             except LLMClientError as exc:
                 logger.warning("Lỗi sinh câu trả lời từ LLM: %s. Kích hoạt fallback mẫu có sẵn.", exc)
 
@@ -142,7 +179,7 @@ class GroundedGenerationService:
         for idx, cand in enumerate(candidates[:3], 1):
             p = cand.product
             relevanceExpl = cand.relevanceExplanation or getattr(cand, "relevance_explanation", "") or p.benefits
-            lines.append(f"- **{p.name}** [{idx}] ({p.brand}): {relevanceExpl}")
+            lines.append(f"- **{p.name}** [{idx}] ({p.brand}, {p.price:,.0f} VND): {relevanceExpl}")
 
         if safeWarn:
             lines.append("")
@@ -164,50 +201,13 @@ class GroundedGenerationService:
         conversationHistory: str = "",
         **kwargs,
     ):
-        userMsg = userMessage or kwargs.get("user_message", "")
-        und = understanding if understanding is not None else kwargs.get("understanding")
-        cands = candidates if candidates is not None else kwargs.get("candidates", [])
-        convHist = conversationHistory or kwargs.get("conversation_history", "")
-
-        if not cands:
-            yield "Rất tiếc, hiện tại hệ thống chưa tìm thấy sản phẩm nào khớp hoàn toàn với tiêu chí bạn đưa ra. Bạn có muốn thử nới lỏng ngân sách hoặc tham khảo các dòng sản phẩm cùng công dụng khác không ạ?"
-            return
-
-        prompt = ContextBuilder.buildGenerationPrompt(
-            userMessage=userMsg,
-            understanding=und,
-            candidates=cands,
-            conversationHistory=convHist,
+        # Do not expose unverified model text in SSE. The metadata still streams
+        # immediately; the verified answer follows as a single text event.
+        answer = await self.generateResponse(
+            userMessage=userMessage, understanding=understanding, candidates=candidates,
+            conversationHistory=conversationHistory, **kwargs,
         )
-
-        hasTokens = False
-        try:
-            async for token in llmClient.streamText(
-                prompt=prompt,
-                system_instruction=(
-                    "Bạn là Chuyên viên Tư vấn Mỹ phẩm & Da liễu Chân thành, Ngắn gọn và Trực diện. "
-                    "Tuyệt đối KHÔNG mở đầu sáo rỗng giả trân (như 'rất vui được đồng hành...'). "
-                    "Đi thẳng vào trọng tâm vấn đề, giải thích súc tích và tôn trọng thời gian của khách hàng. "
-                    "Trích xuất thông tin liên quan theo đúng câu hỏi (giá, thành phần, cách dùng). "
-                    "BẮT BUỘC ghi số nguồn tương ứng dạng [1], [2] ngay sau tên sản phẩm hoặc thông tin trích dẫn. "
-                    "Tuyệt đối KHÔNG sử dụng bất kỳ emoji hay biểu tượng icon nào trong câu trả lời."
-                ),
-                max_tokens=200,
-                temperature=0.3,
-            ):
-                cleaned_token = remove_emojis(token)
-                if cleaned_token:
-                    hasTokens = True
-                    yield cleaned_token
-        except Exception as exc:
-            logger.warning("Lỗi khi truyền dòng LLM: %s. Chuyển sang phản hồi fallback.", exc)
-            sw = ingredientSafetyEngine.checkCandidatesSafety(cands, userMsg)
-            yield self.templateFallback(cands, safetyWarnings=sw)
-            return
-
-        if not hasTokens:
-            sw = ingredientSafetyEngine.checkCandidatesSafety(cands, userMsg)
-            yield self.templateFallback(cands, safetyWarnings=sw)
+        yield answer
 
     generate_stream = generateStream
 

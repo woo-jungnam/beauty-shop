@@ -6,7 +6,8 @@ RUN npm ci
 COPY . .
 # Public URL only; never pass secrets as build arguments.
 ARG VITE_API_BASE_URL=
-RUN VITE_API_BASE_URL="$VITE_API_BASE_URL" npm run build
+ARG VITE_GOOGLE_OAUTH_CLIENT_ID=
+RUN VITE_API_BASE_URL="$VITE_API_BASE_URL" VITE_GOOGLE_OAUTH_CLIENT_ID="$VITE_GOOGLE_OAUTH_CLIENT_ID" npm run build
 
 FROM nginx:alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf

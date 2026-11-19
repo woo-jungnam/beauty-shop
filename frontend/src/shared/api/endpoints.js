@@ -1,6 +1,7 @@
 export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/api/v1/auth/login',
+    GOOGLE_LOGIN: '/api/v1/auth/login/google',
     REGISTER: '/api/v1/auth/register',
     REFRESH: '/api/v1/auth/refresh',
     LOGOUT: '/api/v1/auth/logout',

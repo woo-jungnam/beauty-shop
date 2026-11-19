@@ -3,12 +3,12 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/formatters.dart';
 import 'customer_account_screen.dart';
+import 'account_help_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:beautyshop_mobile/core/theme/app_colors.dart';
 import 'package:beautyshop_mobile/core/theme/app_typography.dart';
 import 'package:beautyshop_mobile/providers/auth_provider.dart';
-import '../cart/cart_screen.dart';
 import 'package:beautyshop_mobile/providers/theme_provider.dart';
 import 'package:beautyshop_mobile/presentation/screens/auth/login_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/orders/order_history_screen.dart';
@@ -28,44 +28,61 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _orderStatistics;
   int? _statsUserId;
-  bool _loadingStats = false;
+  int _statsRequest = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final auth = context.watch<AuthProvider>();
     final uid = auth.isAuthenticated ? auth.currentUser?.id : null;
-    if (uid == null) {
-      if (_orderStatistics != null || _statsUserId != null) {
-        _orderStatistics = null;
-        _statsUserId = null;
-      }
-    } else if (uid != _statsUserId && !_loadingStats) {
-      _orderStatistics = null;
+    if (uid == _statsUserId) return;
+    _statsUserId = uid;
+    _orderStatistics = null;
+    _statsRequest++;
+    if (uid != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _fetchOrderStatistics(uid);
+        if (mounted && _statsUserId == uid) _fetchOrderStatistics(uid);
       });
     }
   }
 
   Future<void> _fetchOrderStatistics(int userId) async {
-    if (_loadingStats) return;
-    _loadingStats = true;
+    final request = ++_statsRequest;
     try {
-      final res = await ApiClient().get<dynamic>('/api/v1/users/order-statistics');
+      final response = await ApiClient().get<dynamic>('/api/v1/users/order-statistics');
       if (mounted &&
-          context.read<AuthProvider>().currentUser?.id == userId &&
-          res.isSuccess &&
-          res.data is Map) {
+          request == _statsRequest &&
+          _statsUserId == userId &&
+          response.isSuccess &&
+          response.data is Map) {
         setState(() {
-          _statsUserId = userId;
-          _orderStatistics = Map<String, dynamic>.from(res.data as Map);
+          _orderStatistics = Map<String, dynamic>.from(response.data as Map);
         });
       }
     } catch (_) {
-    } finally {
-      _loadingStats = false;
+      // Keep the last successful statistics for the current account.
     }
+  }
+
+  Widget _transactionStat(String label, String key, {bool currency = true}) {
+    final value = _orderStatistics?[key];
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      title: Text(label),
+      trailing: Text(value is num
+          ? (currency ? AppFormatters.formatCurrency(value) : value.toInt().toString())
+          : '—'),
+    );
+  }
+
+  Future<void> _openOrderHistory(OrderHistoryScreen screen) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    );
+    final userId = _statsUserId;
+    if (mounted && userId != null) await _fetchOrderStatistics(userId);
   }
 
   @override
@@ -211,6 +228,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
+                if (auth.isAuthenticated) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    color: AppColors.getSurface(context),
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Thống kê giao dịch', style: AppTypography.titleMedium),
+                        const Divider(),
+                        _transactionStat('Tổng số đơn', 'totalOrders', currency: false),
+                        _transactionStat('Tổng tiền đã thanh toán', 'totalPaid'),
+                        _transactionStat('Tổng tiền đã hoàn', 'totalRefunded'),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 10),
 
                 Container(
@@ -226,14 +261,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: AppTypography.titleMedium,
                           ),
                           InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const OrderHistoryScreen(),
-                                ),
-                              );
-                            },
+                            onTap: () => _openOrderHistory(
+                              const OrderHistoryScreen(),
+                            ),
                             child: const Row(
                               children: [
                                 Text(
@@ -263,48 +293,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildOrderStatusItem(
                             Icons.payment,
                             'Chờ thanh toán',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const OrderHistoryScreen(unpaidOnly: true),
-                              ),
+                            onTap: () => _openOrderHistory(
+                              const OrderHistoryScreen(unpaidOnly: true),
                             ),
                           ),
                           _buildOrderStatusItem(
                             Icons.inventory_2_outlined,
                             'Chờ xử lý',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const OrderHistoryScreen(
-                                  initialTabIndex: 1,
-                                ),
-                              ),
+                            onTap: () => _openOrderHistory(
+                              const OrderHistoryScreen(initialTabIndex: 1),
                             ),
                           ),
                           _buildOrderStatusItem(
                             Icons.local_shipping_outlined,
                             'Đang giao',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const OrderHistoryScreen(
-                                  initialTabIndex: 2,
-                                ),
-                              ),
+                            onTap: () => _openOrderHistory(
+                              const OrderHistoryScreen(initialTabIndex: 2),
                             ),
                           ),
                           _buildOrderStatusItem(
                             Icons.check_circle_outline,
                             'Đã giao',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const OrderHistoryScreen(
-                                  initialTabIndex: 3,
-                                ),
-                              ),
+                            onTap: () => _openOrderHistory(
+                              const OrderHistoryScreen(initialTabIndex: 3),
                             ),
                           ),
                         ],
@@ -386,6 +397,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           MaterialPageRoute(
                             builder: (_) => const MyAppointmentsScreen(),
                           ),
+                        ),
+                      ),
+                      _buildMenuItem(
+                        Icons.storefront_outlined,
+                        'Hệ thống chi nhánh',
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AccountHelpScreen(showBranches: true)),
+                        ),
+                      ),
+                      _buildMenuItem(
+                        Icons.verified_outlined,
+                        'Chính sách cam kết',
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AccountHelpScreen(showBranches: false)),
                         ),
                       ),
                       _buildMenuItem(

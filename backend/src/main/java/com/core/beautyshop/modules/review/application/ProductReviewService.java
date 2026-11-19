@@ -49,22 +49,13 @@ public class ProductReviewService {
                 throw new BusinessException("Đơn hàng này đã được đánh giá trước đó");
             }
         }
-        ReviewStatus initialStatus = verifiedPurchase ? ReviewStatus.APPROVED : ReviewStatus.PENDING;
-        Instant approvedAt = verifiedPurchase ? Instant.now() : null;
-
         ProductReview review = ProductReview.builder().productId(command.productId()).userId(userId)
                 .orderId(verifiedPurchase ? eligibleOrderId : null)
                 .rating(verifiedPurchase ? command.rating() : null)
                 .isVerifiedPurchase(verifiedPurchase)
                 .title(command.title()).content(command.content().trim())
-                .status(initialStatus)
-                .approvedAt(approvedAt)
                 .build();
-        ProductReview saved = repository.save(review);
-        if (verifiedPurchase) {
-            refreshRating(command.productId());
-        }
-        return ReviewView.from(saved);
+        return ReviewView.from(repository.save(review));
     }
 
     @Transactional(readOnly = true)
@@ -93,10 +84,35 @@ public class ProductReviewService {
     public ReviewView moderate(Long id, ReviewStatus status) {
         if (status == null || status == ReviewStatus.PENDING) throw new BusinessException("Trạng thái kiểm duyệt không hợp lệ");
         ProductReview review = findForRatingUpdate(id);
+        updateModeration(review, status);
+        return ReviewView.from(review);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void applySentiment(Long id, int previousAttempts, ReviewSentiment sentiment, String version) {
+        Long productId = repository.findProductIdForReview(id).orElse(null);
+        if (productId == null) return;
+        catalogFacade.lockProductForRating(productId);
+        ProductReview review = repository.findByIdForUpdate(id).orElse(null);
+        if (review == null || review.getSentimentState() != ReviewSentiment.PENDING
+                || review.getSentimentAttempts() != previousAttempts) return;
+
+        review.setSentimentState(sentiment);
+        review.setSentimentAttempts(previousAttempts + 1);
+        review.setSentimentNextAttemptAt(null);
+        review.setSentimentModelVersion(version);
+        review.setSentimentAnalyzedAt(Instant.now());
+
+        if (review.getStatus() == ReviewStatus.PENDING) {
+            updateModeration(review, sentiment == ReviewSentiment.POSITIVE
+                    ? ReviewStatus.APPROVED : ReviewStatus.REJECTED);
+        }
+    }
+
+    private void updateModeration(ProductReview review, ReviewStatus status) {
         review.setStatus(status);
         review.setApprovedAt(status == ReviewStatus.APPROVED ? Instant.now() : null);
         refreshRating(review.getProductId());
-        return ReviewView.from(review);
     }
 
     @Transactional

@@ -93,6 +93,15 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Tài khoản của bạn không có quyền truy cập hệ thống vận hành. Vui lòng liên hệ quản trị hệ thống.');
     }
 
+    return startSession(data);
+  };
+
+  const loginWithGoogle = async (credential, password) => {
+    const response = await apiClient.post(ENDPOINTS.AUTH.GOOGLE_LOGIN, { credential, password });
+    return startSession(response.data || response);
+  };
+
+  const startSession = (data) => {
     localStorage.setItem('beautyshop_admin_token', data.accessToken);
     if (data.refreshToken) {
       localStorage.setItem('beautyshop_admin_refresh_token', data.refreshToken);
@@ -118,23 +127,7 @@ export const AuthProvider = ({ children }) => {
     const data = response.data || response;
 
     if (data.accessToken) {
-      localStorage.setItem('beautyshop_admin_token', data.accessToken);
-      if (data.refreshToken) {
-        localStorage.setItem('beautyshop_admin_refresh_token', data.refreshToken);
-      }
-      const sessionUser = {
-        id: data.id,
-        username: data.username,
-        email: data.email,
-        fullName: data.fullName,
-        roles: data.roles,
-        permissions: data.permissions || [],
-      };
-      localStorage.setItem('beautyshop_admin_user', JSON.stringify(sessionUser));
-      setToken(data.accessToken);
-      setUser(sessionUser);
-      window.dispatchEvent(new Event('auth:login'));
-      return sessionUser;
+      return startSession(data);
     }
     return data;
   };
@@ -177,6 +170,7 @@ export const AuthProvider = ({ children }) => {
       return profile;
     },
     login,
+    loginWithGoogle,
     register,
     logout,
   };

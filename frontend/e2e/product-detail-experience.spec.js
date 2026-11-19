@@ -602,9 +602,9 @@ test('Gửi đánh giá có nhãn và phản hồi kiểm duyệt bằng tiếng
   await expect(reviews.getByRole('combobox', { name: 'Đơn hàng đã giao', exact: true })).toBeVisible();
   await reviews.getByRole('radio', { name: '3 sao', exact: true }).check();
   await reviews.getByRole('textbox', { name: 'Tiêu đề (không bắt buộc)', exact: true }).fill('Nhận xét mới');
-  await reviews.getByRole('textbox', { name: 'Nội dung bình luận', exact: true }).fill('Thông tin quy cách rõ ràng.');
+  await reviews.getByRole('textbox', { name: 'Nội dung đánh giá *', exact: true }).fill('Thông tin quy cách rõ ràng.');
   await reviews.getByRole('button', { name: 'Gửi đánh giá', exact: true }).click();
-  await expect(reviews.getByRole('status')).toContainText(/duyệt|kiểm duyệt/i);
+  await expect(reviews.getByRole('status')).toContainText('Đánh giá đã gửi và đang chờ duyệt.');
   await expect(page.locator('#product-review-list').getByText('Nhận xét mới', { exact: true })).toHaveCount(0);
   expect(api.submittedReviews[0]).toMatchObject({ productId: 42, orderId: 77, rating: 3, title: 'Nhận xét mới' });
 });

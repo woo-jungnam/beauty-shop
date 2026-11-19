@@ -71,15 +71,18 @@ class VectorRepository:
 
     _chunk_id_to_uuid = chunkIdToUuid
 
-    def upsertChunks(self, chunks: List[ProductChunk], vectors: List[List[float]]) -> int:
+    def upsertChunks(self, chunks: List[ProductChunk], vectors: List[List[float]], embeddingSpace: str = "") -> int:
         if not chunks or not vectors or len(chunks) != len(vectors):
             return 0
 
         points: List[PointStruct] = []
         for chunk, vec in zip(chunks, vectors):
-            pointId = self.chunkIdToUuid(chunk.chunk_id)
+            if len(vec) != self.dimension or not any(vec):
+                continue
+            pointId = self.chunkIdToUuid(f"{embeddingSpace}:{chunk.chunk_id}" if embeddingSpace else chunk.chunk_id)
             payload = {
                 "chunk_id": chunk.chunk_id,
+                "embedding_space": embeddingSpace,
                 "product_id": chunk.product_id,
                 "chunk_type": chunk.chunk_type.value,
                 "content": chunk.content,
@@ -102,6 +105,8 @@ class VectorRepository:
                 )
             )
 
+        if not points:
+            return 0
         self.client.upsert(
             collection_name=self.collectionName,
             points=points,
@@ -133,7 +138,9 @@ class VectorRepository:
         skinType = skinType or kwargs.get("skin_type")
         targetType = targetType or kwargs.get("target_type")
 
-        mustConditions = []
+        embeddingSpace = kwargs.get("embeddingSpace")
+        spaceConditions = [FieldCondition(key="embedding_space", match=MatchValue(value=embeddingSpace))] if embeddingSpace else []
+        mustConditions = list(spaceConditions)
 
         if targetType:
             mustConditions.append(
@@ -201,7 +208,7 @@ class VectorRepository:
         points = doSearch(queryFilter)
 
         if not points and mustConditions:
-            relaxedConditions = []
+            relaxedConditions = list(spaceConditions)
             if category:
                 catClean = category.strip()
                 relaxedConditions.append(

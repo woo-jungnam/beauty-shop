@@ -25,45 +25,46 @@ class GenerationGuardrail:
             return True, botResponse, []
 
         issues: List[str] = []
-        candidateProds = [getattr(c, "product", c) for c in candidates]
-        candidateNames = [getattr(p, "name", "").strip().lower() for p in candidateProds if getattr(p, "name", "")]
-        candidateBrands = [getattr(p, "brand", "").strip().lower() for p in candidateProds if getattr(p, "brand", "")]
+        products = [getattr(candidate, "product", candidate) for candidate in candidates]
+        citations = [int(value) for value in re.findall(r"\[(\d+)\]", botResponse)]
+        if not citations or any(index < 1 or index > len(products) for index in citations):
+            issues.append("Missing or invalid product citations")
 
-        respLower = botResponse.lower()
+        if products and not any(
+            product.name and product.name.strip().casefold() in botResponse.casefold()
+            for product in products
+        ):
+            issues.append("No catalog product name found")
 
-        matchedAnyBrand = any(b in respLower for b in candidateBrands if len(b) > 2)
-        matchedAnyName = any(n[:15] in respLower for n in candidateNames if len(n) >= 15) or any(n in respLower for n in candidateNames)
+        # Prices must match the one product cited on the same line. Use the
+        # catalog template if an amount cannot be attributed unambiguously.
+        for line in botResponse.splitlines():
+            amounts = re.findall(
+                r"(?<![\w.,])(?:\d{1,3}(?:[., ]\d{3})+|\d+)\s*(?:vnd|đồng|đ|₫|nghìn|ngàn|k|triệu)(?!\w)"
+                r"|(?<![\w.,])(?:\d{1,3}(?:[.,]\d{3})+|\d{5,})(?![\w.,])",
+                line, re.IGNORECASE,
+            )
+            if not amounts:
+                continue
+            line_citations = {int(value) for value in re.findall(r"\[(\d+)\]", line)}
+            if len(line_citations) != 1 or not line_citations.issubset(range(1, len(products) + 1)):
+                issues.append("Price has no unique product citation")
+                continue
+            product = products[next(iter(line_citations)) - 1]
+            for value in amounts:
+                number = re.search(r"\d[\d., ]*", value).group().strip()
+                unit = value[len(number):].strip().lower()
+                if unit in ("k", "nghìn", "ngàn", "triệu"):
+                    if not number.isdecimal():
+                        issues.append("Ambiguous abbreviated price")
+                        continue
+                    price = int(number) * (1_000_000 if unit == "triệu" else 1_000)
+                else:
+                    price = int(re.sub(r"[^0-9]", "", number))
+                if price != round(product.price):
+                    issues.append("Price does not match cited product")
 
-        if not (matchedAnyBrand or matchedAnyName):
-            issues.append("Lack of candidate mentions in response")
-
-        foundPrices = re.findall(r"\b(\d{1,3}(?:[.,]\d{3})+)\s*(?:đ|vnd|đồng)?\b", botResponse, re.I)
-        numericPrices = []
-        for fp in foundPrices:
-            cleanPrice = fp.replace(".", "").replace(",", "")
-            try:
-                numericPrices.append(float(cleanPrice))
-            except ValueError:
-                pass
-
-        candPrices = [float(getattr(p, "price", 0.0)) for p in candidateProds]
-        for numP in numericPrices:
-            if numP > 10_000:
-                isCloseToAny = any(abs(numP - cp) / max(cp, 1.0) < 0.35 for cp in candPrices)
-                if not isCloseToAny:
-                    issues.append(f"Price mismatch: {numP:,.0f} VND")
-
-        sanitized = botResponse
-        foundCitations = [int(m) for m in re.findall(r"\[(\d+)\]", botResponse)]
-        numCandidates = len(candidates)
-        invalidCitations = [c for c in foundCitations if c < 1 or c > numCandidates]
-        if invalidCitations:
-            issues.append(f"Invalid citation indices: {invalidCitations}")
-            for inv in invalidCitations:
-                sanitized = re.sub(rf"\[{inv}\]", "", sanitized)
-
-        isValid = len(issues) == 0 or (matchedAnyBrand or matchedAnyName)
-        return isValid, sanitized, issues
+        return not issues, botResponse, issues
 
     verify_response = verifyResponse
 

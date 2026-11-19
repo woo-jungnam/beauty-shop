@@ -1,5 +1,12 @@
+import hashlib
+import hmac
+from functools import cached_property
 from typing import Any
+from uuid import uuid4
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.core.config import getSettings
 
 
 class UnderstandTestRequest(BaseModel):
@@ -14,8 +21,21 @@ class UnderstandTestRequest(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    sessionId: str = Field(..., min_length=1)
-    message: str = Field(..., min_length=1)
+    sessionId: str = Field(..., min_length=1, max_length=128)
+    message: str = Field(..., min_length=1, max_length=4000)
+    context_id: str | None = Field(default=None, max_length=129)
+
+    @cached_property
+    def context_key(self) -> str:
+        secret = getSettings().chatbot_context_secret
+        if not secret:
+            return "direct:" + hashlib.sha256(self.sessionId.encode()).hexdigest()
+        key, separator, signature = (self.context_id or "").partition(".")
+        if separator and len(key) == 64:
+            expected = hmac.new(secret.encode(), ("context:" + key).encode(), hashlib.sha256).hexdigest()
+            if hmac.compare_digest(signature.encode(), expected.encode()):
+                return "scoped:" + key
+        return "ephemeral:" + uuid4().hex
 
     model_config = ConfigDict(populate_by_name=True)
 

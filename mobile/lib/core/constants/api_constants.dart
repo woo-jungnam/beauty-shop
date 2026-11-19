@@ -36,6 +36,7 @@ class ApiConstants {
   static const String products = '/api/v1/products';
   static const String productFeatured = '/api/v1/products/featured';
   static const String recommendedForYou = '/api/v1/products/recommended-for-you';
+  static const String currentFlashSale = '/api/v1/flash-sales/current';
   static const String expiringSoon = '/api/v1/products/expiring-soon';
   static const String productSearch = '/api/v1/products/search';
   static const String searchByImage = '/api/v1/products/search-by-image';

@@ -8,6 +8,10 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum ErrorCode {
 
+    GOOGLE_LINK_REQUIRED("AUTH_GOOGLE_LINK_REQUIRED", HttpStatus.CONFLICT, "Nhập mật khẩu BeautyShop để liên kết tài khoản Google."),
+    GOOGLE_SIGN_IN_DISABLED("AUTH_GOOGLE_DISABLED", HttpStatus.SERVICE_UNAVAILABLE, "Đăng nhập Google chưa được bật."),
+    INVALID_GOOGLE_TOKEN("AUTH_GOOGLE_INVALID", HttpStatus.UNAUTHORIZED, "Không xác thực được tài khoản Google. Vui lòng chọn tài khoản lại."),
+
     SYSTEM_ERROR("SYS_001", HttpStatus.INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi hệ thống không mong muốn"),
     INVALID_PARAMETER("SYS_002", HttpStatus.BAD_REQUEST, "Tham số truyền vào không hợp lệ"),
     VALIDATION_FAILED("SYS_003", HttpStatus.BAD_REQUEST, "Dữ liệu xác thực không hợp lệ"),

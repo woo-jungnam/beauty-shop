@@ -9,10 +9,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -20,6 +22,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,6 +83,30 @@ public class ChatbotControllerTest {
                 .andExpect(jsonPath("$.data.session_id").value("sess_test_123"))
                 .andExpect(jsonPath("$.data.answer").value("Dưới đây là kem dưỡng phù hợp với làn da của bạn"))
                 .andExpect(jsonPath("$.data.products[0].name").value("Kem dưỡng ẩm chuyên sâu"));
+    }
+
+    @Test
+    void scopesTheSamePublicSessionByGuestOwner() throws Exception {
+        ReflectionTestUtils.setField(chatbotController, "contextSecret", "test-session-scope-secret");
+        when(chatbotService.chat(any(ChatRequest.class)))
+                .thenReturn(ChatResponse.builder().sessionId("public_id").build());
+
+        for (String owner : List.of("guest_aaaaaaaaaaaaaaaaaaaaaa",
+                "guest_aaaaaaaaaaaaaaaaaaaaaa", "guest_bbbbbbbbbbbbbbbbbbbbbb")) {
+            mockMvc.perform(post("/api/v1/chatbot/chat")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-Guest-Session-Id", owner)
+                    .content("{\"session_id\":\"public_id\",\"message\":\"hello\",\"context_id\":\"forged\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.session_id").value("public_id"));
+        }
+
+        var captor = ArgumentCaptor.forClass(ChatRequest.class);
+        verify(chatbotService, times(3)).chat(captor.capture());
+        var requests = captor.getAllValues();
+        assertEquals(requests.get(0).getContextId(), requests.get(1).getContextId());
+        assertNotEquals(requests.get(0).getContextId(), requests.get(2).getContextId());
+        assertNotEquals("forged", requests.get(0).getContextId());
     }
 
     @Test

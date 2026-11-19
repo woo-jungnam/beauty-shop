@@ -224,7 +224,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         SnackBar(
                           content: Text(
                             ok
-                                ? 'Cảm ơn bạn đã gửi đánh giá!'
+                                ? 'Đánh giá đã gửi và đang chờ duyệt.'
                                 : pp.reviewSubmitError ??
                                       'Không thể gửi đánh giá lúc này',
                           ),

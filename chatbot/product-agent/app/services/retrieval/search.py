@@ -1,4 +1,5 @@
 import asyncio
+from contextvars import ContextVar
 import hashlib
 import json
 import math
@@ -152,16 +153,19 @@ class EmbeddingService:
         self.cacheSize = kwargs.get("cache_size", cacheSize)
         self._cache: dict[str, List[float]] = {}
         self._client: Optional[httpx.AsyncClient] = None
-        self.is_fallback_active: bool = False
+        self._fallback_active = ContextVar('embedding_fallback_active', default=False)
         cacheDir = Path(settings.embedding_cache_dir) if settings.embedding_cache_dir else Path(__file__).resolve().parent.parent.parent / "data"
         self._cacheFile = cacheDir / "embedding_cache.json"
         self._cache_file = self._cacheFile
         self._isSaving = False
         self.local_model = None
+        self.local_model_identity = ""
         self.active_provider = getattr(settings, "embedding_provider", "local").lower()
         self._initLocalModel()
-        modelKey = hashlib.sha256(settings.embedding_model_name.encode()).hexdigest()[:12] if self.active_provider == "gemini" else ""
-        cacheName = f"embedding_cache_{self.active_provider}_{modelKey}_{self.dimension}.json" if modelKey else f"embedding_cache_{self.active_provider}.json"
+        modelIdentity = self.local_model_identity or settings.embedding_model_name
+        modelKey = hashlib.sha256(modelIdentity.encode()).hexdigest()[:12]
+        self.embedding_space = f"{self.active_provider}_{modelKey}_{self.dimension}"
+        cacheName = f"embedding_cache_{self.embedding_space}.json"
         self._cacheFile = cacheDir / cacheName
         self._cache_file = self._cacheFile
         self._loadCacheFromDisk()
@@ -197,6 +201,7 @@ class EmbeddingService:
             except Exception:
                 self.local_model = SentenceTransformer(model_to_load)
             self.active_provider = "local_finetuned" if found_path else "local_base"
+            self.local_model_identity = model_to_load
             self.is_fallback_active = False
             logger.info("Đã nạp thành công mô hình Local Embedding (%s)!", self.active_provider)
         except Exception as exc:
@@ -279,7 +284,16 @@ class EmbeddingService:
 
     _fallback_vector = fallbackVector
 
+    @property
+    def is_fallback_active(self) -> bool:
+        return self._fallback_active.get()
+
+    @is_fallback_active.setter
+    def is_fallback_active(self, active: bool) -> None:
+        self._fallback_active.set(active)
+
     async def embedText(self, text: str) -> List[float]:
+        self.is_fallback_active = False
         cleaned = TextCleaner.clean(text)
         if not cleaned:
             return [0.0] * self.dimension
@@ -306,7 +320,7 @@ class EmbeddingService:
 
         # 2. Sử dụng API Gemini nếu được cấu hình hoặc fallback
         apiKey = getattr(settings, "llm_api_key", "") or os.getenv("GEMINI_API_KEY", "")
-        if apiKey:
+        if apiKey and self.local_model is None:
             modelName = settings.embedding_model_name
             if not modelName.startswith("models/"):
                 modelName = f"models/{modelName}"
@@ -361,6 +375,8 @@ class EmbeddingService:
                         normalize_embeddings=True
                     ).tolist()
                 )
+                if len(vecs) != len(cleaned_texts) or any(len(v) != self.dimension for v in vecs):
+                    raise ValueError("Invalid local embedding dimensions")
                 for t, v in zip(cleaned_texts, vecs):
                     self._cache[t] = v
                 self.saveCacheToDisk()
@@ -404,10 +420,14 @@ class EmbeddingService:
                 except Exception as exc:
                     logger.warning("Embedding batch failed (%s); retrying individual texts.", type(exc).__name__)
 
+        async def embed_index_text(text: str) -> List[float]:
+            vector = await self.embedText(text)
+            return [] if self.isFallbackActive else vector
+
         results: List[List[float]] = []
         for i in range(0, len(texts), batchSize):
             batch = texts[i : i + batchSize]
-            tasks = [self.embedText(t) for t in batch]
+            tasks = [embed_index_text(t) for t in batch]
             batchVectors = await asyncio.gather(*tasks)
             results.extend(batchVectors)
         self.saveCacheToDisk()
@@ -538,7 +558,9 @@ class HybridRetrievalService:
                 if concerns and not any(c in vecQuery for c in concerns):
                     vecQuery += f" Dành cho vấn đề: {', '.join(concerns)}."
                 queryVec = await embeddingService.embedQuery(vecQuery)
-                return await asyncio.to_thread(
+                if getattr(embeddingService, "is_fallback_active", False):
+                    return [], True
+                points = await asyncio.to_thread(
                     vector_repository.searchVectors,
                     queryVector=queryVec,
                     limit=settings.retrieval_vector_top_k,
@@ -549,19 +571,33 @@ class HybridRetrievalService:
                     skinType=skinType,
                     concerns=concerns,
                     targetType=targetType,
+                    embeddingSpace=embeddingService.embedding_space,
                 )
 
-        sqlProducts, bm25Hits, vectorPoints = await asyncio.gather(
+                return points, False
+
+        results = await asyncio.gather(
             asyncio.to_thread(_sqlSearchSync),
             asyncio.to_thread(_bm25SearchSync),
             _runVector(),
-            return_exceptions=False,
+            return_exceptions=True,
         )
+        if any(isinstance(result, asyncio.CancelledError) for result in results):
+            raise asyncio.CancelledError
+        if all(isinstance(result, Exception) for result in results):
+            raise RuntimeError("All retrieval sources failed")
+        for source, result in zip(("SQL", "BM25", "vector"), results):
+            if isinstance(result, Exception):
+                logger.warning("Retrieval source %s unavailable: %s", source, type(result).__name__)
+        sqlRows, bm25Rows, vectorRows = results
+        sqlProducts = [] if isinstance(sqlRows, Exception) else sqlRows
+        bm25Hits = [] if isinstance(bm25Rows, Exception) else bm25Rows
+        vectorPoints, vectorDegraded = ([], True) if isinstance(vectorRows, Exception) else vectorRows
 
         with tracker.measure("rrf_fusion"):
             rrfK = settings.hybrid_rrf_k
             wSql = 1.0
-            if getattr(embeddingService, "is_fallback_active", False):
+            if vectorDegraded:
                 wVector = 0.0
                 wBm25 = 2.5
             else:
@@ -634,7 +670,11 @@ class HybridRetrievalService:
 
             pidsToFetch = [pId for pId, c in candidateMap.items() if c.product is None]
             if pidsToFetch:
-                fetchedProds = await asyncio.to_thread(self.productRepo.getByIds, pidsToFetch)
+                try:
+                    fetchedProds = await asyncio.to_thread(self.productRepo.getByIds, pidsToFetch)
+                except Exception:
+                    logger.warning("Could not hydrate retrieval candidates from catalog")
+                    fetchedProds = []
                 for p in fetchedProds:
                     if p.id in candidateMap:
                         candidateMap[p.id].product = p

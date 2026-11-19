@@ -1,123 +1,92 @@
-import os
-import sys
-import io
+"""Fine-tune the Vietnamese embedding encoder on CPU and export a standalone checkpoint."""
+import argparse
 import json
-import math
-import shutil
 from pathlib import Path
+
 import torch
-from torch.utils.data import DataLoader, Dataset
-from sentence_transformers import SentenceTransformer, losses
+from sentence_transformers import SentenceTransformer, models
+from torch.nn import functional as F
+from torch.utils.data import DataLoader
 
-if hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+TRAINING = Path(__file__).resolve().parents[1]
+BASE_MODEL = "bkai-foundation-models/vietnamese-bi-encoder"
+FIELDS = ("anchor", "positive", "negative")
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-OUTPUT_DIR = BASE_DIR / "export_model" / "my_cosmetics_embedding"
-AGENT_DIR = BASE_DIR.parent / "product-agent" / "my_cosmetics_embedding"
-
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-class TripletDataset(Dataset):
-    def __init__(self, triplets):
-        self.triplets = triplets
-
-    def __len__(self):
-        return len(self.triplets)
-
-    def __getitem__(self, idx):
-        item = self.triplets[idx]
-        return item["anchor"], item["positive"], item["negative"]
-
-def collate_fn(batch, model):
-    anchors = [x[0] for x in batch]
-    positives = [x[1] for x in batch]
-    negatives = [x[2] for x in batch]
-    
-    # Preprocess tokens for SentenceTransformer
-    tokenized = [
-        model.preprocess(anchors),
-        model.preprocess(positives),
-        model.preprocess(negatives)
-    ]
-    return tokenized
-
-def evaluate_triplets(model, val_data):
-    correct = 0
-    margins = []
-    for item in val_data:
-        a_vec = model.encode(item["anchor"], normalize_embeddings=True)
-        p_vec = model.encode(item["positive"], normalize_embeddings=True)
-        n_vec = model.encode(item["negative"], normalize_embeddings=True)
-        sim_pos = float(torch.tensor(a_vec) @ torch.tensor(p_vec))
-        sim_neg = float(torch.tensor(a_vec) @ torch.tensor(n_vec))
-        if sim_pos > sim_neg:
-            correct += 1
-        margins.append(sim_pos - sim_neg)
-    acc = (correct / len(val_data)) * 100
-    avg_m = sum(margins) / len(margins)
-    return acc, avg_m
 
 def main():
-    print("=" * 70)
-    print("BẮT ĐẦU FINE-TUNING EMBEDDING BẰNG THUẦN PYTORCH (KHÔNG CẦN DATASETS/PYARROW)")
-    print("=" * 70)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base-model", default=BASE_MODEL)
+    parser.add_argument("--from-cross-encoder", action="store_true",
+                        help="Use the backbone of a local classification checkpoint with mean pooling")
+    parser.add_argument("--output", type=Path, default=TRAINING / "export_model/my_cosmetics_embedding")
+    parser.add_argument("--epochs", type=int, default=2)
+    parser.add_argument("--threads", type=int, default=4)
+    args = parser.parse_args()
+    if args.epochs < 1 or args.threads < 1:
+        parser.error("epochs and threads must be positive")
+    if args.output.exists() and (not args.output.is_dir() or any(args.output.iterdir())):
+        parser.error("output must be a new or empty directory")
 
-    with open(DATA_DIR / "train_triplets.json", "r", encoding="utf-8") as f:
-        train_data = json.load(f)
-    with open(DATA_DIR / "val_triplets.json", "r", encoding="utf-8") as f:
-        val_data = json.load(f)
+    torch.manual_seed(42)
+    torch.set_num_threads(args.threads)
+    rows = [
+        {field: row[field] for field in FIELDS}
+        for row in json.loads((TRAINING / "data/train_triplets.json").read_bytes())
+    ]
+    if args.from_cross_encoder:
+        encoder = models.Transformer(args.base_model, max_seq_length=128,
+                                     model_args={"local_files_only": True},
+                                     tokenizer_args={"local_files_only": True})
+        pooling = models.Pooling(encoder.get_word_embedding_dimension(), pooling_mode="mean")
+        model = SentenceTransformer(modules=[encoder, pooling], device="cpu")
+    else:
+        model = SentenceTransformer(args.base_model, device="cpu")
+    model.max_seq_length = min(model.max_seq_length, 128)
+    model.requires_grad_(False)
+    layers = model[0].auto_model.encoder.layer
+    for layer in layers[-2:]:
+        layer.requires_grad_(True)
+    trainable = [parameter for parameter in model.parameters() if parameter.requires_grad]
+    optimizer = torch.optim.AdamW(trainable, lr=3e-5)
+    loader = DataLoader(rows, batch_size=4, shuffle=True, generator=torch.Generator().manual_seed(42))
+    print(f"Train: {len(rows)} triplets, {len(layers)} encoder blocks, {len(trainable)} trainable tensors", flush=True)
 
-    print(f"Số mẫu huấn luyện: {len(train_data)} | Số mẫu kiểm chuẩn: {len(val_data)}")
-
-    base_model_name = "bkai-foundation-models/vietnamese-bi-encoder"
-    print(f"Đang tải mô hình nền: {base_model_name}...")
-    model = SentenceTransformer(base_model_name)
-
-    print("\n--- ĐÁNH GIÁ BASELINE BAN ĐẦU ---")
-    base_acc, base_m = evaluate_triplets(model, val_data)
-    print(f"-> Độ chính xác Baseline: {base_acc:.2f}% | Margin: {base_m:.4f}")
-
-    dataset = TripletDataset(train_data)
-    dataloader = DataLoader(
-        dataset,
-        batch_size=16,
-        shuffle=True,
-        collate_fn=lambda b: collate_fn(b, model)
-    )
-
-    loss_fn = losses.MultipleNegativesRankingLoss(model)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5, weight_decay=0.01)
-
-    epochs = 3
-    print(f"\nBắt đầu huấn luyện ({epochs} Epochs, {len(dataloader)} bước/epoch)...")
     model.train()
-    best_acc = base_acc
-
-    for epoch in range(1, epochs + 1):
+    losses = []
+    for epoch in range(1, args.epochs + 1):
         total_loss = 0.0
-        for step, batch_features in enumerate(dataloader, 1):
-            optimizer.zero_grad()
-            loss = loss_fn(batch_features, labels=None)
+        for step, batch in enumerate(loader, 1):
+            features = model.tokenize([text for field in FIELDS for text in batch[field]])
+            anchor, positive, negative = model(features)["sentence_embedding"].chunk(3)
+            loss = F.relu(0.2 - F.cosine_similarity(anchor, positive) + F.cosine_similarity(anchor, negative)).mean()
+            if not torch.isfinite(loss):
+                raise RuntimeError("Non-finite training loss")
+            optimizer.zero_grad(set_to_none=True)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(trainable, 1.0)
             optimizer.step()
             total_loss += loss.item()
-        
-        avg_loss = total_loss / len(dataloader)
-        val_acc, val_m = evaluate_triplets(model, val_data)
-        print(f"Epoch {epoch}/{epochs} - Loss: {avg_loss:.4f} - Val Acc: {val_acc:.2f}% - Margin: {val_m:.4f}")
+            if step % 10 == 0:
+                print(f"Epoch {epoch}/{args.epochs}, step {step}/{len(loader)}", flush=True)
+        losses.append(total_loss / len(loader))
+        print(f"Epoch {epoch}: loss={losses[-1]:.5f}", flush=True)
 
-    print("\nĐang lưu mô hình đã fine-tune...")
-    model.save(str(OUTPUT_DIR))
+    args.output.mkdir(parents=True, exist_ok=True)
+    model.save_pretrained(str(args.output), safe_serialization=True)
+    metadata = {
+        "base_model": args.base_model,
+        "train_triplets": len(rows), "seed": 42, "batch_size": 4,
+        "epochs": args.epochs, "sequence_length": model.max_seq_length,
+        "trainable_encoder_blocks": 2, "loss": "cosine_triplet_margin", "margin": 0.2,
+        "learning_rate": 3e-5, "epoch_losses": losses,
+        "from_cross_encoder": args.from_cross_encoder,
+    }
+    provenance = Path(args.base_model) / "source.txt"
+    if provenance.is_file():
+        metadata["base_model_source"] = provenance.read_text(encoding="utf-8").strip()
+    (args.output / "training_run.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    print(f"Saved checkpoint: {args.output}", flush=True)
 
-    print(f"Đang sao chép mô hình sang chatbot: {AGENT_DIR}...")
-    if AGENT_DIR.exists():
-        shutil.rmtree(AGENT_DIR)
-    shutil.copytree(OUTPUT_DIR, AGENT_DIR)
-    print("-> ĐÃ ĐỒNG BỘ VÀO PRODUCT-AGENT THÀNH CÔNG!")
-    print("=" * 70)
 
 if __name__ == "__main__":
     main()

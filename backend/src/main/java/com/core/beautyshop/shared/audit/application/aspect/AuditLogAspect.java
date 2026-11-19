@@ -64,7 +64,7 @@ public class AuditLogAspect {
                 || uri.startsWith("/api/v1/roles") || uri.startsWith("/api/v1/chatbot/sync/") || uri.startsWith("/api/v1/chatbot/test/")
                 || Set.of("products", "categories", "brands", "attributes", "tags").stream()
                     .anyMatch(resource -> request.getRequestURI().matches(".*/api/v1/" + resource + "(?:/.*)?"))
-                || uri.matches("/api/v1/auth/(login|logout|register|refresh)");
+                || uri.matches("/api/v1/auth/(login(?:/google)?|logout|register|refresh)");
         if (!mutation || !managedPath) return joinPoint.proceed();
         long start = System.currentTimeMillis();
         String status = "SUCCESS";

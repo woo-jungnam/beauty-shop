@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,7 @@ import 'package:beautyshop_mobile/presentation/screens/home/home_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/cart/cart_screen.dart';
 import 'package:beautyshop_mobile/presentation/screens/checkout/checkout_screen.dart';
+import 'package:beautyshop_mobile/presentation/screens/checkout/checkout_address_fields.dart';
 
 typedef ApiHandler =
     FutureOr<Map<String, dynamic>> Function(
@@ -102,6 +104,50 @@ void main() {
     await StorageService.setDeliveryDetails({});
   });
 
+  testWidgets(
+    'Checkout uses bundled addresses and clears the ward when the city changes',
+    (tester) async {
+      final city = TextEditingController(text: 'Hà Nội');
+      final ward = TextEditingController(text: 'Phường Ba Đình');
+      final district = TextEditingController(text: 'Ba Đình');
+      addTearDown(city.dispose);
+      addTearDown(ward.dispose);
+      addTearDown(district.dispose);
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: CheckoutAddressFields(
+                city: city,
+                ward: ward,
+                district: district,
+              ),
+            ),
+          ),
+        );
+        await rootBundle.loadString('assets/vietnam-addresses.json');
+      });
+      await tester.pumpAndSettle();
+
+      final dropdowns = find.byType(DropdownButton<String>);
+      final provincePicker = tester.widget<DropdownButton<String>>(
+        dropdowns.first,
+      );
+      expect(provincePicker.items, hasLength(34));
+      expect(provincePicker.value, 'Hà Nội');
+      provincePicker.onChanged?.call('An Giang');
+      await tester.pumpAndSettle();
+
+      expect(city.text, 'An Giang');
+      expect(ward.text, isEmpty);
+      expect(district.text, isEmpty);
+      final wardPicker = tester.widget<DropdownButton<String>>(dropdowns.last);
+      expect(wardPicker.items, hasLength(102));
+      wardPicker.onChanged?.call(wardPicker.items!.first.value);
+      expect(ward.text, isNotEmpty);
+    },
+  );
+
   test(
     'Clearance uses its endpoint and keeps selected SKU and zero admin discount',
     () async {
@@ -128,6 +174,21 @@ void main() {
       final provider = ProductProvider(
         loadOnCreate: false,
         apiClient: StubApiClient((path, query, body) {
+          if (path == ApiConstants.currentFlashSale) {
+            if (fail) throw StateError('Offline');
+            return success({
+              'items': [
+                {
+                  'productId': 25,
+                  'productVariantId': 40,
+                  'productName': 'Campaign serum',
+                  'originalPrice': 200000,
+                  'flashPrice': 150000,
+                  'remainingQuota': 4,
+                },
+              ],
+            });
+          }
           expect(path, ApiConstants.expiringSoon);
           expect(query?['thresholdDays'], 90);
           expect(query?.containsKey('onSale'), isFalse);
@@ -136,8 +197,10 @@ void main() {
         }),
       );
       await provider.fetchFlashSaleProducts();
-      expect(provider.flashSaleProducts.length, 1);
-      final selected = provider.flashSaleProducts.single;
+      expect(provider.flashSaleProducts.length, 2);
+      expect(provider.flashSaleProducts.first.dealVariant?.id, 40);
+      expect(provider.flashSaleProducts.first.displayPrice, 150000);
+      final selected = provider.flashSaleProducts.last;
       expect(selected.clearanceVariant!.id, 22);
       expect(selected.displayPrice, 0);
       expect(selected.basePrice, 100000);
@@ -506,7 +569,8 @@ void main() {
     final provider = ProductProvider(
       loadOnCreate: false,
       apiClient: StubApiClient((path, query, body) {
-        if (path == ApiConstants.recommendedForYou) return success(manyProducts);
+        if (path == ApiConstants.recommendedForYou)
+          return success(manyProducts);
         return page([]);
       }),
     );

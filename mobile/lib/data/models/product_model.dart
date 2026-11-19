@@ -15,6 +15,7 @@ class ProductItem {
   final int totalSold;
   final String? brandName;
   final ProductVariant? clearanceVariant;
+  final ProductVariant? flashSaleVariant;
   final DateTime? earliestExpirationDate;
   final int? daysRemaining;
   final int? clearanceStock;
@@ -37,6 +38,7 @@ class ProductItem {
     this.totalSold = 0,
     this.brandName,
     this.clearanceVariant,
+    this.flashSaleVariant,
     this.earliestExpirationDate,
     this.daysRemaining,
     this.clearanceStock,
@@ -44,6 +46,31 @@ class ProductItem {
     this.targetType = 'PRODUCT',
     this.durationMinutes,
   });
+
+  ProductVariant? get dealVariant => flashSaleVariant ?? clearanceVariant;
+
+  factory ProductItem.fromFlashSale(Map<String, dynamic> json) {
+    final variant = ProductVariant.fromJson({
+      'id': json['productVariantId'],
+      'sku': json['sku'],
+      'variantName': json['variantName'],
+      'price': json['originalPrice'],
+      'discountPrice': json['flashPrice'],
+      'stockQuantity': json['remainingQuota'],
+    });
+    final productId = (json['productId'] as num).toInt();
+    return ProductItem(
+      id: productId,
+      name: json['productName']?.toString() ?? '',
+      slug: 'product-$productId',
+      thumbnailUrl: ImageUtils.resolveUrl(json['thumbnailUrl']?.toString()),
+      basePrice: variant.price,
+      salePrice: variant.discountPrice,
+      totalStock: variant.stockQuantity,
+      totalSold: (json['quantitySold'] as num?)?.toInt() ?? 0,
+      flashSaleVariant: variant,
+    );
+  }
 
   bool get isService => targetType.toUpperCase() == 'SERVICE';
 

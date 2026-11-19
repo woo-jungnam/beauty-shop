@@ -46,6 +46,7 @@ class OrderItem {
   final int? variantId;
   final String productName;
   final String variantName;
+  final String? sku;
   final String? thumbnailUrl;
   final double price;
   final double discount;
@@ -58,6 +59,7 @@ class OrderItem {
     required this.productName,
     this.variantName = 'Tiêu chuẩn',
     this.thumbnailUrl,
+    this.sku,
     required this.price,
     this.discount = 0.0,
     required this.quantity,
@@ -76,6 +78,7 @@ class OrderItem {
           json['name']?.toString() ??
           'Sản phẩm',
       variantName: json['variantName']?.toString() ?? 'Tiêu chuẩn',
+      sku: json['sku']?.toString(),
       thumbnailUrl: ImageUtils.resolveUrl(
         json['imageUrl']?.toString() ??
             json['thumbnailUrl']?.toString() ??
@@ -88,10 +91,18 @@ class OrderItem {
   }
 }
 
+enum OrderHistoryType { product, spaVisit, spaPackage }
+
 class OrderResponse {
   final int id;
   final int? servicePackageId;
   final String? spaBenefitType;
+  final int? appointmentId;
+  final List<String> spaServiceNames;
+  final String? carrierName;
+  final String? trackingCode;
+  final String? cancelReason;
+  final String? refundReference;
   final String orderCode;
   final String status;
   final double totalAmount;
@@ -112,6 +123,12 @@ class OrderResponse {
     required this.id,
     this.servicePackageId,
     this.spaBenefitType,
+    this.appointmentId,
+    this.spaServiceNames = const [],
+    this.carrierName,
+    this.trackingCode,
+    this.cancelReason,
+    this.refundReference,
     required this.orderCode,
     required this.status,
     required this.totalAmount,
@@ -129,8 +146,54 @@ class OrderResponse {
     this.items = const [],
   });
 
+  OrderHistoryType get historyType {
+    if (servicePackageId != null) return OrderHistoryType.spaPackage;
+    if (appointmentId != null || spaServiceNames.isNotEmpty)
+      return OrderHistoryType.spaVisit;
+    return OrderHistoryType.product;
+  }
+
+  bool matchesHistoryQuery(String query) {
+    final needle = query.trim().toLowerCase();
+    if (needle.isEmpty) return true;
+    return [
+      orderCode,
+      customerPhone,
+      customerName,
+      carrierName,
+      trackingCode,
+      servicePackageId?.toString(),
+      if (appointmentId != null) 'SPA-APT-#$appointmentId',
+      ...spaServiceNames,
+      for (final item in items) ...[
+        item.productName,
+        item.variantName,
+        item.sku,
+      ],
+    ].any((value) => value?.toLowerCase().contains(needle) ?? false);
+  }
+
   bool get isPaid => paymentStatus == 'PAID';
   bool get isCancelled => status == 'CANCELLED';
+
+  DateTime? get paymentExpiresAt => DateTime.tryParse(paymentDeadline ?? '');
+
+  bool get canPayByQr {
+    final deadline = paymentExpiresAt;
+    return paymentMethod == 'BANK' &&
+        paymentStatus == 'PENDING' &&
+        !isCancelled &&
+        (deadline == null || deadline.isAfter(DateTime.now()));
+  }
+
+  String get paymentStatusLabel => switch (paymentStatus) {
+    'PENDING' => 'Chờ thanh toán',
+    'PAID' => 'Đã thanh toán',
+    'FAILED' => 'Thanh toán thất bại',
+    'REFUND_PENDING' => 'Chờ hoàn tiền',
+    'REFUNDED' => 'Đã hoàn tiền',
+    _ => 'Chưa cập nhật',
+  };
 
   String get statusLabel => switch (status) {
     'PENDING' => 'Chờ xử lý',
@@ -151,6 +214,16 @@ class OrderResponse {
       id: ((json['id'] ?? json['orderId']) as num?)?.toInt() ?? 0,
       servicePackageId: (json['servicePackageId'] as num?)?.toInt(),
       spaBenefitType: json['spaBenefitType']?.toString(),
+      appointmentId: (json['appointmentId'] as num?)?.toInt(),
+      spaServiceNames: (json['spaVisitItems'] as List? ?? [])
+          .whereType<Map>()
+          .map((item) => item['serviceName']?.toString() ?? '')
+          .where((name) => name.isNotEmpty)
+          .toList(),
+      carrierName: json['carrierName']?.toString(),
+      trackingCode: json['trackingCode']?.toString(),
+      cancelReason: json['cancelReason']?.toString(),
+      refundReference: json['refundReference']?.toString(),
       orderCode:
           json['orderCode']?.toString() ??
           json['orderNumber']?.toString() ??

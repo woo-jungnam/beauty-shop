@@ -209,7 +209,7 @@ class IndexingService:
             vectors = await embeddingService.embedBatch(textsToEmbed)
 
         with tracker.measure("qdrant_upsert"):
-            vectorsStored = vectorRepository.upsertChunks(allChunks, vectors)
+            vectorsStored = vectorRepository.upsertChunks(allChunks, vectors, embeddingService.embedding_space)
 
         with tracker.measure("bm25_indexing"):
             bm25Service.buildIndex(allChunks)

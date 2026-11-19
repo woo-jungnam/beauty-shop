@@ -17,6 +17,44 @@ from app.services.ingestion.cleaning import TextCleaner
 class QueryRouter:
     ORDER_NUMBER_PATTERN = OrderRepository.ORDER_NUMBER_PATTERN
     PHONE_PATTERN = OrderRepository.PHONE_PATTERN
+    OUTSIDE_TOPICS = {
+        "WEATHER": "dự báo thời tiết",
+        "MATH": "giải bài toán này",
+        "CODE": "viết hoặc giải thích mã lập trình",
+        "SPORT": "cung cấp thông tin thể thao",
+        "FINANCE": "tư vấn tài chính hoặc đầu tư",
+        "POLITICS": "giải đáp về chính trị",
+        "MEDICAL": "chẩn đoán hoặc kê đơn",
+        "LANGUAGE": "dịch nội dung này",
+        "ENTERTAINMENT": "thực hiện yêu cầu giải trí này",
+        "OTHER": "hỗ trợ yêu cầu này",
+    }
+    OUTSIDE_TOPIC_PATTERNS = {
+        "WEATHER": r"thời tiết|dự báo|trời mưa|trời nắng|mưa không",
+        "MATH": r"\d\s*[+*/=x-]\s*\d|\b(?:bài toán|bằng mấy|cộng|trừ|nhân|chia)\b",
+        "CODE": r"\b(?:code|lập trình|javascript|python)\b",
+        "SPORT": r"world cup|bóng đá|thể thao|trận đấu|vô địch",
+        "FINANCE": r"chứng khoán|đầu tư|crypto|bitcoin",
+    }
+
+    @classmethod
+    def outsideTopicFallback(cls, message: str) -> str:
+        return next((topic for topic, pattern in cls.OUTSIDE_TOPIC_PATTERNS.items()
+                     if re.search(pattern, message, re.IGNORECASE)), "OTHER")
+
+    @classmethod
+    def outsideReply(cls, topic: str, opening: str = "") -> str:
+        action = cls.OUTSIDE_TOPICS.get(topic, cls.OUTSIDE_TOPICS["OTHER"])
+        opening = opening or (
+            "Yêu cầu này nằm ngoài phạm vi hỗ trợ của mình."
+            if action == cls.OUTSIDE_TOPICS["OTHER"] else
+            f"Mình hiểu bạn đang cần {action}, nhưng phần này nằm ngoài phạm vi hỗ trợ của mình."
+        )
+        return (
+            f"{opening} "
+            "Mình là trợ lý AI của BeautyShop. Mình có thể giúp bạn tìm mỹ phẩm, "
+            "tư vấn chăm sóc da, tra cứu đơn hàng hoặc tìm dịch vụ spa. Bạn muốn mình hỗ trợ phần nào nhé?"
+        )
 
     RETRIEVAL_INTENTS = {
         Intent.PRODUCT_SEARCH,
@@ -187,6 +225,10 @@ class FastPathParser:
         re.compile(r"(\d+\s*(cộng|trừ|nhân|chia)\s*\d+|bằng\s+mấy|bằng\s+bao\s+nhiêu\s*(\?|$))", re.I),
         re.compile(r"(thời tiết|trời mưa|mưa không|trời nắng|mấy giờ|bây giờ là mấy giờ|hôm nay thứ mấy|viết code|lập trình|dịch bài|kể chuyện|hát đi)", re.I),
     )
+    CATALOG_SIGNAL = re.compile(
+        r"\b(mỹ phẩm|kem chống nắng|kem dưỡng|serum|sữa rửa mặt|tẩy trang|dưỡng da|"
+        r"chăm sóc da|sản phẩm|spa|liệu trình|đặt lịch|đơn hàng|shop)\b", re.I
+    )
     PRICE_KEYWORDS = ("dưới", "tầm", "khoảng", "rẻ hơn", "ngân sách", "tiền", "<=")
     CATEGORY_PREFIXES = ("đổi sang ", "chuyển sang ", "sang ", "qua ", "loại ", "chọn ")
 
@@ -210,6 +252,8 @@ class FastPathParser:
 
         for pat in self.OUT_OF_DOMAIN_PATTERNS:
             if pat.search(clean) or pat.search(message):
+                if self.CATALOG_SIGNAL.search(clean):
+                    return None  # Classify the requested action, not a keyword in its context.
                 res = self.buildResult(Intent.OUT_OF_DOMAIN, message, message)
                 res.primary_intent = PrimaryIntent.NGOAI_PHAM_VI.value
                 res.action_routing = ActionRouting.FAST_PATH.value

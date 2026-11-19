@@ -2,12 +2,13 @@ import 'dart:convert';
 import '../../../core/utils/idempotency_key.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:printing/printing.dart';
+import 'order_invoice.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/storage/storage_service.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../data/models/order_model.dart';
-import '../../../providers/cart_provider.dart';
+import '../../../core/utils/cart_actions.dart';
 import '../../../providers/order_provider.dart';
 import '../checkout/vietqr_payment_screen.dart';
 import '../spa/spa_tickets_screen.dart';
@@ -28,6 +29,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Map<int, int> quantities = {};
   final reason = TextEditingController(), evidence = TextEditingController();
   String? error;
+  bool returnsLoaded = false;
   String? returnFingerprint, returnKey;
   bool busy = false;
   String money(dynamic value) =>
@@ -50,6 +52,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() {
       busy = true;
       error = null;
+      returnsLoaded = false;
     });
     try {
       final response = await api.get<dynamic>(
@@ -60,9 +63,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       final returnResponse = await api.get<dynamic>(
         '/api/v1/orders/${widget.orderId}/returns',
       );
-      if (mounted) setState(() => returns = returnResponse.data as List? ?? []);
-    } catch (e) {
-      if (mounted && order == null) setState(() => error = '$e');
+      if (!returnResponse.isSuccess || returnResponse.data is! List) {
+        throw StateError('Missing returns data');
+      }
+      if (mounted) {
+        setState(() {
+          returns = returnResponse.data as List;
+          returnsLoaded = true;
+          quantities.clear();
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => error =
+              'Không thể cập nhật chi tiết hoặc yêu cầu đổi trả. Hãy bấm làm mới.',
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -76,43 +93,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     });
     try {
       await action();
-      await load();
+      if (mounted) await load();
     } catch (e) {
       if (mounted) setState(() => error = '$e');
     } finally {
       if (mounted) setState(() => busy = false);
     }
-  }
-
-  Future<void> reorder() async {
-    final failures = <String>[];
-    var added = 0;
-    for (final item in order?['items'] as List? ?? []) {
-      try {
-        if (item['variantId'] == null)
-          throw StateError('Sản phẩm tạm thời hết hàng');
-        await api.post<dynamic>(
-          '/api/v1/cart/add',
-          data: {
-            'variantId': item['variantId'],
-            'quantity': item['quantity'],
-            'sessionId': StorageService.getGuestSessionId(),
-          },
-        );
-        added++;
-      } catch (e) {
-        failures.add('${item['productName']}: $e');
-      }
-    }
-    if (!mounted) return;
-    await context.read<CartProvider>().fetchCart();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Đã thêm $added mặt hàng theo giá hiện tại vào giỏ.'),
-      ),
-    );
-    if (failures.isNotEmpty) throw StateError(failures.join('\n'));
   }
 
   int returnable(dynamic item) {
@@ -165,19 +151,37 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     evidence.clear();
   }
 
+  Future<void> _printInvoice(OrderResponse order) async {
+    try {
+      await Printing.layoutPdf(
+        name: 'BeautyShop-${order.orderCode}',
+        onLayout: (format) => buildOrderInvoice(order, format),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể mở hộp thoại in hóa đơn.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final value = order;
-    final deadline = DateTime.tryParse('${value?['paymentDeadline']}');
-    final canPay =
-        value?['paymentMethod'] == 'BANK' &&
-        value?['paymentStatus'] == 'PENDING' &&
-        value?['status'] != 'CANCELLED' &&
-        (deadline == null || deadline.isAfter(DateTime.now()));
+    final summary = value == null ? null : OrderResponse.fromJson(value);
+    final canPay = summary?.canPayByQr ?? false;
+    final deadline = summary?.paymentExpiresAt;
     return Scaffold(
       appBar: AppBar(
         title: Text('${value?['orderNumber'] ?? 'Chi tiết đơn hàng'}'),
         actions: [
+          if (summary != null)
+            IconButton(
+              tooltip: 'In hóa đơn',
+              icon: const Icon(Icons.print_outlined),
+              onPressed: busy ? null : () => _printInvoice(summary),
+            ),
           IconButton(
             onPressed: busy ? null : load,
             icon: const Icon(Icons.refresh),
@@ -192,7 +196,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             Text(error!, style: const TextStyle(color: Colors.red)),
           if (value != null) ...[
             Text(
-              'Trạng thái: ${OrderResponse.fromJson(value).statusLabel} · Thanh toán: ${value['paymentStatus']}',
+              'Trạng thái: ${summary!.statusLabel} · ${summary.paymentStatusLabel}',
             ),
             const SizedBox(height: 12),
             Text(
@@ -202,52 +206,50 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               Text(
                 'Vận chuyển: ${value['carrierName'] ?? ''} · ${value['trackingCode']}',
               ),
-            ...(value['items'] as List? ?? []).map(
-              (item) {
-                final img = ImageUtils.resolveUrl(
-                  item['imageUrl']?.toString() ??
-                      item['thumbnailUrl']?.toString(),
-                );
-                final price = ((item['price'] as num?) ?? 0) - ((item['discount'] as num?) ?? 0);
-                final qty = (item['quantity'] as num?)?.toInt() ?? 1;
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      color: const Color(0xFFF3F4F6),
-                      child: img != null && img.isNotEmpty
-                          ? Image.network(
-                              img,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.image_outlined,
-                                size: 20,
-                                color: Color(0xFF9CA3AF),
-                              ),
-                            )
-                          : const Icon(
+            ...(value['items'] as List? ?? []).map((item) {
+              final img = ImageUtils.resolveUrl(
+                item['imageUrl']?.toString() ??
+                    item['thumbnailUrl']?.toString(),
+              );
+              final price =
+                  ((item['price'] as num?) ?? 0) -
+                  ((item['discount'] as num?) ?? 0);
+              final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    color: const Color(0xFFF3F4F6),
+                    child: img != null && img.isNotEmpty
+                        ? Image.network(
+                            img,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
                               Icons.image_outlined,
                               size: 20,
                               color: Color(0xFF9CA3AF),
                             ),
-                    ),
+                          )
+                        : const Icon(
+                            Icons.image_outlined,
+                            size: 20,
+                            color: Color(0xFF9CA3AF),
+                          ),
                   ),
-                  title: Text('${item['productName']}'),
-                  subtitle: Text(
-                    '${item['variantName'] ?? item['sku'] ?? 'Tiêu chuẩn'} · SL: $qty',
-                  ),
-                  trailing: Text(
-                    money(price * qty),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                );
-              },
-            ),
+                ),
+                title: Text('${item['productName']}'),
+                subtitle: Text(
+                  '${item['variantName'] ?? item['sku'] ?? 'Tiêu chuẩn'} · SL: $qty',
+                ),
+                trailing: Text(
+                  money(price * qty),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              );
+            }),
             ...(value['spaVisitItems'] as List? ?? []).map(
               (item) => ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -267,7 +269,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 title: Text('${item['serviceName'] ?? 'Dịch vụ Spa'}'),
                 subtitle: const Text('Dịch vụ Spa tại chỗ'),
                 trailing: Text(
-                  money((item['amount'] ?? item['price'] ?? item['unitPrice'] as num?) ?? 0),
+                  money(
+                    (item['amount'] ??
+                            item['price'] ??
+                            item['unitPrice'] as num?) ??
+                        0,
+                  ),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -275,6 +282,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             Text(
               'Tổng đơn: ${money(value['totalAmount'])}\nĐã thu: ${money(value['paidAmount'])}\nĐã hoàn: ${money(value['refundedAmount'])}',
             ),
+            if (summary.refundReference?.trim().isNotEmpty == true)
+              Text('Mã chứng từ hoàn tiền: ${summary.refundReference}'),
+            if (summary.cancelReason?.trim().isNotEmpty == true)
+              Text('Lý do hủy đơn: ${summary.cancelReason}'),
             if (deadline != null)
               Text('Hạn thanh toán: ${AppFormatters.formatDate(deadline)}'),
             if (canPay)
@@ -310,7 +321,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             if ((value['items'] as List? ?? []).isNotEmpty)
               OutlinedButton(
-                onPressed: busy ? null : () => run(reorder),
+                onPressed: busy
+                    ? null
+                    : () => run(() => reorderProducts(context, summary.items)),
                 child: const Text('Mua lại theo giá hiện tại'),
               ),
             if (value['status'] == 'PENDING')
@@ -344,7 +357,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             try {
                               await context
                                   .read<OrderProvider>()
-                                  .fetchOrders();
+                                  .refreshOrders();
                             } catch (_) {}
                           }
                         }
@@ -379,7 +392,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               ),
             ),
-            if (value['status'] == 'DELIVERED') ...[
+            if (value['status'] == 'DELIVERED' && returnsLoaded) ...[
               const Text('Chọn số lượng cần đổi trả'),
               ...(value['items'] as List? ?? []).map((item) {
                 final max = returnable(item);

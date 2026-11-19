@@ -96,6 +96,8 @@ services:
       DATABASE_URL: sqlite:////app/data/cosmetics_ecommerce.db
       QDRANT_URL: /app/data/qdrant_storage
       EMBEDDING_PROVIDER: gemini
+      CHATBOT_CONTEXT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      CHATBOT_SESSION_REDIS_URL: redis://redis:6379/2
       EMBEDDING_CACHE_DIR: /app/data/embedding_cache
       IMAGE_SEARCH_ENABLED: ${IMAGE_SEARCH_ENABLED:-false}
       IMAGE_SEARCH_SERVICE_URL: http://image-search:8001
@@ -120,6 +122,8 @@ services:
       - uploads_data:/app/uploads:ro
     depends_on:
       mysql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       backend:
         condition: service_healthy
@@ -183,6 +187,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
     container_name: beautyshop_frontend
     restart: unless-stopped
     expose:
@@ -231,6 +237,7 @@ services:
       FLYWAY_ENABLED: "true"
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-900000}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       JWT_REFRESH_EXPIRATION_MS: ${JWT_REFRESH_EXPIRATION_MS:-604800000}
       SEPAY_WEBHOOK_API_KEY: ${SEPAY_WEBHOOK_API_KEY:?SEPAY_WEBHOOK_API_KEY is required}
       SEPAY_BANK_NAME: ${SEPAY_BANK_NAME:-MBBank}

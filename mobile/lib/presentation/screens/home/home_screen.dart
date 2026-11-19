@@ -132,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen>
           const SizedBox(width: 4),
           const Expanded(
             child: Text(
-              'XẢ KHO CẬN HẠN · 31–90 NGÀY',
+              'FLASH SALE GIỜ VÀNG',
               style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 13.5,
@@ -266,15 +266,15 @@ class _HomeScreenState extends State<HomeScreen>
       MaterialPageRoute(
         builder: (_) => ProductDetailScreen(
           productId: product.id,
-          initialVariantId: product.clearanceVariant?.id,
+          initialVariantId: product.dealVariant?.id,
         ),
       ),
     ),
     onAddToCart: () => addProductToCart(
       context,
       productId: product.id,
-      variantId: product.clearanceVariant?.id ?? 0,
-      variantName: product.clearanceVariant?.variantName ?? '',
+      variantId: product.dealVariant?.id ?? 0,
+      variantName: product.dealVariant?.variantName ?? '',
       productName: product.name,
       price: product.displayPrice,
       thumbnailUrl: product.thumbnailUrl,
@@ -416,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen>
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: provider.flashSaleProducts.take(6).length,
+                  itemCount: provider.flashSaleProducts.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (_, index) => SizedBox(
                     width: 152,

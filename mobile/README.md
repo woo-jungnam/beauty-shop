@@ -29,3 +29,10 @@ flutter build apk --debug
 Voucher được kiểm tra qua `POST /api/v1/promotions/validate` với `code` và `orderAmount`, yêu cầu đăng nhập. Nếu server chưa cung cấp endpoint hoặc xác thực lỗi, app không áp dụng giảm giá. Chính sách vận chuyển lấy từ `/api/v1/system-configs/public`; thiếu cấu hình thì phí và tổng dự kiến được hiển thị là chưa xác định.
 
 Danh sách ưu đãi dùng bộ lọc `onSale=true`. Backend chưa có phiên Flash Sale, thời điểm kết thúc hay tỷ lệ đã bán nên giao diện không hiển thị các số liệu đó. Checkout backend hiện xử lý toàn bộ giỏ, vì vậy app yêu cầu chọn tất cả sản phẩm trước khi đặt đơn. Tổng hiển thị trước đặt hàng là dự kiến; tổng xác nhận lấy từ phản hồi tạo đơn.
+
+## Danh muc dia chi giao hang
+
+The bundled `assets/vietnam-addresses.json` mirrors the storefront fallback.
+Source: [tinhthanhpho.com](https://www.tinhthanhpho.com/api-docs), dataset
+2026.10.8, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Checkout also refreshes the province and ward lists from that API when available.

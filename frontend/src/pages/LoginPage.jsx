@@ -20,6 +20,7 @@ import { useAuth } from '../app/providers/AuthProvider';
 import { getAdminSections } from '../app/adminNavigation';
 import { Button } from '../shared/ui/Button';
 import { PasswordRecoveryForm } from './PasswordRecoveryForm';
+import { GoogleSignIn } from './GoogleSignIn';
 import '../customer/styles/customer-auth.css';
 
 const getAuthErrorMessage = (err, fallback) => {
@@ -42,7 +43,7 @@ const consumeCustomerRedirect = () => {
 };
 
 export const LoginPage = ({ isAdminRoute = false, recoveryMode, recoveryToken }) => {
-  const { login, register, isAuthenticated, isOperator, isAdmin, user } = useAuth();
+  const { login, loginWithGoogle, register, isAuthenticated, isOperator, isAdmin, user } = useAuth();
   const customerRedirected = useRef(false);
 
   useEffect(() => {
@@ -87,6 +88,7 @@ export const LoginPage = ({ isAdminRoute = false, recoveryMode, recoveryToken })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
     if (authMode === 'register' && !isAdminRoute) {
@@ -776,6 +778,7 @@ export const LoginPage = ({ isAdminRoute = false, recoveryMode, recoveryToken })
                   </button>
                   <a href="#/recover-password" className="auth-forgot-link">Quên mật khẩu?</a>
                 </form>
+                {loginActive && <GoogleSignIn signIn={loginWithGoogle} busy={loading} setBusy={setLoading} />}
               </div>
             </div>
 

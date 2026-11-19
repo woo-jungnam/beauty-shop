@@ -206,6 +206,12 @@ class ProductRepository:
         finally:
             session.close()
 
+    def listIdentities(self) -> list[tuple[str, str]]:
+        with self.sessionFactory() as session:
+            return [(product_id, name) for product_id, name in session.execute(
+                select(ProductModel.id, ProductModel.name)
+            )]
+
     def listAll(self, limit: int = 100) -> list[ProductRead]:
         session: Session = self.sessionFactory()
         try:

@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.identity.application.service;
 
+import com.core.beautyshop.modules.identity.application.dto.request.GoogleLoginRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.LoginRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.RefreshTokenRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.RegisterRequest;
@@ -27,11 +28,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -39,6 +40,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -46,6 +48,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
+    private static final Set<String> CUSTOMER_ROLES = Set.of("ROLE_USER", "ROLE_CUSTOMER");
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -55,6 +58,8 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenSessionRepository refreshTokenSessionRepository;
     private final TokenVersionCache tokenVersionCache;
     private final EntityManager entityManager;
+    private final GoogleIdentityVerifier googleIdentityVerifier;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -71,8 +76,86 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin người dùng"));
         entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         requireActiveUser(user);
+        return issueLoginSession(user, true);
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        var identity = googleIdentityVerifier.verify(request.credential());
+        var linkedUser = userRepository.findByGoogleSubject(identity.subject());
+        if (linkedUser.isPresent()) {
+            User user = lockGoogleCustomer(linkedUser.get().getId());
+            if (!identity.subject().equals(user.getGoogleSubject())) {
+                throw new BusinessException(ErrorCode.INVALID_GOOGLE_TOKEN);
+            }
+            return issueLoginSession(user, true);
+        }
+
+        var existingUser = userRepository.findByEmailIgnoreCase(identity.email());
+        if (existingUser.isPresent()) {
+            User user = lockGoogleCustomer(existingUser.get().getId());
+            if (!identity.email().equalsIgnoreCase(user.getEmail())) {
+                throw new BusinessException(ErrorCode.INVALID_GOOGLE_TOKEN);
+            }
+            // A request that waited for the same link can use the completed association.
+            if (identity.subject().equals(user.getGoogleSubject())) {
+                return issueLoginSession(user, true);
+            }
+            if (user.getGoogleSubject() != null) {
+                throw new BusinessException(ErrorCode.USER_ALREADY_EXISTS, "Tài khoản BeautyShop đã liên kết với một tài khoản Google khác.");
+            }
+            if (request.password() == null || request.password().isEmpty()) {
+                throw new BusinessException(ErrorCode.GOOGLE_LINK_REQUIRED);
+            }
+            if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+                throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+            }
+            user.setGoogleSubject(identity.subject());
+            userRepository.flush();
+            return issueLoginSession(user, true);
+        }
+
+        if (request.password() != null) {
+            throw new BusinessException(ErrorCode.INVALID_GOOGLE_TOKEN);
+        }
+        if (!identity.googleManagesEmail()) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED,
+                    "Hãy đăng ký BeautyShop bằng email này trước, sau đó dùng mật khẩu BeautyShop để liên kết Google.");
+        }
+        String name = identity.name();
+        if (name == null || name.isBlank()) {
+            name = "Khách hàng BeautyShop";
+        }
+        name = name.strip();
+        name = name.substring(0, name.offsetByCodePoints(0, Math.min(100, name.codePointCount(0, name.length()))));
+        User user = userRepository.saveAndFlush(User.builder()
+                .username("google_" + UUID.randomUUID().toString().replace("-", ""))
+                .email(identity.email())
+                .googleSubject(identity.subject())
+                .fullName(name)
+                .roles(List.of(defaultCustomerRole()))
+                .build());
+        return issueLoginSession(user, true);
+    }
+
+    private User lockGoogleCustomer(Long id) {
+        User user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ACCESS_DENIED));
+        entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
+        requireActiveUser(user);
+        if (user.getRoles().isEmpty() || user.getRoles().stream().anyMatch(role -> !CUSTOMER_ROLES.contains(role.getRoleName()))
+                || !user.getStaffPermissions().isEmpty()) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "Đăng nhập Google chỉ dành cho tài khoản khách hàng.");
+        }
+        return user;
+    }
+
+    private AuthResponse issueLoginSession(User user, boolean authenticateRequest) {
         UserDetailsImpl userDetails = UserDetailsImpl.build(user);
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+        if (authenticateRequest) {
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+        }
         String familyId = UUID.randomUUID().toString();
         String jwt = jwtUtils.generateAccessToken(userDetails, familyId);
         String refreshToken = jwtUtils.generateRefreshToken(userDetails.getUsername());
@@ -108,29 +191,19 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED, "Tên đăng nhập và email không được trùng với tài khoản khác");
         }
 
-        List<Role> roles = new ArrayList<>();
-        Role defaultRole = roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name())
+        List<Role> roles = List.of(defaultCustomerRole());
+        User user = userFactory.createNewUser(request, roles);
+        userRepository.save(user);
+        return issueLoginSession(user, false);
+    }
+
+    private Role defaultCustomerRole() {
+        return roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name())
                 .or(() -> roleRepository.findByName(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_CUSTOMER.name()))
                 .orElseGet(() -> roleRepository.save(Role.builder()
                         .name(com.core.beautyshop.modules.identity.domain.enums.Role.ROLE_USER.name())
                         .description("Default User Role")
                         .build()));
-        roles.add(defaultRole);
-
-        User user = userFactory.createNewUser(request, roles);
-        userRepository.save(user);
-        tokenVersionCache.updateCurrentVersion(user.getId(), user.getTokenVersion());
-
-        UserDetailsImpl userDetails = UserDetailsImpl.build(user);
-        String familyId = UUID.randomUUID().toString();
-        String jwt = jwtUtils.generateAccessToken(userDetails, familyId);
-        String refreshToken = jwtUtils.generateRefreshToken(userDetails.getUsername());
-
-        saveRefreshSession(user, refreshToken, familyId);
-
-        List<String> roleNames = roles.stream().map(Role::getRoleName).toList();
-
-        return authMapper.toAuthResponse(user, jwt, refreshToken, roleNames);
     }
 
     @Override

@@ -227,7 +227,7 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
       const nextOrder = canRate ? availableOrders.find((order) => Number(order.id) !== orderId) : null;
       setForm({ orderId: nextOrder?.id ? String(nextOrder.id) : '', rating: 5, title: '', content: '' });
       setSuccess(
-        response?.status === 'APPROVED' || canRate
+        response?.status === 'APPROVED'
           ? 'Đánh giá của bạn đã được duyệt và đăng công khai thành công!'
           : 'Đánh giá đã gửi và đang chờ duyệt.'
       );
@@ -315,7 +315,7 @@ const ProductReviewsContent = ({ product, isAuthenticated, onNavigate }) => {
                     ))}
                   </fieldset>
                 </div>
-                <p className="pd-review-note">Đánh giá từ đơn hàng đã mua của bạn sẽ được hiển thị công khai ngay sau khi gửi.</p>
+                <p className="pd-review-note">Đánh giá từ đơn hàng đã mua sẽ được kiểm duyệt trước khi hiển thị công khai.</p>
                 <label className="pd-review-field" htmlFor={`${fieldId}-title`}>Tiêu đề (không bắt buộc)
                   <input id={`${fieldId}-title`} type="text" value={form.title} maxLength={150} onChange={(event) => setForm((previous) => ({ ...previous, title: event.target.value }))} placeholder="Cảm nhận tổng quan về sản phẩm" />
                 </label>

@@ -4,8 +4,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   // Every VITE_* value becomes public browser code. Reject unreviewed variables.
   const env = { ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env };
-  const unexpected = Object.keys(env).filter((key) => key.startsWith('VITE_') && key !== 'VITE_API_BASE_URL');
+  const publicVariables = new Set(['VITE_API_BASE_URL', 'VITE_GOOGLE_OAUTH_CLIENT_ID']);
+  const unexpected = Object.keys(env).filter((key) => key.startsWith('VITE_') && !publicVariables.has(key));
   if (unexpected.length) throw new Error(`Unapproved public environment variables: ${unexpected.join(', ')}`);
+  if (env.VITE_GOOGLE_OAUTH_CLIENT_ID && !/^[a-zA-Z0-9-]+\.apps\.googleusercontent\.com$/.test(env.VITE_GOOGLE_OAUTH_CLIENT_ID.trim())) {
+    throw new Error('VITE_GOOGLE_OAUTH_CLIENT_ID must be a public Google OAuth Client ID');
+  }
   if (env.VITE_API_BASE_URL) {
     const url = new URL(env.VITE_API_BASE_URL);
     if (url.username || url.password || url.search || url.hash) throw new Error('VITE_API_BASE_URL must not contain credentials, query parameters or fragments');

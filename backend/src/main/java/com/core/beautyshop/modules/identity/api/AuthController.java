@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.modules.identity.application.dto.request.GoogleLoginRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.LoginRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.RefreshTokenRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.RegisterRequest;
@@ -26,6 +27,13 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+
+    @PostMapping(value = "/login/google", consumes = "application/json")
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(
+            @Valid @RequestBody GoogleLoginRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(authService.loginWithGoogle(request)));
+    }
 
     @Operation(summary = "Đăng nhập tài khoản và nhận cặp JWT", description = "Công khai, không cần access token. usernameOrEmail nhận username hoặc email; giá trị chứa @ được tra theo email. Tài khoản phải đang ACTIVE. Mỗi lần đăng nhập tạo một họ phiên riêng.")
     @PostMapping("/login")

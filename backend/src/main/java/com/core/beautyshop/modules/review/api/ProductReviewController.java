@@ -34,7 +34,7 @@ public class ProductReviewController {
         return ApiResponse.success(service.checkEligibility(productId));
     }
 
-    @Operation(summary = "Gửi đánh giá từ đơn hàng đã giao", description = "Yêu cầu đăng nhập. Đơn DELIVERED phải thuộc người gửi và chứa sản phẩm; mỗi sản phẩm/đơn/người dùng chỉ có một đánh giá. Đánh giá từ người mua hợp lệ sẽ được phê duyệt tự động và hiển thị công khai ngay.")
+    @Operation(summary = "Gửi bình luận hoặc đánh giá sản phẩm", description = "Yêu cầu đăng nhập. Chỉ đơn đã giao thuộc người gửi và chứa sản phẩm mới được chấm sao. Bình luận chờ kiểm duyệt sau khi gửi.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Đã nhận đánh giá", useReturnTypeSchema = true)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

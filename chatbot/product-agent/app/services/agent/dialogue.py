@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.config import getSettings
 from app.core.taxonomy import Taxonomy
 from app.schemas.query import (
     ActionRouting,
@@ -61,6 +62,35 @@ class InMemorySessionStore(BaseSessionStore):
         expired = [sid for sid, ctx in self._sessions.items() if now - ctx.lastActive > self.ttlSeconds]
         for sid in expired:
             self._sessions.pop(sid, None)
+
+    cleanup_expired = cleanupExpired
+
+
+class RedisSessionStore(BaseSessionStore):
+    def __init__(self, url: str, ttlSeconds: int = 3600):
+        from redis import Redis
+
+        self.client = Redis.from_url(url, socket_connect_timeout=1, socket_timeout=1)
+        self.ttlSeconds = ttlSeconds
+
+    @staticmethod
+    def _key(sessionId: str) -> str:
+        return f"chatbot:context:v1:{sessionId}"
+
+    def get(self, sessionId: str) -> Optional["ConversationContext"]:
+        value = self.client.getex(self._key(sessionId), ex=self.ttlSeconds)
+        return ConversationContext.model_validate_json(value) if value is not None else None
+
+    def set(self, sessionId: str, context: "ConversationContext") -> None:
+        context.lastActive = time.time()
+        self.client.set(self._key(sessionId), context.model_dump_json(), ex=self.ttlSeconds)
+
+    def delete(self, sessionId: str) -> None:
+        self.client.delete(self._key(sessionId))
+
+    def cleanupExpired(self) -> None:
+        # Redis handles expiry for each key.
+        return None
 
     cleanup_expired = cleanupExpired
 
@@ -440,6 +470,7 @@ class ConversationContextManager:
                 semanticQ = f"{finalCategory} cho {skinStr} {conStr}".strip()
                 bm25Q = semanticQ
 
+        self.store.set(sId, ctx)
         return cls(
             complexity_level=cur.complexity_level,
             information_score=recalcScore,
@@ -499,6 +530,7 @@ class ConversationContextManager:
             userMessage=uMsg,
             turnIdx=turnIdx,
         )
+        self.store.set(sId, ctx)
 
     record_turn = recordTurn
 
@@ -516,5 +548,8 @@ class ConversationContextManager:
     get_history_formatted = getHistoryFormatted
 
 
-conversationManager = ConversationContextManager()
+_sessionRedisUrl = getSettings().chatbot_session_redis_url
+conversationManager = ConversationContextManager(
+    store=RedisSessionStore(_sessionRedisUrl) if _sessionRedisUrl else None,
+)
 conversation_manager = conversationManager

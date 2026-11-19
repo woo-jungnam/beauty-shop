@@ -292,8 +292,6 @@ async def run_benchmark():
                 has_real_fields = all(bool(p.id and p.name and p.brand) for p in prods)
                 if has_real_fields:
                     p3_faithfulness_count += 1
-            else:
-                p3_faithfulness_count += 1
 
             # --- KIỂM TRA TRỤ CỘT 5: TRUSTWORTHY AI & RED-TEAMING ---
             if gt.get("is_red_teaming") or gt.get("expect_injection_refusal") or gt.get("expect_system_prompt_leak_refusal"):
@@ -361,7 +359,7 @@ async def run_benchmark():
 
     medical_warn_recall = (p3_medical_warning_success / p3_total_medical_checks * 100) if p3_total_medical_checks else 100
     pregnant_acc = (p3_pregnant_safety_success / p3_total_pregnant_checks * 100) if p3_total_pregnant_checks else 100
-    faithfulness_score = (p3_faithfulness_count / p3_total_faithfulness_checks) if p3_total_faithfulness_checks else 1.0
+    faithfulness_score = (p3_faithfulness_count / p3_total_faithfulness_checks) if p3_total_faithfulness_checks else 0.0
 
     redteam_acc = (p5_redteam_success / p5_total_redteam * 100) if p5_total_redteam else 100
     med_boundary_rate = (p5_med_boundary_success / p5_total_med_boundary * 100) if p5_total_med_boundary else 100
@@ -385,7 +383,7 @@ async def run_benchmark():
     print(f"   • Domain Shift Purity (Reset bám rác):        {domain_shift_acc:.1f}% ({p1_domain_shift_success}/{p1_total_domain_shift})")
     print("-" * 95)
     print(f"2. TRỤ CỘT 2: GỢI Ý ĐÀM THOẠI & TUÂN THỦ RÀNG BUỘC (CRSLab & RecSys)")
-    print(f"   • Hit Rate@3 (Tìm trúng ứng viên phù hợp):    {hit_rate_3:.1f}%")
+    print(f"   • Tỷ lệ đạt số thẻ tối thiểu:                {hit_rate_3:.1f}%")
     print(f"   • Strict Domain Purity (100% Spa thuần túy): {pure_domain_acc:.1f}%")
     print(f"   • Quantity Sync Accuracy (Khớp số lượng thẻ):{qty_sync_acc:.1f}%")
     print(f"   • Hard Constraint Compliance Rate (CCR):     {ccr_rate:.1f}% ({p2_ccr_success}/{p2_total_ccr})")
@@ -395,7 +393,7 @@ async def run_benchmark():
     print(f"   • Maternal Safety Compliance (An toàn thai):  {pregnant_acc:.1f}%")
     print("-" * 95)
     print(f"4. TRỤ CỘT 4: TRUNG THỰC & CHỐNG ẢO GIÁC (RAGAS Framework - EACL 2024)")
-    print(f"   • Faithfulness Score (Chống ảo giác CSDL):    {faithfulness_score:.2f} / 1.00")
+    print(f"   • Tỷ lệ ca có thẻ đủ ID, tên và thương hiệu:  {faithfulness_score:.2f} / 1.00")
     print("-" * 95)
     print(f"5. TRỤ CỘT 5: AN TOÀN AI & KHÁNG TẤN CÔNG (DecodingTrust / OWASP LLM)")
     print(f"   • Prompt Injection & Leak Resilience:        {redteam_acc:.1f}% ({p5_redteam_success}/{p5_total_redteam})")
@@ -455,13 +453,13 @@ async def run_benchmark():
 | | **Clarification Trigger Accuracy** | **{clarify_acc:.1f}%** | Nhận diện câu hỏi mơ hồ & khẩu ngữ 3 miền |
 | | **Coreference Resolution (Focus Stack)** | **{coref_acc:.1f}%** | Centering Theory (*Grosz et al., 1995*) |
 | | **Domain Shift Purity** | **{domain_shift_acc:.1f}%** | Chuyển đổi sạch giữa Mỹ phẩm & Spa |
-| **2. Gợi Ý Đàm Thoại & Ràng Buộc (CRS)** | **Hit Rate@3** | **{hit_rate_3:.1f}%** | Tỷ lệ tìm thấy sản phẩm trúng đích Top 3 |
+| **2. Gợi Ý Đàm Thoại & Ràng Buộc (CRS)** | **Đạt số thẻ tối thiểu** | **{hit_rate_3:.1f}%** | Kiểm tra số lượng thẻ theo kịch bản |
 | | **Hard Constraint Compliance (CCR)** | **{ccr_rate:.1f}%** | CRSLab (*Zhou et al., KDD 2020*) |
 | | **Strict Domain Purity** | **{pure_domain_acc:.1f}%** | 100% không lẫn mỹ phẩm vào dịch vụ Spa |
 | | **Quantity Sync Accuracy** | **{qty_sync_acc:.1f}%** | Đồng bộ tuyệt đối số thẻ theo yêu cầu |
 | **3. An Toàn Y Khoa & Hoạt Chất** | **Clinical Warning Recall** | **{medical_warn_recall:.1f}%** | Cảnh báo tương thích hoạt chất BHA/Retinol/BPO/Treti |
 | | **Maternal Safety Compliance** | **{pregnant_acc:.1f}%** | Bộ lọc chống chỉ định an toàn thai kỳ (AAD) |
-| **4. Trung Thực & Chống Ảo Giác (RAG)** | **Faithfulness Score** | **{faithfulness_score:.2f} / 1.00** | RAGAS Framework (*Es et al., EACL 2024*) |
+| **4. Độ đầy đủ của thẻ** | **Có thẻ đủ ID, tên và thương hiệu** | **{faithfulness_score:.2f} / 1.00** | Kiểm tra cấu trúc thẻ |
 | **5. An Toàn AI & Red-Teaming** | **Prompt Injection Resilience** | **{redteam_acc:.1f}%** | DecodingTrust (*Wang et al., NeurIPS 2023*) |
 | | **Medical Boundary Enforcement** | **{med_boundary_rate:.1f}%** | Ranh giới y khoa: Từ chối kê đơn thuốc biệt dược |
 | **6. Hiệu Năng & Độ Trễ (Latency)** | **Fast-Path Latency** | **{mean_fp_lat:.2f} ms** | Xử lý cảm ơn / chào hỏi trực tiếp |
@@ -481,7 +479,7 @@ async def run_benchmark():
 ---
 
 ## IV. PHÂN TÍCH CHỨNG CỨ & KẾT LUẬN CHO KHÓA LUẬN
-1. **Tính xác thực cao của dữ liệu (RAGAS):** 100% sản phẩm và gói dịch vụ được định danh rõ ràng từ cơ sở dữ liệu MySQL và vector engine Qdrant, đạt điểm Faithfulness tuyệt đối **{faithfulness_score:.2f}/1.00**, chứng minh hệ thống loại bỏ hoàn toàn hiện tượng ảo giác (hallucination).
+1. **Độ đầy đủ của thẻ:** **{faithfulness_score:.2f}/1.00** là tỷ lệ ca có thẻ với đủ ID, tên và thương hiệu. Chỉ số này kiểm tra cấu trúc thẻ. Độ bám bằng chứng của câu trả lời cần được đo ở cấp khẳng định.
 2. **Năng lực NLU thích nghi khẩu ngữ cao cấp (MultiWOZ):** Đạt tỷ lệ kích hoạt làm rõ **{clarify_acc:.1f}%** trên các câu tiếng địa phương (Bắc - Trung - Nam) và tiếng lóng Gen Z, giải quyết bài toán giao tiếp tự nhiên của người tiêu dùng thương mại điện tử Việt Nam.
 3. **An toàn lâm sàng da liễu vượt chuẩn y khoa (AAD Guidelines):** Khả năng phát hiện tương tác đối kháng (Treti + BHA, Retinol + BHA, BPO + Vitamin C) và chỉ định an toàn thai kỳ đạt độ nhạy **{medical_warn_recall:.1f}%**, cung cấp lời khuyên phòng ngừa rủi ro phỏng rát, kích ứng chuẩn y khoa.
 4. **Kháng tấn công và giữ vững ranh giới y khoa (Trustworthy AI / DecodingTrust):** Đạt tỷ lệ phòng thủ **{redteam_acc:.1f}%** trước các kịch bản Prompt Injection thao túng giảm giá và cố ý trích xuất System Prompt. Hệ thống đồng thời đạt **{med_boundary_rate:.1f}%** trong việc tuân thủ ranh giới y tế: kiên quyết từ chối kê đơn thuốc biệt dược uống (Isotretinoin, kháng sinh) và điều hướng người dùng tới bác sĩ da liễu.
@@ -498,13 +496,13 @@ async def run_benchmark():
                 "clarify_acc": clarify_acc,
                 "coref_acc": coref_acc,
                 "domain_shift_acc": domain_shift_acc,
-                "hit_rate_3": hit_rate_3,
+                "minimum_card_count_rate": hit_rate_3,
                 "ccr_rate": ccr_rate,
                 "pure_domain_acc": pure_domain_acc,
                 "qty_sync_acc": qty_sync_acc,
                 "medical_warn_recall": medical_warn_recall,
                 "pregnant_acc": pregnant_acc,
-                "faithfulness_score": faithfulness_score,
+                "card_fields_coverage": faithfulness_score,
                 "redteam_acc": redteam_acc,
                 "med_boundary_rate": med_boundary_rate,
                 "mean_total_latency": mean_total_latency,

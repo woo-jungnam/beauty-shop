@@ -24,11 +24,13 @@ public class ReviewSentimentWorker {
     private static final int MAX_ATTEMPTS = 5;
 
     private final ProductReviewRepository repository;
+    private final ProductReviewService reviewService;
     private final RestClient client;
 
-    public ReviewSentimentWorker(ProductReviewRepository repository,
+    public ReviewSentimentWorker(ProductReviewRepository repository, ProductReviewService reviewService,
             @Value("${review.sentiment.url}") String serviceUrl) {
         this.repository = repository;
+        this.reviewService = reviewService;
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(2_000);
         factory.setReadTimeout(3_000);
@@ -72,11 +74,10 @@ public class ReviewSentimentWorker {
             return;
         }
 
-        Instant analyzedAt = Instant.now();
         for (int index = 0; index < reviews.size(); index++) {
             ProductReview review = reviews.get(index);
-            repository.completeSentimentAttempt(review.getId(), review.getSentimentAttempts(), ReviewSentiment.PENDING,
-                    prediction.results().get(index).label(), null, prediction.modelVersion(), analyzedAt);
+            reviewService.applySentiment(review.getId(), review.getSentimentAttempts(),
+                    prediction.results().get(index).label(), prediction.modelVersion());
         }
     }
 

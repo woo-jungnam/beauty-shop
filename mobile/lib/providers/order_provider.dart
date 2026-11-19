@@ -13,22 +13,29 @@ class OrderProvider extends ChangeNotifier {
   String? _errorMessage;
   String? _actionError;
   int _page = 0;
+  int _historyRequest = 0;
+  bool _loadingHistory = false;
   bool _hasMore = false;
   bool get hasMore => _hasMore;
   Future<void> loadMore() => fetchOrders(append: true);
+  Future<void> refreshOrders() => fetchOrders(status: _currentStatus);
 
   List<OrderResponse> get orders => _orders;
-  bool get isLoading => _isLoading;
+  bool get isLoading => _isLoading || _loadingHistory;
   String? get errorMessage => _errorMessage;
   String? get actionError => _actionError;
 
   OrderProvider({ApiClient? apiClient, bool loadOnCreate = true})
     : _apiClient = apiClient ?? ApiClient() {
     StorageService.authCleared.addListener(_clearSessionOrders);
+    StorageService.authSessionChanged.addListener(_clearSessionOrders);
     if (loadOnCreate) fetchOrders();
   }
 
   void _clearSessionOrders() {
+    _historyRequest++;
+    _loadingHistory = false;
+    _currentStatus = null;
     _orders = [];
     _page = 0;
     _hasMore = false;
@@ -39,7 +46,9 @@ class OrderProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _historyRequest++;
     StorageService.authCleared.removeListener(_clearSessionOrders);
+    StorageService.authSessionChanged.removeListener(_clearSessionOrders);
     super.dispose();
   }
 
@@ -47,14 +56,21 @@ class OrderProvider extends ChangeNotifier {
   String? get currentStatus => _currentStatus;
 
   Future<void> fetchOrders({String? status, bool append = false}) async {
-    if (_isLoading) return;
-    if (!append) {
+    if (append && (_loadingHistory || !_hasMore)) return;
+    if (!append && _currentStatus != status) {
+      _orders = [];
+      _page = 0;
+      _hasMore = false;
       _currentStatus = status;
     }
+    final request = ++_historyRequest;
     final filterStatus = append ? _currentStatus : status;
     final requestedPage = append ? _page + 1 : 0;
     final ownerToken = StorageService.getAccessToken();
-    _isLoading = true;
+    bool isCurrent() =>
+        request == _historyRequest &&
+        ownerToken == StorageService.getAccessToken();
+    _loadingHistory = true;
     _errorMessage = null;
     notifyListeners();
 
@@ -69,13 +85,14 @@ class OrderProvider extends ChangeNotifier {
             fromJsonT: (json) =>
                 OrderResponse.fromJson(json as Map<String, dynamic>),
           );
-          if (result.data != null) {
+          if (!isCurrent()) return;
+          if (result.isSuccess && result.data != null) {
             if (filterStatus == null || result.data!.status == filterStatus) {
               details.add(result.data!);
             }
           }
         }
-        if (ownerToken != StorageService.getAccessToken()) return;
+        if (!isCurrent()) return;
         _orders = append ? [..._orders, ...details] : details;
         _page = requestedPage;
         _hasMore = ids.length > (requestedPage + 1) * 20;
@@ -98,19 +115,25 @@ class OrderProvider extends ChangeNotifier {
         ),
       );
 
-      if (ownerToken != StorageService.getAccessToken()) return;
-      if (response.isSuccess && response.data != null) {
-        _orders = append
-            ? [..._orders, ...response.data!.content]
-            : response.data!.content;
-        _page = requestedPage;
-        _hasMore = response.data!.content.length == 20;
+      if (!isCurrent()) return;
+      final data = response.data;
+      if (!response.isSuccess || data == null) {
+        throw StateError('Invalid order history response');
       }
-    } catch (e) {
-      _errorMessage = 'Không thể tải lịch sử đơn hàng';
+      _orders = append
+          ? {
+              for (final row in [..._orders, ...data.content]) row.id: row,
+            }.values.toList()
+          : data.content;
+      _page = requestedPage;
+      _hasMore = !data.last && requestedPage + 1 < data.totalPages;
+    } catch (_) {
+      if (isCurrent()) _errorMessage = 'Không thể tải lịch sử đơn hàng';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (request == _historyRequest) {
+        _loadingHistory = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -180,7 +203,7 @@ class OrderProvider extends ChangeNotifier {
         ApiConstants.orderCancelUrl(orderId),
       );
       if (response.isSuccess) {
-        await fetchOrders(status: _currentStatus);
+        await refreshOrders();
         return true;
       } else {
         _actionError = response.message ?? 'Không thể hủy đơn hàng';

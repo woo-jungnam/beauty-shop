@@ -97,3 +97,21 @@ __pycache__/
 
 image-search/data/
 chatbot/product-agent/data/
+~$*
+*.zip
+chatbot/training/export_model/
+*.safetensors
+*.apk
+*.aab
+mobile/android/local.properties
+mobile/android/.kotlin/
+# Office & Presentations
+*.pptx
+~$*
+
+# Presentation Images & Zips
+BeautyShop_*_PNG/
+*.zip
+
+# AI Models export
+chatbot/training/export_model/

@@ -5,6 +5,7 @@ import com.core.beautyshop.modules.chatbot.application.dto.request.UnderstandTes
 import com.core.beautyshop.modules.chatbot.application.dto.response.ChatResponse;
 import com.core.beautyshop.modules.chatbot.application.service.ChatbotService;
 import com.core.beautyshop.shared.dto.ApiResponse;
+import com.core.beautyshop.shared.security.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,17 +38,39 @@ public class ChatbotController {
 
     private final ChatbotService chatbotService;
 
+    @Value("${jwt.secret:}")
+    private String contextSecret;
+
+    private void scopeContext(ChatRequest request, String guestSession) {
+        if (contextSecret == null || contextSecret.isBlank()) return;
+        String owner = SecurityUtils.getCurrentUserIdOptional()
+                .map(id -> "user:" + id)
+                .orElseGet(() -> guestSession != null && guestSession.matches("[a-zA-Z0-9_-]{24,128}")
+                        ? "guest:" + guestSession : "ephemeral:" + UUID.randomUUID());
+        String key = sign("scope:" + owner + "\0" + request.getSessionId());
+        request.setContextId(key + "." + sign("context:" + key));
+    }
+
+    private String sign(String value) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(contextSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return HexFormat.of().formatHex(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException("Cannot sign chatbot context", exception);
+        }
+    }
+
     @Operation(
             summary = "Trò chuyện tư vấn sản phẩm (Non-streaming)",
             description = "API công khai. Gửi message và session_id tới dịch vụ AI; trả JSON trong ApiResponse. session_id là mã hội thoại do client cung cấp, không phải phiên xác thực JWT."
     )
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<ChatResponse>> chat(
-            @Valid @RequestBody ChatRequest request
+            @Valid @RequestBody ChatRequest request,
+            @RequestHeader(value = "X-Guest-Session-Id", required = false) String guestSession
     ) {
-        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-            request.setSessionId("sess_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
-        }
+        scopeContext(request, guestSession);
         ChatResponse response = chatbotService.chat(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Nhận phản hồi tư vấn thành công"));
     }
@@ -53,11 +82,10 @@ public class ChatbotController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Luồng Server-Sent Events", content = @Content(mediaType = "text/event-stream", schema = @Schema(type = "string", example = "data: {\"type\":\"error\",\"detail\":\"Chatbot service unavailable\"}\n\n")))
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> chatStream(
-            @Valid @RequestBody ChatRequest request
+            @Valid @RequestBody ChatRequest request,
+            @RequestHeader(value = "X-Guest-Session-Id", required = false) String guestSession
     ) {
-        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-            request.setSessionId("sess_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
-        }
+        scopeContext(request, guestSession);
         StreamingResponseBody responseBody = outputStream -> chatbotService.streamChat(request, outputStream);
 
         return ResponseEntity.ok()

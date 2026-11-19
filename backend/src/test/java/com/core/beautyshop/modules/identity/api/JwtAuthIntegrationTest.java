@@ -1,5 +1,8 @@
 package com.core.beautyshop.modules.identity.api;
 
+import com.core.beautyshop.modules.identity.application.dto.request.GoogleLoginRequest;
+import com.core.beautyshop.modules.identity.application.service.GoogleIdentityVerifier;
+import com.core.beautyshop.modules.identity.application.service.GoogleIdentityVerifier.GoogleIdentity;
 import com.core.beautyshop.modules.identity.application.dto.request.LoginRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.RefreshTokenRequest;
 import com.core.beautyshop.modules.identity.application.dto.request.RegisterRequest;
@@ -12,8 +15,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -21,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.when;
 
 import com.core.beautyshop.modules.identity.domain.Role;
 import com.core.beautyshop.modules.identity.domain.RoleRepository;
@@ -49,6 +55,64 @@ public class JwtAuthIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @MockitoBean
+    private GoogleIdentityVerifier googleIdentityVerifier;
+
+    @Test
+    void googleLinksExistingCustomerOnlyAfterPasswordConfirmation() throws Exception {
+        Long userId = userRepository.findByUsername("user").orElseThrow().getId();
+        when(googleIdentityVerifier.verify("link-token"))
+                .thenReturn(new GoogleIdentity("existing-customer", "user@beautyshop.com", "Google Name", false));
+
+        googleLogin("link-token", null)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("AUTH_GOOGLE_LINK_REQUIRED"));
+        googleLogin("link-token", "wrong-password").andExpect(status().isUnauthorized());
+        MvcResult linked = googleLogin("link-token", "user123")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(userId))
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.refreshToken").isNotEmpty())
+                .andReturn();
+        String refreshToken = objectMapper.readTree(linked.getResponse().getContentAsString())
+                .path("data").path("refreshToken").asText();
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RefreshTokenRequest(refreshToken))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.id").value(userId));
+        googleLogin("link-token", null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(userId));
+    }
+
+    @Test
+    void googleCreatesCustomerOnceAndUsesSubjectWhenEmailChanges() throws Exception {
+        when(googleIdentityVerifier.verify("signup-token"))
+                .thenReturn(new GoogleIdentity("new-customer", "google.new@gmail.com", "Google Customer", true));
+        googleLogin("signup-token", null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_USER"));
+        Long userId = userRepository.findByGoogleSubject("new-customer").orElseThrow().getId();
+
+        when(googleIdentityVerifier.verify("new-email-token"))
+                .thenReturn(new GoogleIdentity("new-customer", "google.changed@gmail.com", "Changed", true));
+        googleLogin("new-email-token", null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(userId))
+                .andExpect(jsonPath("$.data.email").value("google.new@gmail.com"));
+    }
+
+    @Test
+    void googleCannotLinkAnAdministrator() throws Exception {
+        String email = userRepository.findByUsername("admin").orElseThrow().getEmail();
+        when(googleIdentityVerifier.verify("admin-token"))
+                .thenReturn(new GoogleIdentity("google-admin", email, "Admin", true));
+        googleLogin("admin-token", "admin123").andExpect(status().isForbidden());
+    }
+
+    private ResultActions googleLogin(String credential, String password) throws Exception {
+        return mockMvc.perform(post("/api/v1/auth/login/google")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new GoogleLoginRequest(credential, password))));
+    }
 
     @BeforeEach
     public void setup() {
@@ -161,7 +225,7 @@ public class JwtAuthIntegrationTest {
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.username").value("testuser1"))
-                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_CUSTOMER"));
+                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_USER"));
     }
 
     @Test
