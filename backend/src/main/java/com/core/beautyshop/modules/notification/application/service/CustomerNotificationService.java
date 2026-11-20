@@ -30,6 +30,12 @@ public class CustomerNotificationService implements CustomerNotificationFacade {
         var rows=em.createQuery("select n from CustomerNotification n where n.userId=:uid order by n.id desc",CustomerNotification.class).setParameter("uid",uid).setFirstResult(page*size).setMaxResults(size).getResultList();
         return PageResponse.of(new PageImpl<>(rows.stream().map(this::view).toList(),PageRequest.of(page,size),total));
     }
+    @Transactional(readOnly = true)
+    public long unreadCount() {
+        return em.createQuery("select count(n) from CustomerNotification n where n.userId = :uid and n.readAt is null", Long.class)
+                .setParameter("uid", SecurityUtils.getCurrentUserId()).getSingleResult();
+    }
+
     @Transactional public View read(Long id){
         var n=em.find(CustomerNotification.class,id);
         if(n==null || !n.getUserId().equals(SecurityUtils.getCurrentUserId()))throw new ResourceNotFoundException("Không tìm thấy thông báo của bạn");

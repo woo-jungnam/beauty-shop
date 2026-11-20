@@ -47,6 +47,7 @@ export const ENDPOINTS = {
     UPDATE_STATUS: (id) => `/api/v1/admin/orders/${id}/status`,
     CONFIRM_PAYMENT: (id) => `/api/v1/admin/orders/${id}/confirm-payment`,
     CONFIRM_REFUND: (id) => `/api/v1/admin/orders/${id}/refund-confirmation`,
+    ASSIGN_SHIPPER: (id) => `/api/v1/admin/orders/${id}/assign-shipper`,
   },
 
   INVENTORY: {

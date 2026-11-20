@@ -1,5 +1,6 @@
 package com.core.beautyshop.modules.order.domain;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -80,7 +81,44 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
 
+    @Query("select o from Order o where o.isDeleted = false and o.shipperId = :shipperId and (:status is null or o.status = :status) and o.status in (com.core.beautyshop.modules.order.domain.enums.OrderStatus.SHIPPED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERY_FAILED) order by o.createdAt desc, o.id desc")
+    Page<Order> findShipperDeliveries(@Param("shipperId") Long shipperId, @Param("status") OrderStatus status, Pageable pageable);
+
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-}
+    String SHIPPER_HISTORY = """
+            from Order o where o.isDeleted = false and o.shipperId = :shipperId
+            and (o.deliveredAt is not null or o.shipperAssignedAt is not null or o.status in (SHIPPED, DELIVERED, DELIVERY_FAILED))
+            and coalesce(o.deliveredAt, o.shipperAssignedAt, o.createdAt) >= :from
+            and coalesce(o.deliveredAt, o.shipperAssignedAt, o.createdAt) < :to
+            """;
 
+    @Query("select o " + SHIPPER_HISTORY + """
+            and (:status is null or o.status = :status)
+            order by coalesce(o.deliveredAt, o.shipperAssignedAt, o.createdAt) desc, o.id desc
+            """)
+    Page<Order> findShipperHistory(Long shipperId, Instant from, Instant to, OrderStatus status, Pageable pageable);
+
+    interface DeliveryTotals {
+        long getTotalOrders();
+        long getDeliveredOrders();
+        BigDecimal getTotalRevenue();
+        BigDecimal getTotalCodCollected();
+        BigDecimal getTotalDeliveryFees();
+    }
+
+    @Query("""
+            select count(o) as totalOrders,
+                   count(case when o.deliveredAt is not null then 1 end) as deliveredOrders,
+                   coalesce(sum(case when o.deliveredAt is not null then o.totalAmount else 0 end), 0) as totalRevenue,
+                   coalesce(sum(case when o.deliveredAt is not null then o.shipperCodCollected else 0 end), 0) as totalCodCollected,
+                   coalesce(sum(case when o.deliveredAt is not null then o.shippingFee else 0 end), 0) as totalDeliveryFees
+            """ + SHIPPER_HISTORY)
+    DeliveryTotals getShipperDeliveryTotals(Long shipperId, Instant from, Instant to);
+
+    @Query("""
+            select o.deliveredAt from Order o where o.isDeleted = false and o.shipperId = :shipperId
+            and o.deliveredAt >= :from and o.deliveredAt < :to
+            """)
+    List<Instant> findShipperDeliveryTimes(Long shipperId, Instant from, Instant to);
+}

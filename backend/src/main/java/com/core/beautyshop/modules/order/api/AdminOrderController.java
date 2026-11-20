@@ -62,6 +62,15 @@ public class AdminOrderController {
         return ResponseEntity.ok(ApiResponse.success(order));
     }
 
+    @Operation(summary = "Điều phối tài xế bưu tá cho đơn hàng", description = "Chỉ áp dụng cho đơn CONFIRMED, PROCESSING hoặc SHIPPED")
+    @PostMapping("/{id}/assign-shipper")
+    public ResponseEntity<ApiResponse<OrderResponse>> assignShipper(
+            @PathVariable Long id,
+            @Valid @RequestBody com.core.beautyshop.modules.order.application.dto.request.AssignShipperRequest request) {
+        OrderResponse order = orderService.assignShipper(id, request);
+        return ResponseEntity.ok(ApiResponse.success(order));
+    }
+
     @Operation(summary = "Xác nhận thanh toán thủ công cho đơn hàng (Kiểm thử / Đối soát)")
     @PostMapping("/{id}/confirm-payment")
     public ResponseEntity<ApiResponse<OrderResponse>> confirmPayment(

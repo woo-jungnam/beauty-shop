@@ -85,6 +85,16 @@ public class OrderResponse {
     private String carrierName;
     @Schema(description = "Mã vận đơn")
     private String trackingCode;
+    @Schema(description = "Đường dẫn ảnh bằng chứng giao hàng chụp từ camera")
+    private String deliveryProofUrl;
+    @Schema(description = "ID tài khoản tài xế phụ trách")
+    private Long shipperId;
+    @Schema(description = "Tên tài xế giao hàng")
+    private String shipperName;
+    @Schema(description = "SĐT tài xế giao hàng")
+    private String shipperPhone;
+    @Schema(description = "Ghi chú của tài xế lúc giao hàng thành công")
+    private String deliveredNotes;
     @Schema(description = "Lý do hủy được ghi nhận")
     private String cancelReason;
     @Schema(description = "ID actor hủy; có thể null với tác vụ hệ thống")

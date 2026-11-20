@@ -6,6 +6,7 @@ import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
+import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
 import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.order.application.dto.request.AdminOrderFilter;
@@ -71,6 +72,7 @@ public class OrderServiceImpl implements OrderService {
     private final InventoryFacade inventoryFacade;
     private final CatalogFacade catalogFacade;
     private final IdentityFacade identityFacade;
+    private final CustomerNotificationFacade customerNotifications;
     private final OrderFactory orderFactory;
     private final OrderMapper orderMapper;
     private final PaymentFacade paymentFacade;
@@ -386,7 +388,7 @@ public class OrderServiceImpl implements OrderService {
                 && order.getPaymentStatus() != PaymentStatus.PAID) {
             throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán (PAID) trước khi chuẩn bị hàng hoặc xuất kho giao hàng");
         }
-        if (newStatus == OrderStatus.SHIPPED) {
+        if (newStatus == OrderStatus.SHIPPED && previousStatus != OrderStatus.DELIVERY_FAILED) {
             Map<Long, Integer> totalQtyByVariant = order.getItems().stream()
                     .collect(Collectors.groupingBy(OrderItem::getProductVariantId, Collectors.summingInt(OrderItem::getQuantity)));
             for (var entry : totalQtyByVariant.entrySet()) {
@@ -424,6 +426,63 @@ public class OrderServiceImpl implements OrderService {
                 .previousStatus(previousStatus)
                 .newStatus(saved.getStatus())
                 .build());
+
+        return orderMapper.toOrderResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse assignShipper(Long id, com.core.beautyshop.modules.order.application.dto.request.AssignShipperRequest request) {
+        Order order = orderRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
+
+        if (order.getStatus() != OrderStatus.CONFIRMED && order.getStatus() != OrderStatus.PROCESSING && order.getStatus() != OrderStatus.SHIPPED) {
+            throw new BusinessException("Chỉ có thể gán tài xế cho đơn hàng đã xác nhận, đang xử lý hoặc đang giao");
+        }
+
+        Long previousShipper = order.getShipperId();
+        Long assignedShipper = request.getShipperId();
+        if (assignedShipper != null && !identityFacade.existsById(assignedShipper)) {
+            throw new BusinessException("Không tìm thấy tài khoản tài xế");
+        }
+        order.setShipperId(assignedShipper);
+        if (!java.util.Objects.equals(previousShipper, assignedShipper) || order.getShipperAssignedAt() == null) {
+            order.setShipperAssignedAt(assignedShipper == null ? null : Instant.now());
+        }
+        order.setShipperName(request.getShipperName() != null ? request.getShipperName().trim() : "Bưu tá nội bộ");
+        if (request.getShipperPhone() != null && !request.getShipperPhone().isBlank()) {
+            order.setShipperPhone(request.getShipperPhone().trim());
+        }
+
+        OrderStatus previousStatus = order.getStatus();
+        if (order.getStatus() == OrderStatus.CONFIRMED || order.getStatus() == OrderStatus.PROCESSING) {
+            order.markAsShipped("In-house Express", "SHIP-" + order.getOrderNumber());
+            Map<Long, Integer> totalQtyByVariant = order.getItems().stream()
+                    .collect(Collectors.groupingBy(OrderItem::getProductVariantId, Collectors.summingInt(OrderItem::getQuantity)));
+            for (var entry : totalQtyByVariant.entrySet()) {
+                inventoryFacade.validateForDispatch(order.getOrderNumber(), entry.getKey(), entry.getValue());
+                inventoryFacade.deductStock(order.getOrderNumber(), entry.getKey(), entry.getValue());
+            }
+        }
+        String noteText = "Điều phối cho bưu tá: " + order.getShipperName()
+                + (request.getNotes() != null && !request.getNotes().isBlank() ? " (" + request.getNotes().trim() + ")" : "");
+        createStatusHistory(order, order.getStatus(), noteText);
+        Order saved = orderRepository.save(order);
+
+        if (assignedShipper != null && !assignedShipper.equals(previousShipper)) {
+            customerNotifications.publish(assignedShipper, "shipper-assignment:" + java.util.UUID.randomUUID(),
+                    "SHIPPER_ASSIGNMENT", "Đơn giao hàng mới", "Bạn được phân công giao đơn #" + saved.getOrderNumber(),
+                    "/api/v1/shipper/orders/" + saved.getId());
+        }
+
+        if (previousStatus != saved.getStatus()) {
+            eventPublisher.publishEvent(OrderEvents.OrderStatusChangedEvent.builder()
+                    .orderId(saved.getId())
+                    .orderNumber(saved.getOrderNumber())
+                    .previousStatus(previousStatus)
+                    .newStatus(saved.getStatus())
+                    .build());
+        }
 
         return orderMapper.toOrderResponse(saved);
     }

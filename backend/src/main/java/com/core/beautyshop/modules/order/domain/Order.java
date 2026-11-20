@@ -134,6 +134,27 @@ public class Order extends Base {
     @Column(name = "tracking_code", length = 100)
     private String trackingCode;
 
+    @Column(name = "delivery_proof_url", length = 500)
+    private String deliveryProofUrl;
+
+    @Column(name = "shipper_cod_collected", precision = 12, scale = 2)
+    private BigDecimal shipperCodCollected;
+
+    @Column(name = "shipper_assigned_at")
+    private Instant shipperAssignedAt;
+
+    @Column(name = "shipper_id")
+    private Long shipperId;
+
+    @Column(name = "shipper_name", length = 100)
+    private String shipperName;
+
+    @Column(name = "shipper_phone", length = 20)
+    private String shipperPhone;
+
+    @Column(name = "delivered_notes", length = 500)
+    private String deliveredNotes;
+
     @Column(name = "cancel_reason", length = 500)
     private String cancelReason;
 

@@ -80,4 +80,9 @@ class ApiConstants {
 
   static const String publicConfigs = '/api/v1/system-configs/public';
   static const String validateVoucher = '/api/v1/promotions/validate';
+
+  static const String shipperOrders = '/api/v1/shipper/orders';
+  static String shipperOrderDetail(int id) => '/api/v1/shipper/orders/$id';
+  static String shipperStartDelivery(int id) => '/api/v1/shipper/orders/$id/start';
+  static String shipperCompleteDelivery(int id) => '/api/v1/shipper/orders/$id/delivered';
 }

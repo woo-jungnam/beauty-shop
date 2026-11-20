@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.*;
 public class CustomerNotificationController {
     private final CustomerNotificationService notifications;
 
+    @GetMapping("/unread-count")
+    public ApiResponse<Long> unreadCount() {
+        return ApiResponse.success(notifications.unreadCount());
+    }
+
     @Operation(summary = "Danh sách thông báo của tôi", description = "Khách hàng tra cứu và phân trang danh sách thông báo về đơn hàng, lịch hẹn, khuyến mãi")
     @GetMapping public ApiResponse<PageResponse<CustomerNotificationService.View>> mine(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size){return ApiResponse.success(notifications.mine(page,size));}
 

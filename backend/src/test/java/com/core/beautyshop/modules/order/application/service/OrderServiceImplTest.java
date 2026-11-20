@@ -7,6 +7,8 @@ import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
+import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
+import com.core.beautyshop.modules.order.application.dto.request.AssignShipperRequest;
 import com.core.beautyshop.modules.order.application.dto.request.CheckoutRequest;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
 import com.core.beautyshop.modules.order.application.factory.OrderFactory;
@@ -56,6 +58,7 @@ class OrderServiceImplTest {
     @Mock private InventoryFacade inventoryFacade;
     @Mock private CatalogFacade catalogFacade;
     @Mock private IdentityFacade identityFacade;
+    @Mock private CustomerNotificationFacade customerNotifications;
     @Mock private OrderFactory orderFactory;
     @Mock private OrderMapper orderMapper;
     @Mock private PaymentFacade paymentFacade;
@@ -79,6 +82,23 @@ class OrderServiceImplTest {
         assertEquals(OrderStatus.PROCESSING, order.getStatus());
         org.mockito.Mockito.verify(eventPublisher, org.mockito.Mockito.never()).publishEvent(any(Object.class));
         org.mockito.Mockito.verify(orderRepository, org.mockito.Mockito.never()).save(any(Order.class));
+    }
+
+    @Test
+    void assigningSameShipperTwiceSendsOneNotification() {
+        Order order = Order.builder().orderNumber("ORD-TEST").status(OrderStatus.SHIPPED)
+                .statusHistories(new ArrayList<>()).build();
+        order.setId(42L);
+        when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(identityFacade.existsById(50L)).thenReturn(true);
+        var assignment = AssignShipperRequest.builder().shipperId(50L).shipperName("Tài xế").build();
+
+        orderService.assignShipper(42L, assignment);
+        orderService.assignShipper(42L, assignment);
+
+        verify(customerNotifications).publish(eq(50L), any(), eq("SHIPPER_ASSIGNMENT"), any(), any(),
+                eq("/api/v1/shipper/orders/42"));
     }
 
     @Test

@@ -26,6 +26,7 @@ import {
   Printer,
   CreditCard,
   AlertTriangle,
+  Camera,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -121,6 +122,11 @@ export const OrdersPage = () => {
   const detailRequest = useRef(0);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [shipperId, setShipperId] = useState('');
+  const [shipperName, setShipperName] = useState('');
+  const [shipperPhone, setShipperPhone] = useState('');
+  const [previewProofUrl, setPreviewProofUrl] = useState('');
 
   const [targetStatus, setTargetStatus] = useState('CONFIRMED');
   const [carrierName, setCarrierName] = useState('');
@@ -258,6 +264,46 @@ export const OrdersPage = () => {
       fetchOrders(page);
     } catch (err) {
       setErrorMessage(err.message || 'Lỗi cập nhật trạng thái đơn hàng');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenAssignModal = (order) => {
+    setSelectedOrder(order);
+    setShipperId(order.shipperId?.toString() || '');
+    setShipperName(order.shipperName || '');
+    setShipperPhone(order.shipperPhone || '');
+    setErrorMessage('');
+    setAssignModalOpen(true);
+  };
+
+  const handleAssignShipperSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedOrder) return;
+    if (!Number.isSafeInteger(Number(shipperId)) || Number(shipperId) <= 0) {
+      setErrorMessage('Nhập ID tài khoản tài xế hợp lệ');
+      return;
+    }
+    if (!shipperName.trim()) {
+      setErrorMessage('Vui lòng nhập tên tài xế / bưu tá');
+      return;
+    }
+    setSubmitting(true);
+    setErrorMessage('');
+    try {
+      const res = await apiClient.post(ENDPOINTS.ORDERS.ASSIGN_SHIPPER(selectedOrder.id), {
+        shipperId: Number(shipperId),
+        shipperName: shipperName.trim(),
+        shipperPhone: shipperPhone.trim(),
+      });
+      setAssignModalOpen(false);
+      if (res && res.data) {
+        setSelectedOrder(res.data);
+      }
+      fetchOrders(page);
+    } catch (err) {
+      setErrorMessage(err.message || 'Lỗi điều phối shipper');
     } finally {
       setSubmitting(false);
     }
@@ -422,6 +468,28 @@ export const OrdersPage = () => {
           >
             <Edit size={14} />
           </Button>
+          {row.deliveryProofUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewProofUrl(resolveMediaUrl(row.deliveryProofUrl))}
+              title="Xem ảnh bằng chứng giao hàng (PoD)"
+              style={{ color: '#059669', borderColor: '#059669' }}
+            >
+              <Camera size={14} />
+            </Button>
+          )}
+          {getOrderType(row) === 'PRODUCT' && ['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(row.status) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenAssignModal(row)}
+              title={row.shipperName ? `Đổi shipper (${row.shipperName})` : 'Điều phối tài xế giao'}
+              style={row.shipperName ? { color: '#4F46E5', borderColor: '#818CF8' } : {}}
+            >
+              <Truck size={14} />
+            </Button>
+          )}
           {row.paymentStatus !== 'PAID' && row.status !== 'CANCELLED' && (
             <Button
               variant="outline"
@@ -464,6 +532,28 @@ export const OrdersPage = () => {
           >
             <Edit size={14} />
           </Button>
+          {row.deliveryProofUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewProofUrl(resolveMediaUrl(row.deliveryProofUrl))}
+              title="Xem ảnh bằng chứng giao hàng (PoD)"
+              style={{ color: '#059669', borderColor: '#059669' }}
+            >
+              <Camera size={14} />
+            </Button>
+          )}
+          {getOrderType(row) === 'PRODUCT' && ['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(row.status) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenAssignModal(row)}
+              title={row.shipperName ? `Đổi shipper (${row.shipperName})` : 'Điều phối tài xế giao'}
+              style={row.shipperName ? { color: '#4F46E5', borderColor: '#818CF8' } : {}}
+            >
+              <Truck size={14} />
+            </Button>
+          )}
           {row.paymentStatus !== 'PAID' && row.status !== 'CANCELLED' && (
             <Button
               variant="outline"
@@ -1135,6 +1225,66 @@ export const OrdersPage = () => {
                       <>
                         {renderRow('Đơn vị vận chuyển:', selectedOrder.carrierName || 'Chưa chỉ định')}
                         {renderRow('Mã vận đơn:', selectedOrder.trackingCode || 'Chưa tạo vận đơn')}
+                        {renderRow(
+                          'Tài xế nội bộ (Shipper):',
+                          selectedOrder.shipperName ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: 600, color: '#1E293B' }}>
+                                {selectedOrder.shipperName}
+                                {selectedOrder.shipperPhone && ` (${selectedOrder.shipperPhone})`}
+                              </span>
+                              {['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(selectedOrder.status) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleOpenAssignModal(selectedOrder)}
+                                  style={{ fontSize: '11px', padding: '1px 6px', height: '20px', color: '#4F46E5' }}
+                                >
+                                  Đổi
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ color: '#94A3B8' }}>Chưa phân công</span>
+                              {['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(selectedOrder.status) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenAssignModal(selectedOrder)}
+                                  style={{ fontSize: '11px', padding: '1px 6px', height: '22px' }}
+                                >
+                                  + Phân công tài xế
+                                </Button>
+                              )}
+                            </div>
+                          )
+                        )}
+                        {selectedOrder.deliveryProofUrl && renderRow(
+                          'Bằng chứng giao hàng (PoD):',
+                          <div style={{ marginTop: '4px' }}>
+                            <img
+                              src={resolveMediaUrl(selectedOrder.deliveryProofUrl)}
+                              alt="Bằng chứng giao hàng (PoD)"
+                              onClick={() => setPreviewProofUrl(resolveMediaUrl(selectedOrder.deliveryProofUrl))}
+                              style={{
+                                width: '90px',
+                                height: '90px',
+                                objectFit: 'cover',
+                                borderRadius: '6px',
+                                border: '2px solid #10B981',
+                                cursor: 'pointer',
+                              }}
+                              title="Bấm để phóng to ảnh bằng chứng"
+                            />
+                            {selectedOrder.deliveredNotes && (
+                              <div style={{ fontSize: '12px', color: '#047857', marginTop: '4px', fontStyle: 'italic' }}>
+                                Ghi chú bưu tá: {selectedOrder.deliveredNotes}
+                              </div>
+                            )}
+                          </div>,
+                          true
+                        )}
                       </>
                     )}
                     {isSpaPackageOrder && selectedOrder.servicePackageId && (
@@ -1751,6 +1901,93 @@ export const OrdersPage = () => {
             placeholder="Lý do hoàn trả cho khách..."
           />
         </form>
+      </Modal>
+
+      {/* Modal điều phối Shipper nội bộ */}
+      <Modal
+        isOpen={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        title={`Điều phối tài xế giao hàng: ${selectedOrder?.orderNumber || selectedOrder?.orderCode || `#${selectedOrder?.id}`}`}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setAssignModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleAssignShipperSubmit}
+              loading={submitting}
+            >
+              Lưu phân công
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleAssignShipperSubmit}>
+          {errorMessage && (
+            <div
+              style={{
+                padding: '8px 12px',
+                backgroundColor: 'var(--color-danger-50)',
+                border: '1px solid var(--color-danger-600)',
+                color: 'var(--color-danger-700)',
+                borderRadius: '6px',
+                marginBottom: '12px',
+                fontSize: '13px',
+              }}
+            >
+              {errorMessage}
+            </div>
+          )}
+          <Input
+            label="ID tài khoản tài xế"
+            type="number"
+            min="1"
+            step="1"
+            required
+            value={shipperId}
+            onChange={(e) => setShipperId(e.target.value)}
+          />
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
+              Tên tài xế / Bưu tá: <span style={{ color: 'red' }}>*</span>
+            </label>
+            <Input
+              value={shipperName}
+              onChange={(e) => setShipperName(e.target.value)}
+              placeholder="VD: Nguyễn Văn Tài (Shipper)"
+              required
+            />
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
+              Số điện thoại tài xế:
+            </label>
+            <Input
+              value={shipperPhone}
+              onChange={(e) => setShipperPhone(e.target.value)}
+              placeholder="VD: 0901234567"
+            />
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '6px' }}>
+            💡 <strong>Mẹo:</strong> Sau khi phân công, tài xế mở app mobile tại mục <strong>"Giao Hàng (Shipper)"</strong> để nhận đơn, liên hệ khách hàng và chụp ảnh xác nhận PoD khi giao hàng thành công.
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal phóng to ảnh PoD */}
+      <Modal
+        isOpen={Boolean(previewProofUrl)}
+        onClose={() => setPreviewProofUrl('')}
+        title="Bằng chứng giao hàng (Proof of Delivery)"
+      >
+        <div style={{ textAlign: 'center' }}>
+          <img
+            src={previewProofUrl}
+            alt="Proof of Delivery Large"
+            style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '8px', objectFit: 'contain' }}
+          />
+        </div>
       </Modal>
 
       <ConfirmModal

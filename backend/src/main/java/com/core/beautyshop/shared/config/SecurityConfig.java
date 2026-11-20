@@ -138,6 +138,7 @@ public class SecurityConfig {
                                 "/api/v1/roles/**",
                                 "/api/v1/test/admin"
                         ).hasRole("ADMIN")
+                        .requestMatchers("/api/v1/shipper/**").authenticated()
                         .anyRequest().authenticated()
                 );
 

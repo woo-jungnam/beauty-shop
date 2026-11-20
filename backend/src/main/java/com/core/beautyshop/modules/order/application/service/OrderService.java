@@ -27,6 +27,8 @@ public interface OrderService {
 
     OrderResponse updateOrderStatus(Long id, UpdateOrderStatusRequest request);
 
+    OrderResponse assignShipper(Long id, com.core.beautyshop.modules.order.application.dto.request.AssignShipperRequest request);
+
     OrderResponse cancelOrder(Long id);
 
     OrderResponse cancelOrder(Long id, Long userId);
