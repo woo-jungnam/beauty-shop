@@ -205,6 +205,8 @@ export const getRoleLabel = (roleName) => {
   if (!roleName) return '-';
   const clean = roleName.replace(/^ROLE_/, '');
   switch (clean) {
+    case 'SHIPPER':
+      return 'Tài xế (SHIPPER)';
     case 'ADMIN':
       return 'Quản trị viên (ADMIN)';
     case 'STAFF':

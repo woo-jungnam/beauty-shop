@@ -30,6 +30,17 @@ public class AdminUserController {
     private final UserService userService;
     private final AuthService authService;
 
+    @GetMapping("/shippers")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ApiResponse<PageResponse<ShipperOption>> shippers(@RequestParam(required = false) String keyword,
+            @ParameterObject Pageable pageable) {
+        return ApiResponse.success(PageResponse.of(userService.getAllUsers(keyword, AccountStatus.ACTIVE,
+                "ROLE_SHIPPER", pageable).map(user -> new ShipperOption(user.getId(), user.getUsername(),
+                        user.getFullName(), user.getPhone()))));
+    }
+
+    public record ShipperOption(Long id, String username, String fullName, String phone) {}
+
     @Operation(summary = "Lấy danh sách người dùng (ADMIN)", description = "Chỉ tài khoản chưa soft-delete. Có bộ lọc keyword/status/role và page/size/sort; page bắt đầu từ 0. Không giới hạn danh sách vào khách hàng.")
     @GetMapping
     public ApiResponse<PageResponse<UserProfileResponse>> list(@Parameter(description = "Tìm chứa chuỗi trong username, email, fullName hoặc phone; tên/email không phân biệt hoa thường") @RequestParam(required = false) String keyword,

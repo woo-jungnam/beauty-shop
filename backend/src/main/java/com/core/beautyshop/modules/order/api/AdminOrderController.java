@@ -62,7 +62,7 @@ public class AdminOrderController {
         return ResponseEntity.ok(ApiResponse.success(order));
     }
 
-    @Operation(summary = "Điều phối tài xế bưu tá cho đơn hàng", description = "Chỉ áp dụng cho đơn CONFIRMED, PROCESSING hoặc SHIPPED")
+    @Operation(summary = "Điều phối tài xế bưu tá cho đơn hàng", description = "Áp dụng cho đơn CONFIRMED, PROCESSING, SHIPPED hoặc DELIVERY_FAILED")
     @PostMapping("/{id}/assign-shipper")
     public ResponseEntity<ApiResponse<OrderResponse>> assignShipper(
             @PathVariable Long id,

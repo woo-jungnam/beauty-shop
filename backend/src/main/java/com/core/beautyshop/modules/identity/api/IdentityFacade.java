@@ -10,5 +10,6 @@ public interface IdentityFacade {
     Optional<UserSummaryDto> findUserSummaryById(Long userId);
     UserSummaryDto getUserSummaryById(Long userId);
     boolean existsById(Long userId);
+    Optional<UserSummaryDto> findActiveUserWithRole(Long userId, String roleName);
     Map<Long, UserSummaryDto> findUserSummaries(Collection<Long> ids);
 }

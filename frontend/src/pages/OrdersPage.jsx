@@ -50,6 +50,11 @@ import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { useAuth } from '../app/providers/AuthProvider';
 
+const canAssignShipper = (order) =>
+  getOrderType(order) === 'PRODUCT' &&
+  ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERY_FAILED'].includes(order.status) &&
+  (order.paymentMethod !== 'BANK' || order.paymentStatus === 'PAID');
+
 export const OrdersPage = () => {
   const { isAdmin } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -124,8 +129,10 @@ export const OrdersPage = () => {
   const [refundModalOpen, setRefundModalOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [shipperId, setShipperId] = useState('');
-  const [shipperName, setShipperName] = useState('');
-  const [shipperPhone, setShipperPhone] = useState('');
+  const [shipperSearch, setShipperSearch] = useState('');
+  const [shipperPage, setShipperPage] = useState(0);
+  const [shipperResults, setShipperResults] = useState(null);
+  const [shipperLoading, setShipperLoading] = useState(false);
   const [previewProofUrl, setPreviewProofUrl] = useState('');
 
   const [targetStatus, setTargetStatus] = useState('CONFIRMED');
@@ -269,24 +276,44 @@ export const OrdersPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (!assignModalOpen) return;
+    let active = true;
+    setShipperLoading(true);
+    setShipperResults(null);
+    setErrorMessage('');
+    const timer = setTimeout(async () => {
+      try {
+        const query = new URLSearchParams({ keyword: shipperSearch.trim(), page: shipperPage, size: 20, sort: 'id,asc' });
+        const response = await apiClient.get(`${ENDPOINTS.USERS.SHIPPERS}?${query}`);
+        if (active) setShipperResults(response.data || response);
+      } catch (err) {
+        if (active) setErrorMessage(err.message || 'Không tải được danh sách tài xế.');
+      } finally {
+        if (active) setShipperLoading(false);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [assignModalOpen, shipperSearch, shipperPage]);
+
   const handleOpenAssignModal = (order) => {
     setSelectedOrder(order);
     setShipperId(order.shipperId?.toString() || '');
-    setShipperName(order.shipperName || '');
-    setShipperPhone(order.shipperPhone || '');
+    setShipperSearch('');
+    setShipperPage(0);
+    setShipperResults(null);
     setErrorMessage('');
     setAssignModalOpen(true);
   };
 
   const handleAssignShipperSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!selectedOrder) return;
-    if (!Number.isSafeInteger(Number(shipperId)) || Number(shipperId) <= 0) {
-      setErrorMessage('Nhập ID tài khoản tài xế hợp lệ');
-      return;
-    }
-    if (!shipperName.trim()) {
-      setErrorMessage('Vui lòng nhập tên tài xế / bưu tá');
+    if (!selectedOrder || submitting || shipperLoading) return;
+    if (!shipperResults?.content?.some((shipper) => String(shipper.id) === shipperId)) {
+      setErrorMessage('Chọn tài xế đang hoạt động trong danh sách.');
       return;
     }
     setSubmitting(true);
@@ -294,8 +321,6 @@ export const OrdersPage = () => {
     try {
       const res = await apiClient.post(ENDPOINTS.ORDERS.ASSIGN_SHIPPER(selectedOrder.id), {
         shipperId: Number(shipperId),
-        shipperName: shipperName.trim(),
-        shipperPhone: shipperPhone.trim(),
       });
       setAssignModalOpen(false);
       if (res && res.data) {
@@ -479,7 +504,7 @@ export const OrdersPage = () => {
               <Camera size={14} />
             </Button>
           )}
-          {getOrderType(row) === 'PRODUCT' && ['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(row.status) && (
+          {canAssignShipper(row) && (
             <Button
               variant="outline"
               size="sm"
@@ -543,7 +568,7 @@ export const OrdersPage = () => {
               <Camera size={14} />
             </Button>
           )}
-          {getOrderType(row) === 'PRODUCT' && ['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(row.status) && (
+          {canAssignShipper(row) && (
             <Button
               variant="outline"
               size="sm"
@@ -1233,7 +1258,7 @@ export const OrdersPage = () => {
                                 {selectedOrder.shipperName}
                                 {selectedOrder.shipperPhone && ` (${selectedOrder.shipperPhone})`}
                               </span>
-                              {['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(selectedOrder.status) && (
+                              {canAssignShipper(selectedOrder) && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -1247,7 +1272,7 @@ export const OrdersPage = () => {
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span style={{ color: '#94A3B8' }}>Chưa phân công</span>
-                              {['CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(selectedOrder.status) && (
+                              {canAssignShipper(selectedOrder) && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -1789,7 +1814,7 @@ export const OrdersPage = () => {
                 <option value="SHIPPED">
                   Xuất kho bàn giao vận chuyển{selectedOrder?.paymentMethod === 'BANK' && selectedOrder?.paymentStatus !== 'PAID' ? ' (Cần thanh toán PAID)' : ''}
                 </option>
-                <option value="DELIVERED">Xác nhận giao thành công</option>
+                {!selectedOrder?.shipperId && <option value="DELIVERED">Xác nhận giao thành công</option>}
                 <option value="CANCELLED">Hủy đơn hàng</option>
                 <option value="RETURNED">Khách trả hàng về kho</option>
               </Select>
@@ -1917,13 +1942,48 @@ export const OrdersPage = () => {
               variant="primary"
               onClick={handleAssignShipperSubmit}
               loading={submitting}
+              disabled={shipperLoading || !shipperResults?.content?.some((shipper) => String(shipper.id) === shipperId)}
             >
-              Lưu phân công
+              {selectedOrder?.status === 'SHIPPED' ? 'Lưu phân công' :
+                selectedOrder?.status === 'DELIVERY_FAILED' ? 'Phân công giao lại' : 'Phân công và xuất kho'}
             </Button>
           </>
         }
       >
         <form onSubmit={handleAssignShipperSubmit}>
+          <Input
+            label="Tìm tài xế"
+            placeholder="Tên, tên đăng nhập hoặc số điện thoại"
+            value={shipperSearch}
+            onChange={(event) => {
+              setShipperSearch(event.target.value);
+              setShipperPage(0);
+            }}
+          />
+          <Select
+            label="Tài xế giao hàng"
+            value={shipperResults?.content?.some((shipper) => String(shipper.id) === shipperId) ? shipperId : ''}
+            onChange={(event) => setShipperId(event.target.value)}
+            disabled={shipperLoading || !shipperResults?.content?.length}
+          >
+            <option value="">
+              {shipperLoading ? 'Đang tải tài xế…' : shipperResults?.content?.length ? 'Chọn tài xế' : 'Không có tài xế khả dụng'}
+            </option>
+            {shipperResults?.content?.map((shipper) => (
+              <option key={shipper.id} value={shipper.id}>
+                {shipper.fullName || shipper.username} · {shipper.username}{shipper.phone ? ` · ${shipper.phone}` : ''}
+              </option>
+            ))}
+          </Select>
+          {shipperResults?.totalPages > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Button type="button" size="sm" variant="outline" disabled={shipperPage === 0}
+                onClick={() => setShipperPage(shipperPage - 1)}>Trước</Button>
+              <span>{shipperPage + 1} / {shipperResults.totalPages}</span>
+              <Button type="button" size="sm" variant="outline" disabled={shipperPage + 1 >= shipperResults.totalPages}
+                onClick={() => setShipperPage(shipperPage + 1)}>Sau</Button>
+            </div>
+          )}
           {errorMessage && (
             <div
               style={{
@@ -1939,39 +1999,6 @@ export const OrdersPage = () => {
               {errorMessage}
             </div>
           )}
-          <Input
-            label="ID tài khoản tài xế"
-            type="number"
-            min="1"
-            step="1"
-            required
-            value={shipperId}
-            onChange={(e) => setShipperId(e.target.value)}
-          />
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
-              Tên tài xế / Bưu tá: <span style={{ color: 'red' }}>*</span>
-            </label>
-            <Input
-              value={shipperName}
-              onChange={(e) => setShipperName(e.target.value)}
-              placeholder="VD: Nguyễn Văn Tài (Shipper)"
-              required
-            />
-          </div>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
-              Số điện thoại tài xế:
-            </label>
-            <Input
-              value={shipperPhone}
-              onChange={(e) => setShipperPhone(e.target.value)}
-              placeholder="VD: 0901234567"
-            />
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748B', backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '6px' }}>
-            💡 <strong>Mẹo:</strong> Sau khi phân công, tài xế mở app mobile tại mục <strong>"Giao Hàng (Shipper)"</strong> để nhận đơn, liên hệ khách hàng và chụp ảnh xác nhận PoD khi giao hàng thành công.
-          </div>
         </form>
       </Modal>
 

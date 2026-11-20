@@ -361,7 +361,7 @@ export const UsersPage = () => {
   };
 
   const handleDeleteRole = (role) => {
-    if (['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER'].includes(role.roleName)) {
+    if (['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER', 'ROLE_SHIPPER'].includes(role.roleName)) {
       alert('Đây là vai trò hệ thống mặc định (Core System Role), không được phép xóa.');
       return;
     }
@@ -547,7 +547,7 @@ export const UsersPage = () => {
             <div style={{ fontWeight: 700, fontFamily: 'monospace', fontSize: '13px' }}>
               {row.roleName}
             </div>
-            {['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER'].includes(row.roleName) && (
+            {['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER', 'ROLE_SHIPPER'].includes(row.roleName) && (
               <span style={{ fontSize: '10px', color: 'var(--color-accent-700)', fontWeight: 600 }}>
                 Hệ thống cốt lõi (Core)
               </span>
@@ -576,7 +576,7 @@ export const UsersPage = () => {
       header: 'Thao tác',
       align: 'right',
       render: (row) => {
-        const isCoreRole = ['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER'].includes(row.roleName);
+        const isCoreRole = ['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER', 'ROLE_SHIPPER'].includes(row.roleName);
         return (
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
             <Button

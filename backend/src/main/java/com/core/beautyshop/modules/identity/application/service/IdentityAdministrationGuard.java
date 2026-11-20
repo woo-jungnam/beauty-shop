@@ -14,7 +14,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class IdentityAdministrationGuard {
     private static final Set<String> SYSTEM_ROLES = Set.of(
-            "ROLE_ADMIN", "ROLE_STAFF", "ROLE_USER", "ROLE_CUSTOMER");
+            "ROLE_ADMIN", "ROLE_STAFF", "ROLE_USER", "ROLE_CUSTOMER", "ROLE_SHIPPER");
     private final RoleRepository roles;
     private final UserRepository users;
 

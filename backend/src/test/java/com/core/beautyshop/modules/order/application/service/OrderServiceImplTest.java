@@ -6,6 +6,7 @@ import com.core.beautyshop.modules.cart.api.dto.CartResponse;
 import com.core.beautyshop.modules.catalog.api.CatalogFacade;
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
+import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.inventory.api.InventoryFacade;
 import com.core.beautyshop.modules.notification.api.CustomerNotificationFacade;
 import com.core.beautyshop.modules.order.application.dto.request.AssignShipperRequest;
@@ -91,14 +92,58 @@ class OrderServiceImplTest {
         order.setId(42L);
         when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
-        when(identityFacade.existsById(50L)).thenReturn(true);
-        var assignment = AssignShipperRequest.builder().shipperId(50L).shipperName("Tài xế").build();
+        when(identityFacade.findActiveUserWithRole(50L, "ROLE_SHIPPER")).thenReturn(Optional.of(
+                UserSummaryDto.builder().fullName("Tài xế").build()));
+        var assignment = AssignShipperRequest.builder().shipperId(50L).build();
 
         orderService.assignShipper(42L, assignment);
         orderService.assignShipper(42L, assignment);
 
         verify(customerNotifications).publish(eq(50L), any(), eq("SHIPPER_ASSIGNMENT"), any(), any(),
                 eq("/api/v1/shipper/orders/42"));
+    }
+
+    @Test
+    void rejectsAssignmentToAnAccountWithoutShipperRole() {
+        Order order = Order.builder().status(OrderStatus.SHIPPED).build();
+        when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
+        var assignment = AssignShipperRequest.builder().shipperId(50L).build();
+
+        assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
+                () -> orderService.assignShipper(42L, assignment));
+        org.junit.jupiter.api.Assertions.assertNull(order.getShipperId());
+    }
+
+    @Test
+    void retryingDeliveryUsesSelectedAccountWithoutDeductingStockAgain() {
+        Order order = Order.builder().orderNumber("ORD-TEST")
+                .status(OrderStatus.DELIVERY_FAILED).shipperId(10L).shipperPhone("0901111111")
+                .statusHistories(new ArrayList<>()).build();
+        order.setId(42L);
+        when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(identityFacade.findActiveUserWithRole(50L, "ROLE_SHIPPER")).thenReturn(Optional.of(
+                UserSummaryDto.builder().username("driver50").build()));
+
+        orderService.assignShipper(42L, AssignShipperRequest.builder().shipperId(50L).build());
+
+        assertEquals(OrderStatus.SHIPPED, order.getStatus());
+        assertEquals(50L, order.getShipperId());
+        assertEquals("driver50", order.getShipperName());
+        org.junit.jupiter.api.Assertions.assertNull(order.getShipperPhone());
+        org.mockito.Mockito.verifyNoInteractions(inventoryFacade);
+    }
+
+    @Test
+    void assignedOrderCannotBeMarkedDeliveredWithoutProof() {
+        Order order = Order.builder().status(OrderStatus.SHIPPED).shipperId(50L).build();
+        when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
+        var command = new UpdateOrderStatusRequest();
+        command.setStatus(OrderStatus.DELIVERED);
+
+        assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
+                () -> orderService.updateOrderStatus(42L, command));
+        assertEquals(OrderStatus.SHIPPED, order.getStatus());
     }
 
     @Test

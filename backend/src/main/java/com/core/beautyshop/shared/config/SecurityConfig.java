@@ -128,6 +128,7 @@ public class SecurityConfig {
                                 "/api/v1/admin/vouchers/**",
                                 "/api/v1/admin/flash-sales/**",
                                 "/api/v1/admin/staff/**",
+                                "/api/v1/admin/users/shippers",
                                 "/api/v1/admin/spa/**",
                                 "/api/v1/admin/dashboard/**"
                         ).hasAnyRole("ADMIN", "STAFF")
@@ -138,7 +139,7 @@ public class SecurityConfig {
                                 "/api/v1/roles/**",
                                 "/api/v1/test/admin"
                         ).hasRole("ADMIN")
-                        .requestMatchers("/api/v1/shipper/**").authenticated()
+                        .requestMatchers("/api/v1/shipper/**").hasRole("SHIPPER")
                         .anyRequest().authenticated()
                 );
 

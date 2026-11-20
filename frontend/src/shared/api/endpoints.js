@@ -17,6 +17,7 @@ export const ENDPOINTS = {
   },
 
   USERS: {
+    SHIPPERS: '/api/v1/admin/users/shippers',
     LIST: '/api/v1/admin/users',
     DETAIL: (id) => `/api/v1/admin/users/${id}`,
     UPDATE_STATUS: (id) => `/api/v1/admin/users/${id}/status`,

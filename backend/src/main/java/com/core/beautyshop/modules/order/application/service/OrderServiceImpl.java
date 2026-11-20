@@ -363,6 +363,10 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Đơn hàng gói Spa không áp dụng giao nhận hay hoàn trả như hàng vật lý");
 
         validateStatusTransition(previousStatus, newStatus);
+        if (newStatus == OrderStatus.DELIVERED && previousStatus != newStatus
+                && order.getShipperId() != null && order.getDeliveryProofUrl() == null) {
+            throw new BusinessException("Tài xế cần xác nhận giao hàng kèm ảnh trên ứng dụng");
+        }
         if(newStatus==OrderStatus.RETURNED&&productReturns!=null)productReturns.ensureWholeReturnAllowed(order.getId());
         if (previousStatus == newStatus) return orderMapper.toOrderResponse(order);
 
@@ -434,25 +438,32 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse assignShipper(Long id, com.core.beautyshop.modules.order.application.dto.request.AssignShipperRequest request) {
         Order order = orderRepository.findByIdForUpdate(id)
+                .filter(candidate -> !Boolean.TRUE.equals(candidate.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với id: " + id));
 
-        if (order.getStatus() != OrderStatus.CONFIRMED && order.getStatus() != OrderStatus.PROCESSING && order.getStatus() != OrderStatus.SHIPPED) {
-            throw new BusinessException("Chỉ có thể gán tài xế cho đơn hàng đã xác nhận, đang xử lý hoặc đang giao");
+        if (order.getAppointmentId() != null || order.getServicePackageId() != null) {
+            throw new BusinessException("Chỉ phân công tài xế cho đơn hàng vật lý");
+        }
+        if (order.getStatus() != OrderStatus.CONFIRMED && order.getStatus() != OrderStatus.PROCESSING
+                && order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.DELIVERY_FAILED) {
+            throw new BusinessException("Trạng thái đơn hàng hiện tại không cho phép phân công tài xế");
+        }
+        if (order.getPaymentMethod() == PaymentMethod.BANK && order.getPaymentStatus() != PaymentStatus.PAID) {
+            throw new BusinessException("Cần hoàn tất thanh toán chuyển khoản trước khi phân công và xuất kho");
         }
 
         Long previousShipper = order.getShipperId();
         Long assignedShipper = request.getShipperId();
-        if (assignedShipper != null && !identityFacade.existsById(assignedShipper)) {
-            throw new BusinessException("Không tìm thấy tài khoản tài xế");
-        }
+        var shipper = identityFacade.findActiveUserWithRole(assignedShipper, "ROLE_SHIPPER")
+                .orElseThrow(() -> new BusinessException("Chọn tài khoản tài xế đang hoạt động"));
         order.setShipperId(assignedShipper);
-        if (!java.util.Objects.equals(previousShipper, assignedShipper) || order.getShipperAssignedAt() == null) {
-            order.setShipperAssignedAt(assignedShipper == null ? null : Instant.now());
+        boolean changedShipper = !assignedShipper.equals(previousShipper);
+        if (changedShipper || order.getShipperAssignedAt() == null) {
+            order.setShipperAssignedAt(Instant.now());
         }
-        order.setShipperName(request.getShipperName() != null ? request.getShipperName().trim() : "Bưu tá nội bộ");
-        if (request.getShipperPhone() != null && !request.getShipperPhone().isBlank()) {
-            order.setShipperPhone(request.getShipperPhone().trim());
-        }
+        order.setShipperName(shipper.getFullName() == null || shipper.getFullName().isBlank()
+                ? shipper.getUsername() : shipper.getFullName());
+        order.setShipperPhone(shipper.getPhone());
 
         OrderStatus previousStatus = order.getStatus();
         if (order.getStatus() == OrderStatus.CONFIRMED || order.getStatus() == OrderStatus.PROCESSING) {
@@ -464,12 +475,17 @@ public class OrderServiceImpl implements OrderService {
                 inventoryFacade.deductStock(order.getOrderNumber(), entry.getKey(), entry.getValue());
             }
         }
+        if (previousStatus == OrderStatus.DELIVERY_FAILED) {
+            order.setStatus(OrderStatus.SHIPPED);
+        }
         String noteText = "Điều phối cho bưu tá: " + order.getShipperName()
                 + (request.getNotes() != null && !request.getNotes().isBlank() ? " (" + request.getNotes().trim() + ")" : "");
-        createStatusHistory(order, order.getStatus(), noteText);
+        if (changedShipper || previousStatus != order.getStatus() || (request.getNotes() != null && !request.getNotes().isBlank())) {
+            createStatusHistory(order, order.getStatus(), noteText);
+        }
         Order saved = orderRepository.save(order);
 
-        if (assignedShipper != null && !assignedShipper.equals(previousShipper)) {
+        if (changedShipper || previousStatus == OrderStatus.DELIVERY_FAILED) {
             customerNotifications.publish(assignedShipper, "shipper-assignment:" + java.util.UUID.randomUUID(),
                     "SHIPPER_ASSIGNMENT", "Đơn giao hàng mới", "Bạn được phân công giao đơn #" + saved.getOrderNumber(),
                     "/api/v1/shipper/orders/" + saved.getId());

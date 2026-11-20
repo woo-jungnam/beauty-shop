@@ -49,6 +49,11 @@ class AuthProvider extends ChangeNotifier {
         _errorMessage = response.message ?? 'Đăng nhập không thành công';
         return false;
       }
+      final roles = data?['roles'];
+      if (roles is! List || !roles.contains('ROLE_SHIPPER')) {
+        _errorMessage = 'Tài khoản chưa được cấp vai trò Tài xế.';
+        return false;
+      }
       final user = data?['user'] as Map<String, dynamic>?;
       await StorageService.setUserInfo(
         (user?['username'] ?? data?['username'])?.toString() ?? username,

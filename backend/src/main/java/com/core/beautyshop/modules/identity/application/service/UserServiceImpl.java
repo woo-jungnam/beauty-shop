@@ -140,7 +140,11 @@ public class UserServiceImpl implements UserService {
         if (status != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         if (role != null && !role.isBlank()) {
             String name = role.startsWith("ROLE_") ? role : "ROLE_" + role;
-            spec = spec.and((root, query, cb) -> { query.distinct(true); return cb.equal(root.join("roles").get("name"), name); });
+            spec = spec.and((root, query, cb) -> {
+                query.distinct(true);
+                var assignedRole = root.join("roles");
+                return cb.and(cb.equal(assignedRole.get("name"), name), cb.isFalse(assignedRole.get("isDeleted")));
+            });
         }
         return userRepository.findAll(spec, pageable).map(authMapper::toUserProfileResponse);
     }

@@ -79,6 +79,16 @@ public class IdentityFacadeImpl implements IdentityFacade {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<UserSummaryDto> findActiveUserWithRole(Long userId, String roleName) {
+        return userRepository.findById(userId)
+                .filter(user -> user.getStatus() == AccountStatus.ACTIVE && !Boolean.TRUE.equals(user.getIsDeleted()))
+                .filter(user -> user.getRoles() != null && user.getRoles().stream().anyMatch(role ->
+                        roleName.equals(role.getName()) && !Boolean.TRUE.equals(role.getIsDeleted())))
+                .map(this::mapToSummary);
+    }
+
+    @Override
     public boolean existsById(Long userId) {
         if (userId == null) {
             return false;

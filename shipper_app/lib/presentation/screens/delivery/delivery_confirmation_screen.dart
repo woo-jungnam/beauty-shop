@@ -24,6 +24,9 @@ class _DeliveryConfirmationScreenState
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
   bool _isSubmitting = false;
+  bool _codConfirmed = false;
+
+  bool get _requiresCodConfirmation => widget.order.codAmount > 0;
 
   final NumberFormat _currencyFormat = NumberFormat.currency(
     locale: 'vi_VN',
@@ -455,13 +458,28 @@ class _DeliveryConfirmationScreenState
                 ],
               ),
             ),
+            if (_requiresCodConfirmation)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Đã thu đủ ${_currencyFormat.format(widget.order.codAmount)} tiền mặt',
+                ),
+                value: _codConfirmed,
+                onChanged: _isSubmitting
+                    ? null
+                    : (value) => setState(() => _codConfirmed = value ?? false),
+              ),
             const SizedBox(height: 26),
 
             // Submit Button
             SizedBox(
               height: 52,
               child: ElevatedButton.icon(
-                onPressed: _isSubmitting ? null : _submitConfirmation,
+                onPressed:
+                    _isSubmitting ||
+                        (_requiresCodConfirmation && !_codConfirmed)
+                    ? null
+                    : _submitConfirmation,
                 icon: _isSubmitting
                     ? const SizedBox.shrink()
                     : const Icon(Icons.verified, color: Colors.white),
