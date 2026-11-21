@@ -25,7 +25,7 @@ import { openTreatmentPayment } from '../treatments/paymentNavigation';
 import { resolveMediaUrl } from '../../shared/utils/formatters';
 import './spa-benefits.css';
 
-const PACKAGE_PAGE_SIZE = 6;
+const PACKAGE_PAGE_SIZE = 3;
 
 export const ServicePackages = ({ onNavigate }) => {
   const { isAuthenticated, user } = useAuth();

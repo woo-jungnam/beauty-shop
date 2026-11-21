@@ -19,11 +19,11 @@ async function setup(page, handler = () => undefined, profile = customer) {
   });
 }
 test('package catalog paginates the filtered results from the first page', async ({ page }) => {
-  const packages = Array.from({ length: 10 }, (_, index) => ({
+  const packages = Array.from({ length: 6 }, (_, index) => ({
     ...pack,
     id: pack.id + index,
     name: `Gói Spa ${String(index + 1).padStart(2, '0')}`,
-    description: index < 8 ? 'Phục hồi da' : 'Dưỡng da',
+    description: index < 5 ? 'Phục hồi da' : 'Dưỡng da',
   }));
   await setup(page, async (route, path) => {
     if (!path.endsWith('/spa/services/packages')) return false;
@@ -38,11 +38,11 @@ test('package catalog paginates the filtered results from the first page', async
   const next = pagination.getByRole('button', { name: 'Trang sau' });
   const search = page.getByRole('textbox', { name: 'Tìm kiếm gói dịch vụ' });
 
-  await expect(cards).toHaveCount(6);
+  await expect(cards).toHaveCount(3);
   await expect(previous).toBeDisabled();
   await next.click();
-  await expect(cards).toHaveCount(4);
-  await expect(cards.first()).toHaveText('Gói Spa 07');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.first()).toHaveText('Gói Spa 04');
   await expect(next).toBeDisabled();
 
   await search.fill('Phục hồi da');
@@ -50,13 +50,13 @@ test('package catalog paginates the filtered results from the first page', async
   await expect(cards.first()).toHaveText('Gói Spa 01');
   await next.click();
   await expect(cards).toHaveCount(2);
-  await expect(page.getByText('Hiển thị 7–8 / 8 gói dịch vụ')).toBeVisible();
+  await expect(page.getByText('Hiển thị 4–5 / 5 gói dịch vụ')).toBeVisible();
 
   await search.fill('không có kết quả');
   await expect(pagination).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Không tìm thấy gói dịch vụ phù hợp' })).toBeVisible();
   await page.getByRole('button', { name: 'Xóa bộ lọc tìm kiếm' }).click();
-  await expect(cards).toHaveCount(6);
+  await expect(cards).toHaveCount(3);
   await expect(pagination.getByRole('status')).toHaveText('Trang 1 / 2');
 });
 
