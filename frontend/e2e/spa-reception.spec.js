@@ -52,7 +52,9 @@ async function setup(page, options = {}) {
       calls.push({ path });
       if (options.checkInFail) return route.fulfill({ status: 409, json: { message: 'Check-in unavailable' } });
       const id = Number(path.split('/').at(-2)); appointments = appointments.map(row => row.id === id ? { ...row, checkedInAt: '2026-10-13T03:15:00Z' } : row); data = appointments.find(row => row.id === id);
-    } else if (path.endsWith('/invoice')) return route.fulfill({ status: 404, json: { message: 'No invoice' } });
+    } else if (path === '/api/v1/appointments/2') data = appointments.find(row => row.id === 2);
+    else if (path.endsWith('/finance')) data = { entries: [], reviewReasons: [], depositDue: 0 };
+    else if (path.endsWith('/invoice')) return route.fulfill({ status: 404, json: { message: 'No invoice' } });
     await route.fulfill({ json: { data } });
   });
   await page.goto('/#/reception');
@@ -188,8 +190,9 @@ test('beauty-report: SpaPage counter stays unknown until success; loading and er
   state.hold = () => true;
   state.appointmentsFail = true;
   await page.goto('/#/admin/spa');
-  const tab = page.getByRole('button', { name: /^Lịch hẹn Spa/ });
-  await expect(tab).toHaveText('Lịch hẹn Spa (—)');
+  const tab = page.getByRole('button', { name: 'Lịch hẹn Spa', exact: true });
+  const count = page.locator('.admin-section-nav-trigger-count');
+  await expect(tab).toBeVisible();
   expect(state.calls).toHaveLength(0);
   await tab.click();
   await expect.poll(() => state.pending.length).toBe(1);
@@ -197,13 +200,13 @@ test('beauty-report: SpaPage counter stays unknown until success; loading and er
   await expect(page.getByText('Không có lịch hẹn spa nào phù hợp.', { exact: true })).toHaveCount(0);
   state.pending.shift().release();
   await expect(page.getByRole('alert')).toContainText('Chưa tải được lịch hẹn');
-  await expect(tab).toHaveText('Lịch hẹn Spa (—)');
+  await expect(count).toHaveText('—');
   await expect(page.getByText('Chưa có dữ liệu', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Không có lịch hẹn spa nào phù hợp.', { exact: true })).toHaveCount(0);
   state.appointmentsFail = false;
   state.hold = null;
   await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
-  await expect(tab).toHaveText('Lịch hẹn Spa (0)');
+  await expect(count).toHaveText('0');
   await expect(page.getByText('Không có lịch hẹn spa nào phù hợp.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mở quầy Lễ tân', exact: true })).toHaveCount(1);
 });
@@ -213,19 +216,20 @@ test('beauty-report: SpaPage ignores stale filter and page responses', async ({ 
   const state = await setupBeautyReport(page, { admin: true, rows });
   state.hold = ({ status }) => !status;
   await page.goto('/#/admin/spa');
-  const tab = page.getByRole('button', { name: /^Lịch hẹn Spa/ });
+  const tab = page.getByRole('button', { name: 'Lịch hẹn Spa', exact: true });
+  const count = page.locator('.admin-section-nav-trigger-count');
   await tab.click();
   await expect.poll(() => state.pending.length).toBe(1);
   const oldFilter = state.pending.shift();
   const filter = page.getByLabel('Lọc trạng thái lịch hẹn');
   await filter.selectOption('CONFIRMED');
   await expect(page.getByRole('cell', { name: /Khách 3/ })).toBeVisible();
-  await expect(tab).toHaveText('Lịch hẹn Spa (1)');
+  await expect(count).toHaveText('1');
   state.hold = null;
   oldFilter.release();
   await filter.selectOption('PENDING');
   await expect(page.getByRole('cell', { name: /Khách 1/ })).toBeVisible();
-  await expect(tab).toHaveText('Lịch hẹn Spa (3)');
+  await expect(count).toHaveText('3');
   state.hold = ({ status, page: index }) => status === 'PENDING' && index === 1;
   await page.getByRole('button', { name: 'Sau', exact: true }).click();
   await expect.poll(() => state.pending.length).toBe(1);
@@ -236,7 +240,7 @@ test('beauty-report: SpaPage ignores stale filter and page responses', async ({ 
   await page.getByRole('button', { name: 'Làm mới', exact: true }).click();
   await expect(page.getByRole('cell', { name: /Khách 3/ })).toBeVisible();
   await expect(page.getByRole('cell', { name: /Khách 2/ })).toHaveCount(0);
-  await expect(tab).toHaveText('Lịch hẹn Spa (1)');
+  await expect(count).toHaveText('1');
 });
 
 test('all pages load; facility strip respects occupancy and cleaning independently of queue filters', async ({ page }) => {
@@ -378,9 +382,13 @@ test('start requires check-in; incomplete executions require explicit confirmati
   await card.getByRole('button', { name: 'Check-in ngay' }).click();
   await card.getByRole('button', { name: 'Bắt đầu ca' }).click();
   await card.getByRole('button', { name: 'Hoàn tất & thu ngân' }).click();
-  await expect(page.getByRole('dialog', { name: 'Xác nhận hoàn tất ca chăm sóc' })).toBeVisible();
+  const execution = page.getByRole('dialog', { name: /Lịch hẹn #2/ });
+  await expect(execution).toBeVisible();
   expect(calls.some(call => call.body?.status === 'COMPLETED')).toBe(false);
-  await page.getByRole('button', { name: 'Xác nhận đã thực hiện đủ & hoàn tất' }).click();
+  await execution.getByRole('button', { name: 'Đóng cửa sổ' }).click();
+  await page.route('**/appointments/admin/all?**', route => route.fulfill({ json: { data: { content: [appointment(2, 'IN_PROGRESS', { items: [item(2, { executionStatus: 'PERFORMED', staffId: 11 })] })], last: true, totalPages: 1 } } }));
+  await page.reload();
+  await card.getByRole('button', { name: 'Hoàn tất & thu ngân' }).click();
   await expect(page.getByRole('dialog', { name: 'Thu ngân tại quầy' })).toBeVisible();
   expect(calls.filter(call => call.path.endsWith('/2/status')).map(call => call.body.status)).toEqual(['IN_PROGRESS', 'COMPLETED']);
 });

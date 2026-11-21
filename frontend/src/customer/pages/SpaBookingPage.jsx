@@ -96,6 +96,8 @@ const StepHeading = ({ number, title, description, complete }) => (
   </div>
 );
 
+import { PackageServicePicker } from '../../features/spa/PackageServicePicker';
+
 export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTicketId }) => {
   const { user, isAuthenticated } = useAuth();
   const [services, setServices] = useState([]);
@@ -184,7 +186,14 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
   const stepToFocus = useRef(null);
 
   const today = getVietnamDateString();
-  const slotContext = `${selectedService?.id || ""}/${selectedDate}/${selectedStaff}`;
+  const [extraIds, setExtraIds] = useState([]);
+  const ticket = tickets.find(item => item.id === selectedTicketId);
+  useEffect(() => setExtraIds([]), [selectedService?.id, selectedTicketId]);
+  const extraServices = extraIds.map(id => ticket?.services?.find(item => item.serviceId === id && item.available > 0 && id !== selectedService?.id)).filter(Boolean);
+  const extraQuery = extraServices.map(item => item.serviceId).join(',');
+  const serviceNames = [selectedService?.name, ...extraServices.map(item => item.serviceName)].filter(Boolean).join(' + ');
+  const visitDuration = [selectedService, ...extraServices.map(item => services.find(s => s.id === item.serviceId))].reduce((sum, item) => sum + Number(item?.durationMinutes || 0) + Number(item?.preparationTimeMinutes || 0), 0);
+  const slotContext = `${selectedService?.id || ""}/${selectedDate}/${selectedStaff}/${extraQuery}/${ticket?.expiryDate || ""}`;
   const validSlot = Boolean(
     selectedSlot &&
       loadedSlotContext === slotContext &&
@@ -381,53 +390,47 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     };
   }, []);
 
+  const applyFinance = (data, waiting) => {
+    if (data.status === "CONFIRMED") {
+      setBookingResult({ ...waiting.bookingInfo, status: data.status, paidAmount: Number(data.depositCollected || 0) });
+      setPaymentWaiting(null);
+      return;
+    }
+    const review = data.reviewReasons?.length > 0;
+    const closed = data.closed || ["CANCELLED", "NO_SHOW", "COMPLETED"].includes(data.status);
+    const due = Number(data.depositDue || 0);
+    setPaymentWaiting(current => current?.appointmentId !== waiting.appointmentId ? current : {
+      ...current, amount: due, review: review || closed,
+      instruction: review || closed ? null : data.depositPayment?.paymentInstruction,
+    });
+    setPaymentError(closed ? "Lịch đã đóng. Kiểm tra lịch hẹn để xem chi tiết."
+      : review ? "Spa đang đối soát khoản đã nhận. Vui lòng giữ chứng từ chuyển khoản."
+      : Number(data.depositCollected) > 0 ? `Spa đã nhận ${formatCurrency(data.depositCollected)}. Còn thiếu ${formatCurrency(due)}.`
+      : "Đang chờ ngân hàng ghi nhận giao dịch.");
+  };
+
   useEffect(() => {
     if (!paymentWaiting?.appointmentId) return;
     let cancelled = false;
     const interval = setInterval(async () => {
       try {
         const res = await apiClient.get(`/api/v1/spa/appointments/${paymentWaiting.appointmentId}/finance`);
-        if (cancelled) return;
-        const data = readData(res);
-        if (data.status === "CONFIRMED" || Number(data.depositCollected || 0) > 0) {
-          clearInterval(interval);
-          setBookingResult({
-            ...paymentWaiting.bookingInfo,
-            status: "CONFIRMED",
-            paidAmount: Number(data.depositCollected || paymentWaiting.amount),
-          });
-          setPaymentWaiting(null);
-        }
-      } catch (e) {
-        console.warn("Polling payment notice:", e);
+        if (!cancelled) applyFinance(readData(res), paymentWaiting);
+      } catch {
+        if (!cancelled) setPaymentError("Chưa kiểm tra được giao dịch. Hệ thống sẽ thử lại.");
       }
     }, 4000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [paymentWaiting]);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [paymentWaiting?.appointmentId]);
 
   const handleManualCheckPayment = async () => {
     if (!paymentWaiting?.appointmentId || checkingPayment) return;
     setCheckingPayment(true);
-    setPaymentError('');
     try {
       const res = await apiClient.get(`/api/v1/spa/appointments/${paymentWaiting.appointmentId}/finance`);
-      const data = readData(res);
-      if (data.status === "CONFIRMED" || Number(data.depositCollected || 0) > 0) {
-        setBookingResult({
-          ...paymentWaiting.bookingInfo,
-          status: "CONFIRMED",
-          paidAmount: Number(data.depositCollected || paymentWaiting.amount),
-        });
-        setPaymentWaiting(null);
-      } else {
-        setPaymentError('Hệ thống chưa nhận được giao dịch chuyển khoản từ ngân hàng. Nếu bạn vừa chuyển, vui lòng đợi 5-10 giây để cổng VietQR khớp lệnh.');
-      }
+      applyFinance(readData(res), paymentWaiting);
     } catch (e) {
-      setPaymentError(e.message || 'Chưa kiểm tra được giao dịch.');
+      setPaymentError(e.message || "Chưa kiểm tra được giao dịch.");
     } finally {
       setCheckingPayment(false);
     }
@@ -445,6 +448,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     }
     setLoadingSlots(true);
     const query = new URLSearchParams({ date: selectedDate });
+    if (extraQuery) query.set("additionalServiceIds", extraQuery);
+    if (ticket?.expiryDate) query.set("validBefore", ticket.expiryDate);
     if (selectedStaff !== "AUTO") query.set("staffId", selectedStaff);
     apiClient
       .get(
@@ -495,7 +500,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     return () => {
       cancelled = true;
     };
-  }, [selectedService?.id, selectedDate, selectedStaff, slotVersion]);
+  }, [selectedService?.id, selectedDate, selectedStaff, slotVersion, extraQuery, ticket?.expiryDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -677,6 +682,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             facilityId: selectedFacilityId ? Number(selectedFacilityId) : null,
             ticketId: selectedTicketId ? Number(selectedTicketId) : null,
           },
+          ...extraServices.map(item => ({ serviceId: item.serviceId, ticketId: selectedTicketId })),
         ],
       });
       const created = readData(response);
@@ -692,8 +698,8 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
         status: created.status || "PENDING",
         date: created.appointmentDate || selectedDate,
         time: created.startTime || selectedSlot,
-        service: created.items?.[0]?.serviceName || selectedService.name,
-        duration: selectedService.durationMinutes || 60,
+        service: created.items?.map(item => item.serviceName).filter(Boolean).join(" + ") || serviceNames,
+        duration: visitDuration,
         staff: selectedStaffName,
         facility: chosenFacility,
         price: total,
@@ -811,7 +817,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
             </div>
           ) : (
             <div style={{ padding: '20px', color: 'var(--c-text-muted)' }}>
-              Đang tải mã VietQR thanh toán...
+              {paymentWaiting.review ? 'Đã dừng yêu cầu chuyển khoản cho lịch này.' : 'Đang tải mã VietQR thanh toán...'}
             </div>
           )}
 
@@ -946,7 +952,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   {bookingResult.ticketId ? (
                     <>
                       0 đ
-                      <small>Khấu trừ vé #{bookingResult.ticketId}</small>
+                      <small>Đã giữ lượt từ vé #{bookingResult.ticketId}</small>
                     </>
                   ) : bookingResult.paymentOption === "PAY_FULL" ? (
                     <>
@@ -1257,7 +1263,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   <Ticket size={22} />
                   <div>
                     <strong>Bạn có vé liệu trình phù hợp</strong>
-                    <p>Sử dụng 1 buổi từ vé để thanh toán cho cuộc hẹn này.</p>
+                    <p>Mỗi dịch vụ đã chọn sẽ giữ một lượt tương ứng trên vé.</p>
                   </div>
                   <label>
                     <span className="booking-sr-only">
@@ -1284,6 +1290,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   </label>
                 </div>
               )}
+              <PackageServicePicker ticket={ticket} serviceId={selectedService?.id} selected={extraIds} onChange={setExtraIds} />
             </section>}
 
             {currentStep === 2 && <section
@@ -1713,9 +1720,9 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                 />
                 <div>
                   <small>{getCategory(selectedService)}</small>
-                  <strong>{selectedService.name}</strong>
+                  <strong>{serviceNames}</strong>
                   <span>
-                    <Clock size={13} /> {selectedService.durationMinutes || 60}{" "}
+                    <Clock size={13} /> {visitDuration}{" "}
                     phút
                   </span>
                 </div>
@@ -1790,7 +1797,7 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
                   <>
                     <div>
                       <strong>Thanh toán bằng vé liệu trình</strong>
-                      <small>Khấu trừ 1 buổi từ vé #{selectedTicketId}</small>
+                      <small>Giữ {1 + extraServices.length} lượt từ vé #{selectedTicketId}</small>
                     </div>
                     <b>0 đ</b>
                   </>

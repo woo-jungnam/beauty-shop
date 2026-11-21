@@ -47,8 +47,11 @@ INSERT INTO categories (name, slug, description, image_url, display_order, is_ac
 ('Dụng cụ làm đẹp', 'dung-cu-lam-dep', NULL, NULL, 6, TRUE, 'system', 'system', FALSE)
 ON DUPLICATE KEY UPDATE slug = categories.slug;
 
+SET @catalog_offset = GREATEST((SELECT COALESCE(MAX(id),0) FROM products), (SELECT COALESCE(MAX(id),0) FROM product_variants));
+
 -- 1. INSERT INTO products
-INSERT INTO products (
+CREATE TEMPORARY TABLE seed_products LIKE products;
+INSERT INTO seed_products (
     id, name, slug, short_description, description, thumbnail_url,
     status, product_type, target_gender, skin_type, ingredients, how_to_use,
     origin_country, volume, is_featured, average_rating, total_reviews, total_sold,
@@ -254,10 +257,13 @@ INSERT INTO products (
 (298, 'Dầu Gội Sạch Gàu Ngăn Rụng Tóc Head & Shoulders Anti-Hairfall Shampoo 850ml', 'dau-goi-sach-gau-ngan-rung-toc-head-and-shoulders-anti-hairfall-shampoo-850ml', 'Dầu gội sạch gàu kết hợp tinh chất dầu sâm nuôi dưỡng chân tóc chắc khỏe giảm gãy rụng tóc hiệu quả.', 'Head & Shoulders Anti-Hairfall Shampoo bảo vệ da đầu toàn diện khỏi tác nhân gây gàu và hiện tượng rụng tóc do gãy rụng. Tinh chất nhân sâm quý giá cung cấp dưỡng chất nuôi dưỡng chân tóc, tăng cường độ bám của nang tóc và phục hồi cấu trúc sợi tóc dẻo dai từ gốc đến ngọn.', 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=800&q=85', 'ACTIVE', 'PRODUCT', 'UNISEX', 'NORMAL', 'Water, Sodium Laureth Sulfate, Zinc Carbonate, Glycol Distearate, Cocamide MEA, Cocamidopropyl Betaine, Sodium Chloride, Fragrance, Zinc Pyrithione, Panax Ginseng Root Extract, Dimethicone, Guar Hydroxypropyltrimonium Chloride, Sodium Benzoate, Magnesium Carbonate Hydroxide, Methylchloroisothiazolinone, Methylisothiazolinone.', 'Thoa dầu gội lên tóc ướt, tạo bọt và mát xa da đầu nhẹ nhàng trong 2-3 phút để dưỡng chất nhân sâm thấm sâu vào chân tóc rồi xả sạch với nước.', 'Mỹ', '850ml', 1, 4.85, 38, 108, 40, 1, 0, 'Zinc Pyrithione (ZPT), Ginseng Extract, Dimethicone', NOW(), NOW()),
 (299, 'Dầu Xả Sạch Gàu Cấp Ẩm Da Đầu Head & Shoulders Sub Zero Cool Menthol Conditioner 300ml', 'dau-xa-sach-gau-cap-am-da-dau-head-and-shoulders-sub-zero-cool-menthol-conditioner-300ml', 'Dầu xả sạch gàu chuyên dụng có thể thoa trực tiếp lên da đầu giúp cấp ẩm làm mát và dưỡng tóc mềm mượt.', 'Head & Shoulders Sub Zero Cool Menthol Conditioner là dầu xả đặc biệt có công thức an toàn để thoa trực tiếp lên da đầu mà không gây bít tắc chân tóc. Chứa hoạt chất ZPT và bạc hà mát lạnh làm dịu cơn ngứa da đầu, cấp ẩm sâu chống khô da đầu và giữ cho mái tóc luôn suôn mượt tơi xốp.', 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=800&q=85', 'ACTIVE', 'PRODUCT', 'UNISEX', 'NORMAL', 'Water, Stearyl Alcohol, Cetyl Alcohol, Stearamidopropyl Dimethylamine, Glutamic Acid, Dimethicone, Fragrance, Zinc Pyrithione, Menthol, Benzyl Alcohol, Citric Acid, Sodium Chloride, Methylchloroisothiazolinone, Methylisothiazolinone.', 'Sau khi gội đầu sạch, thoa dầu xả lên cả tóc và da đầu. Mát xa nhẹ nhàng trong 1-2 phút để cảm nhận cảm giác mát lạnh sảng khoái rồi xả sạch lại bằng nước.', 'Mỹ', '300ml', 1, 4.92, 39, 109, 40, 1, 0, 'Zinc Pyrithione, Menthol, Scalp Hydrating Complex', NOW(), NOW()),
 (300, 'Dầu Gội Kiểm Soát Dầu Ngừa Ngứa Da Đầu Head & Shoulders Itchy Scalp Care Shampoo 850ml', 'dau-goi-kiem-soat-dau-ngua-ngua-da-dau-head-and-shoulders-itchy-scalp-care-shampoo-850ml', 'Dầu gội dập tắt cơn ngứa da đầu tức thì chứa chiết xuất khuynh diệp Eucalyptus và kẽm ZPT.', 'Head & Shoulders Itchy Scalp Care Shampoo mang lại cảm giác nhẹ nhõm tức thì cho da đầu bị ngứa ngáy dữ dội do gàu. Chiết xuất lá khuynh diệp tự nhiên Eucalyptus xoa dịu các kích ứng ngứa rát, trong khi hoạt chất ZPT loại bỏ mảng gàu bám dai dẳng, mang lại da đầu khỏe mạnh sạch gàu và mái tóc thơm mát suốt 72 giờ.', 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=800&q=85', 'ACTIVE', 'PRODUCT', 'UNISEX', 'ALL', 'Water, Sodium Laureth Sulfate, Zinc Carbonate, Glycol Distearate, Cocamide MEA, Cocamidopropyl Betaine, Sodium Chloride, Fragrance, Zinc Pyrithione, Eucalyptus Globulus Leaf Extract, Dimethicone, Guar Hydroxypropyltrimonium Chloride, Sodium Benzoate, Magnesium Carbonate Hydroxide, Methylchloroisothiazolinone, Methylisothiazolinone.', 'Làm ướt tóc và da đầu, lấy một lượng vừa đủ xoa đều và gãi nhẹ da đầu trong 2 phút rồi xả sạch lại bằng nước mát.', 'Mỹ', '850ml', 1, 4.85, 40, 110, 40, 1, 0, 'Eucalyptus Extract, Zinc Pyrithione (ZPT), Zinc Carbonate', NOW(), NOW());
+INSERT INTO products (id, name, slug, short_description, description, thumbnail_url, status, product_type, target_gender, skin_type, ingredients, how_to_use, origin_country, volume, is_featured, average_rating, total_reviews, total_sold, brand_id, has_fragrance, has_alcohol, key_actives_summary, created_at, updated_at)
+SELECT @catalog_offset + id, name, slug, short_description, description, thumbnail_url, status, product_type, target_gender, skin_type, ingredients, how_to_use, origin_country, volume, is_featured, average_rating, total_reviews, total_sold, brand_id, has_fragrance, has_alcohol, key_actives_summary, created_at, updated_at FROM seed_products;
+DROP TEMPORARY TABLE seed_products;
 
 -- 2. INSERT INTO product_categories
 INSERT INTO product_categories (product_id, category_id)
-SELECT seed.product_id, category.id
+SELECT @catalog_offset + seed.product_id, category.id
 FROM (
     SELECT 101 AS product_id, 'kem-nen' AS category_slug
     UNION ALL SELECT 101 AS product_id, 'trang-diem' AS category_slug
@@ -665,7 +671,8 @@ FROM (
 JOIN categories category ON category.slug = seed.category_slug;
 
 -- 3. INSERT INTO product_variants
-INSERT INTO product_variants (
+CREATE TEMPORARY TABLE seed_product_variants LIKE product_variants;
+INSERT INTO seed_product_variants (
     id, product_id, sku, variant_name, price, original_price, discount_price,
     volume_value, volume_unit, currency, is_default, is_active,
     active_default_product_id, created_at, updated_at
@@ -870,9 +877,13 @@ INSERT INTO product_variants (
 (298, 298, 'HNS-FALL-SHAMP-850', 'Chai vòi nhấn 850ml', 215000.00, 255000.00, 215000.00, 850.00, 'ml', 'VND', 1, 1, 298, NOW(), NOW()),
 (299, 299, 'HNS-SUBZERO-COND-300', 'Chai 300ml', 125000.00, 150000.00, 125000.00, 300.00, 'ml', 'VND', 1, 1, 299, NOW(), NOW()),
 (300, 300, 'HNS-ITCHY-SHAMP-850', 'Chai vòi nhấn 850ml', 210000.00, 250000.00, 210000.00, 850.00, 'ml', 'VND', 1, 1, 300, NOW(), NOW());
+INSERT INTO product_variants (id, product_id, sku, variant_name, price, original_price, discount_price, volume_value, volume_unit, currency, is_default, is_active, active_default_product_id, created_at, updated_at)
+SELECT @catalog_offset + id, @catalog_offset + product_id, sku, variant_name, price, original_price, discount_price, volume_value, volume_unit, currency, is_default, is_active, @catalog_offset + active_default_product_id, created_at, updated_at FROM seed_product_variants;
+DROP TEMPORARY TABLE seed_product_variants;
 
 -- 4. INSERT INTO product_images
-INSERT INTO product_images (
+CREATE TEMPORARY TABLE seed_product_images LIKE product_images;
+INSERT INTO seed_product_images (
     product_id, image_url, alt_text, display_order, is_primary, image_type, created_at, updated_at
 ) VALUES
 (101, 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=85', 'Kem Nền L''Oreal Paris Infallible 32H Fresh Wear Foundation 30ml', 0, 1, 'PRODUCT_FRONT', NOW(), NOW()),
@@ -1075,9 +1086,13 @@ INSERT INTO product_images (
 (298, 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=800&q=85', 'Dầu Gội Sạch Gàu Ngăn Rụng Tóc Head & Shoulders Anti-Hairfall Shampoo 850ml', 0, 1, 'PRODUCT_FRONT', NOW(), NOW()),
 (299, 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=800&q=85', 'Dầu Xả Sạch Gàu Cấp Ẩm Da Đầu Head & Shoulders Sub Zero Cool Menthol Conditioner 300ml', 0, 1, 'PRODUCT_FRONT', NOW(), NOW()),
 (300, 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=800&q=85', 'Dầu Gội Kiểm Soát Dầu Ngừa Ngứa Da Đầu Head & Shoulders Itchy Scalp Care Shampoo 850ml', 0, 1, 'PRODUCT_FRONT', NOW(), NOW());
+INSERT INTO product_images (product_id, image_url, alt_text, display_order, is_primary, image_type, created_at, updated_at)
+SELECT @catalog_offset + product_id, image_url, alt_text, display_order, is_primary, image_type, created_at, updated_at FROM seed_product_images;
+DROP TEMPORARY TABLE seed_product_images;
 
 -- 5. INSERT INTO warehouse_stocks
-INSERT INTO warehouse_stocks (
+CREATE TEMPORARY TABLE seed_warehouse_stocks LIKE warehouse_stocks;
+INSERT INTO seed_warehouse_stocks (
     warehouse_id, product_variant_id, quantity, reserved_quantity, quarantined_quantity,
     cost_price, batch_code, created_at, updated_at
 ) VALUES
@@ -1281,3 +1296,6 @@ INSERT INTO warehouse_stocks (
 (1, 298, 150, 0, 0, 150500.00, '', NOW(), NOW()),
 (1, 299, 150, 0, 0, 87500.00, '', NOW(), NOW()),
 (1, 300, 150, 0, 0, 147000.00, '', NOW(), NOW());
+INSERT INTO warehouse_stocks (warehouse_id, product_variant_id, quantity, reserved_quantity, quarantined_quantity, cost_price, batch_code, created_at, updated_at)
+SELECT warehouse_id, @catalog_offset + product_variant_id, quantity, reserved_quantity, quarantined_quantity, cost_price, batch_code, created_at, updated_at FROM seed_warehouse_stocks;
+DROP TEMPORARY TABLE seed_warehouse_stocks;

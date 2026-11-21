@@ -99,12 +99,13 @@ void main() {
       date: DateTime(2026, 11, 1),
       timeSlot: '10:00',
       ticketId: 91,
+      additionalServiceIds: [3],
     );
     expect(success, isTrue);
-    expect((api.calls.last['data']['items'] as List).single, {
-      'serviceId': 2,
-      'ticketId': 91,
-    });
+    expect(api.calls.last['data']['items'], [
+      {'serviceId': 2, 'ticketId': 91},
+      {'serviceId': 3, 'ticketId': 91},
+    ]);
     provider.dispose();
   });
   test('cash booking does not silently attach a ticket', () async {

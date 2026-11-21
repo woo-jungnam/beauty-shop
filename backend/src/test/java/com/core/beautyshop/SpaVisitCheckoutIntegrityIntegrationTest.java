@@ -12,6 +12,7 @@ import com.core.beautyshop.modules.payment.domain.*;
 import com.core.beautyshop.modules.payment.domain.enums.TransactionStatus;
 import com.core.beautyshop.modules.spa.application.dto.request.*;
 import com.core.beautyshop.modules.spa.application.service.SpaAppointmentCheckoutService;
+import com.core.beautyshop.modules.spa.application.service.SpaFinancialService;
 import com.core.beautyshop.modules.spa.domain.*;
 import com.core.beautyshop.modules.spa.domain.enums.*;
 import com.core.beautyshop.shared.domain.enums.PaymentMethod;
@@ -55,6 +56,7 @@ class SpaVisitCheckoutIntegrityIntegrationTest {
     @Autowired com.core.beautyshop.modules.payment.api.AdminPaymentController paymentAdmin;
     @Autowired com.core.beautyshop.modules.dashboard.application.AdminDashboardService dashboard;
     @Autowired SpaAppointmentCheckoutService checkout;
+    @Autowired SpaFinancialService checkoutFinance;
     @Autowired PaymentWebhookService webhook;
     @Autowired OrderService physicalOrders;
     @Autowired OrderExpirationService expiration;
@@ -305,8 +307,10 @@ class SpaVisitCheckoutIntegrityIntegrationTest {
                 .contentType("application/json").content("{\"paymentMethod\":\"BANK\"}")).andExpect(status().isForbidden());
         mvc.perform(post(route + "/cash-receipts").with(authentication(auth(fixture.customer()))).header("Idempotency-Key", "unauthorized")
                 .contentType("application/json").content("{\"amount\":301}")).andExpect(status().isForbidden());
+        var policy = checkoutFinance.policy();
         mvc.perform(get("/api/v1/appointments/checkout-policy").with(authentication(auth(fixture.customer())))).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.depositsEnabled").value(false)).andExpect(jsonPath("$.data.noShowFeesEnabled").value(false));
+                .andExpect(jsonPath("$.data.depositsEnabled").value(policy.depositAmount().signum() > 0))
+                .andExpect(jsonPath("$.data.noShowFeesEnabled").value(policy.noShowFee().signum() > 0));
     }
 
     @Test

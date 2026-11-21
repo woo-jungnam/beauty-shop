@@ -25,9 +25,7 @@ export const spaErrorMessage = (error, fallback = 'Thao tác chưa hoàn tất. 
       if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(raw)) {
         return raw;
       }
-      if (/^[A-Za-z0-9 .,:;!?()'-]+$/.test(raw) && raw.length <= 250) {
-        return raw;
-      }
+
     }
   }
 

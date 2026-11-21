@@ -437,8 +437,8 @@ public class TreatmentCourseService {
                 .orElseThrow(() -> business("This appointment cannot be rescheduled"));
         if (existing != null && items(s).stream().noneMatch(i -> existing.getItems().stream()
                 .anyMatch(a -> Objects.equals(a.getId(), i.getAppointmentItemId())))) throw business("Appointment does not belong to this session");
-        String blocked = blocked(c, s);
-        if (blocked != null && !(existing != null && "This session already has a live appointment".equals(blocked))) return List.of();
+        String blocked = blocked(c, s, existing);
+        if (blocked != null) return List.of();
         List<SessionItem> remaining = items(s).stream().filter(i -> !"COMPLETED".equals(i.getStatus()))
                 .filter(i -> existing == null || existing.getItems().stream().anyMatch(a -> Objects.equals(a.getId(), i.getAppointmentItemId()))).toList();
         if (remaining.isEmpty()) return List.of();
@@ -448,14 +448,24 @@ public class TreatmentCourseService {
                 && date.isAfter(LocalDate.now(SpaTimeRules.ZONE).plusDays(bookingPolicy.maxAdvanceDays()))) return List.of();
         var hours = calendar.forDate(date);
         if (hours.closed()) return List.of();
+        var serviceById = new java.util.HashMap<Long, BeautyService>();
+        var eligibleStaff = new java.util.HashMap<Long, List<Long>>();
+        for (var item : remaining) {
+            var service = serviceById.computeIfAbsent(item.getServiceId(), key -> services.findById(key).orElseThrow(() -> missing("Service")));
+            if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) return List.of();
+            eligibleStaff.computeIfAbsent(service.getId(), key -> staff.findQualifiedActiveStaff(key).stream()
+                    .filter(person -> !Boolean.TRUE.equals(service.getRequiresCertification()) || person.getSkills().stream().anyMatch(skill ->
+                            skill.getService().getId().equals(key) && Boolean.TRUE.equals(skill.getIsCertified())
+                            && (skill.getCertifiedUntil() == null || !skill.getCertifiedUntil().isBefore(date))))
+                    .map(person -> person.getId()).toList());
+        }
         for (int minute=hours.opensAt().getHour()*60+hours.opensAt().getMinute(); minute<hours.closesAt().getHour()*60+hours.closesAt().getMinute(); minute+=30) {
             LocalTime candidateTime=LocalTime.of(minute/60,minute%60);
             LocalTime cursor = candidateTime; String candidate = candidateTime.toString(); boolean valid = true;
             Instant firstStart = date.atTime(cursor).atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant();
             if (!firstStart.isAfter(Instant.now()) || !withinWindow(c, s, firstStart)) continue;
             for (SessionItem item : remaining) {
-                BeautyService service = services.findById(item.getServiceId()).orElseThrow(() -> missing("Service"));
-                if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) { valid = false; break; }
+                BeautyService service = serviceById.get(item.getServiceId());
                 AppointmentItem original = existing == null ? null : existing.getItems().stream()
                         .filter(a -> Objects.equals(a.getId(), item.getAppointmentItemId())).findFirst().orElseThrow();
                 LocalTime end;
@@ -469,12 +479,9 @@ public class TreatmentCourseService {
                 if (!withinWindow(c, s, date.atTime(cursor).atZone(SpaTimeRules.ZONE).toInstant())) { valid = false; break; }
                 LocalTime start = cursor;
                 Long effectiveStaff = original != null && original.getStaff() != null ? original.getStaff().getId() : staffId;
-                boolean hasPerformer = staff.findQualifiedActiveStaff(service.getId()).stream()
-                        .filter(person -> !Boolean.TRUE.equals(service.getRequiresCertification()) || person.getSkills().stream().anyMatch(skill ->
-                                skill.getService().getId().equals(service.getId()) && Boolean.TRUE.equals(skill.getIsCertified())
-                                && (skill.getCertifiedUntil()==null || !skill.getCertifiedUntil().isBefore(date))))
-                        .filter(person -> effectiveStaff == null || effectiveStaff.equals(person.getId()))
-                        .anyMatch(person -> treatmentStaffAvailable(person.getId(), date, start, end, appointmentId));
+                boolean hasPerformer = eligibleStaff.get(service.getId()).stream()
+                        .filter(person -> effectiveStaff == null || effectiveStaff.equals(person))
+                        .anyMatch(person -> treatmentStaffAvailable(person, date, start, end, appointmentId));
                 if (!hasPerformer || !treatmentFacilities.hasAvailability(service.getId(), date, start, end, appointmentId)) {
                     valid = false; break;
                 }
@@ -539,12 +546,16 @@ public class TreatmentCourseService {
         return (earliest == null || !at.isBefore(earliest)) && (latest == null || !at.isAfter(latest)) && (c.getExpiryDate() == null || at.isBefore(c.getExpiryDate()));
     }
     String blocked(Course c, Session s) {
+        return blocked(c, s, null);
+    }
+    private String blocked(Course c, Session s, Appointment rescheduling) {
         String state = effectiveStatus(c);
         if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(state)) return "Lộ trình đang ở trạng thái " + state;
         if ("PENDING_INTAKE".equals(state) && s.getSequence() != 1) return "Cần hoàn tất tiếp nhận (Intake) lâm sàng trước khi thực hiện các buổi tiếp theo";
         if (Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) return "Buổi điều trị này đã hoàn thành hoặc kết thúc";
         if (sessions(c).stream().anyMatch(p -> p.isRequired() && p.getSequence() < s.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(p.getStatus()))) return "Cần hoàn tất buổi điều trị trước đó trước khi tiếp tục";
-        if (items(s).stream().anyMatch(i -> Set.of("SCHEDULED", "IN_PROGRESS").contains(i.getStatus()))) return "Buổi điều trị này đã có một lịch hẹn đang hoạt động";
+        if (items(s).stream().anyMatch(i -> Set.of("SCHEDULED", "IN_PROGRESS").contains(i.getStatus())
+                && (rescheduling == null || rescheduling.getItems().stream().noneMatch(a -> Objects.equals(a.getId(), i.getAppointmentItemId()))))) return "Buổi điều trị này đã có một lịch hẹn đang hoạt động";
         return null;
     }
     void refreshSession(Session s) {

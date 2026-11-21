@@ -75,8 +75,8 @@ test('Existing Spa invoice reopens without recreating; cash collects outstanding
 test('Customer view only sees invoice if generated, cannot create invoice or collect cash', async ({ page }) => {
   const customer = { id: 2, username: 'customer-test', fullName: 'Customer Guest', roles: ['ROLE_CUSTOMER'], permissions: [] };
   await page.addInitScript((user) => {
-    localStorage.setItem('beautyshop_user', JSON.stringify(user));
-    localStorage.setItem('beautyshop_token', 'cust-token');
+    localStorage.setItem('beautyshop_admin_user', JSON.stringify(user));
+    localStorage.setItem('beautyshop_admin_token', 'cust-token');
   }, customer);
   let invoice = null;
   await page.route('**/api/v1/**', async (route) => {
@@ -84,6 +84,7 @@ test('Customer view only sees invoice if generated, cannot create invoice or col
     const path = new URL(request.url()).pathname;
     let data = [];
     if (path.endsWith('/auth/profile')) data = customer;
+    else if (path.endsWith('/my-appointments')) data = [{ id: 42, userId: 2, status: 'COMPLETED', customerName: 'Customer Guest', appointmentDate: '2026-10-08', startTime: '10:00', items: [] }];
     else if (path.endsWith('/invoice')) {
       if (!invoice) return route.fulfill({ status: 404, json: { message: 'No invoice' } });
       data = invoice;
@@ -103,6 +104,7 @@ test('Customer view only sees invoice if generated, cannot create invoice or col
     await route.fulfill({ json: { data } });
   });
   await page.goto('/#/profile?tab=appointments&appointment=42');
+  await page.getByText('Thông tin thanh toán & Hướng dẫn VietQR', { exact: true }).click();
   await expect(page.getByText('Quét VietQR để đặt cọc')).toBeVisible();
   await expect(page.getByText('SPADEP-11112222333344445555666677778888')).toBeVisible();
   await expect(page.getByText('Hóa đơn buổi chăm sóc chưa được nhân viên lễ tân lập.')).toBeVisible();

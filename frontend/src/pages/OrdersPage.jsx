@@ -286,7 +286,13 @@ export const OrdersPage = () => {
       try {
         const query = new URLSearchParams({ keyword: shipperSearch.trim(), page: shipperPage, size: 20, sort: 'id,asc' });
         const response = await apiClient.get(`${ENDPOINTS.USERS.SHIPPERS}?${query}`);
-        if (active) setShipperResults(response.data || response);
+        if (!active) return;
+        const results = response.data || response;
+        setShipperResults(results);
+        if (shipperPage === 0 && !shipperSearch.trim() && results.totalElements === 1
+            && results.content.length === 1 && !selectedOrder?.shipperId) {
+          setShipperId((currentId) => currentId || String(results.content[0].id));
+        }
       } catch (err) {
         if (active) setErrorMessage(err.message || 'Không tải được danh sách tài xế.');
       } finally {
@@ -297,7 +303,7 @@ export const OrdersPage = () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [assignModalOpen, shipperSearch, shipperPage]);
+  }, [assignModalOpen, selectedOrder?.shipperId, shipperSearch, shipperPage]);
 
   const handleOpenAssignModal = (order) => {
     setSelectedOrder(order);
@@ -1966,8 +1972,10 @@ export const OrdersPage = () => {
             onChange={(event) => setShipperId(event.target.value)}
             disabled={shipperLoading || !shipperResults?.content?.length}
           >
-            <option value="">
-              {shipperLoading ? 'Đang tải tài xế…' : shipperResults?.content?.length ? 'Chọn tài xế' : 'Không có tài xế khả dụng'}
+            <option value="" disabled>
+              {shipperLoading ? 'Đang tải tài xế…'
+                : !shipperResults ? 'Chưa tải được danh sách tài xế'
+                  : shipperResults.content.length ? 'Chọn tài xế' : 'Không có tài xế khả dụng'}
             </option>
             {shipperResults?.content?.map((shipper) => (
               <option key={shipper.id} value={shipper.id}>

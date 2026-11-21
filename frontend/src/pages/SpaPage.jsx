@@ -954,7 +954,7 @@ export const SpaPage = () => {
               setExtendModalOpen(true);
             }}
             icon={Clock}
-            disabled={row.benefitType === 'TREATMENT_COURSE' || row.status === 'REVOKED'}
+            disabled={row.benefitType === 'TREATMENT_COURSE' || ['REVOKED', 'AWAITING_SETTLEMENT'].includes(row.status)}
             title="Gia hạn thời gian vé"
           >
             Gia hạn
@@ -968,7 +968,7 @@ export const SpaPage = () => {
               setCompensateModalOpen(true);
             }}
             icon={Gift}
-            disabled={row.benefitType === 'TREATMENT_COURSE' || row.status === 'REVOKED'}
+            disabled={row.benefitType === 'TREATMENT_COURSE' || ['REVOKED', 'AWAITING_SETTLEMENT'].includes(row.status)}
             title="Bồi thường thêm buổi"
           >
             Bồi thường
@@ -1035,7 +1035,7 @@ export const SpaPage = () => {
                 {
                   id: 'appointments',
                   label: 'Lịch hẹn Spa',
-                  count: aptTotalElements,
+                  count: aptTotalElements ?? '—',
                   icon: CalendarCheck,
                   description: 'Theo dõi tiếp đón, xếp phòng và thực hiện liệu trình'
                 },
@@ -1051,7 +1051,7 @@ export const SpaPage = () => {
                 {
                   id: 'appointments',
                   label: 'Lịch hẹn được phân công',
-                  count: aptTotalElements,
+                  count: aptTotalElements ?? '—',
                   icon: CalendarCheck,
                   description: 'Danh sách buổi hẹn bạn phụ trách chuẩn bị và thực hiện'
                 }

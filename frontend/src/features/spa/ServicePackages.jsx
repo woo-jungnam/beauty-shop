@@ -16,12 +16,16 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../shared/api/client';
 import { useAuth } from '../../app/providers/AuthProvider';
+import { Pagination } from '../../customer/components/account/AccountTools';
+import { pageWindow } from '../../customer/utils/profileModel';
 import { Button } from '../../shared/ui/Button';
 import { Modal } from '../../shared/ui/Modal';
 import { money, unwrap, errorMessage, idempotencyKey } from '../treatments/treatmentApi';
 import { openTreatmentPayment } from '../treatments/paymentNavigation';
 import { resolveMediaUrl } from '../../shared/utils/formatters';
 import './spa-benefits.css';
+
+const PACKAGE_PAGE_SIZE = 6;
 
 export const ServicePackages = ({ onNavigate }) => {
   const { isAuthenticated, user } = useAuth();
@@ -36,6 +40,8 @@ export const ServicePackages = ({ onNavigate }) => {
   const [selected, setSelected] = useState(null);
   const [revision, setRevision] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const filterBar = useRef(null);
 
   const selectPackage = (pack) => {
     if (!purchaseKeys.current.has(pack.id)) {
@@ -76,6 +82,17 @@ export const ServicePackages = ({ onNavigate }) => {
         )
     );
   }, [packages, searchQuery]);
+
+  const packagePage = pageWindow(filteredPackages, page, PACKAGE_PAGE_SIZE);
+  const firstIndex = packagePage.page * PACKAGE_PAGE_SIZE;
+  const updateSearch = (query) => {
+    setSearchQuery(query);
+    setPage(0);
+  };
+  const changePage = (nextPage) => {
+    setPage(nextPage);
+    filterBar.current?.scrollIntoView({ block: 'start' });
+  };
 
   return (
     <section className="spa-benefits" aria-labelledby="spa-packages-heading">
@@ -138,19 +155,21 @@ export const ServicePackages = ({ onNavigate }) => {
 
       {/* Search & Counter Filter Bar */}
       {!loading && !error && packages.length > 0 && (
-        <div className="spa-benefit-filter-bar">
+        <div className="spa-benefit-filter-bar" ref={filterBar}>
           <div className="spa-benefit-search-box">
             <Search size={16} />
             <input
               type="text"
               placeholder="Tìm kiếm gói dịch vụ hoặc tên dịch vụ thành phần…"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => updateSearch(e.target.value)}
               aria-label="Tìm kiếm gói dịch vụ"
             />
           </div>
           <span className="spa-benefit-count-badge">
-            Hiển thị {filteredPackages.length} / {packages.length} gói dịch vụ
+            {filteredPackages.length > 0
+              ? `Hiển thị ${firstIndex + 1}–${firstIndex + packagePage.rows.length} / ${filteredPackages.length} gói dịch vụ`
+              : '0 gói dịch vụ phù hợp'}
           </span>
         </div>
       )}
@@ -179,7 +198,7 @@ export const ServicePackages = ({ onNavigate }) => {
         <>
           {/* Package Cards Grid */}
           <div className="spa-package-grid">
-            {filteredPackages.map((pack, index) => {
+            {packagePage.rows.map((pack, index) => {
               const totalSessions = (pack.items || []).reduce(
                 (sum, item) => sum + (item.quantity || 0),
                 0
@@ -195,7 +214,7 @@ export const ServicePackages = ({ onNavigate }) => {
                 totalSessions > 0 ? Math.round(userPrice / totalSessions) : null;
               const cardImage = pack.thumbnailUrl
                 ? resolveMediaUrl(pack.thumbnailUrl)
-                : index % 2 === 0
+                : (firstIndex + index) % 2 === 0
                 ? '/images/spa/facial-care.jpg'
                 : '/images/spa/spa-ritual.jpg';
 
@@ -306,6 +325,17 @@ export const ServicePackages = ({ onNavigate }) => {
             })}
           </div>
 
+          {packagePage.totalPages > 1 && (
+            <div className="spa-package-pagination">
+              <Pagination
+                page={packagePage.page}
+                totalPages={packagePage.totalPages}
+                onChange={changePage}
+                label="Phân trang gói dịch vụ"
+              />
+            </div>
+          )}
+
           {!filteredPackages.length && (
             <div
               style={{
@@ -333,7 +363,7 @@ export const ServicePackages = ({ onNavigate }) => {
                   size="sm"
                   variant="outline"
                   style={{ marginTop: 16 }}
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => updateSearch('')}
                 >
                   Xóa bộ lọc tìm kiếm
                 </Button>
@@ -344,7 +374,6 @@ export const ServicePackages = ({ onNavigate }) => {
           {/* Customer Guarantees Bento Section */}
           <section className="spa-package-guarantees" aria-labelledby="spa-guarantees-title">
             <div className="spa-package-guarantees-heading">
-              <span className="spa-benefit-eyebrow">QUYỀN LỢI THÀNH VIÊN</span>
               <h3 id="spa-guarantees-title">
                 Vì sao nên lựa chọn gói dịch vụ nhiều lượt tại BeautyShop?
               </h3>

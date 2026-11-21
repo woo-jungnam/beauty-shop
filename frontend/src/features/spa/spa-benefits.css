@@ -231,6 +231,22 @@
   margin-bottom: 48px;
 }
 
+.spa-benefits .spa-benefit-filter-bar {
+  scroll-margin-top: calc(var(--customer-header-height, 140px) + 16px);
+}
+
+.spa-benefits .spa-package-grid:has(+ .spa-package-pagination) {
+  margin-bottom: 20px;
+}
+
+.spa-package-pagination {
+  margin-bottom: 40px;
+}
+
+.spa-package-pagination .account-actions {
+  justify-content: center;
+}
+
 .spa-benefit-card {
   position: relative;
   display: flex;

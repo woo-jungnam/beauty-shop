@@ -85,7 +85,7 @@ class TreatmentCourseIntegrationTest extends SpaWorkflowTestSupport {
         CourseFixture f = courseFixture();
         var purchase = as(f.base().customer(), () -> treatments.purchase(new PurchaseCommand(
                 f.template().id(), f.template().versionId(), true, UUID.randomUUID().toString(), null)));
-        Instant paidAt = Instant.now().minusSeconds(86400);
+        Instant paidAt = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).minusSeconds(86400);
         tx(() -> {
             var order = orders.findById(purchase.getOrderId()).orElseThrow();
             order.setPaidAt(paidAt); order.setPaidAmount(order.getTotalAmount());

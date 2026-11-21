@@ -48,6 +48,56 @@ class SpaPackageCompletionIntegrationTest extends SpaWorkflowTestSupport {
         assertThrows(BusinessException.class,()->as(f.admin(),()->refunds.settlePackage(f.ticketId(),confirmation("75"))));
         assertThrows(BusinessException.class,()->as(f.customer(),()->appointments.bookAppointment(booking(f,f.firstStaffId(),LocalTime.of(10,0),f.ticketId()))));
     }
+    @Autowired SpaPackageRequestService requests;
+    @Autowired BeautyServiceService availability;
+
+    @Test void multiServiceVisitKeepsIndependentQuotasAndChecksExpiryAtEachStart() {
+        var f = fixture();
+        var second = tx(() -> {
+            var service = services.save(BeautyService.builder().name("Second service").slug(UUID.randomUUID().toString())
+                    .basePrice(BigDecimal.TEN).durationMinutes(30).build());
+            skills.save(StaffServiceSkill.builder().staff(staffs.getReferenceById(f.firstStaffId())).service(service).isCertified(true).build());
+            var ticket = tickets.findById(f.ticketId()).orElseThrow();
+            ticket.setTotalSessions(2);
+            ticket.getEntitlements().put(service.getId(), new TicketEntitlement(1, 0));
+            ticket.setExpiryDate(f.date().atTime(10, 40).atZone(SpaTimeRules.ZONE).toInstant());
+            return service.getId();
+        });
+        var expiry = f.date().atTime(10, 40).atZone(SpaTimeRules.ZONE).toInstant();
+        var slots = availability.getAvailableSlots(f.serviceId(), f.date(), f.firstStaffId(), List.of(second), expiry);
+        assertTrue(slots.contains("09:30"));
+        assertFalse(slots.contains("10:00"));
+        var command = booking(f, f.firstStaffId(), LocalTime.of(10, 0), f.ticketId());
+        var extra = new AppointmentItemRequest();
+        extra.setServiceId(second);
+        extra.setTicketId(f.ticketId());
+        command.setItems(List.of(command.getItems().getFirst(), extra));
+        assertThrows(BusinessException.class, () -> as(f.customer(), () -> appointments.bookAppointment(command)));
+        command.setStartTime(LocalTime.of(9, 30));
+        var visit = as(f.customer(), () -> appointments.bookAppointment(command));
+        assertEquals(2, visit.getItems().size());
+        tx(() -> {
+            var ticket = tickets.findById(f.ticketId()).orElseThrow();
+            assertEquals(2, ticket.getReservedSessions());
+            assertEquals(1, ticket.getEntitlements().get(second).getReserved());
+            return null;
+        });
+    }
+
+    @Test void approvedCancellationPreventsNewReservationsUntilSettlement() {
+        var f = fixture();
+        snapshot(f, 4, 0, "100");
+        var held = as(f.customer(), () -> appointments.bookAppointment(booking(f, f.firstStaffId(), LocalTime.of(10, 0), f.ticketId())));
+        var request = as(f.customer(), () -> requests.create(f.ticketId(), new SpaPackageRequestService.Command("CANCEL", "Dừng sử dụng", null)));
+        as(f.admin(), () -> requests.review(f.ticketId(), request.getId(), new SpaPackageRequestService.Decision(true, "Đã duyệt")));
+        assertThrows(BusinessException.class, () -> as(f.customer(), () -> appointments.bookAppointment(booking(f, f.firstStaffId(), LocalTime.of(12, 0), f.ticketId()))));
+        assertNotNull(as(f.admin(), () -> refunds.packageQuote(f.ticketId())).blockedReason());
+        as(f.admin(), () -> { appointments.cancelAppointment(held.getId(), "Giải phóng lịch"); return null; });
+        assertEquals(TicketStatus.AWAITING_SETTLEMENT, tickets.findById(f.ticketId()).orElseThrow().getStatus());
+        as(f.admin(), () -> refunds.settlePackage(f.ticketId(), confirmation("100")));
+        assertEquals("COMPLETED", as(f.customer(), () -> requests.list(f.ticketId())).getFirst().getStatus());
+    }
+
     @Test void reservedRightsAndLegacyPricesBlockSettlementWithoutChangingMoney() {
         var f=fixture();assertNotNull(as(f.admin(),()->refunds.packageQuote(f.ticketId())).blockedReason());
         snapshot(f,4,0,"100");

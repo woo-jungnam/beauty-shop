@@ -90,7 +90,10 @@ public class SpaServiceController {
     public ResponseEntity<ApiResponse<List<String>>> getAvailableSlots(
             @PathVariable Long id,
             @Parameter(description = "Ngày từ hôm nay theo Asia/Ho_Chi_Minh, yyyy-MM-dd", example = "2026-10-05") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @Parameter(description = "ID hồ sơ Staff có kỹ năng dịch vụ, không phải ID User; bỏ trống để tìm bất kỳ staff phù hợp") @RequestParam(required = false) Long staffId) {
-        return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getAvailableSlots(id, date, staffId)));
+            @Parameter(description = "ID hồ sơ Staff có kỹ năng dịch vụ, không phải ID User; bỏ trống để tìm bất kỳ staff phù hợp") @RequestParam(required = false) Long staffId,
+            @RequestParam(required = false) List<Long> additionalServiceIds,
+            @RequestParam(required = false) java.time.Instant validBefore) {
+        return ResponseEntity.ok(ApiResponse.success(beautyServiceService.getAvailableSlots(id, date, staffId,
+                additionalServiceIds == null ? List.of() : additionalServiceIds, validBefore)));
     }
 }

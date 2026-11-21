@@ -83,7 +83,12 @@ public class FacilitySchedulingService {
         boolean constrained = items.stream().anyMatch(item -> !released(item)
                 && (item.getFacility() != null || (item.getResourceRequirements() != null && !item.getResourceRequirements().isEmpty())));
         if (!constrained) return;
-        List<Facility> locked = facilities.findAllForAllocationUpdate();
+        var types = new TreeSet<String>();
+        for (var item : items) {
+            if (!released(item)) types.addAll(demand(item).keySet());
+        }
+        if (types.isEmpty()) return;
+        List<Facility> locked = facilities.findForAllocationUpdate(types);
         locked.forEach(entityManager::refresh);
         Map<Long, Facility> byId = new LinkedHashMap<>();
         locked.forEach(f -> byId.put(f.getId(), f));

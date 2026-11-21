@@ -128,11 +128,14 @@ public class SpaFinancialService implements SpaDepositFacade {
   }
   Finance f=load(id);
   String status=depositStatus(f,a);
-  if(("SUCCESS".equals(status) || (f.depositCollected().compareTo(f.depositRequired())>=0 && f.depositRequired().signum()>0))
+  if("SUCCESS".equals(status)
      && a.getStatus()==AppointmentStatus.PENDING && !f.closed()) {
    a.setStatus(AppointmentStatus.CONFIRMED);
    a.setPendingExpiresAt(null);
    em.flush();
+  }
+  if (a.getStatus() == AppointmentStatus.PENDING && f.reviewReasons().contains("OVERPAYMENT")) {
+   a.setPendingExpiresAt(null);
   }
   return status;
  }

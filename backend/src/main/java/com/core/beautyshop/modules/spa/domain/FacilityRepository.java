@@ -15,6 +15,6 @@ public interface FacilityRepository extends JpaRepository<Facility, Long> {
     @Query("select f from Facility f where f.id = :id and f.isDeleted = false")
     Optional<Facility> findForUpdate(Long id);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select f from Facility f where f.isDeleted = false order by f.id")
-    List<Facility> findAllForAllocationUpdate();
+    @Query("select f from Facility f where f.isDeleted = false and f.type in :types order by f.id")
+    List<Facility> findForAllocationUpdate(@org.springframework.data.repository.query.Param("types") java.util.Set<String> types);
 }

@@ -59,6 +59,8 @@ public class SpaRefundService {
         if (q.refundableAmount().compareTo(c.amount()) != 0) throw new BusinessException("Số hoàn phải bằng báo giá quyết toán hiện tại; hãy tải lại");
         if (c.amount().signum() > 0) orders.confirmSpaServiceRefund(balance.orderId(), c.amount(), c.reference(), c.reason());
         ticket.setStatus(TicketStatus.REVOKED);
+        em.createQuery("update SpaPackageRequest r set r.status='COMPLETED' where r.ticketId=:id and r.status='AWAITING_SETTLEMENT'")
+                .setParameter("id", id).executeUpdate();
         var movement = new TicketSessionMovement(); movement.setTicketId(id); movement.setOperation("REFUND_CLOSE");
         movement.setReason(c.reason()); movement.setActorUserId(SecurityUtils.getCurrentUserId());
         movement.setIdempotencyKey("SETTLE:"+id); movement.setUsedAfter(ticket.getUsedSessions());

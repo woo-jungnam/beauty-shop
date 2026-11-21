@@ -60,7 +60,10 @@ public class SpaPackageRequestService {
         if (!decision.approve()) r.setStatus("REJECTED");
         else if ("EXTEND".equals(r.getType())) {
             administrativeTickets.extend(ticketId,r.getExtensionDays(),r.getReviewReason(),"package-request:"+r.getId()); r.setStatus("APPROVED");
-        } else r.setStatus("AWAITING_SETTLEMENT");
+        } else {
+            ticket.setStatus(TicketStatus.AWAITING_SETTLEMENT);
+            r.setStatus("AWAITING_SETTLEMENT");
+        }
         return r;
     }
     private UserServiceTicket ticket(Long id) {

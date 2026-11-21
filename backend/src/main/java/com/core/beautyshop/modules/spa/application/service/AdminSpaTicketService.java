@@ -128,6 +128,7 @@ public class AdminSpaTicketService {
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy vé Spa: " + id)); }
 
     private void requirePaidTicket(UserServiceTicket ticket) {
+        if (ticket.getStatus() == TicketStatus.AWAITING_SETTLEMENT) throw new BusinessException("Vé đã dừng, đang chờ quyết toán");
         if (ticket.getStatus() == TicketStatus.REVOKED || ticket.getOrderId() == null
                 || !orderFacade.isPaidOrderForUser(ticket.getOrderId(), ticket.getUserId())) {
             throw new BusinessException("Không thể điều chỉnh vé đã bị thu hồi hoặc chưa thanh toán");

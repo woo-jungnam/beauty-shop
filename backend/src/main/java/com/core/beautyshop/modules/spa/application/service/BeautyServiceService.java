@@ -14,4 +14,5 @@ public interface BeautyServiceService {
     List<StaffResponse> getQualifiedStaff(Long serviceId);
     List<StaffResponse> getAllStaff();
     List<String> getAvailableSlots(Long serviceId, LocalDate date, Long staffId);
+    List<String> getAvailableSlots(Long serviceId, LocalDate date, Long staffId, List<Long> additional, java.time.Instant validBefore);
 }

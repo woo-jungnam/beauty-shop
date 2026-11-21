@@ -99,6 +99,7 @@ async function spaStorefront(
         service: path.split("/")[5],
         date: url.searchParams.get("date"),
         staff: url.searchParams.get("staffId"),
+        additional: url.searchParams.get("additionalServiceIds"),
       });
       if (holdNextSlots) {
         holdNextSlots = false;
@@ -121,7 +122,7 @@ async function spaStorefront(
         { id: 22, fullName: "Minh Thư", specialty: "Chăm sóc da" },
       ];
     else if (path === "/api/v1/spa/tickets/my-active-tickets")
-      data = withTicket ? [{ id: 77, remainingByService: { 8: 3 } }] : [];
+      data = withTicket ? [{ id: 77, remainingByService: { 8: 3, 9: 1 }, services: [{ serviceId: 9, serviceName: "Dịch vụ bổ sung", available: 1 }] }] : [];
     else if (path === "/api/v1/spa/financial-policy")
       data = { version: 1, depositAmount: 0 };
     else if (path === "/api/v1/spa/appointments/120/finance")
@@ -274,11 +275,12 @@ test("Choosing a specialist reloads their slots and a prepaid ticket updates the
   const api = await spaStorefront(page, { withTicket: true });
   await page.goto("/#/booking?serviceId=8");
   await page.getByLabel("Áp dụng vé liệu trình").selectOption("77");
+  await page.getByRole("checkbox", { name: /Dịch vụ bổ sung/ }).check();
   await expect(page.locator(".booking-total b")).toHaveText("0 đ");
   await next(page, "Tiếp tục chọn giờ");
   await page.getByRole("button", { name: /Ngọc Anh/ }).click();
   await expect
-    .poll(() => api.slotRequests.some((request) => request.staff === "21"))
+    .poll(() => api.slotRequests.some((request) => request.staff === "21" && request.additional === "9"))
     .toBeTruthy();
   await page
     .getByRole("group", { name: "Buổi chiều & tối", exact: true })
@@ -291,6 +293,7 @@ test("Choosing a specialist reloads their slots and a prepaid ticket updates the
   await expect(page.getByText("SPA-120", { exact: true })).toBeVisible();
   expect(api.writes[0].items).toEqual([
     { serviceId: 8, staffId: 21, facilityId: null, ticketId: 77 },
+    { serviceId: 9, ticketId: 77 },
   ]);
 });
 

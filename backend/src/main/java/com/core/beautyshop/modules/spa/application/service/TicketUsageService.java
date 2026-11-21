@@ -67,7 +67,7 @@ public class TicketUsageService {
             throw new BusinessException("Giữ chỗ vé không nhất quán; cần đối soát");
     }
     private void refreshStatus(UserServiceTicket ticket) {
-        if (ticket.getStatus() == TicketStatus.REVOKED) return;
+        if (ticket.getStatus() == TicketStatus.REVOKED || ticket.getStatus() == TicketStatus.AWAITING_SETTLEMENT) return;
         ticket.setStatus(ticket.getUsedSessions() >= ticket.getTotalSessions() ? TicketStatus.COMPLETED
                 : ticket.getExpiryDate() != null && !ticket.getExpiryDate().isAfter(Instant.now()) ? TicketStatus.EXPIRED : TicketStatus.ACTIVE);
     }

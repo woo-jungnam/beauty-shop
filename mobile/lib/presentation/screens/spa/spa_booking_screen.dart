@@ -39,6 +39,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
   Map<String, dynamic>? _financialPolicy;
   bool _financialAccepted = false;
   int? _ticketId;
+  final List<int> _extraIds = [];
   String _paymentOption = 'DEPOSIT_AT_COUNTER';
   String? _policyError;
   bool _submitting = false;
@@ -76,9 +77,11 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
   void initState() {
     super.initState();
     _ticketId = widget.ticketId;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && context.read<AuthProvider>().isAuthenticated)
-        context.read<SpaProvider>().fetchMyTickets();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted && context.read<AuthProvider>().isAuthenticated) {
+        await context.read<SpaProvider>().fetchMyTickets();
+        if (mounted && _ticketId != null) _fetchAvailableSlots();
+      }
     });
     _loadFinancialPolicy();
     _loadQualifiedStaff();
@@ -110,10 +113,16 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
     final dateStr =
         '${_selectedDate.year.toString().padLeft(4, '0')}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
     try {
+      final tickets = context.read<SpaProvider>().myTickets.where(
+        (t) => t.id == _ticketId,
+      );
+      final expiry = tickets.isEmpty ? null : tickets.first.expiresAt;
       final response = await _apiClient.get<List<String>>(
         '${ApiConstants.spaServices}/${widget.service.id}/available-slots',
         queryParameters: {
           'date': dateStr,
+          if (_extraIds.isNotEmpty) 'additionalServiceIds': _extraIds.join(','),
+          if (expiry != null) 'validBefore': expiry,
           if (_selectedStaffId != null) 'staffId': _selectedStaffId,
         },
         fromJsonT: (json) {
@@ -176,6 +185,8 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
     final selectedTicket = eligible.any((t) => t.id == _ticketId)
         ? _ticketId
         : null;
+    final selectedBenefits = eligible.where((ticket) => ticket.id == selectedTicket).expand((ticket) => ticket.services);
+    final visitName = [widget.service.name, ..._extraIds.map((id) => selectedBenefits.where((item) => item['serviceId'] == id).map((item) => item['serviceName']).join()).where((name) => name.isNotEmpty)].join(' + ');
     if (widget.service.isTreatmentCourse)
       return Scaffold(
         appBar: AppBar(title: const Text('Điều trị theo lộ trình')),
@@ -228,7 +239,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.service.name,
+                          visitName,
                           style: AppTypography.titleMedium.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -278,8 +289,37 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     ),
                   ),
                 ],
-                onChanged: (id) => setState(() => _ticketId = id),
+                onChanged: (id) {
+                  setState(() {
+                    _ticketId = id;
+                    _extraIds.clear();
+                  });
+                  _fetchAvailableSlots();
+                },
               ),
+              if (selectedTicket != null)
+                for (final item
+                    in eligible
+                        .firstWhere((t) => t.id == selectedTicket)
+                        .services)
+                  if (item['serviceId'] != widget.service.id &&
+                      (item['available'] as num) > 0)
+                    CheckboxListTile(
+                      title: Text('Thêm ${item['serviceName']}'),
+                      subtitle: Text('Còn ${item['available']} lượt'),
+                      value: _extraIds.contains(item['serviceId']),
+                      onChanged: (checked) {
+                        final id = (item['serviceId'] as num).toInt();
+                        setState(() {
+                          if (checked == true) {
+                            _extraIds.add(id);
+                          } else {
+                            _extraIds.remove(id);
+                          }
+                        });
+                        _fetchAvailableSlots();
+                      },
+                    ),
               const SizedBox(height: 16),
             ],
 
@@ -294,11 +334,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(
-                    Icons.location_on,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
+                  Icon(Icons.location_on, color: AppColors.primary, size: 20),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -372,14 +408,19 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                   backgroundColor: AppColors.getSurface(context),
                   labelStyle: TextStyle(
                     fontSize: 12,
-                    fontWeight: _selectedStaffId == null ? FontWeight.w800 : FontWeight.w600,
-                    color: _selectedStaffId == null ? AppColors.primary : AppColors.getTextMain(context),
+                    fontWeight: _selectedStaffId == null
+                        ? FontWeight.w800
+                        : FontWeight.w600,
+                    color: _selectedStaffId == null
+                        ? AppColors.primary
+                        : AppColors.getTextMain(context),
                   ),
                 ),
                 ..._staffList.map((st) {
                   final sId = (st['id'] as num?)?.toInt();
                   final isChosen = _selectedStaffId == sId;
-                  final name = st['fullName'] ?? st['specialty'] ?? 'Chuyên viên #$sId';
+                  final name =
+                      st['fullName'] ?? st['specialty'] ?? 'Chuyên viên #$sId';
                   final rating = (st['rating'] as num?)?.toDouble();
                   return ChoiceChip(
                     avatar: rating != null && rating > 0
@@ -396,7 +437,9 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                     labelStyle: TextStyle(
                       fontSize: 12,
                       fontWeight: isChosen ? FontWeight.w800 : FontWeight.w600,
-                      color: isChosen ? AppColors.primary : AppColors.getTextMain(context),
+                      color: isChosen
+                          ? AppColors.primary
+                          : AppColors.getTextMain(context),
                     ),
                   );
                 }),
@@ -451,9 +494,7 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                           : AppColors.getTextMain(context),
                     ),
                     side: BorderSide(
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.border,
+                      color: isSelected ? AppColors.primary : AppColors.border,
                     ),
                   );
                 }).toList(),
@@ -482,10 +523,17 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
               RadioListTile<String>(
                 value: 'DEPOSIT_AT_COUNTER',
                 groupValue: _paymentOption,
-                onChanged: (val) => setState(() => _paymentOption = val ?? 'DEPOSIT_AT_COUNTER'),
+                onChanged: (val) => setState(
+                  () => _paymentOption = val ?? 'DEPOSIT_AT_COUNTER',
+                ),
                 title: const Text('Thanh toán tại quầy'),
                 subtitle: Text(
-                  _financialPolicy != null && (num.tryParse('${_financialPolicy!['depositAmount']}') ?? 0) > 0
+                  _financialPolicy != null &&
+                          (num.tryParse(
+                                    '${_financialPolicy!['depositAmount']}',
+                                  ) ??
+                                  0) >
+                              0
                       ? 'Cọc trước ${AppFormatters.formatCurrency((num.tryParse('${_financialPolicy!['depositAmount']}') ?? 0).toDouble())} qua VietQR, thanh toán phần còn lại sau khi dùng dịch vụ.'
                       : 'Thanh toán trực tiếp sau khi hoàn tất dịch vụ tại quầy.',
                 ),
@@ -493,9 +541,14 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
               RadioListTile<String>(
                 value: 'PAY_FULL',
                 groupValue: _paymentOption,
-                onChanged: (val) => setState(() => _paymentOption = val ?? 'PAY_FULL'),
-                title: Text('Thanh toán trước 100% (${AppFormatters.formatCurrency(widget.service.price)})'),
-                subtitle: const Text('Chuyển khoản toàn bộ qua VietQR để giữ slot ưu tiên.'),
+                onChanged: (val) =>
+                    setState(() => _paymentOption = val ?? 'PAY_FULL'),
+                title: Text(
+                  'Thanh toán trước 100% (${AppFormatters.formatCurrency(widget.service.price)})',
+                ),
+                subtitle: const Text(
+                  'Chuyển khoản toàn bộ qua VietQR để giữ slot ưu tiên.',
+                ),
               ),
               const SizedBox(height: 8),
             ],
@@ -516,159 +569,165 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
                 onPressed: _submitting
                     ? null
                     : () async {
-                  if (_financialPolicy == null ||
-                      (_requiresFinancialAcceptance && !_financialAccepted)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Vui lòng đọc và đồng ý với điều khoản đặt hẹn trước khi tiếp tục.',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-                  if (_selectedTime.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Vui lòng chọn khung giờ hẹn còn trống.',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-
-                  final auth = context.read<AuthProvider>();
-                  if (!auth.isAuthenticated) {
-                    final proceed = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Row(
-                          children: [
-                            Icon(
-                              Icons.lock_outline,
-                              color: AppColors.primary,
+                        if (_financialPolicy == null ||
+                            (_requiresFinancialAcceptance &&
+                                !_financialAccepted)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Vui lòng đọc và đồng ý với điều khoản đặt hẹn trước khi tiếp tục.',
+                              ),
                             ),
-                            SizedBox(width: 8),
-                            Text('Yêu cầu đăng nhập'),
-                          ],
-                        ),
-                        content: const Text(
-                          'Bạn cần đăng nhập tài khoản để xác nhận và quản lý lịch hẹn Spa & Làm Đẹp.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Để sau'),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
+                          );
+                          return;
+                        }
+                        if (_selectedTime.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Vui lòng chọn khung giờ hẹn còn trống.',
+                              ),
                             ),
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Đăng nhập ngay'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (proceed == true) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    }
-                    return;
-                  }
+                          );
+                          return;
+                        }
 
-                  if (_ticketId != null && selectedTicket == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Vé đã chọn chưa thể sử dụng. Vui lòng tải lại vé hoặc chọn thanh toán trực tiếp.',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-                  setState(() => _submitting = true);
-                  bool success = false;
-                  try {
-                    success = await context
-                        .read<SpaProvider>()
-                        .bookAppointment(
-                          serviceId: widget.service.id,
-                          ticketId: selectedTicket,
-                          staffId: _selectedStaffId,
-                          serviceName: widget.service.name,
-                          date: _selectedDate,
-                          timeSlot: _selectedTime,
-                          notes: _noteController.text,
-                          acceptedFinancialPolicy: _financialAccepted,
-                          financialPolicyVersion:
-                              (_financialPolicy!['version'] as num).toInt(),
-                          paymentOption:
-                              _ticketId != null ? 'WAIVE_WALK_IN' : _paymentOption,
-                        );
-                  } finally {
-                    if (mounted) setState(() => _submitting = false);
-                  }
-
-                  if (!mounted || !context.mounted) return;
-                  if (success) {
-                    final appointmentId = context
-                        .read<SpaProvider>()
-                        .lastBookedAppointmentId;
-                    if (appointmentId != null) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TreatmentAppointmentScreen(
-                            id: appointmentId,
-                            operate: false,
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: AppColors.success,
+                        final auth = context.read<AuthProvider>();
+                        if (!auth.isAuthenticated) {
+                          final proceed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.lock_outline,
+                                    color: AppColors.primary,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text('Yêu cầu đăng nhập'),
+                                ],
+                              ),
+                              content: const Text(
+                                'Bạn cần đăng nhập tài khoản để xác nhận và quản lý lịch hẹn Spa & Làm Đẹp.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Để sau'),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                  ),
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Đăng nhập ngay'),
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 8),
-                            Text('Đặt Lịch Thành Công!'),
-                          ],
-                        ),
-                        content: Text(
-                          'Lịch hẹn liệu trình "${widget.service.name}" lúc $_selectedTime ngày ${AppFormatters.formatDate(_selectedDate)} đã được gửi thành công.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Hoàn tất'),
-                          ),
-                        ],
-                      ),
-                    );
-                  } else {
-                    final err =
-                        context.read<SpaProvider>().errorMessage ??
-                        'Không thể đặt lịch hẹn lúc này';
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(err),
-                        backgroundColor: AppColors.dealRed,
-                      ),
-                    );
-                  }
-                },
+                          );
+                          if (proceed == true) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
+                        if (_ticketId != null && selectedTicket == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Vé đã chọn chưa thể sử dụng. Vui lòng tải lại vé hoặc chọn thanh toán trực tiếp.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        setState(() => _submitting = true);
+                        bool success = false;
+                        try {
+                          success = await context
+                              .read<SpaProvider>()
+                              .bookAppointment(
+                                serviceId: widget.service.id,
+                                ticketId: selectedTicket,
+                                additionalServiceIds: _extraIds,
+                                staffId: _selectedStaffId,
+                                serviceName: visitName,
+                                date: _selectedDate,
+                                timeSlot: _selectedTime,
+                                notes: _noteController.text,
+                                acceptedFinancialPolicy: _financialAccepted,
+                                financialPolicyVersion:
+                                    (_financialPolicy!['version'] as num)
+                                        .toInt(),
+                                paymentOption: _ticketId != null
+                                    ? 'WAIVE_WALK_IN'
+                                    : _paymentOption,
+                              );
+                        } finally {
+                          if (mounted) setState(() => _submitting = false);
+                        }
+
+                        if (!mounted || !context.mounted) return;
+                        if (success) {
+                          final appointmentId = context
+                              .read<SpaProvider>()
+                              .lastBookedAppointmentId;
+                          if (appointmentId != null) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TreatmentAppointmentScreen(
+                                  id: appointmentId,
+                                  operate: false,
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: AppColors.success,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text('Đặt Lịch Thành Công!'),
+                                ],
+                              ),
+                              content: Text(
+                                'Lịch hẹn liệu trình "$visitName" lúc $_selectedTime ngày ${AppFormatters.formatDate(_selectedDate)} đã được gửi thành công.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text('Hoàn tất'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          final err =
+                              context.read<SpaProvider>().errorMessage ??
+                              'Không thể đặt lịch hẹn lúc này';
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(err),
+                              backgroundColor: AppColors.dealRed,
+                            ),
+                          );
+                        }
+                      },
                 child: const Text('XÁC NHẬN ĐẶT HẸN'),
               ),
             ),

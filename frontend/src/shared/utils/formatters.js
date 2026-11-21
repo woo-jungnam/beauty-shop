@@ -136,6 +136,8 @@ export const getTicketStatusBadge = (status) => {
   switch (status) {
     case 'COMPLETED':
       return { variant: 'default', text: 'Đã dùng hết' };
+    case 'AWAITING_SETTLEMENT':
+      return { variant: 'warning', text: 'Đã dừng · Chờ quyết toán' };
     case 'REVOKED':
       return { variant: 'danger', text: 'Đã thu hồi' };
     case 'ACTIVE':

@@ -215,7 +215,7 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  isValid ? 'CÒN HIỆU LỰC' : 'KHÔNG KHẢ DỤNG',
+                  ticket.status == 'AWAITING_SETTLEMENT' ? 'CHỜ QUYẾT TOÁN' : isValid ? 'CÒN HIỆU LỰC' : 'KHÔNG KHẢ DỤNG',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,

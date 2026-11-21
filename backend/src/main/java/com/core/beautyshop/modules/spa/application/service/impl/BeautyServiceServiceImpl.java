@@ -100,41 +100,59 @@ public class BeautyServiceServiceImpl implements BeautyServiceService {
 
     @Override
     public List<String> getAvailableSlots(Long serviceId, LocalDate date, Long staffId) {
-        var service = beautyServiceRepository.findWithCategoryById(serviceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
-        if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
-            throw new BusinessException("Dịch vụ spa hiện không khả dụng");
-        }
+        return getAvailableSlots(serviceId, date, staffId, List.of(), null);
+    }
+
+    private record SlotService(Long id, long duration, List<Long> staffIds) {}
+
+    @Override
+    public List<String> getAvailableSlots(Long serviceId, LocalDate date, Long staffId, List<Long> additional, java.time.Instant validBefore) {
         if (date == null || date.isBefore(LocalDate.now(SpaTimeRules.ZONE))) {
             throw new BusinessException("Ngày hẹn không thể ở trong quá khứ");
         }
-        var qualifiedStaff = staffRepository.findQualifiedActiveStaff(serviceId).stream().filter(person ->
-                !Boolean.TRUE.equals(service.getRequiresCertification()) || person.getSkills().stream().anyMatch(skill ->
-                        skill.getService().getId().equals(serviceId) && Boolean.TRUE.equals(skill.getIsCertified())
-                        && (skill.getCertifiedUntil()==null || !skill.getCertifiedUntil().isBefore(date)))).toList();
-        if (staffId != null && qualifiedStaff.stream().noneMatch(staff -> staff.getId().equals(staffId))) {
-            throw new BusinessException("Chuyên viên không có kỹ năng phù hợp cho dịch vụ này");
-        }
-        long duration = SpaTimeRules.durationMinutes(service);
-        var result = new ArrayList<String>();
         var hours = calendar.forDate(date);
         if (hours.closed()) return List.of();
-        var slot = hours.opensAt();
-        var close = hours.closesAt();
-        while (Duration.between(slot, close).toMinutes() >= duration) {
-            var currentSlot = slot;
-            var end = currentSlot.plusMinutes(duration);
-            boolean future = date.atTime(currentSlot).isAfter(LocalDateTime.now(SpaTimeRules.ZONE));
-            boolean available = future && (staffId != null
-                    ? isStaffAvailable(staffId, date, currentSlot, end)
-                    : qualifiedStaff.stream().anyMatch(staff -> isStaffAvailable(staff.getId(), date, currentSlot, end)));
-            available = available && facilities.hasAvailability(serviceId, date, currentSlot, end);
-            if (available) result.add(currentSlot.toString());
-            var next = slot.plusMinutes(30);
+        List<SlotService> sequence = new ArrayList<>();
+        sequence.add(slotService(serviceId, date, staffId));
+        if (additional.size() >= Duration.between(hours.opensAt(), hours.closesAt()).toMinutes()) return List.of();
+        for (Long id : additional) sequence.add(slotService(id, date, null));
+        long total = sequence.stream().mapToLong(SlotService::duration).sum();
+        var result = new ArrayList<String>();
+        var now = LocalDateTime.now(SpaTimeRules.ZONE);
+        for (LocalTime slot = hours.opensAt(); Duration.between(slot, hours.closesAt()).toMinutes() >= total;) {
+            LocalTime cursor = slot;
+            boolean available = date.atTime(slot).isAfter(now);
+            for (var service : sequence) {
+                if (!available) break;
+                LocalTime start = cursor;
+                cursor = start.plusMinutes(service.duration());
+                LocalTime end = cursor;
+                available = (validBefore == null || date.atTime(start).atZone(SpaTimeRules.ZONE).toInstant().isBefore(validBefore))
+                        && service.staffIds().stream().anyMatch(id -> isStaffAvailable(id, date, start, end))
+                        && facilities.hasAvailability(service.id(), date, start, end);
+            }
+            if (available) result.add(slot.toString());
+            LocalTime next = slot.plusMinutes(30);
             if (!next.isAfter(slot)) break;
             slot = next;
         }
         return result;
+    }
+
+    private SlotService slotService(Long id, LocalDate date, Long requestedStaff) {
+        var service = beautyServiceRepository.findWithCategoryById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ spa"));
+        if (!Boolean.TRUE.equals(service.getIsActive()) || Boolean.TRUE.equals(service.getIsDeleted())) {
+            throw new BusinessException("Dịch vụ spa hiện không khả dụng");
+        }
+        var qualified = staffRepository.findQualifiedActiveStaff(id).stream()
+                .filter(person -> requestedStaff == null || requestedStaff.equals(person.getId()))
+                .filter(person -> !Boolean.TRUE.equals(service.getRequiresCertification()) || person.getSkills().stream()
+                        .anyMatch(skill -> skill.getService().getId().equals(id) && Boolean.TRUE.equals(skill.getIsCertified())
+                                && (skill.getCertifiedUntil() == null || !skill.getCertifiedUntil().isBefore(date))))
+                .map(person -> person.getId()).toList();
+        if (requestedStaff != null && qualified.isEmpty()) throw new BusinessException("Chuyên viên không có kỹ năng phù hợp cho dịch vụ này");
+        return new SlotService(id, SpaTimeRules.durationMinutes(service), qualified);
     }
 
     private boolean isStaffAvailable(Long staffId, LocalDate date, LocalTime start, LocalTime end) {

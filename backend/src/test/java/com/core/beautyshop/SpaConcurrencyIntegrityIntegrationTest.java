@@ -114,9 +114,13 @@ class SpaConcurrencyIntegrityIntegrationTest {
         });
     }
 
+    @Autowired com.core.beautyshop.modules.spa.application.service.SpaFinancialService finance;
+
     BookAppointmentRequest booking(Fixture fixture, long staffId, LocalTime time, Long ticketId) {
         var item = new AppointmentItemRequest(); item.setServiceId(fixture.serviceId()); item.setStaffId(staffId); item.setTicketId(ticketId);
         var request = new BookAppointmentRequest(); request.setAppointmentDate(fixture.date()); request.setStartTime(time); request.setItems(List.of(item));
+        request.setAcceptedFinancialPolicy(true);
+        request.setFinancialPolicyVersion(finance.policy().version());
         return request;
     }
 

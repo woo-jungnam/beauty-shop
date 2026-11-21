@@ -220,6 +220,7 @@ class SpaProvider extends ChangeNotifier {
     int? financialPolicyVersion,
     String? paymentOption,
     int? ticketId,
+    List<int> additionalServiceIds = const [],
     int? staffId,
     int? facilityId,
   }) async {
@@ -252,6 +253,7 @@ class SpaProvider extends ChangeNotifier {
               if (facilityId != null) 'facilityId': facilityId,
               if (ticketId != null) 'ticketId': ticketId,
             },
+            for (final id in additionalServiceIds) {'serviceId': id, 'ticketId': ticketId},
           ],
         },
       );

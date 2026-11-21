@@ -10,6 +10,8 @@ import { formatCurrency, getVietnamDateString } from '../../shared/utils/formatt
 import { spaErrorMessage } from '../../shared/utils/spaMessages';
 import { asList, bookingDefaults, normalizePhone, unwrap } from './receptionUtils';
 
+import { PackageServicePicker } from '../../features/spa/PackageServicePicker';
+
 export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBooked }) => {
   const [form, setForm] = useState(() => bookingDefaults(services, facilityId));
   const [lookup, setLookup] = useState({ state: 'idle', customers: [] });
@@ -17,6 +19,10 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
   const [staffLoading, setStaffLoading] = useState(false);
   const [staffError, setStaffError] = useState('');
   const [tickets, setTickets] = useState([]);
+  const [extraIds, setExtraIds] = useState([]);
+  const ticket = tickets.find(item => String(item.id) === form.ticketId);
+  useEffect(() => setExtraIds([]), [form.serviceId, form.ticketId]);
+  const extraQuery = extraIds.join(',');
   const [ticketError, setTicketError] = useState('');
   const [error, setError] = useState('');
   const [financialPolicy,setFinancialPolicy]=useState(null),[financialAccepted,setFinancialAccepted]=useState(false);
@@ -56,7 +62,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
       try {
         const qualified = asList(await apiClient.get(ENDPOINTS.SPA.PUBLIC_SERVICE_STAFF(form.serviceId), { signal: controller.signal }));
         const results = await Promise.allSettled(qualified.map(staff => apiClient.get(
-          ENDPOINTS.SPA.PUBLIC_AVAILABLE_SLOTS(form.serviceId, form.appointmentDate, staff.id), { signal: controller.signal })));
+          ENDPOINTS.SPA.PUBLIC_AVAILABLE_SLOTS(form.serviceId, form.appointmentDate, staff.id), { params: { additionalServiceIds: extraQuery || undefined, validBefore: ticket?.expiryDate || undefined }, signal: controller.signal })));
         if (controller.signal.aborted) return;
         const candidates = qualified.map((staff, index) => ({ ...staff, available: results[index].status === 'fulfilled'
           ? asList(results[index].value).some(slot => String(slot).slice(0, 5) === form.startTime.slice(0, 5)) : null }));
@@ -68,7 +74,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
     };
     load();
     return () => controller.abort();
-  }, [form.serviceId, form.appointmentDate, form.startTime]);
+  }, [form.serviceId, form.appointmentDate, form.startTime, extraQuery, ticket?.expiryDate]);
   useEffect(() => {
     const controller = new AbortController();
     setTickets([]); setTicketError('');
@@ -79,9 +85,11 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
     return () => controller.abort();
   }, [form.customerId]);
   const service = services.find(item => String(item.id) === form.serviceId);
-  const eligibleTickets = tickets.filter(ticket => Number(ticket.remainingByService?.[form.serviceId]) > 0
-    && (!ticket.expiryDate || Date.parse(ticket.expiryDate) > Date.now()));
-  const checkInAllowed = Boolean(form.staffId) && form.appointmentDate === getVietnamDateString();
+  const visitStart = Date.parse(`${form.appointmentDate}T${form.startTime}+07:00`);
+  const eligibleTickets = tickets.filter(ticket => ticket.benefitType !== 'TREATMENT_COURSE' && Number(ticket.remainingByService?.[form.serviceId]) > 0
+    && (!ticket.expiryDate || Date.parse(ticket.expiryDate) > Math.max(Date.now(), visitStart)));
+  const visitNames = [service?.name, ...extraIds.map(id => ticket?.services?.find(item => item.serviceId === id)?.serviceName)].filter(Boolean).join(' + ');
+  const checkInAllowed = Boolean(form.staffId) && !extraIds.length && form.appointmentDate === getVietnamDateString();
   const willAutoCheckIn = Boolean(form.autoCheckIn && checkInAllowed);
   const submit = async event => {
     event.preventDefault();
@@ -92,6 +100,12 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
     let appointment;
     let bookingAttempted = false;
     try {
+      if (form.ticketId && !eligibleTickets.some(item => String(item.id) === form.ticketId)) throw new Error('Vé không khả dụng ở thời điểm đã chọn. Hãy chọn lại vé hoặc đổi giờ.');
+      if (extraIds.length) {
+        const slotPath = ENDPOINTS.SPA.PUBLIC_AVAILABLE_SLOTS(form.serviceId, form.appointmentDate, form.staffId);
+        const slots = asList(await apiClient.get(slotPath, { params: { additionalServiceIds: extraQuery, validBefore: ticket?.expiryDate || undefined } }));
+        if (!slots.some(slot => slot.slice(0, 5) === form.startTime.slice(0, 5))) throw new Error('Giờ này chưa đủ thời gian, nhân viên hoặc phòng cho các dịch vụ đã chọn.');
+      }
       if(!financialPolicy) throw new Error('Cần tải chính sách tài chính trước khi đặt lịch.');
       if([financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&!financialAccepted&&!willAutoCheckIn&&!form.ticketId)
         throw new Error('Cần thông báo và ghi nhận khách đồng ý chính sách cọc/phí trước khi đặt.');
@@ -109,7 +123,8 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
         paymentOption: willAutoCheckIn ? 'WAIVE_WALK_IN' : 'DEPOSIT_AT_COUNTER',
         notes: `[Tiếp đón tại quầy] ${form.notes.trim()}`.trim(),
         items: [{ serviceId: Number(form.serviceId), ...(form.staffId ? { staffId: Number(form.staffId) } : {}),
-          ...(form.facilityId ? { facilityId: Number(form.facilityId) } : {}), ...(form.ticketId ? { ticketId: Number(form.ticketId) } : {}) }],
+          ...(form.facilityId ? { facilityId: Number(form.facilityId) } : {}), ...(form.ticketId ? { ticketId: Number(form.ticketId) } : {}) },
+          ...extraIds.map(serviceId => ({ serviceId, ticketId: Number(form.ticketId) }))],
       }));
       setCreatedAppointment(appointment);
       if (willAutoCheckIn) {
@@ -176,12 +191,13 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
         <Select label="Vé liệu trình của khách" value={form.ticketId} onChange={event => update('ticketId', event.target.value)} options={[
           { value: '', label: 'Thanh toán dịch vụ riêng tại quầy' }, ...eligibleTickets.map(ticket => ({ value: String(ticket.id), label: `${ticket.packageName} · Còn ${ticket.remainingByService[form.serviceId]} lượt dịch vụ này` })),
         ]} />
+        <PackageServicePicker ticket={ticket} serviceId={form.serviceId} selected={extraIds} onChange={setExtraIds} />
         {ticketError && <p role="alert" className="reception-muted">{ticketError}</p>}
         <Input label="Ghi chú tiếp đón" maxLength={450} value={form.notes} onChange={event => update('notes', event.target.value)} placeholder="Yêu cầu của khách, lưu ý khi đón…" />
         <label className="reception-checkbox"><input type="checkbox" checked={form.autoCheckIn && checkInAllowed} disabled={!checkInAllowed} onChange={event => update('autoCheckIn', event.target.checked)} /> Check-in ngay sau khi tạo lịch</label>
         {!checkInAllowed && <small className="reception-muted">Check-in áp dụng cho lịch hôm nay đã chọn KTV.</small>}
       </fieldset>
-      <div className="drawer-submit"><div><small>Dịch vụ đã chọn</small><strong>{service?.name || 'Chưa chọn dịch vụ'}</strong><span>{form.ticketId ? 'Sử dụng vé liệu trình' : formatCurrency(service?.basePrice ?? service?.price ?? 0)}</span></div>
+      <div className="drawer-submit"><div><small>Dịch vụ đã chọn</small><strong>{visitNames || 'Chưa chọn dịch vụ'}</strong><span>{form.ticketId ? 'Sử dụng vé liệu trình' : formatCurrency(service?.basePrice ?? service?.price ?? 0)}</span></div>
         {createdAppointment || uncertainBooking ? <Button onClick={onClose}>Đóng & kiểm tra lịch</Button> : <Button type="submit" loading={busy} disabled={!services.length || staffLoading || lookup.state === 'loading'}>Xác nhận đón khách</Button>}
       </div>
     </form>
