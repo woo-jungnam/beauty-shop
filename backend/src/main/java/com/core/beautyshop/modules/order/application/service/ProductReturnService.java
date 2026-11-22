@@ -51,7 +51,7 @@ public class ProductReturnService {
         BigDecimal remaining=order.getPaidAmount().subtract(order.getRefundedAmount()).max(BigDecimal.ZERO);
         BigDecimal excess=order.getPaidAmount().subtract(order.getTotalAmount()).subtract(refunds.sumOverpaymentRefunds(id)).max(BigDecimal.ZERO).min(remaining);
         BigDecimal liability=returns.findByOrderIdOrderByIdDesc(id).stream().filter(r->r.getStatus().equals("RECEIVED")).map(ProductReturn::getRefundAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
-        return new Balances(order.getPaidAmount(),order.getRefundedAmount(),excess,liability,order.getTotalAmount().subtract(order.getPaidAmount()).max(BigDecimal.ZERO));
+        return new Balances(order.getPaidAmount(),order.getRefundedAmount(),excess,liability,order.unsettledCod());
     }
 
     @Transactional(readOnly=true)

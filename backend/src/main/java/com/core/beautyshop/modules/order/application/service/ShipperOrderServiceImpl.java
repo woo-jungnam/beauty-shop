@@ -78,6 +78,8 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
             throw new BusinessException("Chỉ có thể bắt đầu giao cho đơn hàng đang ở trạng thái đã xuất kho (SHIPPED)");
         }
 
+        if (order.getDeliveryStartedAt() != null) return toShipperView(order);
+        order.setDeliveryStartedAt(Instant.now());
         String note = "Tài xế đang trên đường giao hàng tới địa chỉ khách hàng";
         createStatusHistory(order, order.getStatus(), note);
         Order saved = orderRepository.save(order);
@@ -99,6 +101,7 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
             throw new BusinessException("Chỉ có thể xác nhận đã giao khi đơn hàng đang được vận chuyển");
         }
 
+        requireDeliveryStarted(order);
         if (proofImage == null || proofImage.isEmpty()) {
             throw new BusinessException("Cần ảnh xác nhận giao hàng");
         }
@@ -147,8 +150,15 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
         if (order.getStatus() == OrderStatus.DELIVERY_FAILED) {
             return toShipperView(order);
         }
+        requireDeliveryStarted(order);
         updateDeliveryStatus(orderId, OrderStatus.DELIVERY_FAILED, reason.trim());
         return toShipperView(order);
+    }
+
+    private void requireDeliveryStarted(Order order) {
+        if (order.getStatus() != OrderStatus.SHIPPED || order.getDeliveryStartedAt() == null) {
+            throw new BusinessException("Vui lòng bắt đầu giao trước khi ghi nhận kết quả");
+        }
     }
 
     private void updateDeliveryStatus(Long orderId, OrderStatus status, String notes) {
@@ -164,7 +174,17 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
                                                     OrderStatus status, Pageable pageable) {
         validateDates(from, to);
         return orderRepository.findShipperHistory(shipperId, startOfDay(from), startOfDay(to.plusDays(1)),
-                status, pageable).map(this::toShipperView);
+                status, pageable).map(entry -> {
+                    OrderStatusHistory failure = entry.getPreviousFailure();
+                    if (failure == null) return toShipperView(entry.getDelivery());
+                    return ShipperOrderView.builder()
+                            .id(entry.getDelivery().getId())
+                            .orderNumber(entry.getDelivery().getOrderNumber())
+                            .status(OrderStatus.DELIVERY_FAILED)
+                            .createdAt(failure.getCreatedAt())
+                            .notes(failure.getNotes())
+                            .build();
+                });
     }
 
     @Override
@@ -249,6 +269,9 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
                 .createdAt(order.getCreatedAt())
                 .deliveredAt(order.getDeliveredAt())
                 .assignedAt(order.getShipperAssignedAt())
+                .deliveryStartedAt(order.getDeliveryStartedAt())
+                .codCollected(order.getShipperCodCollected())
+                .codRemitted(order.getShipperCodRemitted())
                 .itemsSummary(itemsSummary)
                 .build();
     }
@@ -260,6 +283,8 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .order(order)
                 .status(status)
+                .shipperId(order.getShipperId())
+                .shipperName(order.getShipperName())
                 .notes(notes)
                 .build();
         order.getStatusHistories().add(history);

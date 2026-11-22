@@ -75,6 +75,9 @@ public class OrderMapper {
                 .trackingCode(order.getTrackingCode())
                 .deliveryProofUrl(order.getDeliveryProofUrl())
                 .shipperId(order.getShipperId())
+                .deliveryStartedAt(order.getDeliveryStartedAt())
+                .shipperCodCollected(order.getShipperCodCollected())
+                .shipperCodRemitted(order.getShipperCodRemitted())
                 .shipperName(order.getShipperName())
                 .shipperPhone(order.getShipperPhone())
                 .deliveredNotes(order.getDeliveredNotes())
@@ -83,7 +86,7 @@ public class OrderMapper {
                 .notes(order.getNotes())
                 .statusHistories(order.getStatusHistories() == null ? List.of() : order.getStatusHistories().stream()
                         .map(history -> new OrderStatusHistoryResponse(
-                                history.getStatus(), history.getNotes(), history.getCreatedAt())).toList())
+                                history.getStatus(), history.getNotes(), history.getCreatedAt(), history.getShipperId(), history.getShipperName())).toList())
                 .createdAt(order.getCreatedAt())
                 .items(order.getItems() != null ?
                         order.getItems().stream().map(item -> toOrderItemResponse(item, variantMap.get(item.getProductVariantId()))).collect(Collectors.toList())

@@ -50,9 +50,47 @@ import { ConfirmModal } from '../shared/ui/ConfirmModal';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
 import { useAuth } from '../app/providers/AuthProvider';
 
+const statusOptions = {
+  PENDING: ['CONFIRMED', 'PROCESSING', 'CANCELLED'],
+  CONFIRMED: ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['SHIPPED', 'CANCELLED'],
+  SHIPPED: ['DELIVERED', 'DELIVERY_FAILED', 'RETURNING_TO_SENDER'],
+  DELIVERY_FAILED: ['SHIPPED', 'RETURNING_TO_SENDER'],
+  RETURNING_TO_SENDER: ['RETURN_TO_SENDER'],
+  DELIVERED: ['RETURNED'],
+};
+
+const statusLabels = {
+  CONFIRMED: 'Xác nhận đơn',
+  PROCESSING: 'Chuyển sang chuẩn bị hàng',
+  SHIPPED: 'Xuất kho bàn giao vận chuyển',
+  DELIVERED: 'Xác nhận giao thành công',
+  DELIVERY_FAILED: 'Giao không thành công',
+  RETURNING_TO_SENDER: 'Yêu cầu hoàn hàng về kho',
+  RETURN_TO_SENDER: 'Xác nhận kho đã nhận hàng hoàn',
+  CANCELLED: 'Hủy đơn',
+  RETURNED: 'Xác nhận khách đã trả hàng về kho',
+};
+
+const statusesThatRequireNotes = ['CANCELLED', 'DELIVERY_FAILED', 'RETURNING_TO_SENDER', 'RETURN_TO_SENDER'];
+
+const availableStatuses = (order) => {
+  if (!order || order.appointmentId) return [];
+  const options = statusOptions[order.status] || [];
+  if (order.servicePackageId) return options.filter(status => ['CONFIRMED', 'CANCELLED'].includes(status));
+  return options.filter(status => {
+    if (status === 'DELIVERED' && order.shipperId) return false;
+    if (status === 'DELIVERY_FAILED' && order.shipperId && !order.deliveryStartedAt) return false;
+    if (status === 'SHIPPED' && order.status === 'DELIVERY_FAILED' && order.shipperId) return false;
+    return order.paymentMethod !== 'BANK' || order.paymentStatus === 'PAID' ||
+      !['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(status);
+  });
+};
+
 const canAssignShipper = (order) =>
   getOrderType(order) === 'PRODUCT' &&
   ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERY_FAILED'].includes(order.status) &&
+  !(order.status === 'SHIPPED' && order.deliveryStartedAt) &&
   (order.paymentMethod !== 'BANK' || order.paymentStatus === 'PAID');
 
 export const OrdersPage = () => {
@@ -239,7 +277,7 @@ export const OrdersPage = () => {
 
   const handleOpenStatusModal = (order) => {
     setSelectedOrder(order);
-    setTargetStatus(order.status === 'PENDING' ? 'CONFIRMED' : order.status);
+    setTargetStatus(availableStatuses(order)[0] || '');
     setCarrierName(order.carrierName || '');
     setTrackingCode(order.trackingCode || '');
     setCancelReason('');
@@ -249,11 +287,13 @@ export const OrdersPage = () => {
 
   const handleUpdateStatusSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedOrder) return;
-
-    const isBankUnpaid = selectedOrder.paymentMethod === 'BANK' && selectedOrder.paymentStatus !== 'PAID';
-    if (isBankUnpaid && (targetStatus === 'PROCESSING' || targetStatus === 'SHIPPED')) {
-      setErrorMessage('Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán (PAID) trước khi chuyển sang chuẩn bị hàng hoặc giao hàng.');
+    if (submitting || !availableStatuses(selectedOrder).includes(targetStatus)) return;
+    if (statusesThatRequireNotes.includes(targetStatus) && !cancelReason.trim()) {
+      setErrorMessage('Vui lòng nhập thông tin xác nhận trước khi lưu.');
+      return;
+    }
+    if (targetStatus === 'SHIPPED' && (!carrierName.trim() || !trackingCode.trim())) {
+      setErrorMessage('Vui lòng nhập đơn vị vận chuyển và mã vận đơn.');
       return;
     }
 
@@ -261,13 +301,14 @@ export const OrdersPage = () => {
     setErrorMessage('');
 
     try {
-      await apiClient.put(ENDPOINTS.ORDERS.UPDATE_STATUS(selectedOrder.id), {
+      const response = await apiClient.put(ENDPOINTS.ORDERS.UPDATE_STATUS(selectedOrder.id), {
         status: targetStatus,
         carrierName: targetStatus === 'SHIPPED' ? carrierName : undefined,
         trackingCode: targetStatus === 'SHIPPED' ? trackingCode : undefined,
-        notes: ['CANCELLED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'].includes(targetStatus) ? cancelReason.trim() : undefined,
+        notes: statusesThatRequireNotes.includes(targetStatus) ? cancelReason.trim() : undefined,
       });
       setStatusModalOpen(false);
+      if (response?.data) setSelectedOrder(response.data);
       fetchOrders(page);
     } catch (err) {
       setErrorMessage(err.message || 'Lỗi cập nhật trạng thái đơn hàng');
@@ -312,12 +353,21 @@ export const OrdersPage = () => {
     setShipperPage(0);
     setShipperResults(null);
     setErrorMessage('');
+    setHandoverNotes('');
     setAssignModalOpen(true);
   };
+
+  const [handoverNotes, setHandoverNotes] = useState('');
+  const needsHandoverNotes = selectedOrder?.status === 'DELIVERY_FAILED' &&
+    selectedOrder.shipperId && shipperId && String(selectedOrder.shipperId) !== shipperId;
 
   const handleAssignShipperSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!selectedOrder || submitting || shipperLoading) return;
+    if (needsHandoverNotes && !handoverNotes.trim()) {
+      setErrorMessage('Ghi nhận việc tài xế cũ đã bàn giao hàng trước khi phân công lại.');
+      return;
+    }
     if (!shipperResults?.content?.some((shipper) => String(shipper.id) === shipperId)) {
       setErrorMessage('Chọn tài xế đang hoạt động trong danh sách.');
       return;
@@ -327,6 +377,7 @@ export const OrdersPage = () => {
     try {
       const res = await apiClient.post(ENDPOINTS.ORDERS.ASSIGN_SHIPPER(selectedOrder.id), {
         shipperId: Number(shipperId),
+        notes: needsHandoverNotes ? handoverNotes.trim() : undefined,
       });
       setAssignModalOpen(false);
       if (res && res.data) {
@@ -494,6 +545,7 @@ export const OrdersPage = () => {
           <Button
             variant="outline"
             size="sm"
+            disabled={!availableStatuses(row).length}
             onClick={() => handleOpenStatusModal(row)}
             title="Đổi trạng thái"
           >
@@ -558,6 +610,7 @@ export const OrdersPage = () => {
           <Button
             variant="outline"
             size="sm"
+            disabled={!availableStatuses(row).length}
             onClick={() => handleOpenStatusModal(row)}
             title="Đổi trạng thái"
           >
@@ -855,6 +908,7 @@ export const OrdersPage = () => {
             <option value="CONFIRMED">Đã xác nhận</option>
             <option value="PROCESSING">Đang chuẩn bị hàng</option>
             <option value="DELIVERY_FAILED">Giao không thành công</option>
+            <option value="RETURNING_TO_SENDER">Đang hoàn về kho</option>
             <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
             <option value="SHIPPED">Đang giao hàng</option>
             <option value="DELIVERED">Đã giao thành công</option>
@@ -1045,6 +1099,7 @@ export const OrdersPage = () => {
                   variant="outline"
                   size="sm"
                   icon={Edit}
+                  disabled={!availableStatuses(selectedOrder).length}
                   onClick={() => handleOpenStatusModal(selectedOrder)}
                 >
                   Cập nhật trạng thái
@@ -1261,7 +1316,11 @@ export const OrdersPage = () => {
                           selectedOrder.shipperName ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span style={{ fontWeight: 600, color: '#1E293B' }}>
-                                {selectedOrder.shipperName}
+                                <span>{selectedOrder.shipperName}
+                                  {selectedOrder.status === 'SHIPPED' && (
+                                    <small> · {selectedOrder.deliveryStartedAt ? 'Đang giao' : 'Chờ bắt đầu giao'}</small>
+                                  )}
+                                </span>
                                 {selectedOrder.shipperPhone && ` (${selectedOrder.shipperPhone})`}
                               </span>
                               {canAssignShipper(selectedOrder) && (
@@ -1659,6 +1718,7 @@ export const OrdersPage = () => {
                       <div key={h.id || idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', fontSize: '12px', padding: '6px 8px', background: '#FFFFFF', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
                         <div>
                           <strong>{getOrderStatusBadge(h.status || h.toStatus).text}</strong>
+                          {h.shipperName && <span style={{ marginLeft: 6 }}>· Tài xế {h.shipperName}</span>}
                           {h.notes && <span style={{ color: '#475569', marginLeft: '6px' }}>· {h.notes}</span>}
                         </div>
                         <span style={{ color: '#64748B', fontSize: '11px', whiteSpace: 'nowrap' }}>
@@ -1691,7 +1751,7 @@ export const OrdersPage = () => {
                   variant="primary"
                   onClick={handleUpdateStatusSubmit}
                   loading={submitting}
-                  disabled={isBlockedTarget}
+                  disabled={!availableStatuses(selectedOrder).includes(targetStatus)}
                   title={isBlockedTarget ? 'Cần xác nhận thanh toán trước khi lưu trạng thái này' : 'Lưu thay đổi'}
                 >
                   Lưu thay đổi
@@ -1789,68 +1849,36 @@ export const OrdersPage = () => {
             );
           })()}
 
-          {selectedOrder && getOrderType(selectedOrder) !== 'PRODUCT' ? (
-            <>
-              <div style={{ padding: '8px 12px', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', fontSize: '12px', color: '#1E40AF', marginBottom: '14px' }}>
-                Đơn dịch vụ Spa (thực hiện tại cơ sở hoặc kích hoạt vé điện tử), không qua khâu vận chuyển hàng hóa.
-              </div>
-              <Select
-                label="Chọn trạng thái đơn dịch vụ mới"
-                value={targetStatus}
-                onChange={(e) => setTargetStatus(e.target.value)}
-              >
-                <option value="CONFIRMED">Xác nhận đơn dịch vụ</option>
-                <option value="COMPLETED">Đã hoàn tất dịch vụ</option>
-                <option value="CANCELLED">Hủy đơn dịch vụ</option>
-              </Select>
-            </>
-          ) : (
-            <>
-              <Select
-                label="Chọn trạng thái luân chuyển mới"
-                value={targetStatus}
-                onChange={(e) => setTargetStatus(e.target.value)}
-              >
-                <option value="CONFIRMED">Xác nhận đơn hàng</option>
-                <option value="PROCESSING">
-                  Chuyển sang chuẩn bị hàng{selectedOrder?.paymentMethod === 'BANK' && selectedOrder?.paymentStatus !== 'PAID' ? ' (Cần thanh toán PAID)' : ''}
-                </option>
-                <option value="DELIVERY_FAILED">Giao không thành công</option>
-                <option value="RETURN_TO_SENDER">Hàng đã hoàn về kho</option>
-                <option value="SHIPPED">
-                  Xuất kho bàn giao vận chuyển{selectedOrder?.paymentMethod === 'BANK' && selectedOrder?.paymentStatus !== 'PAID' ? ' (Cần thanh toán PAID)' : ''}
-                </option>
-                {!selectedOrder?.shipperId && <option value="DELIVERED">Xác nhận giao thành công</option>}
-                <option value="CANCELLED">Hủy đơn hàng</option>
-                <option value="RETURNED">Khách trả hàng về kho</option>
-              </Select>
-
-              {targetStatus === 'SHIPPED' && (
-                <div style={{ marginTop: '12px' }}>
-                  <Input
-                    label="Đơn vị vận chuyển (Carrier)"
-                    placeholder="Ví dụ: Giao Hàng Tiết Kiệm, Viettel Post, GrabExpress..."
-                    value={carrierName}
-                    onChange={(e) => setCarrierName(e.target.value)}
-                    required
-                  />
-                  <Input
-                    label="Mã vận đơn theo dõi (Tracking Code)"
-                    placeholder="Ví dụ: GHTK893284920"
-                    value={trackingCode}
-                    onChange={(e) => setTrackingCode(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          {['CANCELLED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'].includes(targetStatus) && (
+          <Select label="Trạng thái mới" value={targetStatus} onChange={e => setTargetStatus(e.target.value)}>
+            {!availableStatuses(selectedOrder).length && <option value="">Không có trạng thái khả dụng</option>}
+            {availableStatuses(selectedOrder).map(status => (
+              <option key={status} value={status}>{statusLabels[status]}</option>
+            ))}
+          </Select>
+          {targetStatus === 'SHIPPED' && (
             <div style={{ marginTop: '12px' }}>
               <Input
-                label="Lý do hủy đơn hàng"
-                placeholder="Khách đổi ý, hết hàng dự trữ, sai thông tin..."
+                label="Đơn vị vận chuyển (Carrier)"
+                placeholder="Ví dụ: Giao Hàng Tiết Kiệm, Viettel Post, GrabExpress..."
+                value={carrierName}
+                onChange={(e) => setCarrierName(e.target.value)}
+                required
+              />
+              <Input
+                label="Mã vận đơn theo dõi (Tracking Code)"
+                placeholder="Ví dụ: GHTK893284920"
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
+          {statusesThatRequireNotes.includes(targetStatus) && (
+            <div style={{ marginTop: '12px' }}>
+              <Input
+                label={targetStatus === 'RETURN_TO_SENDER' ? 'Thông tin kho đã kiểm nhận hàng' : 'Lý do cập nhật trạng thái'}
+                maxLength={500}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 required
@@ -1983,6 +2011,10 @@ export const OrdersPage = () => {
               </option>
             ))}
           </Select>
+          {needsHandoverNotes && (
+            <Input label="Thông tin tài xế cũ đã bàn giao hàng" value={handoverNotes}
+              onChange={event => setHandoverNotes(event.target.value)} maxLength={200} required />
+          )}
           {shipperResults?.totalPages > 1 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Button type="button" size="sm" variant="outline" disabled={shipperPage === 0}

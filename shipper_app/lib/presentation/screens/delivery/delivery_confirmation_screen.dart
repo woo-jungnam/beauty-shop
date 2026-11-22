@@ -154,8 +154,10 @@ class _DeliveryConfirmationScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       Text(
                         'Đơn hàng #${widget.order.orderNumber}',
@@ -175,8 +177,10 @@ class _DeliveryConfirmationScreenState
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: AppColors.warning),
                         ),
-                        child: const Text(
-                          'Đang giao',
+                        child: Text(
+                          widget.order.deliveryStartedAt == null
+                              ? 'Cần giao'
+                              : 'Đang giao',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -257,8 +261,10 @@ class _DeliveryConfirmationScreenState
                           : AppColors.successLight,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 12,
+                      runSpacing: 6,
                       children: [
                         Text(
                           widget.order.isCod
@@ -312,11 +318,13 @@ class _DeliveryConfirmationScreenState
                         size: 20,
                       ),
                       SizedBox(width: 8),
-                      Text(
-                        'Hình ảnh bằng chứng giao hàng (PoD)',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Ảnh bằng chứng giao hàng',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -338,13 +346,13 @@ class _DeliveryConfirmationScreenState
                                   _selectedImage!.path,
                                   height: 220,
                                   width: double.infinity,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                 )
                               : Image.file(
                                   File(_selectedImage!.path),
                                   height: 220,
                                   width: double.infinity,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                 ),
                         ),
                         Positioned(
@@ -371,36 +379,33 @@ class _DeliveryConfirmationScreenState
                     const SizedBox(height: 12),
                   ],
 
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _pickImage(ImageSource.camera),
-                          icon: const Icon(Icons.photo_camera),
-                          label: const Text('Chụp ảnh'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                      OutlinedButton.icon(
+                        onPressed: () => _pickImage(ImageSource.camera),
+                        icon: const Icon(Icons.photo_camera),
+                        label: const Text('Chụp ảnh'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _pickImage(ImageSource.gallery),
-                          icon: const Icon(Icons.photo_library),
-                          label: const Text('Chọn thư viện'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            foregroundColor: AppColors.textMain,
-                            side: const BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                      OutlinedButton.icon(
+                        onPressed: () => _pickImage(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library),
+                        label: const Text('Chọn thư viện'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          foregroundColor: AppColors.textMain,
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
@@ -426,11 +431,13 @@ class _DeliveryConfirmationScreenState
                     children: [
                       Icon(Icons.edit_note, color: AppColors.primary, size: 20),
                       SizedBox(width: 8),
-                      Text(
-                        'Ghi chú giao hàng',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Ghi chú giao hàng',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -473,7 +480,6 @@ class _DeliveryConfirmationScreenState
 
             // Submit Button
             SizedBox(
-              height: 52,
               child: ElevatedButton.icon(
                 onPressed:
                     _isSubmitting ||

@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class UpdateOrderStatusRequest {
 
     @NotNull(message = "Trạng thái không được để trống")
-    @Schema(description = "Phải tuân thủ chuyển trạng thái theo route; PENDING chỉ hợp lệ khi đơn đã PENDING (gửi lại), COMPLETED không được đặt qua API này", allowableValues = {"PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED"}, example = "CONFIRMED", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Phải tuân thủ chuyển trạng thái theo route; PENDING chỉ hợp lệ khi đơn đã PENDING (gửi lại), COMPLETED không được đặt qua API này", allowableValues = {"PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERY_FAILED", "RETURNING_TO_SENDER", "RETURN_TO_SENDER", "DELIVERED", "CANCELLED", "RETURNED"}, example = "CONFIRMED", requiredMode = Schema.RequiredMode.REQUIRED)
     private OrderStatus status;
 
     @Size(max = 500, message = "Ghi chú không được vượt quá 500 ký tự")

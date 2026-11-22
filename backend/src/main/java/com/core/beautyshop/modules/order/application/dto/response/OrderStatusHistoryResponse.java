@@ -5,4 +5,4 @@ import java.time.Instant;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Bản ghi trạng thái/ghi chú order; createdAt là UTC Instant, ghi nhận thu/hoàn có thể giữ nguyên status phục vụ")
-public record OrderStatusHistoryResponse(OrderStatus status, String notes, Instant createdAt) { }
+public record OrderStatusHistoryResponse(OrderStatus status, String notes, Instant createdAt, Long shipperId, String shipperName) { }

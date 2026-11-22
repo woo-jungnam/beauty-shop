@@ -30,7 +30,7 @@ class ShipperDeliveryRepositoryTest {
         var page = PageRequest.of(0, 1);
         var first = orders.findShipperHistory(50L, from, to, null, page);
         assertEquals(2, first.getTotalElements());
-        assertEquals("ASSIGNED", first.getContent().getFirst().getOrderNumber());
+        assertEquals("ASSIGNED", first.getContent().getFirst().getDelivery().getOrderNumber());
         assertEquals(1, orders.findShipperHistory(50L, from, to, OrderStatus.DELIVERED, page).getTotalElements());
         assertEquals(1, orders.findShipperDeliveryTimes(50L, from, to).size());
 
@@ -40,6 +40,26 @@ class ShipperDeliveryRepositoryTest {
         assertEquals(0, totals.getTotalCodCollected().compareTo(BigDecimal.valueOf(80)));
         assertEquals(0, totals.getTotalRevenue().compareTo(BigDecimal.valueOf(100)));
         assertEquals(0, totals.getTotalDeliveryFees().compareTo(BigDecimal.TEN));
+    }
+
+    @Test
+    void formerShipperRetainsFailedAttemptAfterReassignment() {
+        Instant from = Instant.now().minusSeconds(60);
+        Instant to = from.plusSeconds(120);
+        save("REASSIGNED", 51L, from.plusSeconds(30), null, null);
+        var order = orders.findByOrderNumber("REASSIGNED").orElseThrow();
+        var failure = OrderStatusHistory.builder().order(order).shipperId(50L)
+                .status(OrderStatus.DELIVERY_FAILED).notes("Recipient absent").build();
+        failure.setCreatedAt(from.plusSeconds(20));
+        failure.setUpdatedAt(from.plusSeconds(20));
+        order.setStatusHistories(new java.util.ArrayList<>(java.util.List.of(failure)));
+        orders.saveAndFlush(order);
+
+        var history = orders.findShipperHistory(50L, from, to, OrderStatus.DELIVERY_FAILED, PageRequest.of(0, 10));
+        assertEquals(1, history.getTotalElements());
+        assertEquals("Recipient absent", history.getContent().getFirst().getPreviousFailure().getNotes());
+        assertEquals(0, orders.findShipperHistory(50L, from, to, OrderStatus.SHIPPED,
+                PageRequest.of(0, 10)).getTotalElements());
     }
 
     private void save(String number, long shipper, Instant assigned, Instant delivered, BigDecimal cod) {

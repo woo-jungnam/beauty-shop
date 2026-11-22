@@ -26,6 +26,9 @@ public class ShipperOrderView {
     private String shippingAddress;
     private BigDecimal totalAmount;
     private BigDecimal codAmount;
+    private BigDecimal codCollected;
+    private BigDecimal codRemitted;
+    private Instant deliveryStartedAt;
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;
     private OrderStatus status;

@@ -464,7 +464,14 @@ class CheckoutIntegrityIntegrationTest {
 
     @Test void refusedCodDeliveryReturnsToQuarantineWithoutRecordingAnyReceipt() {
         var fixture=fixture(5);var response=service.checkout(null,request(fixture,PaymentMethod.COD));status(response.getId(),OrderStatus.PROCESSING);status(response.getId(),OrderStatus.SHIPPED);
-        var c=new UpdateOrderStatusRequest();c.setStatus(OrderStatus.DELIVERY_FAILED);c.setNotes("Recipient refused delivery");service.updateOrderStatus(response.getId(),c);c.setStatus(OrderStatus.RETURN_TO_SENDER);service.updateOrderStatus(response.getId(),c);
+        var c=new UpdateOrderStatusRequest();c.setStatus(OrderStatus.DELIVERY_FAILED);c.setNotes("Recipient refused delivery");service.updateOrderStatus(response.getId(),c);c.setStatus(OrderStatus.RETURN_TO_SENDER);
+        assertThrows(BusinessException.class, () -> service.updateOrderStatus(response.getId(), c));
+        c.setStatus(OrderStatus.RETURNING_TO_SENDER);
+        service.updateOrderStatus(response.getId(), c);
+        assertEquals(4, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
+        assertEquals(0, stocks.findById(fixture.stockId()).orElseThrow().getQuarantinedQuantity());
+        c.setStatus(OrderStatus.RETURN_TO_SENDER);
+        service.updateOrderStatus(response.getId(),c);
         var order=orders.findById(response.getId()).orElseThrow();assertEquals(0,order.getPaidAmount().signum());assertEquals(PaymentStatus.PENDING,order.getPaymentStatus());assertTrue(paymentTransactions.findByOrderNumberOrderByCreatedAtDesc(order.getOrderNumber(),org.springframework.data.domain.PageRequest.of(0,20)).isEmpty());
         assertEquals(1,stocks.findById(fixture.stockId()).orElseThrow().getQuarantinedQuantity());
     }
@@ -617,6 +624,7 @@ class CheckoutIntegrityIntegrationTest {
         assertThrows(BusinessException.class, () -> productReturns.replaceAllocation(order.getId()));
         assertThrows(BusinessException.class, () -> status(order.getId(), OrderStatus.SHIPPED));
         assertEquals(OrderStatus.DELIVERY_FAILED, orders.findById(order.getId()).orElseThrow().getStatus());
+        failure.setStatus(OrderStatus.RETURNING_TO_SENDER); service.updateOrderStatus(order.getId(), failure);
         failure.setStatus(OrderStatus.RETURN_TO_SENDER); service.updateOrderStatus(order.getId(), failure);
         assertEquals(4, stocks.findById(fixture.stockId()).orElseThrow().getQuantity());
         assertEquals(1, stocks.findById(fixture.stockId()).orElseThrow().getQuarantinedQuantity());
@@ -631,6 +639,7 @@ class CheckoutIntegrityIntegrationTest {
         service.updateOrderStatus(order.getId(), failure);
         tx(() -> { stocks.findById(fixture.stockId()).orElseThrow().setExpirationDate(BusinessTime.today().plusDays(30)); return true; });
         assertThrows(BusinessException.class, () -> status(order.getId(), OrderStatus.SHIPPED));
+        failure.setStatus(OrderStatus.RETURNING_TO_SENDER); service.updateOrderStatus(order.getId(), failure);
         failure.setStatus(OrderStatus.RETURN_TO_SENDER); service.updateOrderStatus(order.getId(), failure);
         var request = new com.core.beautyshop.modules.order.application.dto.request.ConfirmRefundRequest(
                 "cutoff-refund-" + UUID.randomUUID(), order.getTotalAmount(), "Actual bank refund after carrier returned parcel");

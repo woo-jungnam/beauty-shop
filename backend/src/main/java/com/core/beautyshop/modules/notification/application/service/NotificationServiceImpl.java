@@ -155,7 +155,8 @@ public class NotificationServiceImpl implements NotificationService {
             case "PENDING" -> "Chờ xử lý"; case "CONFIRMED" -> "Đã xác nhận"; case "PROCESSING" -> "Đang chuẩn bị";
             case "SHIPPED" -> "Đang giao"; case "DELIVERED" -> "Đã giao"; case "CANCELLED" -> "Đã hủy";
             case "RETURNED" -> "Đã trả hàng"; case "DELIVERY_FAILED" -> "Giao chưa thành công";
-            case "RETURN_TO_SENDER" -> "Đang hoàn về cửa hàng"; case "COMPLETED" -> "Đã hoàn tất"; default -> status;
+            case "RETURNING_TO_SENDER" -> "Đang hoàn về cửa hàng";
+            case "RETURN_TO_SENDER" -> "Hàng đã hoàn về cửa hàng"; case "COMPLETED" -> "Đã hoàn tất"; default -> status;
         };
     }
 

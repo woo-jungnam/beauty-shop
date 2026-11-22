@@ -81,7 +81,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
 
-    @Query("select o from Order o where o.isDeleted = false and o.shipperId = :shipperId and (:status is null or o.status = :status) and o.status in (com.core.beautyshop.modules.order.domain.enums.OrderStatus.SHIPPED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERY_FAILED) order by o.createdAt desc, o.id desc")
+    @Query("select o from Order o where o.isDeleted = false and o.shipperId = :shipperId and (:status is null or o.status = :status) and o.status in (com.core.beautyshop.modules.order.domain.enums.OrderStatus.SHIPPED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERY_FAILED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.RETURNING_TO_SENDER) order by o.createdAt desc, o.id desc")
     Page<Order> findShipperDeliveries(@Param("shipperId") Long shipperId, @Param("status") OrderStatus status, Pageable pageable);
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
@@ -93,11 +93,34 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             and coalesce(o.deliveredAt, o.shipperAssignedAt, o.createdAt) < :to
             """;
 
-    @Query("select o " + SHIPPER_HISTORY + """
-            and (:status is null or o.status = :status)
-            order by coalesce(o.deliveredAt, o.shipperAssignedAt, o.createdAt) desc, o.id desc
-            """)
-    Page<Order> findShipperHistory(Long shipperId, Instant from, Instant to, OrderStatus status, Pageable pageable);
+    String SHIPPER_HISTORY_WITH_FAILURES = """
+            from Order o left join o.statusHistories h on h.shipperId = :shipperId
+                and (o.shipperId is null or o.shipperId <> :shipperId)
+                and h.isDeleted = false and h.status = com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERY_FAILED and h.createdAt >= :from and h.createdAt < :to
+            where o.isDeleted = false and (
+                (o.shipperId = :shipperId
+                    and (o.deliveredAt is not null or o.shipperAssignedAt is not null
+                        or o.status in (com.core.beautyshop.modules.order.domain.enums.OrderStatus.SHIPPED,
+                            com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED,
+                            com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERY_FAILED,
+                            com.core.beautyshop.modules.order.domain.enums.OrderStatus.RETURNING_TO_SENDER))
+                    and coalesce(o.deliveredAt, o.shipperAssignedAt, o.createdAt) >= :from
+                    and coalesce(o.deliveredAt, o.shipperAssignedAt, o.createdAt) < :to
+                    and (:status is null or o.status = :status))
+                or (h.id is not null
+                    and (:status is null or h.status = :status)))
+            """;
+
+    interface ShipperHistoryEntry {
+        Order getDelivery();
+        OrderStatusHistory getPreviousFailure();
+    }
+
+    @Query(value = "select o as delivery, h as previousFailure " + SHIPPER_HISTORY_WITH_FAILURES + """
+            order by coalesce(h.createdAt, o.deliveredAt, o.shipperAssignedAt, o.createdAt) desc, o.id desc, h.id desc
+            """, countQuery = "select count(o) " + SHIPPER_HISTORY_WITH_FAILURES)
+    Page<ShipperHistoryEntry> findShipperHistory(Long shipperId, Instant from, Instant to,
+                                                OrderStatus status, Pageable pageable);
 
     interface DeliveryTotals {
         long getTotalOrders();

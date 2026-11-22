@@ -359,10 +359,20 @@ public class OrderServiceImpl implements OrderService {
 
         if (order.getAppointmentId() != null)
             throw new BusinessException("Hóa đơn dịch vụ Spa tại quầy không có quy trình giao hàng hay vận chuyển");
-        if (order.getServicePackageId() != null && (newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.RETURNED))
-            throw new BusinessException("Đơn hàng gói Spa không áp dụng giao nhận hay hoàn trả như hàng vật lý");
+        if (order.getServicePackageId() != null && newStatus != OrderStatus.CONFIRMED
+                && newStatus != OrderStatus.CANCELLED && newStatus != previousStatus) {
+            throw new BusinessException("Đơn gói Spa chỉ được xác nhận hoặc hủy tại màn đơn hàng");
+        }
 
         validateStatusTransition(previousStatus, newStatus);
+        if ((newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.DELIVERY_FAILED)
+                && previousStatus != newStatus && order.getShipperId() != null && order.getDeliveryStartedAt() == null) {
+            throw new BusinessException("Tài xế cần bắt đầu giao trước khi ghi nhận kết quả");
+        }
+        if (newStatus == OrderStatus.SHIPPED && previousStatus == OrderStatus.DELIVERY_FAILED
+                && order.getShipperId() != null) {
+            throw new BusinessException("Dùng chức năng phân công giao lại cho đơn có tài xế nội bộ");
+        }
         if (newStatus == OrderStatus.DELIVERED && previousStatus != newStatus
                 && order.getShipperId() != null && order.getDeliveryProofUrl() == null) {
             throw new BusinessException("Tài xế cần xác nhận giao hàng kèm ảnh trên ứng dụng");
@@ -392,20 +402,19 @@ public class OrderServiceImpl implements OrderService {
                 && order.getPaymentStatus() != PaymentStatus.PAID) {
             throw new BusinessException("Đơn hàng thanh toán chuyển khoản cần hoàn tất thanh toán (PAID) trước khi chuẩn bị hàng hoặc xuất kho giao hàng");
         }
-        if (newStatus == OrderStatus.SHIPPED && previousStatus != OrderStatus.DELIVERY_FAILED) {
-            Map<Long, Integer> totalQtyByVariant = order.getItems().stream()
-                    .collect(Collectors.groupingBy(OrderItem::getProductVariantId, Collectors.summingInt(OrderItem::getQuantity)));
-            for (var entry : totalQtyByVariant.entrySet()) {
-                inventoryFacade.validateForDispatch(order.getOrderNumber(), entry.getKey(), entry.getValue());
-                inventoryFacade.deductStock(order.getOrderNumber(), entry.getKey(), entry.getValue());
-            }
+        if (newStatus == OrderStatus.SHIPPED) {
+            dispatchStock(order, previousStatus == OrderStatus.DELIVERY_FAILED);
         }
         if (newStatus == OrderStatus.DELIVERED && order.getDeliveredAt() == null) order.setDeliveredAt(Instant.now());
-        if ((newStatus == OrderStatus.DELIVERY_FAILED || newStatus == OrderStatus.RETURN_TO_SENDER)
+        if ((newStatus == OrderStatus.DELIVERY_FAILED || newStatus == OrderStatus.RETURNING_TO_SENDER
+                || newStatus == OrderStatus.RETURN_TO_SENDER)
                 && (request.getNotes() == null || request.getNotes().isBlank())) throw new BusinessException("Delivery exception reason required");
         if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED || newStatus == OrderStatus.RETURN_TO_SENDER)
                 && order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0) {
             order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
+        }
+        if (newStatus == OrderStatus.SHIPPED && previousStatus == OrderStatus.DELIVERY_FAILED) {
+            order.setDeliveryStartedAt(null);
         }
         order.setStatus(newStatus);
         createStatusHistory(order, newStatus, request.getNotes());
@@ -423,6 +432,13 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order saved = orderRepository.save(order);
+        if (newStatus == OrderStatus.RETURNING_TO_SENDER && saved.getShipperId() != null) {
+            customerNotifications.publish(saved.getShipperId(), "shipper-return:" + saved.getId(),
+                    "SHIPPER_RETURN_REQUEST", "Yêu cầu hoàn hàng về kho",
+                    "Vui lòng bàn giao đơn #" + saved.getOrderNumber() + " cho kho để kiểm nhận",
+                    "/api/v1/shipper/orders/" + saved.getId());
+        }
+
 
         eventPublisher.publishEvent(OrderEvents.OrderStatusChangedEvent.builder()
                 .orderId(saved.getId())
@@ -456,8 +472,20 @@ public class OrderServiceImpl implements OrderService {
         Long assignedShipper = request.getShipperId();
         var shipper = identityFacade.findActiveUserWithRole(assignedShipper, "ROLE_SHIPPER")
                 .orElseThrow(() -> new BusinessException("Chọn tài khoản tài xế đang hoạt động"));
-        order.setShipperId(assignedShipper);
         boolean changedShipper = !assignedShipper.equals(previousShipper);
+        if (changedShipper && order.getStatus() == OrderStatus.SHIPPED && order.getDeliveryStartedAt() != null) {
+            throw new BusinessException("Ghi nhận kết quả chuyến hiện tại trước khi đổi tài xế");
+        }
+        if (changedShipper && previousShipper != null && order.getStatus() == OrderStatus.DELIVERY_FAILED
+                && (request.getNotes() == null || request.getNotes().isBlank())) {
+            throw new BusinessException("Cần ghi nhận việc bàn giao hàng trước khi đổi tài xế giao lại");
+        }
+        OrderStatus previousStatus = order.getStatus();
+        if (previousStatus == OrderStatus.DELIVERY_FAILED) {
+            dispatchStock(order, true);
+        }
+        order.setShipperId(assignedShipper);
+        if (changedShipper || order.getStatus() == OrderStatus.DELIVERY_FAILED) order.setDeliveryStartedAt(null);
         if (changedShipper || order.getShipperAssignedAt() == null) {
             order.setShipperAssignedAt(Instant.now());
         }
@@ -465,15 +493,9 @@ public class OrderServiceImpl implements OrderService {
                 ? shipper.getUsername() : shipper.getFullName());
         order.setShipperPhone(shipper.getPhone());
 
-        OrderStatus previousStatus = order.getStatus();
         if (order.getStatus() == OrderStatus.CONFIRMED || order.getStatus() == OrderStatus.PROCESSING) {
             order.markAsShipped("In-house Express", "SHIP-" + order.getOrderNumber());
-            Map<Long, Integer> totalQtyByVariant = order.getItems().stream()
-                    .collect(Collectors.groupingBy(OrderItem::getProductVariantId, Collectors.summingInt(OrderItem::getQuantity)));
-            for (var entry : totalQtyByVariant.entrySet()) {
-                inventoryFacade.validateForDispatch(order.getOrderNumber(), entry.getKey(), entry.getValue());
-                inventoryFacade.deductStock(order.getOrderNumber(), entry.getKey(), entry.getValue());
-            }
+            dispatchStock(order, false);
         }
         if (previousStatus == OrderStatus.DELIVERY_FAILED) {
             order.setStatus(OrderStatus.SHIPPED);
@@ -733,10 +755,25 @@ public class OrderServiceImpl implements OrderService {
         return subTotal;
     }
 
+    private void dispatchStock(Order order, boolean retry) {
+        Map<Long, Integer> quantities = order.getItems().stream()
+                .collect(Collectors.groupingBy(OrderItem::getProductVariantId, Collectors.summingInt(OrderItem::getQuantity)));
+        for (var entry : quantities.entrySet()) {
+            inventoryFacade.validateForDispatch(order.getOrderNumber(), entry.getKey(), entry.getValue());
+            if (retry) {
+                inventoryFacade.validateDeliveredAllocation(order.getOrderNumber(), entry.getKey(), entry.getValue());
+            } else {
+                inventoryFacade.deductStock(order.getOrderNumber(), entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
     private void createStatusHistory(Order order, OrderStatus status, String notes) {
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .order(order)
                 .status(status)
+                .shipperId(order.getShipperId())
+                .shipperName(order.getShipperName())
                 .notes(notes)
                 .build();
         order.getStatusHistories().add(history);
@@ -824,7 +861,8 @@ public class OrderServiceImpl implements OrderService {
             case PROCESSING -> from == OrderStatus.CONFIRMED || from == OrderStatus.PENDING;
             case SHIPPED -> from == OrderStatus.PROCESSING || from == OrderStatus.DELIVERY_FAILED;
             case DELIVERY_FAILED -> from == OrderStatus.SHIPPED;
-            case RETURN_TO_SENDER -> from == OrderStatus.SHIPPED || from == OrderStatus.DELIVERY_FAILED;
+            case RETURNING_TO_SENDER -> from == OrderStatus.SHIPPED || from == OrderStatus.DELIVERY_FAILED;
+            case RETURN_TO_SENDER -> from == OrderStatus.RETURNING_TO_SENDER;
             case DELIVERED -> from == OrderStatus.SHIPPED;
             case CANCELLED -> from == OrderStatus.PENDING || from == OrderStatus.CONFIRMED || from == OrderStatus.PROCESSING;
             case RETURNED -> from == OrderStatus.DELIVERED;

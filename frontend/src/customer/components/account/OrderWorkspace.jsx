@@ -58,7 +58,8 @@ const statuses = {
   RETURNED: 'Đã trả hàng',
   COMPLETED: 'Hoàn tất',
   DELIVERY_FAILED: 'Giao không thành công',
-  RETURN_TO_SENDER: 'Hàng chuyển về shop',
+  RETURNING_TO_SENDER: 'Đang hoàn về cửa hàng',
+  RETURN_TO_SENDER: 'Hàng đã hoàn về cửa hàng',
   REQUESTED: 'Chờ xét duyệt',
   APPROVED: 'Đã duyệt',
   REJECTED: 'Từ chối',
@@ -83,6 +84,7 @@ const getStatusBadgeStyle = (status) => {
     case 'CANCELLED':
     case 'RETURNED':
     case 'DELIVERY_FAILED':
+    case 'RETURNING_TO_SENDER':
     case 'RETURN_TO_SENDER':
       return { bg: '#FEF2F2', color: '#B91C1C', border: '#FECACA' };
     case 'REQUESTED':
@@ -123,7 +125,7 @@ const PRODUCT_FILTER_TABS = [
   { key: 'PENDING', label: 'Chờ xác nhận', statuses: ['PENDING'] },
   { key: 'PROCESSING', label: 'Đang xử lý / Vận chuyển', statuses: ['CONFIRMED', 'PROCESSING', 'SHIPPED'] },
   { key: 'COMPLETED', label: 'Đã nhận hàng', statuses: ['DELIVERED', 'COMPLETED'] },
-  { key: 'CANCELLED', label: 'Đã hủy / Đổi trả', statuses: ['CANCELLED', 'RETURNED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'] }
+  { key: 'CANCELLED', label: 'Đã hủy / Đổi trả', statuses: ['CANCELLED', 'RETURNED', 'DELIVERY_FAILED', 'RETURNING_TO_SENDER', 'RETURN_TO_SENDER'] }
 ];
 
 const SERVICE_FILTER_TABS = [

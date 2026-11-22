@@ -116,12 +116,17 @@ class ShipperProvider extends ChangeNotifier {
     await fetchOrders();
   }
 
-  Future<void> fetchOrders({bool loadMore = false}) async {
+  Future<void> fetchOrders({
+    bool loadMore = false,
+    bool background = false,
+  }) async {
+    if (background && _isLoading) return;
     if (loadMore && (_isLoading || !_hasMore)) return;
     final session = _session;
     final request = ++_ordersRequest;
     final page = loadMore ? _nextPage : 0;
-    if (!loadMore) {
+    final pages = background && _nextPage > 0 ? _nextPage : 1;
+    if (!loadMore && !background) {
       _orders = [];
       _nextPage = 0;
       _hasMore = false;
@@ -131,22 +136,35 @@ class ShipperProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await _fetchData(ApiConstants.shipperOrders, {
-        'page': page,
-        'size': 20,
-        if (_currentFilter != 'ALL') 'status': _currentFilter,
-      });
-      if (session != _session || request != _ordersRequest) return;
-      final rows = (data['content'] as List).cast<Map<String, dynamic>>().map(
-        ShipperOrderModel.fromJson,
-      );
+      final filter = _currentFilter;
+      final rows = <ShipperOrderModel>[];
+      var hasMore = false;
+      var nextPage = page;
+      for (var offset = 0; offset < pages; offset++) {
+        final data = await _fetchData(ApiConstants.shipperOrders, {
+          'page': nextPage,
+          'size': 20,
+          if (filter != 'ALL') 'status': filter,
+        });
+        if (session != _session || request != _ordersRequest) return;
+        rows.addAll(
+          (data['content'] as List).cast<Map<String, dynamic>>().map(
+            ShipperOrderModel.fromJson,
+          ),
+        );
+        nextPage++;
+        hasMore = data['last'] == false;
+        if (!hasMore) break;
+      }
       _orders = {
-        for (final order in [..._orders, ...rows]) order.id: order,
+        if (loadMore)
+          for (final order in _orders) order.id: order,
+        for (final order in rows) order.id: order,
       }.values.toList();
-      _nextPage = page + 1;
-      _hasMore = data['last'] == false;
+      _nextPage = nextPage;
+      _hasMore = hasMore;
     } catch (e) {
-      if (session == _session && request == _ordersRequest) {
+      if (!background && session == _session && request == _ordersRequest) {
         _ordersError = e.toString();
       }
     } finally {
@@ -155,6 +173,15 @@ class ShipperProvider extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  Future<void> startDelivery(int orderId) async {
+    final session = _session;
+    final response = await ApiClient().patch<Map<String, dynamic>>(
+      ApiConstants.shipperStartDelivery(orderId),
+    );
+    if (!response.isSuccess) throw response.message ?? 'Không thể bắt đầu giao';
+    if (session == _session) await fetchOrders();
   }
 
   Future<void> reportFailure(int orderId, String reason) async {

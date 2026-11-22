@@ -34,6 +34,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     unawaited(shipper.refreshUnreadCount());
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       unawaited(shipper.refreshUnreadCount());
+      if (_tab == 0) unawaited(shipper.fetchOrders(background: true));
     });
   }
 
@@ -292,12 +293,27 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     );
   }
 
+  VoidCallback? _shipperStartAction(ShipperOrderModel order) {
+    if (context.watch<ShipperProvider>().isLoading) return null;
+    return () async {
+      try {
+        await context.read<ShipperProvider>().startDelivery(order.id);
+      } catch (error) {
+        if (mounted)
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    };
+  }
+
   Widget _buildDashboard(ShipperProvider shipper) {
     const filters = {
       'ALL': 'Tất cả',
       'SHIPPED': 'Cần giao',
       'DELIVERED': 'Đã giao',
       'DELIVERY_FAILED': 'Giao thất bại',
+      'RETURNING_TO_SENDER': 'Cần hoàn kho',
     };
     return Column(
       children: [
@@ -408,10 +424,14 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                 top: Radius.circular(13),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       order.isDelivered
@@ -423,14 +443,16 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                           : AppColors.primary,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      '#${order.orderNumber}',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: order.isDelivered
-                            ? AppColors.success
-                            : AppColors.primary,
+                    Flexible(
+                      child: Text(
+                        '#${order.orderNumber}',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: order.isDelivered
+                              ? AppColors.success
+                              : AppColors.primary,
+                        ),
                       ),
                     ),
                   ],
@@ -447,9 +469,16 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    order.isDelivered
-                        ? 'ĐÃ GIAO THÀNH CÔNG'
-                        : (order.isShipped ? 'CẦN GIAO HÀNG' : 'GIAO THẤT BẠI'),
+                    switch (order.status) {
+                      'DELIVERED' => 'ĐÃ GIAO THÀNH CÔNG',
+                      'SHIPPED' =>
+                        order.deliveryStartedAt == null
+                            ? 'CẦN GIAO HÀNG'
+                            : 'ĐANG GIAO',
+                      'DELIVERY_FAILED' => 'GIAO THẤT BẠI',
+                      'RETURNING_TO_SENDER' => 'CẦN HOÀN KHO',
+                      _ => order.status,
+                    },
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
@@ -585,8 +614,10 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                         : AppColors.successLight,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 12,
+                    runSpacing: 6,
                     children: [
                       Text(
                         order.isCod ? 'Thu tiền COD:' : 'Thanh toán:',
@@ -616,7 +647,25 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
 
                 // Action Buttons
                 const SizedBox(height: 12),
-                if (order.isShipped) ...[
+                if (order.codCollected > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'COD đã thu: ${_currencyFormat.format(order.codCollected)}',
+                  ),
+                  Text(
+                    'Đã bàn giao: ${_currencyFormat.format(order.codRemitted)}',
+                  ),
+                  Text(
+                    'Chờ bàn giao: ${_currencyFormat.format(order.codCollected - order.codRemitted)}',
+                  ),
+                ],
+                if (order.isShipped && order.deliveryStartedAt == null)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.local_shipping_outlined),
+                    label: const Text('Bắt đầu giao'),
+                    onPressed: _shipperStartAction(order),
+                  ),
+                if (order.isShipped && order.deliveryStartedAt != null) ...[
                   OutlinedButton.icon(
                     onPressed: () => _reportFailure(order),
                     icon: const Icon(Icons.report_problem_outlined),
@@ -624,7 +673,6 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                   ),
                   SizedBox(
                     width: double.infinity,
-                    height: 44,
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         final res = await Navigator.push<bool>(
@@ -644,7 +692,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                         size: 18,
                       ),
                       label: const Text(
-                        'CHỤP ẢNH XÁC NHẬN GIAO HÀNG (PoD)',
+                        'Chụp ảnh xác nhận giao hàng',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,

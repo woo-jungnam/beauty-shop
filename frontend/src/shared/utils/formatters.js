@@ -1,4 +1,4 @@
-import { serverBaseUrl } from '../api/baseUrl';
+import { serverBaseUrl } from '../api/baseUrl.js';
 
 export const formatCurrency = (amount) => {
   if (amount === undefined || amount === null) return '0 đ';
@@ -58,6 +58,8 @@ export const getOrderStatusBadge = (status) => {
       return { variant: 'info', text: 'Đang xử lý' };
     case 'DELIVERY_FAILED':
       return { text: 'Giao không thành công', variant: 'warning' };
+    case 'RETURNING_TO_SENDER':
+      return { text: 'Đang hoàn về kho', variant: 'warning' };
     case 'RETURN_TO_SENDER':
       return { text: 'Hàng hoàn về kho', variant: 'danger' };
     case 'SHIPPED':

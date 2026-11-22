@@ -30,6 +30,7 @@ assert.equal(getOrderStatusBadge('RECEIVED').text, 'Đã nhận hàng trả');
 assert.equal(getOrderStatusBadge('REJECTED').text, 'Từ chối đổi trả');
 assert.equal(getOrderStatusBadge('REFUNDED').text, 'Đã hoàn tiền');
 assert.equal(getOrderStatusBadge('DELIVERY_FAILED').text, 'Giao không thành công');
+assert.equal(getOrderStatusBadge('RETURNING_TO_SENDER').text, 'Đang hoàn về kho');
 assert.equal(getOrderStatusBadge('RETURN_TO_SENDER').text, 'Hàng hoàn về kho');
 
 // Test 3: getPaymentStatusBadge

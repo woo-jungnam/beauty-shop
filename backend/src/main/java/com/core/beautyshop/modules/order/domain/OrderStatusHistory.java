@@ -34,6 +34,12 @@ public class OrderStatusHistory extends Base {
     @Column(name = "status", nullable = false, length = 20)
     private OrderStatus status;
 
+    @Column(name = "shipper_id")
+    private Long shipperId;
+
+    @Column(name = "shipper_name", length = 100)
+    private String shipperName;
+
     @Column(name = "notes", length = 500)
     private String notes;
 }

@@ -89,6 +89,9 @@ public class OrderResponse {
     private String deliveryProofUrl;
     @Schema(description = "ID tài khoản tài xế phụ trách")
     private Long shipperId;
+    private java.time.Instant deliveryStartedAt;
+    private BigDecimal shipperCodCollected;
+    private BigDecimal shipperCodRemitted;
     @Schema(description = "Tên tài xế giao hàng")
     private String shipperName;
     @Schema(description = "SĐT tài xế giao hàng")

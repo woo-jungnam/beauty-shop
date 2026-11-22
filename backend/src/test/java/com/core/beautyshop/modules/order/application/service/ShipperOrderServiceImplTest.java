@@ -113,6 +113,8 @@ class ShipperOrderServiceImplTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ShipperOrderView result = shipperOrderService.startDelivery(100L, 50L);
+        assertNotNull(result.getDeliveryStartedAt());
+        assertEquals(result.getDeliveryStartedAt(), shipperOrderService.startDelivery(100L, 50L).getDeliveryStartedAt());
 
         assertNotNull(result);
         assertEquals(OrderStatus.SHIPPED, result.getStatus());
@@ -129,7 +131,18 @@ class ShipperOrderServiceImplTest {
     }
 
     @Test
+    void cannotRecordDeliveryOutcomeBeforeStarting() {
+        when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(testOrder));
+        var photo = new MockMultipartFile("proofImage", "proof.jpg", "image/jpeg", new byte[]{1});
+
+        assertThrows(BusinessException.class, () -> shipperOrderService.completeDelivery(100L, 50L, photo, null));
+        assertThrows(BusinessException.class, () -> shipperOrderService.reportDeliveryFailure(100L, 50L, "Recipient absent"));
+        verifyNoInteractions(mediaStorageService, orderService);
+    }
+
+    @Test
     void failedUploadLeavesDeliveryAndCodUntouched() {
+        testOrder.setDeliveryStartedAt(Instant.now());
         when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(testOrder));
         var photo = new MockMultipartFile("proofImage", "proof.jpg", "image/jpeg", new byte[]{1});
         when(mediaStorageService.upload(photo)).thenThrow(new IllegalStateException("storage unavailable"));
@@ -144,6 +157,7 @@ class ShipperOrderServiceImplTest {
 
     @Test
     void reportFailureRequiresOwnershipAndDelegatesToOrderWorkflow() {
+        testOrder.setDeliveryStartedAt(Instant.now());
         when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(testOrder));
         assertThrows(com.core.beautyshop.shared.exception.ResourceNotFoundException.class,
                 () -> shipperOrderService.reportDeliveryFailure(100L, 51L, "Không liên hệ được khách"));
@@ -169,6 +183,7 @@ class ShipperOrderServiceImplTest {
 
     @Test
     void testCompleteDelivery_WithProofPhotoAndNotes_Success() {
+        testOrder.setDeliveryStartedAt(Instant.now());
         when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(testOrder));
         when(orderService.updateOrderStatus(eq(100L), any())).thenAnswer(invocation -> {
             com.core.beautyshop.modules.order.application.dto.request.UpdateOrderStatusRequest update =

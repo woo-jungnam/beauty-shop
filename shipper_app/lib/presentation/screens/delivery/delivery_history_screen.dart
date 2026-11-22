@@ -71,6 +71,11 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
   Widget build(BuildContext context) {
     final groups = <String, List<ShipperOrderModel>>{};
     final format = DateFormat('dd/MM/yyyy');
+    final currency = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    );
     for (final order in _orders) {
       final timestamp =
           order.deliveredAt ?? order.assignedAt ?? order.createdAt;
@@ -110,19 +115,34 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
                   ListTile(
                     title: Text(group.key),
                     trailing: Text(
-                      '${group.value.length} đơn${!_last && group.key == groups.keys.last ? ' đã tải' : ''}',
+                      '${group.value.length} mục${!_last && group.key == groups.keys.last ? ' đã tải' : ''}',
                     ),
                   ),
                   for (final order in group.value)
                     Card(
                       child: ListTile(
                         title: Text('#${order.orderNumber}'),
-                        subtitle: Text(order.customerName),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.customerPhone.isEmpty && order.notes != null
+                                  ? order.notes!
+                                  : order.customerName,
+                            ),
+                            if (order.codCollected > 0)
+                              Text(
+                                'COD chờ bàn giao: ${currency.format(order.codCollected - order.codRemitted)}',
+                              ),
+                          ],
+                        ),
                         trailing: Text(switch (order.status) {
                           'DELIVERED' => 'Đã giao',
                           'SHIPPED' => 'Đang giao',
                           'DELIVERY_FAILED' => 'Giao thất bại',
                           'CANCELLED' => 'Đã hủy',
+                          'RETURNING_TO_SENDER' => 'Đang hoàn về kho',
+                          'RETURN_TO_SENDER' => 'Đã hoàn về kho',
                           'RETURNED' => 'Đã trả hàng',
                           'REFUNDED' => 'Đã hoàn tiền',
                           _ => order.status,

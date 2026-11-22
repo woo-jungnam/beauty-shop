@@ -118,6 +118,7 @@ class OrderServiceImplTest {
     void retryingDeliveryUsesSelectedAccountWithoutDeductingStockAgain() {
         Order order = Order.builder().orderNumber("ORD-TEST")
                 .status(OrderStatus.DELIVERY_FAILED).shipperId(10L).shipperPhone("0901111111")
+                .items(java.util.List.of(OrderItem.builder().productVariantId(7L).quantity(1).build()))
                 .statusHistories(new ArrayList<>()).build();
         order.setId(42L);
         when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
@@ -125,18 +126,48 @@ class OrderServiceImplTest {
         when(identityFacade.findActiveUserWithRole(50L, "ROLE_SHIPPER")).thenReturn(Optional.of(
                 UserSummaryDto.builder().username("driver50").build()));
 
-        orderService.assignShipper(42L, AssignShipperRequest.builder().shipperId(50L).build());
+        var assignment = AssignShipperRequest.builder().shipperId(50L).build();
+        assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
+                () -> orderService.assignShipper(42L, assignment));
+        assertEquals(10L, order.getShipperId());
+        assignment.setNotes("Returned parcel handed to the next driver");
+        orderService.assignShipper(42L, assignment);
 
         assertEquals(OrderStatus.SHIPPED, order.getStatus());
         assertEquals(50L, order.getShipperId());
         assertEquals("driver50", order.getShipperName());
         org.junit.jupiter.api.Assertions.assertNull(order.getShipperPhone());
-        org.mockito.Mockito.verifyNoInteractions(inventoryFacade);
+        verify(inventoryFacade).validateForDispatch("ORD-TEST", 7L, 1);
+        verify(inventoryFacade).validateDeliveredAllocation("ORD-TEST", 7L, 1);
+        verify(inventoryFacade, org.mockito.Mockito.never()).deductStock(any(), any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void cannotReplaceShipperWhoAlreadyStartedDelivery() {
+        Order order = Order.builder().status(OrderStatus.SHIPPED).shipperId(10L)
+                .deliveryStartedAt(java.time.Instant.now()).build();
+        when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
+        when(identityFacade.findActiveUserWithRole(50L, "ROLE_SHIPPER")).thenReturn(Optional.of(
+                UserSummaryDto.builder().username("driver50").build()));
+
+        assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
+                () -> orderService.assignShipper(42L, AssignShipperRequest.builder().shipperId(50L).build()));
+        assertEquals(10L, order.getShipperId());
+    }
+
+    @Test
+    void spaPackageCannotEnterPhysicalOrderPreparation() {
+        Order order = Order.builder().status(OrderStatus.CONFIRMED).servicePackageId(10L).build();
+        when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
+        assertThrows(com.core.beautyshop.shared.exception.BusinessException.class,
+                () -> orderService.updateOrderStatus(42L,
+                        UpdateOrderStatusRequest.builder().status(OrderStatus.PROCESSING).build()));
+        assertEquals(OrderStatus.CONFIRMED, order.getStatus());
     }
 
     @Test
     void assignedOrderCannotBeMarkedDeliveredWithoutProof() {
-        Order order = Order.builder().status(OrderStatus.SHIPPED).shipperId(50L).build();
+        Order order = Order.builder().status(OrderStatus.SHIPPED).shipperId(50L).deliveryStartedAt(java.time.Instant.now()).build();
         when(orderRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(order));
         var command = new UpdateOrderStatusRequest();
         command.setStatus(OrderStatus.DELIVERED);

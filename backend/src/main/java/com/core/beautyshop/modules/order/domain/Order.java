@@ -140,6 +140,12 @@ public class Order extends Base {
     @Column(name = "shipper_cod_collected", precision = 12, scale = 2)
     private BigDecimal shipperCodCollected;
 
+    @Column(name = "shipper_cod_remitted")
+    private BigDecimal shipperCodRemitted;
+
+    @Column(name = "delivery_started_at")
+    private Instant deliveryStartedAt;
+
     @Column(name = "shipper_assigned_at")
     private Instant shipperAssignedAt;
 
@@ -191,6 +197,19 @@ public class Order extends Base {
         if (this.paidAmount != null && this.refundedAmount != null && this.paidAmount.compareTo(this.refundedAmount) > 0) {
             this.paymentStatus = PaymentStatus.REFUND_PENDING;
         }
+    }
+
+    public boolean hasShipperCodCollection() {
+        return paymentMethod == PaymentMethod.COD && shipperCodCollected != null && shipperCodCollected.signum() > 0;
+    }
+
+    public BigDecimal unsettledCod() {
+        if (paymentMethod != PaymentMethod.COD) return BigDecimal.ZERO;
+        if (hasShipperCodCollection() && (status == OrderStatus.DELIVERED || status == OrderStatus.RETURNED)) {
+            return shipperCodCollected.subtract(shipperCodRemitted == null ? BigDecimal.ZERO : shipperCodRemitted)
+                    .max(BigDecimal.ZERO);
+        }
+        return status == OrderStatus.DELIVERED ? totalAmount.subtract(paidAmount).max(BigDecimal.ZERO) : BigDecimal.ZERO;
     }
 
     public void markAsShipped(String carrier, String tracking) {

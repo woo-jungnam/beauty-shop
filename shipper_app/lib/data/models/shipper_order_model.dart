@@ -8,6 +8,9 @@ class ShipperOrderModel {
   final String shippingAddress;
   final double totalAmount;
   final double codAmount;
+  final double codCollected;
+  final double codRemitted;
+  final DateTime? deliveryStartedAt;
   final String paymentMethod;
   final String paymentStatus;
   final String status;
@@ -27,6 +30,9 @@ class ShipperOrderModel {
     required this.shippingAddress,
     required this.totalAmount,
     required this.codAmount,
+    this.codCollected = 0,
+    this.codRemitted = 0,
+    this.deliveryStartedAt,
     required this.paymentMethod,
     required this.paymentStatus,
     required this.status,
@@ -56,6 +62,11 @@ class ShipperOrderModel {
       shippingAddress: json['shippingAddress']?.toString() ?? 'Chưa có địa chỉ',
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       codAmount: (json['codAmount'] as num?)?.toDouble() ?? 0.0,
+      codCollected: (json['codCollected'] as num?)?.toDouble() ?? 0,
+      codRemitted: (json['codRemitted'] as num?)?.toDouble() ?? 0,
+      deliveryStartedAt: DateTime.tryParse(
+        json['deliveryStartedAt']?.toString() ?? '',
+      ),
       paymentMethod: json['paymentMethod']?.toString() ?? 'COD',
       paymentStatus: json['paymentStatus']?.toString() ?? 'PENDING',
       status: json['status']?.toString() ?? 'SHIPPED',
