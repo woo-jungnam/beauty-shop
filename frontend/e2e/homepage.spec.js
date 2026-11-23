@@ -99,7 +99,8 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     const item = { productId: 1, productVariantId: 11, productName: 'Giờ vàng', sku: 'FLASH-1',
       flashPrice: 1900000, originalPrice: 2750000, quantityQuota: 20, quantitySold: 0, remainingQuota: 20 };
     await page.route('**/api/v1/flash-sales/current', route => route.fulfill({ json: { data: {
-      currentSlotId: 1, items: [item, { ...item, productId: 2, productVariantId: 12, flashPrice: 110000, originalPrice: 165000 }],
+      currentSlotId: 1, endsAt: new Date(Date.now() + 3600000).toISOString(),
+      items: [item, { ...item, productId: 2, productVariantId: 12, flashPrice: 110000, originalPrice: 165000 }],
     } } }));
     await page.route('**/api/v1/products/expiring-soon?**', route => route.fulfill({ json: { data: [{
       id: 3, name: 'Sản phẩm cận date', earliestExpirationDate: '2027-01-04', clearanceStock: 5,
@@ -127,6 +128,11 @@ test.describe('1. Trang Chủ (HomePage)', () => {
       if (width === 390) expect(overflow).toBeGreaterThan(0);
     }
     await page.setViewportSize({ width: 1440, height: 900 });
+    const controls = page.locator('#flash-sale .flash-sale-controls');
+    const filters = await controls.locator('.flash-sale-filters').boundingBox();
+    const countdown = await controls.locator('.flash-sale-countdown').boundingBox();
+    expect(countdown.x).toBeGreaterThanOrEqual(filters.x + filters.width);
+    expect(Math.abs(countdown.y + countdown.height / 2 - filters.y - filters.height / 2)).toBeLessThan(1);
     await page.locator('#flash-sale').getByRole('button', { name: /Khuy.n m.i/ }).click();
     await expect(cards).toHaveCount(1);
     await expect.poll(() => grid.evaluate(element => Math.abs(

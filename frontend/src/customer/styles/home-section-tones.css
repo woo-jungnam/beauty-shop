@@ -155,15 +155,6 @@
 .customer-app .customer-home-page :is(#flash-sale, #random-picks) .section-title-wrap::after {
   background: var(--item-highlight) !important;
 }
-.customer-app .customer-home-page #random-picks .recommendations-note {
-  color: #FFFFFF !important;
-  border-left-color: var(--item-highlight);
-}
-.customer-app .customer-home-page #random-picks .recommendations-badge {
-  color: var(--item-ink) !important;
-  background: var(--item-highlight) !important;
-  border-color: var(--item-border) !important;
-}
 .customer-app .customer-home-page #flash-sale .flash-sale-countdown {
   color: var(--item-ink) !important;
   background: var(--item-highlight) !important;

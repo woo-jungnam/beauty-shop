@@ -59,15 +59,9 @@
   border-color: #B78A91;
   box-shadow: none;
 }
-.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-note,
 .customer-app .customer-home-page.customer-home-page #flash-sale .flash-sale-header p {
   color: #625653 !important;
   border-color: #B78A91;
-}
-.customer-app .customer-home-page.customer-home-page #random-picks .recommendations-badge {
-  color: #242020 !important;
-  background: #EBC9C9 !important;
-  border-color: #B78A91 !important;
 }
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) :is(.category-tile-title, .product-card-title-link, .home-spa-card-body h3, .brand-partner-name) {
   color: #242020 !important;

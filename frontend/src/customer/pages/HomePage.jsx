@@ -511,70 +511,71 @@ export const HomePage = ({ onNavigate }) => {
               paddingBottom: '16px',
               borderBottom: '1px solid #FFE5D9'
             }}>
-              <div className="flash-sale-heading-group" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <div className="section-title-wrap">
-                  <span className="campaign-eyebrow"><Zap size={12} /> ƯU ĐÃI GIỚI HẠN</span>
-                  <div className="home-section-title-row">
-                    <h2 className="section-title-highlight">
-                      <Zap size={22} className="section-title-icon" />
-                      FLASH SALE GIỜ VÀNG • GIÁ SỐC ONLINE
-                    </h2>
-                    {/* Real-time Countdown Timer */}
-                    {countdownTarget && (
-                      <div className="flash-sale-countdown" style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        background: '#FFE5D9',
-                        border: '1px solid #FFB4A2',
-                        padding: '3px 10px',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
-                        fontWeight: 700,
-                        color: '#4A3535'
-                      }}>
-                        <Clock size={13} color="#E5989B" />
-                        <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>
-                          {activeFlashSlot && !activeFlashSlot.isCurrent ? 'Bắt đầu sau:' : 'Kết thúc trong:'}
-                        </span>
-                        <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.hours}</span>
-                        <span>:</span>
-                        <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.minutes}</span>
-                        <span>:</span>
-                        <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.seconds}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flash-sale-filters" style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FFE5D9', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
-                  {flashFilters.map(({ id, label, products }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      aria-pressed={flashFilterType === id}
-                      style={{
-                        border: 0,
-                        padding: '4px 10px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        backgroundColor: flashFilterType === id ? '#FFB4A2' : 'transparent',
-                        color: flashFilterType === id ? '#FFFFFF' : '#4A3535',
-                      }}
-                      onClick={() => { setFlashFilterType(id); setCurrentFlashTab(0); }}
-                    >
-                      {label} ({products.length})
-                    </button>
-                  ))}
+              <div className="section-title-wrap">
+                <span className="campaign-eyebrow"><Zap size={12} /> ƯU ĐÃI GIỚI HẠN</span>
+                <div className="home-section-title-row">
+                  <h2 className="section-title-highlight">
+                    <Zap size={22} className="section-title-icon" />
+                    FLASH SALE GIỜ VÀNG • GIÁ SỐC ONLINE
+                  </h2>
                 </div>
               </div>
 
-              <div className="flash-sale-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
-                  {flashFilterType === 'CLEARANCE' ? 'Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.' : flashFilterType === 'CURATED' ? 'Sản phẩm khuyến mãi sốc được tuyển chọn đặc biệt.' : 'Ưu đãi Flash Sale tuyển chọn và lô cận date chính hãng.'}
-                </p>
+              <div className="flash-sale-header-actions">
+                <div className="flash-sale-controls">
+                  <div className="flash-sale-filters" style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FFE5D9', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
+                    {flashFilters.map(({ id, label, products }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={flashFilterType === id}
+                        style={{
+                          border: 0,
+                          padding: '4px 10px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          backgroundColor: flashFilterType === id ? '#FFB4A2' : 'transparent',
+                          color: flashFilterType === id ? '#FFFFFF' : '#4A3535',
+                        }}
+                        onClick={() => { setFlashFilterType(id); setCurrentFlashTab(0); }}
+                      >
+                        {label} ({products.length})
+                      </button>
+                    ))}
+                  </div>
+                  {countdownTarget && (
+                    <div className="flash-sale-countdown" style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: '#FFE5D9',
+                      border: '1px solid #FFB4A2',
+                      padding: '3px 10px',
+                      borderRadius: '6px',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      color: '#4A3535'
+                    }}>
+                      <Clock size={13} color="#E5989B" />
+                      <span style={{ textTransform: 'uppercase', fontSize: '10.5px' }}>
+                        {activeFlashSlot && !activeFlashSlot.isCurrent ? 'Bắt đầu sau:' : 'Kết thúc trong:'}
+                      </span>
+                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.hours}</span>
+                      <span>:</span>
+                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.minutes}</span>
+                      <span>:</span>
+                      <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.seconds}</span>
+                    </div>
+                  )}
+                </div>
+
+                {(flashFilterType === 'CLEARANCE' || flashFilterType === 'CURATED') && (
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--c-text-muted)' }}>
+                    {flashFilterType === 'CLEARANCE' ? 'Lô còn 31–90 ngày, giá ưu đãi do cửa hàng đặt.' : 'Sản phẩm khuyến mãi sốc được tuyển chọn đặc biệt.'}
+                  </p>
+                )}
 
                 {totalFlashTabs > 1 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -757,11 +758,6 @@ export const HomePage = ({ onNavigate }) => {
                 )}
               </div>
             )}
-            {flashFilterType !== 'CAMPAIGN' && clearanceProducts.length > 0 && (
-              <p style={{ margin: '16px 0 0', fontSize: '12px', color: 'var(--c-text-muted)' }}>
-                HSD là ngày gần nhất của tồn cận hạn tại lúc tải. Số lượng có thể thay đổi; giỏ hàng chưa giữ chỗ hoặc cam kết một lô cụ thể.
-              </p>
-            )}
           </div>
         </section>
       )}
@@ -940,20 +936,6 @@ export const HomePage = ({ onNavigate }) => {
                   <Sparkles size={22} className="section-title-icon" />
                   GỢI Ý DÀNH CHO BẠN
                 </h2>
-                <span className="recommendations-badge" style={{
-                  backgroundColor: '#FAD2E1',
-                  color: '#8C2A47',
-                  border: '1px solid #F4ACB7',
-                  padding: '3px 10px',
-                  borderRadius: '9999px',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase'
-                }}>
-                  Dành riêng cho bạn
-                </span>
-                <p className="recommendations-note">Cá nhân loại sản phẩm</p>
               </div>
             </div>
           </div>
