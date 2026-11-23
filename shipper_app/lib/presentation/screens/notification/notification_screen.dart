@@ -114,8 +114,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       ),
                     ),
                   if ((_page > 0 || data?['last'] == false) && rows.isNotEmpty)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 8,
                       children: [
                         TextButton(
                           onPressed: _page > 0 ? () => _load(_page - 1) : null,

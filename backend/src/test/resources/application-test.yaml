@@ -18,7 +18,11 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false
+  data:
+    redis:
+      host: 127.0.0.1
   kafka:
+    bootstrap-servers: 127.0.0.1:9092
     admin:
       auto-create: false
     listener:

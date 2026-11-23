@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 for (const role of ['CUSTOMER', 'ADMIN']) {
-  test(`${role} sees a service booking before invoicing and its invoice afterwards`, async ({ page }) => {
+  test(`${role} sees ${role === 'ADMIN' ? 'service invoices in order management' : 'a service booking before invoicing and its invoice afterwards'}`, async ({ page }) => {
     const user = { id: 7, username: 'service-order-test', fullName: 'Khách kiểm thử', roles: [`ROLE_${role}`], permissions: [] };
     await page.addInitScript(profile => {
       localStorage.setItem('beautyshop_admin_token', 'test-token');
@@ -34,6 +34,17 @@ for (const role of ['CUSTOMER', 'ADMIN']) {
     });
     await page.goto(role === 'ADMIN' ? '/#/admin/orders' : '/#/profile?tab=orders');
     const section = page.getByRole('region', { name: 'Dịch vụ đơn đã đặt', exact: true });
+    if (role === 'ADMIN') {
+      await expect(page.getByText('Không tìm thấy đơn hàng nào phù hợp bộ lọc.')).toBeVisible();
+      await expect(section).toHaveCount(0);
+      invoiced = true;
+      await page.locator('button.btn').getByText('Đơn dịch vụ đơn', { exact: true }).click();
+      await expect(page.getByText('ORD-SERVICE-101', { exact: true })).toBeVisible();
+      await expect(section).toHaveCount(0);
+      expect(errors).toEqual([]);
+      return;
+    }
+    await page.getByRole('button', { name: /^Lịch sử dịch vụ Spa/ }).click();
     await expect(section.getByText('LH-31', { exact: true })).toBeVisible();
     await expect(section.getByText(booking.services[0], { exact: true })).toBeVisible();
     await expect(section.getByText('Đã xác nhận', { exact: true })).toBeVisible();
@@ -43,8 +54,7 @@ for (const role of ['CUSTOMER', 'ADMIN']) {
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
     invoiced = true;
-    if (role === 'ADMIN') await page.locator('.page-header').getByRole('button', { name: 'Làm mới' }).click();
-    else await page.getByRole('button', { name: 'Cập nhật đơn hàng', exact: true }).click();
+    await page.locator('button.btn-luxury-outline').filter({ hasText: /^Làm mới$/ }).click();
     await expect(section.getByText('LH-31', { exact: true })).toHaveCount(0);
     await expect(page.getByText('ORD-SERVICE-101', { exact: true })).toBeVisible();
     expect(errors).toEqual([]);

@@ -28,7 +28,7 @@ class RecommendationClientTest {
             exchange.getResponseBody().write(bytes);exchange.close();
         });
         server.start();
-        client=new RecommendationClient("http://127.0.0.1:"+server.getAddress().getPort(),new ObjectMapper(),1);
+        client=new RecommendationClient("http://127.0.0.1:"+server.getAddress().getPort(),"",new ObjectMapper(),1);
         ReflectionTestUtils.setField(client,"internalToken","fixture-internal-token");
     }
     @AfterEach void close() { server.stop(0); }

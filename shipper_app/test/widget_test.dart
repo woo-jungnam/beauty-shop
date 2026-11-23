@@ -17,6 +17,14 @@ class _TestAuth extends AuthProvider {
 }
 
 class _TestShipper extends ShipperProvider {
+  final delivered = ShipperOrderModel.fromJson({
+    'id': 2,
+    'orderNumber': 'BEAUTYSHOP-20261121-987654321-DELIVERED',
+    'customerName': 'Khách thử nghiệm',
+    'status': 'DELIVERED',
+    'deliveredNotes': List.filled(12, 'Đã bàn giao cho người nhận.').join(' '),
+  });
+
   final order = ShipperOrderModel.fromJson({
     'id': 1,
     'orderNumber': 'BEAUTYSHOP-20261121-123456789',
@@ -28,7 +36,7 @@ class _TestShipper extends ShipperProvider {
   });
 
   @override
-  List<ShipperOrderModel> get orders => [order];
+  List<ShipperOrderModel> get orders => [order, delivered];
 
   @override
   Future<void> fetchOrders({
@@ -38,6 +46,38 @@ class _TestShipper extends ShipperProvider {
 
   @override
   Future<void> refreshUnreadCount() async {}
+
+  @override
+  Future<Map<String, dynamic>> fetchHistory(
+    String from,
+    String to,
+    int page,
+    bool deliveredOnly,
+  ) async => {
+    'content': [
+      {
+        'id': 3,
+        'orderNumber': 'ORDER-HISTORY-WITH-LONG-REFERENCE',
+        'customerName': 'Khách thử nghiệm',
+        'status': 'RETURNING_TO_SENDER',
+      },
+    ],
+    'last': true,
+  };
+
+  @override
+  Future<Map<String, dynamic>> fetchStats(String from, String to) async => {
+    'todayOrders': 1,
+    'weekOrders': 1,
+    'monthOrders': 1,
+    'totalOrders': 1,
+    'deliveredOrders': 1,
+    'totalCodCollected': 123456789,
+    'totalRevenue': 123456789,
+    'totalDeliveryFees': 123456789,
+    'estimatedEarnings': 123456789,
+    'ordersByDay': {'2026-11-21': 1},
+  };
 }
 
 void main() {
@@ -85,6 +125,36 @@ void main() {
       find.byType(SingleChildScrollView).last,
       const Offset(0, -550),
     );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    Navigator.of(context).pop();
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(320, 380);
+    await tester.pumpAndSettle();
+    final proofButton = find.text('Xem bằng chứng giao hàng').hitTestable();
+    await tester.scrollUntilVisible(proofButton, 120);
+    await tester.pumpAndSettle();
+    await tester.tap(proofButton);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    Navigator.of(context).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lịch sử'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('#ORDER-HISTORY-WITH-LONG-REFERENCE'),
+      120,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Thống kê'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('COD tài xế đã thu'), 120);
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(1024, 600);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());

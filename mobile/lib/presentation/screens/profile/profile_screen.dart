@@ -711,18 +711,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    ActionChip(
-                      label: const Text('Production Cloud', style: TextStyle(fontSize: 11)),
-                      onPressed: () => setState(() => controller.text = 'https://api.dermascan.world'),
-                    ),
-                    ActionChip(
-                      label: const Text('Android Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
-                      onPressed: () => setState(() => controller.text = 'http://10.0.2.2:8080'),
-                    ),
-                    ActionChip(
-                      label: const Text('Local (localhost:8080)', style: TextStyle(fontSize: 11)),
-                      onPressed: () => setState(() => controller.text = 'http://localhost:8080'),
-                    ),
+                    if (ApiConstants.configuredBaseUrl.isNotEmpty)
+                      ActionChip(
+                        label: const Text('Production Cloud', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setState(() => controller.text = ApiConstants.configuredBaseUrl),
+                      ),
+                    if (ApiConstants.emulatorBaseUrl.isNotEmpty)
+                      ActionChip(
+                        label: const Text('Android Emulator', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setState(() => controller.text = ApiConstants.emulatorBaseUrl),
+                      ),
+                    if (ApiConstants.localBaseUrl.isNotEmpty)
+                      ActionChip(
+                        label: const Text('Local', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setState(() => controller.text = ApiConstants.localBaseUrl),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 14),

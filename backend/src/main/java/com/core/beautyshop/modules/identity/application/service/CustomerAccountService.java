@@ -41,7 +41,7 @@ public class CustomerAccountService {
     private final JdbcTemplate jdbc;
     @Value("${app.mail.enabled:false}") private boolean mailEnabled;
     @Value("${app.mail.from:no-reply@beautyshop.vn}") private String from;
-    @Value("${app.customer-url:http://localhost}") private String customerUrl;
+    @Value("${app.customer-url}") private String customerUrl;
 
     @Transactional(readOnly=true)
     public SkinView skin() {

@@ -92,7 +92,8 @@ public class RecommendationClient {
     }
 
     public RecommendationClient(
-            @Value("${chatbot.service.url:http://localhost:8000}") String chatbotBaseUrl,
+            @Value("${chatbot.service.url}") String chatbotBaseUrl,
+            @Value("${CHATBOT_RECOMMENDATION_FALLBACK_URL:}") String altUrl,
             ObjectMapper objectMapper,
             @Value("${chatbot.service.timeout-seconds:10}") int timeoutSeconds
     ) {
@@ -106,13 +107,7 @@ public class RecommendationClient {
                 .requestFactory(factory)
                 .build();
 
-        String altUrl = null;
-        if (this.baseUrl.contains("localhost:8000") || this.baseUrl.contains("127.0.0.1:8000")) {
-            altUrl = this.baseUrl.replace("8000", "18000");
-        } else if (this.baseUrl.contains("localhost:18000") || this.baseUrl.contains("127.0.0.1:18000")) {
-            altUrl = this.baseUrl.replace("18000", "8000");
-        }
-        if (altUrl != null) {
+        if (!altUrl.isBlank()) {
             this.alternativeClient = RestClient.builder()
                     .baseUrl(altUrl)
                     .requestFactory(factory)

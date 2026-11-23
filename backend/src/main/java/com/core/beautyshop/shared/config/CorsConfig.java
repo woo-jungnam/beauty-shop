@@ -16,18 +16,6 @@ import java.util.Set;
 @Configuration
 public class CorsConfig {
 
-    public static final List<String> ALLOWED_ORIGINS = List.of(
-            "https://dermascan.world",
-            "https://www.dermascan.world",
-            "http://localhost:8080",
-            "http://127.0.0.1:8080",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost"
-    );
-
     @Value("${app.cors.allowed-origins:}")
     private String customOrigins;
 
@@ -35,7 +23,7 @@ public class CorsConfig {
     private String customerUrl;
 
     public List<String> getAllowedOrigins() {
-        Set<String> origins = new LinkedHashSet<>(ALLOWED_ORIGINS);
+        Set<String> origins = new LinkedHashSet<>();
         if (customOrigins != null && !customOrigins.isBlank()) {
             Arrays.stream(customOrigins.split(","))
                     .map(String::trim)

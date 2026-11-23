@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     image_search_max_pixels: int = Field(default=20_000_000, ge=1, le=40_000_000)
     image_search_batch_size: int = Field(default=16, ge=1, le=64)
     image_search_upload_dir: str = str(BASE_DIR.parent.parent / "backend" / "uploads")
-    image_search_media_origin: str = "http://localhost:8080"
+    image_search_media_origin: str = ""
     # Trusted aliases for /uploads/ URLs, comma separated; images are never downloaded.
     image_search_allowed_origins: str = ""
     image_search_excluded_hosts: str = "images.unsplash.com,via.placeholder.com,placehold.co"

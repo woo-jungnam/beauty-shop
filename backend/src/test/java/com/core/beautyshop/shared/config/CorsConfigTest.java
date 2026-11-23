@@ -9,7 +9,10 @@ class CorsConfigTest {
     @Test
     void onlyExactProductionOriginsAreAllowedWithCredentials() {
         var request = new MockHttpServletRequest("OPTIONS", "/api/v1/products");
-        var configuration = new CorsConfig().corsConfigurationSource().getCorsConfiguration(request);
+        var corsConfig = new CorsConfig();
+        org.springframework.test.util.ReflectionTestUtils.setField(corsConfig, "customOrigins",
+                "https://dermascan.world,https://www.dermascan.world,http://localhost:8080");
+        var configuration = corsConfig.corsConfigurationSource().getCorsConfiguration(request);
         assertNotNull(configuration);
         assertEquals("https://dermascan.world", configuration.checkOrigin("https://dermascan.world"));
         assertEquals("https://www.dermascan.world", configuration.checkOrigin("https://www.dermascan.world"));

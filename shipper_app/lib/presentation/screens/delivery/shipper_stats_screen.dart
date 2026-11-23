@@ -42,40 +42,31 @@ class _ShipperStatsScreenState extends State<ShipperStatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DeliveryDates(
-          range: _range,
-          onChange: (range) {
-            _range = range;
-            _refresh();
-          },
-        ),
-        Expanded(
-          child: FutureBuilder(
-            future: _stats,
-            builder: (context, snapshot) => RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(12),
-                children: [
-                  if (snapshot.connectionState != ConnectionState.done)
-                    const Center(child: CircularProgressIndicator())
-                  else if (snapshot.hasError) ...[
-                    Text(snapshot.error.toString()),
-                    TextButton(
-                      onPressed: _refresh,
-                      child: const Text('Thử lại'),
-                    ),
-                  ] else
-                    ..._report(snapshot.requireData),
-                ],
-              ),
+    return FutureBuilder(
+      future: _stats,
+      builder: (context, snapshot) => RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(12),
+          children: [
+            DeliveryDates(
+              range: _range,
+              onChange: (range) {
+                _range = range;
+                _refresh();
+              },
             ),
-          ),
+            if (snapshot.connectionState != ConnectionState.done)
+              const Center(child: CircularProgressIndicator())
+            else if (snapshot.hasError) ...[
+              Text(snapshot.error.toString()),
+              TextButton(onPressed: _refresh, child: const Text('Thử lại')),
+            ] else
+              ..._report(snapshot.requireData),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -117,20 +108,19 @@ class _ShipperStatsScreenState extends State<ShipperStatsScreen> {
             ),
             ListTile(
               title: const Text('COD tài xế đã thu'),
-              trailing: Text(currency.format(data['totalCodCollected'])),
+              subtitle: Text(currency.format(data['totalCodCollected'])),
             ),
             ListTile(
               title: const Text('Giá trị đơn đã giao'),
-              trailing: Text(currency.format(data['totalRevenue'])),
+              subtitle: Text(currency.format(data['totalRevenue'])),
             ),
             ListTile(
               title: const Text('Phí giao hàng trên đơn đã giao'),
-              trailing: Text(currency.format(data['totalDeliveryFees'])),
+              subtitle: Text(currency.format(data['totalDeliveryFees'])),
             ),
             ListTile(
               title: const Text('Thu nhập ước tính trong kỳ'),
-              subtitle: const Text('Số đơn đã giao × mức trả mỗi đơn'),
-              trailing: Text(
+              subtitle: Text(
                 data['estimatedEarnings'] == null
                     ? 'Chưa cấu hình'
                     : currency.format(data['estimatedEarnings']),

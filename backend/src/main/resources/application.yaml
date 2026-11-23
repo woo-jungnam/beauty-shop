@@ -30,7 +30,7 @@ spring:
     virtual:
       enabled: true
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    host: ${SPRING_MAIL_HOST:}
     port: ${SPRING_MAIL_PORT:587}
     username: ${SPRING_MAIL_USERNAME:}
     password: ${SPRING_MAIL_PASSWORD:}
@@ -56,13 +56,13 @@ spring:
     redis:
       repositories:
         enabled: false
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       timeout: 2000ms
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/beautyshop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8}
-    username: ${DB_USERNAME:root}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: ${DB_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     hikari:
@@ -93,7 +93,7 @@ spring:
           fail_on_pagination_over_collection_fetch: true
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -132,11 +132,11 @@ management:
 review:
   sentiment:
     enabled: ${REVIEW_SENTIMENT_ENABLED:false}
-    url: ${REVIEW_SENTIMENT_URL:http://review-sentiment:8002}
+    url: ${REVIEW_SENTIMENT_URL:}
     poll-delay-ms: ${REVIEW_SENTIMENT_POLL_DELAY_MS:5000}
 
 app:
-  customer-url: ${CUSTOMER_APP_URL:http://localhost}
+  customer-url: ${CUSTOMER_APP_URL:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:}
   spa:
@@ -181,13 +181,13 @@ sepay:
 
 chatbot:
   service:
-    url: ${CHATBOT_SERVICE_URL:http://localhost:8000}
+    url: ${CHATBOT_SERVICE_URL:}
     timeout-seconds: ${CHATBOT_TIMEOUT_SECONDS:60}
     max-concurrent-streams: ${CHATBOT_MAX_CONCURRENT_STREAMS:32}
 
 image-search:
   enabled: ${IMAGE_SEARCH_ENABLED:false}
-  service-url: ${IMAGE_SEARCH_SERVICE_URL:http://localhost:8001}
+  service-url: ${IMAGE_SEARCH_SERVICE_URL:}
   internal-token: ${IMAGE_SEARCH_INTERNAL_TOKEN:}
   timeout-seconds: ${IMAGE_SEARCH_TIMEOUT_SECONDS:30}
 

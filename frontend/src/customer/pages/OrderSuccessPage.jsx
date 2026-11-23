@@ -27,10 +27,10 @@ const formatCurrency = (val) => {
 const validOrderId = value => /^[1-9][0-9]*$/.test(String(value ?? '')) ? String(value) : null;
 
 const getPaymentWsUrl = (subscriptionToken) => {
-  const httpUrl = serverBaseUrl(import.meta.env.VITE_API_BASE_URL) || (typeof window !== 'undefined' ? window.location.origin : '');
-  const wsProtocol = httpUrl.startsWith('https') ? 'wss:' : 'ws:';
-  const host = httpUrl ? httpUrl.replace(/^https?:\/\//, '') : 'localhost:8080';
-  return `${wsProtocol}//${host}/ws/payment?subscriptionToken=${encodeURIComponent(subscriptionToken)}`;
+  const url = new URL('/ws/payment', serverBaseUrl(import.meta.env.VITE_API_BASE_URL) || window.location.origin);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.searchParams.set('subscriptionToken', subscriptionToken);
+  return url.toString();
 };
 
 export const OrderSuccessPage = ({

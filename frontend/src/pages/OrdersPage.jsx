@@ -1,5 +1,5 @@
 import { CommerceOperationsPanel } from '../features/commerce/AdminCommercePanels';
-import { ServiceBookingOrders } from '../features/spa/ServiceBookingOrders';
+import { DeliveryProofDetails } from '../features/commerce/DeliveryProofDetails';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
@@ -171,7 +171,7 @@ export const OrdersPage = () => {
   const [shipperPage, setShipperPage] = useState(0);
   const [shipperResults, setShipperResults] = useState(null);
   const [shipperLoading, setShipperLoading] = useState(false);
-  const [previewProofUrl, setPreviewProofUrl] = useState('');
+  const [proofOrder, setProofOrder] = useState(null);
 
   const [targetStatus, setTargetStatus] = useState('CONFIRMED');
   const [carrierName, setCarrierName] = useState('');
@@ -555,7 +555,7 @@ export const OrdersPage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPreviewProofUrl(resolveMediaUrl(row.deliveryProofUrl))}
+              onClick={() => setProofOrder(row)}
               title="Xem ảnh bằng chứng giao hàng (PoD)"
               style={{ color: '#059669', borderColor: '#059669' }}
             >
@@ -620,7 +620,7 @@ export const OrdersPage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPreviewProofUrl(resolveMediaUrl(row.deliveryProofUrl))}
+              onClick={() => setProofOrder(row)}
               title="Xem ảnh bằng chứng giao hàng (PoD)"
               style={{ color: '#059669', borderColor: '#059669' }}
             >
@@ -1019,26 +1019,20 @@ export const OrdersPage = () => {
 
       {/* Khu vực hiển thị bảng theo phân loại đơn hàng */}
       {orderTypeTab === 'SPA_VISIT' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Khối đơn đặt dịch vụ đơn lẻ */}
-          <ServiceBookingOrders admin refreshKey={orders} />
-
-          {/* Khối hóa đơn dịch vụ đơn đã quyết toán (nếu có) */}
-          <div className="card" style={{ padding: '16px' }}>
-            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '12px', color: 'var(--text-main)' }}>
-              Hóa đơn dịch vụ đơn đã lập & quyết toán
-            </div>
-            <DataTable
-              columns={columns}
-              data={orders}
-              loading={loading}
-              emptyMessage="Chưa có hóa đơn dịch vụ đơn nào đã lập."
-              page={page}
-              totalPages={totalPages}
-              totalElements={totalElements}
-              onPageChange={(p) => fetchOrders(p)}
-            />
+        <div className="card" style={{ padding: '16px' }}>
+          <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '12px', color: 'var(--text-main)' }}>
+            Hóa đơn dịch vụ đơn đã lập & quyết toán
           </div>
+          <DataTable
+            columns={columns}
+            data={orders}
+            loading={loading}
+            emptyMessage="Chưa có hóa đơn dịch vụ đơn nào đã lập."
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            onPageChange={(p) => fetchOrders(p)}
+          />
         </div>
       ) : (
         <>
@@ -1052,11 +1046,6 @@ export const OrdersPage = () => {
             totalElements={totalElements}
             onPageChange={(p) => fetchOrders(p)}
           />
-
-          {/* Dịch vụ đơn đã đặt (hiển thị khi xem tất cả để theo dõi toàn bộ luồng) */}
-          {isAdmin && orderTypeTab === 'ALL' && (
-            <ServiceBookingOrders admin refreshKey={orders} />
-          )}
 
           {/* Đổi trả sản phẩm & đối soát COD (chỉ hiển thị khi xem sản phẩm hoặc tất cả) */}
           {(orderTypeTab === 'ALL' || orderTypeTab === 'PRODUCT') && (
@@ -1356,7 +1345,7 @@ export const OrdersPage = () => {
                             <img
                               src={resolveMediaUrl(selectedOrder.deliveryProofUrl)}
                               alt="Bằng chứng giao hàng (PoD)"
-                              onClick={() => setPreviewProofUrl(resolveMediaUrl(selectedOrder.deliveryProofUrl))}
+                              onClick={() => setProofOrder(selectedOrder)}
                               style={{
                                 width: '90px',
                                 height: '90px',
@@ -2042,19 +2031,13 @@ export const OrdersPage = () => {
         </form>
       </Modal>
 
-      {/* Modal phóng to ảnh PoD */}
       <Modal
-        isOpen={Boolean(previewProofUrl)}
-        onClose={() => setPreviewProofUrl('')}
-        title="Bằng chứng giao hàng (Proof of Delivery)"
+        isOpen={Boolean(proofOrder)}
+        onClose={() => setProofOrder(null)}
+        title="Bằng chứng giao hàng"
+        maxWidth="920px"
       >
-        <div style={{ textAlign: 'center' }}>
-          <img
-            src={previewProofUrl}
-            alt="Proof of Delivery Large"
-            style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '8px', objectFit: 'contain' }}
-          />
-        </div>
+        {proofOrder && <DeliveryProofDetails key={proofOrder.id} order={proofOrder} />}
       </Modal>
 
       <ConfirmModal

@@ -46,7 +46,7 @@ public class ChatbotServiceImpl implements ChatbotService {
     public void shutdown() { deadlines.shutdownNow(); }
 
     public ChatbotServiceImpl(
-            @Value("${chatbot.service.url:http://localhost:8000}") String chatbotBaseUrl,
+            @Value("${chatbot.service.url}") String chatbotBaseUrl,
             ObjectMapper objectMapper,
             @Value("${chatbot.service.timeout-seconds:60}") int timeoutSeconds,
             @Value("${chatbot.service.max-concurrent-streams:32}") int maxStreams,

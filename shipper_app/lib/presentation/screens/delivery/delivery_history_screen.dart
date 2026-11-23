@@ -84,87 +84,79 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
           : format.format(vietnamTime(timestamp));
       groups.putIfAbsent(date, () => []).add(order);
     }
-    return Column(
-      children: [
-        DeliveryDates(
-          range: _range,
-          onChange: (range) {
-            _range = range;
-            _load(reset: true);
-          },
-        ),
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(value: true, label: Text('Đã giao')),
-            ButtonSegment(value: false, label: Text('Tất cả')),
-          ],
-          selected: {_deliveredOnly},
-          onSelectionChanged: (value) {
-            _deliveredOnly = value.single;
-            _load(reset: true);
-          },
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => _load(reset: true),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(12),
-              children: [
-                for (final group in groups.entries) ...[
-                  ListTile(
-                    title: Text(group.key),
-                    trailing: Text(
-                      '${group.value.length} mục${!_last && group.key == groups.keys.last ? ' đã tải' : ''}',
-                    ),
-                  ),
-                  for (final order in group.value)
-                    Card(
-                      child: ListTile(
-                        title: Text('#${order.orderNumber}'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              order.customerPhone.isEmpty && order.notes != null
-                                  ? order.notes!
-                                  : order.customerName,
-                            ),
-                            if (order.codCollected > 0)
-                              Text(
-                                'COD chờ bàn giao: ${currency.format(order.codCollected - order.codRemitted)}',
-                              ),
-                          ],
-                        ),
-                        trailing: Text(switch (order.status) {
-                          'DELIVERED' => 'Đã giao',
-                          'SHIPPED' => 'Đang giao',
-                          'DELIVERY_FAILED' => 'Giao thất bại',
-                          'CANCELLED' => 'Đã hủy',
-                          'RETURNING_TO_SENDER' => 'Đang hoàn về kho',
-                          'RETURN_TO_SENDER' => 'Đã hoàn về kho',
-                          'RETURNED' => 'Đã trả hàng',
-                          'REFUNDED' => 'Đã hoàn tiền',
-                          _ => order.status,
-                        }),
-                      ),
-                    ),
-                ],
-                if (_loading) const Center(child: CircularProgressIndicator()),
-                if (_error != null) ...[
-                  Text(_error!),
-                  TextButton(onPressed: _load, child: const Text('Thử lại')),
-                ] else if (!_loading && !_last)
-                  TextButton(onPressed: _load, child: const Text('Tải thêm')),
-                if (!_loading && _error == null && _orders.isEmpty)
-                  const Center(
-                    child: Text('Không có đơn trong khoảng ngày này'),
-                  ),
-              ],
-            ),
+    return RefreshIndicator(
+      onRefresh: () => _load(reset: true),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(12),
+        children: [
+          DeliveryDates(
+            range: _range,
+            onChange: (range) {
+              _range = range;
+              _load(reset: true);
+            },
           ),
-        ),
-      ],
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: true, label: Text('Đã giao')),
+              ButtonSegment(value: false, label: Text('Tất cả')),
+            ],
+            selected: {_deliveredOnly},
+            onSelectionChanged: (value) {
+              _deliveredOnly = value.single;
+              _load(reset: true);
+            },
+          ),
+          for (final group in groups.entries) ...[
+            ListTile(
+              title: Text(group.key),
+              trailing: Text(
+                '${group.value.length} mục${!_last && group.key == groups.keys.last ? ' đã tải' : ''}',
+              ),
+            ),
+            for (final order in group.value)
+              Card(
+                child: ListTile(
+                  title: Text('#${order.orderNumber}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.customerPhone.isEmpty && order.notes != null
+                            ? order.notes!
+                            : order.customerName,
+                      ),
+                      if (order.codCollected > 0)
+                        Text(
+                          'COD chờ bàn giao: ${currency.format(order.codCollected - order.codRemitted)}',
+                        ),
+                      Text(switch (order.status) {
+                        'DELIVERED' => 'Đã giao',
+                        'SHIPPED' => 'Đang giao',
+                        'DELIVERY_FAILED' => 'Giao thất bại',
+                        'CANCELLED' => 'Đã hủy',
+                        'RETURNING_TO_SENDER' => 'Đang hoàn về kho',
+                        'RETURN_TO_SENDER' => 'Đã hoàn về kho',
+                        'RETURNED' => 'Đã trả hàng',
+                        'REFUNDED' => 'Đã hoàn tiền',
+                        _ => order.status,
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+          if (_loading) const Center(child: CircularProgressIndicator()),
+          if (_error != null) ...[
+            Text(_error!),
+            TextButton(onPressed: _load, child: const Text('Thử lại')),
+          ] else if (!_loading && !_last)
+            TextButton(onPressed: _load, child: const Text('Tải thêm')),
+          if (!_loading && _error == null && _orders.isEmpty)
+            const Center(child: Text('Không có đơn trong khoảng ngày này')),
+        ],
+      ),
     );
   }
 }

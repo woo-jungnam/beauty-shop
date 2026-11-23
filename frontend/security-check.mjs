@@ -65,10 +65,10 @@ for (const path of ['.env', '.env.production', '.env.local', '.env.production.lo
 let envText = '';
 try { envText = readFileSync(resolve(cwd, '.env'), 'utf8'); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
-const reviewedPublicVariables = new Set(['VITE_API_BASE_URL', 'VITE_GOOGLE_OAUTH_CLIENT_ID']);
+const reviewedFrontendVariables = new Set(['VITE_API_BASE_URL', 'VITE_GOOGLE_OAUTH_CLIENT_ID', 'DEV_API_PROXY_TARGET']);
 for (const line of envText.split(/\r?\n/)) {
   const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/);
-  if (match && !reviewedPublicVariables.has(match[1])) report('local-env', prefix + '.env', 'unreviewed-variable:' + match[1]);
+  if (match && !reviewedFrontendVariables.has(match[1])) report('local-env', prefix + '.env', 'unreviewed-variable:' + match[1]);
 }
 inspect('local-env', prefix + '.env', envText);
 

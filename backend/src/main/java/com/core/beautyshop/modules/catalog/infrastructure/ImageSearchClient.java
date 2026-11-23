@@ -45,7 +45,7 @@ public class ImageSearchClient {
         }
     }
 
-    public ImageSearchClient(@Value("${image-search.service-url:http://image-search:8001}") String url,
+    public ImageSearchClient(@Value("${image-search.service-url}") String url,
                              @Value("${image-search.internal-token:}") String token,
                              @Value("${image-search.enabled:false}") boolean enabled,
                              @Value("${image-search.timeout-seconds:30}") int timeout) {
