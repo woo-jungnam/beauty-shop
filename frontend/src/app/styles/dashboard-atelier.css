@@ -46,22 +46,6 @@
   z-index: 1;
 }
 
-.atelier-dashboard .atelier-eyebrow {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  color: var(--atelier-muted);
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: 0.16em;
-}
-
-.atelier-dashboard .atelier-eyebrow-line {
-  width: 23px;
-  height: 2px;
-  background: var(--atelier-violet);
-}
-
 .atelier-dashboard .atelier-welcome {
   margin-top: 15px;
   color: #777087;
@@ -1929,10 +1913,6 @@
     transform: scale(0.53);
     transform-origin: right top;
     pointer-events: none;
-  }
-  .atelier-dashboard .atelier-eyebrow {
-    font-size: 7px;
-    letter-spacing: 0.11em;
   }
   .atelier-dashboard .atelier-welcome {
     font-size: 10px;

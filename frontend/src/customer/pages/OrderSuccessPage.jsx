@@ -16,6 +16,7 @@ import { getGuestSessionId } from '../../shared/utils/session';
 import { serverBaseUrl } from '../../shared/api/baseUrl';
 import { orderBenefitDestination } from '../../features/spa/benefitModel';
 import { resolveMediaUrl } from '../../shared/utils/formatters';
+import OrderPrintInvoice from './OrderPrintInvoice';
 
 const formatCurrency = (val) => {
   const amount = val == null || typeof val === 'boolean' || String(val).trim() === '' ? NaN : Number(val);
@@ -226,7 +227,7 @@ export const OrderSuccessPage = ({
 
   return (
     <div className="customer-container customer-order-success-page" style={{ padding: '40px 20px 80px 20px', maxWidth: '780px' }}>
-      <div style={{
+      <div className={hasVerifiedOrder ? 'no-print' : undefined} style={{
         backgroundColor: '#FFFFFF',
         borderRadius: 'var(--radius-lg)',
         border: '1.5px solid var(--c-border-subtle)',
@@ -535,6 +536,7 @@ export const OrderSuccessPage = ({
           </button>
         </div>
       </div>
+      {hasVerifiedOrder && <OrderPrintInvoice order={orderDetail} paymentExpired={isExpired} />}
     </div>
   );
 };

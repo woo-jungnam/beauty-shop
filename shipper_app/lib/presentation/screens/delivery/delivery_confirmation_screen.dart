@@ -245,7 +245,7 @@ class _DeliveryConfirmationScreenState
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              widget.order.shippingAddress,
+                              widget.order.displayShippingAddress,
                               style: const TextStyle(
                                 color: AppColors.textMuted,
                                 fontSize: 13,

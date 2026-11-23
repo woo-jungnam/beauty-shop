@@ -62,8 +62,7 @@ void main() {
       expect(hasDelivered, isTrue);
     });
 
-    test('ApiConstants baseUrl defaults or connects to https://api.dermascan.world', () {
-      ApiConstants.setCustomBaseUrl('https://api.dermascan.world');
+    test('ApiConstants uses the public API without a build-time override', () {
       expect(ApiConstants.baseUrl, 'https://api.dermascan.world');
     });
 

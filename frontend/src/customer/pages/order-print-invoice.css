@@ -1,0 +1,111 @@
+.order-print-invoice {
+  display: none;
+}
+
+@media print {
+  .order-print-invoice {
+    display: block;
+    color: #111;
+    background: #fff;
+    font: 10pt/1.45 Arial, sans-serif;
+    overflow-wrap: anywhere;
+  }
+
+  .order-print-invoice h1 {
+    font-size: 21pt;
+    margin: 0 0 14pt;
+  }
+
+  .order-print-brand {
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .order-print-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14pt;
+    break-inside: avoid;
+  }
+
+  .order-print-invoice h2,
+  .order-print-invoice caption {
+    font-size: 11pt;
+    font-weight: 700;
+    margin: 0 0 5pt;
+    text-align: left;
+  }
+
+  .order-print-invoice dl {
+    margin: 0;
+  }
+
+  .order-print-invoice dt {
+    display: inline;
+    font-weight: 700;
+    margin-right: 5pt;
+  }
+
+  .order-print-invoice dd {
+    display: inline;
+    margin: 0;
+  }
+
+  .order-print-notes {
+    white-space: pre-wrap;
+  }
+
+  .order-print-invoice table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14pt 0;
+  }
+
+  .order-print-invoice thead {
+    display: table-header-group;
+  }
+
+  .order-print-invoice tr,
+  .order-print-totals {
+    break-inside: avoid;
+  }
+
+  .order-print-invoice th,
+  .order-print-invoice td {
+    border-bottom: 1px solid #aaa;
+    padding: 5pt;
+    text-align: right;
+    vertical-align: top;
+  }
+
+  .order-print-invoice :is(th, td):nth-child(2) {
+    width: 43%;
+    text-align: left;
+  }
+
+  .order-print-invoice td:nth-child(n + 3) {
+    white-space: nowrap;
+  }
+
+  .order-print-invoice small {
+    display: block;
+    font-size: 9pt;
+  }
+
+  .order-print-invoice .order-print-totals {
+    width: min(100%, 250pt);
+    margin-left: auto;
+  }
+
+  .order-print-totals > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10pt;
+    padding: 3pt 0;
+  }
+
+  .order-print-totals > div:nth-child(4) {
+    border-top: 1px solid #888;
+    font-weight: 700;
+  }
+}

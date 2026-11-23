@@ -1025,10 +1025,6 @@ export const DashboardPage = () => {
       {loading && <div className="atelier-loading-line" aria-hidden="true" />}
       <section className="atelier-greeting atelier-reveal">
         <div className="atelier-greeting-copy">
-          <div className="atelier-eyebrow">
-            <span className="atelier-eyebrow-line" />
-            YOUR BEAUTY BUSINESS, IN FOCUS
-          </div>
           <p className="atelier-welcome">
             Chào {user?.fullName?.split(" ").at(-1) || "bạn"}, chúc một ngày rực
             rỡ.

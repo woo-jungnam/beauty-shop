@@ -4,10 +4,10 @@ Chạy các lệnh sau trong thư mục `mobile`.
 
 ## API
 
-API mặc định: `https://api.dermascan.world`. Base URL không gồm đường dẫn Swagger hoặc `/api/v1`; các endpoint đã có prefix riêng.
+API mặc định là `https://api.dermascan.world`. Base URL chỉ gồm giao thức, hostname và cổng tùy chọn.
 
 ```powershell
-flutter run --dart-define-from-file=env.example.json
+flutter run
 ```
 
 Đổi sang backend local trên Android emulator:
@@ -16,7 +16,7 @@ flutter run --dart-define-from-file=env.example.json
 flutter run --dart-define=BACKEND_URL=http://10.0.2.2:8080
 ```
 
-Flutter đọc `BACKEND_URL` qua `String.fromEnvironment` tại build time, không tự đọc `.env`. URL tùy chỉnh đã lưu bằng `ApiConstants.setCustomBaseUrl` được ưu tiên hơn cấu hình build.
+Flutter đọc `BACKEND_URL` khi build qua `--dart-define` hoặc `--dart-define-from-file`. Trên điện thoại Android thật cắm USB, nếu backend đang chạy trên máy tính ở cổng 8080, chạy `adb reverse tcp:8080 tcp:8080` trước khi build debug với `BACKEND_URL=http://localhost:8080`.
 
 ## Kiểm tra
 

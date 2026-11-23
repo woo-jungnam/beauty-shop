@@ -59,7 +59,7 @@ class ShipperOrderModel {
       orderNumber: json['orderNumber']?.toString() ?? '',
       customerName: json['customerName']?.toString() ?? 'Khách hàng',
       customerPhone: json['customerPhone']?.toString() ?? '',
-      shippingAddress: json['shippingAddress']?.toString() ?? 'Chưa có địa chỉ',
+      shippingAddress: json['shippingAddress']?.toString().trim() ?? '',
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       codAmount: (json['codAmount'] as num?)?.toDouble() ?? 0.0,
       codCollected: (json['codCollected'] as num?)?.toDouble() ?? 0,
@@ -89,6 +89,9 @@ class ShipperOrderModel {
   }
 
   bool get isDelivered => status == 'DELIVERED';
+
+  String get displayShippingAddress =>
+      shippingAddress.isEmpty ? 'Chưa có địa chỉ' : shippingAddress;
   bool get isShipped => status == 'SHIPPED';
   bool get isCod => codAmount > 0;
 }

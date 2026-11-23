@@ -24,6 +24,10 @@ class ShipperDashboardScreen extends StatefulWidget {
 
 class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     with WidgetsBindingObserver {
+  static final _mapsDirections = Uri.tryParse(
+    const String.fromEnvironment('MAPS_DIRECTIONS_URL'),
+  );
+
   Timer? _pollTimer;
   int _tab = 0;
 
@@ -86,6 +90,25 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
         SnackBar(content: Text('Không thể gọi đến $cleanPhone: $e')),
       );
     }
+  }
+
+  Future<void> _openDirections(String address) async {
+    final url = _mapsDirections!.replace(
+      queryParameters: {
+        'api': '1',
+        'destination': address,
+        'dir_action': 'navigate',
+      },
+    );
+    try {
+      if (await launchUrl(url, mode: LaunchMode.externalApplication)) return;
+    } on Exception {
+      // The device may have no app available to open the link.
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Không mở được bản đồ. Vui lòng thử lại.')),
+    );
   }
 
   void _showProofDialog(ShipperOrderModel order) {
@@ -585,12 +608,30 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        order.shippingAddress,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMain,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.displayShippingAddress,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMain,
+                            ),
+                          ),
+                          if (order.isShipped &&
+                              order.shippingAddress.isNotEmpty &&
+                              _mapsDirections?.scheme == 'https' &&
+                              _mapsDirections!.hasAuthority)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  _openDirections(order.shippingAddress),
+                              icon: const Icon(
+                                Icons.directions_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Chỉ đường'),
+                            ),
+                        ],
                       ),
                     ),
                   ],

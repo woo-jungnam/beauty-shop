@@ -1,7 +1,10 @@
 import '../storage/storage_service.dart';
 
 class ApiConstants {
-  static const configuredBaseUrl = String.fromEnvironment('BACKEND_URL');
+  static const _buildBaseUrl = String.fromEnvironment('BACKEND_URL');
+  static const _defaultBaseUrl = 'https://api.dermascan.world';
+  static const configuredBaseUrl =
+      _buildBaseUrl == '' ? _defaultBaseUrl : _buildBaseUrl;
   static const localBaseUrl = String.fromEnvironment('BACKEND_LOCAL_URL');
   static const emulatorBaseUrl = String.fromEnvironment('BACKEND_EMULATOR_URL');
   static String? _customBaseUrl;
@@ -15,7 +18,7 @@ class ApiConstants {
     if (_customBaseUrl != null && _customBaseUrl!.isNotEmpty) {
       return _customBaseUrl!;
     }
-    const envUrl = configuredBaseUrl;
+    const envUrl = _buildBaseUrl;
     if (envUrl.isNotEmpty) {
       return envUrl;
     }
@@ -23,7 +26,7 @@ class ApiConstants {
     if (savedUrl != null && savedUrl.isNotEmpty) {
       return savedUrl;
     }
-    return '';
+    return _defaultBaseUrl;
   }
 
   static const Duration connectTimeout = Duration(seconds: 25);

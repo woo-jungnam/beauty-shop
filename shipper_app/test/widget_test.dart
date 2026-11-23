@@ -29,6 +29,7 @@ class _TestShipper extends ShipperProvider {
     'id': 1,
     'orderNumber': 'BEAUTYSHOP-20261121-123456789',
     'customerName': 'Khách thử nghiệm',
+    'shippingAddress': '123 Đường Nguyễn Huệ, Phường Sài Gòn, TP. Hồ Chí Minh',
     'totalAmount': 123456789,
     'codAmount': 123456789,
     'status': 'SHIPPED',

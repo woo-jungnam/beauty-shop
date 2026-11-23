@@ -3,7 +3,10 @@ import 'package:flutter/foundation.dart';
 import '../storage/storage_service.dart';
 
 class ApiConstants {
-  static const configuredBaseUrl = String.fromEnvironment('BACKEND_URL');
+  static const _buildBaseUrl = String.fromEnvironment('BACKEND_URL');
+  static const _defaultBaseUrl = 'https://api.dermascan.world';
+  static const configuredBaseUrl =
+      _buildBaseUrl == '' ? _defaultBaseUrl : _buildBaseUrl;
   static const localBaseUrl = String.fromEnvironment('BACKEND_LOCAL_URL');
   static String? _customBaseUrl;
 
@@ -32,9 +35,9 @@ class ApiConstants {
 
   static String get baseUrl =>
       _customBaseUrl ??
-      _validUrl(configuredBaseUrl) ??
+      _validUrl(_buildBaseUrl) ??
       _validUrl(StorageService.getBaseUrl()) ??
-      '';
+      _defaultBaseUrl;
 
   static const Duration connectTimeout = Duration(seconds: 25);
   static const Duration receiveTimeout = Duration(seconds: 60);
