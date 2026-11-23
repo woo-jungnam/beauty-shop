@@ -39,6 +39,7 @@ public class CustomerAccountService {
     private final AuthService auth;
     private final Optional<JavaMailSender> mail;
     private final JdbcTemplate jdbc;
+    private final LoyaltyReconciliationService loyalty;
     @Value("${app.mail.enabled:false}") private boolean mailEnabled;
     @Value("${app.mail.from:no-reply@beautyshop.vn}") private String from;
     @Value("${app.customer-url}") private String customerUrl;
@@ -137,8 +138,10 @@ public class CustomerAccountService {
                 normalized,Timestamp.from(Instant.now()));
     }
     @Transactional(readOnly=true) public OrderStatistics statistics(){
+        Long userId = SecurityUtils.getCurrentUserId();
+        BigDecimal eligibleSpent = loyalty.eligibleSpent(userId);
         return jdbc.queryForObject("select count(*) cnt,coalesce(sum(paid_amount),0) paid,coalesce(sum(refunded_amount),0) refunded from orders where user_id=? and is_deleted=false",
-            (rs,n)->new OrderStatistics(rs.getLong("cnt"),rs.getBigDecimal("paid"),rs.getBigDecimal("refunded"),rs.getBigDecimal("paid").subtract(rs.getBigDecimal("refunded"))),SecurityUtils.getCurrentUserId());
+            (rs,n)->new OrderStatistics(rs.getLong("cnt"),rs.getBigDecimal("paid"),rs.getBigDecimal("refunded"),rs.getBigDecimal("paid").subtract(rs.getBigDecimal("refunded")),eligibleSpent),userId);
     }
     private User lockCurrent(){return users.findByIdForUpdate(SecurityUtils.getCurrentUserId()).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy tài khoản"));}
     private static String clean(String value){return value==null || value.isBlank()?null:value.trim();}
@@ -153,5 +156,6 @@ public class CustomerAccountService {
     public record PasswordReset(@NotBlank @Size(max=256) String token,@NotBlank @Size(min=8,max=128) String newPassword){}
     public record EmailCommand(@NotBlank @Email @Size(max=254) String email){}
     public record NewsletterCommand(@NotBlank @Email @Size(max=254) String email,boolean consent){}
-    public record OrderStatistics(long totalOrders,BigDecimal totalPaid,BigDecimal totalRefunded,BigDecimal netSpent){}
+    public record OrderStatistics(long totalOrders,BigDecimal totalPaid,BigDecimal totalRefunded,BigDecimal netSpent,
+                                  BigDecimal loyaltyEligibleSpent){}
 }

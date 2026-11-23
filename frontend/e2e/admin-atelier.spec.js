@@ -476,6 +476,11 @@ test("Admin login protects access and offers accessible password visibility", as
   await page.goto("/#/admin/login");
   await expect(page.locator(".admin-auth")).toBeVisible();
   await expect(page.locator(".admin-shell")).toHaveCount(0);
+  const shell = page.locator(".admin-auth__shell");
+  expect(await shell.boundingBox()).toMatchObject({
+    x: 0, y: 0, width: page.viewportSize().width,
+  });
+  expect((await shell.boundingBox()).height).toBeGreaterThanOrEqual(page.viewportSize().height);
   const password = page.locator('.admin-auth input[type="password"]');
   await expect(password).toHaveAttribute("autocomplete", "current-password");
   await page
@@ -485,6 +490,7 @@ test("Admin login protects access and offers accessible password visibility", as
     page.locator('.admin-auth input[autocomplete="current-password"]'),
   ).toHaveAttribute("type", "text");
   await page.setViewportSize({ width: 390, height: 844 });
+  expect(await shell.boundingBox()).toMatchObject({ x: 0, y: 0, width: 390 });
   await noPageOverflow(page);
 });
 

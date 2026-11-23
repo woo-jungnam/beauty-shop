@@ -197,9 +197,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Colors.white24,
                               ),
                               _buildProfileStat(
-                                'Chi Tiêu Ròng',
-                                _orderStatistics != null
-                                    ? AppFormatters.formatCurrency((_orderStatistics!['netSpent'] as num?)?.toDouble() ?? 0)
+                                'Chi Tiêu Tính Điểm',
+                                _orderStatistics?['loyaltyEligibleSpent'] is num
+                                    ? AppFormatters.formatCurrency((_orderStatistics!['loyaltyEligibleSpent'] as num).toDouble())
                                     : '--',
                                 Icons.account_balance_wallet_outlined,
                               ),

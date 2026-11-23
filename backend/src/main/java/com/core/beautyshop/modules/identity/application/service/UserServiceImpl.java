@@ -179,6 +179,7 @@ public class UserServiceImpl implements UserService {
                     .max(Comparator.comparingInt(MembershipTier::getRequiredPoints))
                     .orElse(MembershipTier.MEMBER));
             award.setReversed(true);
+            award.setEligibleAmount(java.math.BigDecimal.ZERO);
             loyaltyPointAwardRepository.save(award);
             userRepository.save(user);
         });

@@ -11,6 +11,7 @@ import com.core.beautyshop.modules.identity.domain.CustomerAccountData.*;
 import com.core.beautyshop.modules.notification.application.service.CustomerNotificationService;
 import com.core.beautyshop.modules.order.domain.Order;
 import com.core.beautyshop.modules.order.domain.OrderRepository;
+import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import com.core.beautyshop.modules.spa.application.service.SpaAccessService;
 import com.core.beautyshop.modules.spa.domain.Appointment;
 import com.core.beautyshop.modules.spa.domain.AppointmentItem;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 class CustomerAccountIntegrityIntegrationTest {
     @Autowired CustomerAccountService accounts;
+    @Autowired LoyaltyReconciliationService loyalty;
     @Autowired UserService profiles;
     @Autowired CustomerNotificationService notifications;
     @Autowired CustomerWishlistController wishlist;
@@ -245,6 +247,26 @@ class CustomerAccountIntegrityIntegrationTest {
         assertEquals(25, stats.totalOrders()); assertEquals(0, new BigDecimal("2500000").compareTo(stats.totalPaid()));
         assertEquals(0, new BigDecimal("250000").compareTo(stats.totalRefunded()));
         assertEquals(0, new BigDecimal("2250000").compareTo(stats.netSpent()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(stats.loyaltyEligibleSpent()));
+    }
+
+    @Test void eligibleSpendFollowsDeliveryAndChangesEvenWhenRoundedPointsStayTheSame() {
+        var customer = user("ROLE_CUSTOMER");
+        var row = Order.builder().orderNumber("ACC-" + UUID.randomUUID()).userId(customer.getId()).customerName("Fixture")
+            .customerPhone("0912345678").shippingAddress("Fixture address").paymentMethod(PaymentMethod.BANK)
+            .status(OrderStatus.SHIPPED).subTotal(new BigDecimal("18000")).shippingFee(new BigDecimal("2000"))
+            .totalAmount(new BigDecimal("20000")).paidAmount(new BigDecimal("20000")).build();
+        orders.saveAndFlush(row);
+        loyalty.reconcile(row.getId(), customer.getId(), row.getTotalAmount());
+        assertEquals(0, BigDecimal.ZERO.compareTo(as(customer, accounts::statistics).loyaltyEligibleSpent()));
+
+        row.setStatus(OrderStatus.DELIVERED);
+        orders.saveAndFlush(row);
+        assertEquals(0, new BigDecimal("18000").compareTo(as(customer, accounts::statistics).loyaltyEligibleSpent()));
+        loyalty.reconcile(row.getId(), customer.getId(), row.getTotalAmount());
+        loyalty.reconcile(row.getId(), customer.getId(), new BigDecimal("17500"));
+        assertEquals(0, new BigDecimal("15500").compareTo(as(customer, accounts::statistics).loyaltyEligibleSpent()));
+        assertEquals(1, users.findById(customer.getId()).orElseThrow().getLoyaltyPoints());
     }
     void order(User owner, BigDecimal paid, BigDecimal refunded, boolean deleted) {
         var row = Order.builder().orderNumber("ACC-" + UUID.randomUUID()).userId(owner.getId()).customerName("Fixture")

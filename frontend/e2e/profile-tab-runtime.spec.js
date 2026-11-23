@@ -19,7 +19,7 @@ async function setup(page) {
     if (pathname === '/api/v1/auth/profile') data = user;
     else if (pathname === '/api/v1/orders/my-orders') data = { content: [order], totalElements: 1, totalPages: 1 };
     else if (pathname === '/api/v1/orders/21') data = order;
-    else if (pathname === '/api/v1/users/order-statistics') data = { totalOrders: 1, totalPaid: 95000, totalRefunded: 0, netSpent: 95000 };
+    else if (pathname === '/api/v1/users/order-statistics') data = { totalOrders: 1, totalPaid: 95000, totalRefunded: 0, netSpent: 95000, loyaltyEligibleSpent: 65000 };
     else if (pathname === '/api/v1/spa/tickets/my-tickets') data = [ticket];
     else if (pathname === '/api/v1/appointments/my-appointments') data = [appointment];
     else if (pathname === '/api/v1/appointments/71') data = appointment;
@@ -31,6 +31,14 @@ async function setup(page) {
   });
   return errors;
 }
+
+test('profile shows loyalty-eligible spending from the statistics API', async ({ page }) => {
+  await setup(page);
+  await page.goto('/#/profile');
+  await expect(page.locator('.pf-hero-spending-amount')).toHaveText(/65\.000/);
+  const spending = page.locator('.pf-stat-box').filter({ hasText: 'Chi tiêu tính điểm' });
+  await expect(spending.locator('.pf-stat-val')).toHaveText(/65\.000/);
+});
 
 test('every profile tab renders without uncaught errors when switching back and forth', async ({ page }) => {
   const errors = await setup(page);

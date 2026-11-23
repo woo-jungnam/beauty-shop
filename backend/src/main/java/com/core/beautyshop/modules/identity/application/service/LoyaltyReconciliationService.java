@@ -14,6 +14,15 @@ import java.util.Comparator;
 
 @Service @RequiredArgsConstructor
 public class LoyaltyReconciliationService {
+    private static final BigDecimal SPEND_PER_POINT = BigDecimal.valueOf(10000);
+    private static final String SPEND_COLUMNS = """
+        o.user_id, o.total_amount, o.paid_amount, o.refunded_amount, o.shipping_fee,
+        o.status, o.service_package_id, o.appointment_id,
+        CASE WHEN o.service_package_id IS NULL AND o.appointment_id IS NULL THEN
+            (SELECT COALESCE(SUM(r.refund_amount), 0) FROM product_returns r
+             WHERE r.order_id = o.id AND r.status IN ('RECEIVED', 'REFUNDED'))
+        ELSE 0 END AS returned_amount
+        """;
     private final UserRepository users;
     private final LoyaltyPointAwardRepository awards;
     private final JdbcTemplate jdbc;
@@ -21,28 +30,88 @@ public class LoyaltyReconciliationService {
     @Transactional public void reconcile(Long orderId,Long userId,BigDecimal requested){
         if(orderId==null||userId==null)return;
         em.flush();
-        var rows=jdbc.query("select user_id,total_amount,paid_amount,refunded_amount,shipping_fee,status,service_package_id,appointment_id from orders where id=? and is_deleted=false",
-            (rs,n)->new Spend(rs.getObject("user_id")==null?null:rs.getLong("user_id"),rs.getBigDecimal("total_amount"),rs.getBigDecimal("paid_amount").subtract(rs.getBigDecimal("refunded_amount")).max(BigDecimal.ZERO),rs.getBigDecimal("shipping_fee"),rs.getString("status"),rs.getObject("service_package_id")!=null,rs.getObject("appointment_id")!=null),orderId);
+        var rows = jdbc.query("SELECT " + SPEND_COLUMNS + " FROM orders o WHERE o.id=? AND o.is_deleted=false",
+                (rs, n) -> readSpend(rs), orderId);
         if(rows.isEmpty()||!userId.equals(rows.getFirst().owner()))return;
         Spend spend=rows.getFirst();
-        boolean eligibleState=spend.packageOrder() ? !"CANCELLED".equals(spend.status()) : spend.visit() ? "COMPLETED".equals(spend.status()) : ("DELIVERED".equals(spend.status()) || "COMPLETED".equals(spend.status()));
-        BigDecimal base=requested==null?spend.total():requested.max(BigDecimal.ZERO);
-        if(!spend.packageOrder()&&!spend.visit())base=base.subtract(spend.shipping()).max(BigDecimal.ZERO);
-        BigDecimal returned = spend.packageOrder() || spend.visit() ? BigDecimal.ZERO : jdbc.queryForObject(
-                "select coalesce(sum(refund_amount),0) from product_returns where order_id=? and status in ('RECEIVED','REFUNDED')",BigDecimal.class,orderId);
-        BigDecimal capacity=spend.total().subtract(spend.shipping()).subtract(returned).max(BigDecimal.ZERO);
-        BigDecimal eligible=eligibleState?base.min(capacity).min(spend.netPaid()):BigDecimal.ZERO;
-        int target=eligible.divideToIntegralValue(BigDecimal.valueOf(10000)).intValueExact();
+        BigDecimal eligible = spend.eligibleAmount(requested);
+        int target=eligible.divideToIntegralValue(SPEND_PER_POINT).intValueExact();
         var user=users.findByIdForUpdate(userId).orElseThrow(()->new BusinessException("Không tìm thấy chủ điểm thành viên"));
         var award=awards.findByOrderId(orderId).orElse(null);
         int old=award==null||award.isReversed()?0:award.getPoints();
-        if(old==target)return;
-        long calculated=(long)(user.getLoyaltyPoints()==null?0:user.getLoyaltyPoints())+target-old;
-        if(calculated>Integer.MAX_VALUE)throw new BusinessException("Điểm thành viên vượt giới hạn");
-        int points=(int)Math.max(0,calculated);user.setLoyaltyPoints(points);
-        user.setMembershipTier(Arrays.stream(MembershipTier.values()).filter(t->points>=t.getRequiredPoints()).max(Comparator.comparingInt(MembershipTier::getRequiredPoints)).orElse(MembershipTier.MEMBER));
-        if(award==null)award=LoyaltyPointAward.builder().userId(userId).orderId(orderId).points(target).build();
-        award.setPoints(target);award.setReversed(target==0);awards.save(award);users.save(user);
+        if (award == null && !spend.eligibleState()) return;
+        if (old == target && award != null && award.getEligibleAmount() != null
+                && award.getEligibleAmount().compareTo(eligible) == 0) return;
+        if (old != target) {
+            long calculated = (long) (user.getLoyaltyPoints() == null ? 0 : user.getLoyaltyPoints()) + target - old;
+            if (calculated > Integer.MAX_VALUE) throw new BusinessException("Điểm thành viên vượt giới hạn");
+            int points = (int) Math.max(0, calculated);
+            user.setLoyaltyPoints(points);
+            user.setMembershipTier(Arrays.stream(MembershipTier.values())
+                    .filter(tier -> points >= tier.getRequiredPoints())
+                    .max(Comparator.comparingInt(MembershipTier::getRequiredPoints))
+                    .orElse(MembershipTier.MEMBER));
+            users.save(user);
+        }
+        if (award == null) award = LoyaltyPointAward.builder().userId(userId).orderId(orderId).build();
+        award.setPoints(target);
+        award.setReversed(eligible.signum() == 0);
+        award.setEligibleAmount(eligible);
+        awards.save(award);
     }
-    private record Spend(Long owner,BigDecimal total,BigDecimal netPaid,BigDecimal shipping,String status,boolean packageOrder,boolean visit){}
+
+    @Transactional(readOnly = true)
+    public BigDecimal eligibleSpent(Long userId) {
+        var amounts = jdbc.query("SELECT " + SPEND_COLUMNS + """
+                , a.eligible_amount, a.points, a.reversed
+                FROM orders o
+                LEFT JOIN loyalty_point_awards a ON a.order_id = o.id AND a.user_id = o.user_id AND a.is_deleted = false
+                WHERE o.user_id = ? AND o.is_deleted = false
+                  AND (o.status IN ('DELIVERED', 'COMPLETED') OR o.service_package_id IS NOT NULL)
+                """, (rs, n) -> {
+            Spend spend = readSpend(rs);
+            if (rs.getBoolean("reversed") || !spend.eligibleState()) return BigDecimal.ZERO;
+            BigDecimal recorded = rs.getBigDecimal("eligible_amount");
+            if (recorded != null) return recorded;
+            return spend.legacyEligibleAmount(rs.getInt("points"));
+        }, userId);
+        return amounts.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private static Spend readSpend(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return new Spend(rs.getObject("user_id", Long.class), rs.getBigDecimal("total_amount"),
+                rs.getBigDecimal("paid_amount"), rs.getBigDecimal("refunded_amount"),
+                rs.getBigDecimal("shipping_fee"), rs.getBigDecimal("returned_amount"), rs.getString("status"),
+                rs.getObject("service_package_id") != null, rs.getObject("appointment_id") != null);
+    }
+
+    private record Spend(Long owner, BigDecimal total, BigDecimal paid, BigDecimal refunded,
+                         BigDecimal shipping, BigDecimal returned, String status, boolean packageOrder, boolean visit) {
+        boolean eligibleState() {
+            if (packageOrder) return !"CANCELLED".equals(status);
+            return "COMPLETED".equals(status) || (!visit && "DELIVERED".equals(status));
+        }
+
+        BigDecimal netPaid() {
+            return paid.subtract(refunded).max(BigDecimal.ZERO);
+        }
+
+        BigDecimal eligibleAmount(BigDecimal requested) {
+            if (!eligibleState()) return BigDecimal.ZERO;
+            BigDecimal base = requested == null ? total : requested.max(BigDecimal.ZERO);
+            if (!packageOrder && !visit) base = base.subtract(shipping).max(BigDecimal.ZERO);
+            BigDecimal capacity = total.subtract(shipping).subtract(returned).max(BigDecimal.ZERO);
+            return base.min(capacity).min(netPaid());
+        }
+
+        BigDecimal legacyEligibleAmount(int awardedPoints) {
+            if (packageOrder) {
+                // Historical packages only retained rounded points from the Spa progress event.
+                return eligibleAmount(SPEND_PER_POINT.multiply(BigDecimal.valueOf(awardedPoints)));
+            }
+            BigDecimal requested = total.subtract(refunded.max(returned));
+            if (refunded.signum() > 0 || returned.signum() > 0) requested = requested.min(netPaid());
+            return eligibleAmount(requested);
+        }
+    }
 }

@@ -398,18 +398,6 @@ export const HomePage = ({ onNavigate }) => {
     ];
   }, [categories, products.length, totalProductCount]);
 
-  const categoryProductCounts = useMemo(() => {
-    const counts = {};
-    if (products && products.length > 0) {
-      products.forEach(p => {
-        if (p.categoryId) {
-          counts[p.categoryId] = (counts[p.categoryId] || 0) + 1;
-        }
-      });
-    }
-    return counts;
-  }, [products]);
-
   const CATEGORY_PAGE_SIZE = 8;
   const [currentCategoryTab, setCurrentCategoryTab] = useState(0);
   const [isCategoryHovered, setIsCategoryHovered] = useState(false);
@@ -855,30 +843,23 @@ export const HomePage = ({ onNavigate }) => {
               <div key={n} className="skeleton-shimmer home-category-skeleton" />
             ))
           ) : (
-            currentCategoryBatch.map((cat) => {
-              const count = categoryProductCounts[cat.id];
-              return (
-                <div
-                  key={cat.id}
-                  className="category-tile-card"
-                  onClick={() => onNavigate(`products?categoryId=${cat.id}&category=${cat.slug}&name=${encodeURIComponent(cat.name)}`)}
-                >
-                  <div className="category-tile-avatar">
-                    <img
-                      src={getCategoryImage(cat)}
-                      alt={cat.name}
-                      loading="lazy"
-                    />
-                  </div>
-                  <span className="category-tile-title">
-                    {cat.name}
-                  </span>
-                  <span className="category-tile-meta">
-                    {count ? `${count} sản phẩm` : 'Khám phá'}
-                  </span>
+            currentCategoryBatch.map((cat) => (
+              <div
+                key={cat.id}
+                className="category-tile-card"
+                onClick={() => onNavigate(`products?categoryId=${cat.id}&category=${cat.slug}&name=${encodeURIComponent(cat.name)}`)}
+              >
+                <div className="category-tile-avatar">
+                  <img
+                    src={getCategoryImage(cat)}
+                    alt={cat.name}
+                    loading="lazy"
+                  />
                 </div>
-              );
-            })
+                <span className="category-tile-title">{cat.name}</span>
+                <span className="category-tile-meta">Khám phá</span>
+              </div>
+            ))
           )}
         </div>
       </section>

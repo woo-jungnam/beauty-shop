@@ -290,9 +290,9 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
           <div className="pf-hero-spending-cell">
             <div className="pf-hero-spending-header">
               <span className="pf-hero-spending-amount">
-                {data.statistics?.totalPaid != null ? formatCurrency(data.statistics.totalPaid) : '0đ'}
+                {data.statistics?.loyaltyEligibleSpent != null ? formatCurrency(data.statistics.loyaltyEligibleSpent) : '—'}
               </span>
-              <span className="pf-hero-spending-period">Từ 01/01/2026</span>
+              <span className="pf-hero-spending-period">Chi tiêu tính điểm</span>
             </div>
             <div className="pf-hero-progress-track">
               <div className="pf-hero-progress-fill" style={{ width: `${progressPercent}%` }} />
@@ -796,9 +796,9 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                         </span>
                       </div>
                       <div className="pf-stat-box">
-                        <span className="pf-stat-lbl">Chi tiêu thực trả</span>
+                        <span className="pf-stat-lbl">Chi tiêu tính điểm</span>
                         <span className="pf-stat-val">
-                          {data.statistics?.netSpent != null ? formatCurrency(data.statistics.netSpent) : '0đ'}
+                          {data.statistics?.loyaltyEligibleSpent != null ? formatCurrency(data.statistics.loyaltyEligibleSpent) : '—'}
                         </span>
                       </div>
                     </div>

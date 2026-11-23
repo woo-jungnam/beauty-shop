@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Entity
 @Table(
@@ -30,6 +31,10 @@ public class LoyaltyPointAward extends Base {
     @lombok.Setter
     @Column(name = "points", nullable = false)
     private Integer points;
+
+    @lombok.Setter
+    @Column(name = "eligible_amount", precision = 19, scale = 2)
+    private BigDecimal eligibleAmount;
 
     @lombok.Setter
     @Column(name = "reversed", nullable = false)

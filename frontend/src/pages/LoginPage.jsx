@@ -171,9 +171,6 @@ export const LoginPage = ({ isAdminRoute = false, recoveryMode, recoveryToken })
   if (isAdminRoute) {
     return (
       <main className="admin-auth">
-        <div className="admin-auth__ambient admin-auth__ambient--rose" aria-hidden="true" />
-        <div className="admin-auth__ambient admin-auth__ambient--violet" aria-hidden="true" />
-
         <div className="admin-auth__shell">
           <section className="admin-auth__brand" aria-labelledby="admin-auth-brand-heading">
             <a href="#/" className="admin-auth__brandmark" aria-label="BeautyShop — về cửa hàng">
