@@ -131,8 +131,8 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     const controls = page.locator('#flash-sale .flash-sale-controls');
     const filters = await controls.locator('.flash-sale-filters').boundingBox();
     const countdown = await controls.locator('.flash-sale-countdown').boundingBox();
-    expect(countdown.x).toBeGreaterThanOrEqual(filters.x + filters.width);
-    expect(Math.abs(countdown.y + countdown.height / 2 - filters.y - filters.height / 2)).toBeLessThan(1);
+    expect(filters.y).toBeGreaterThanOrEqual(countdown.y + countdown.height);
+    expect(Math.abs(countdown.x + countdown.width - filters.x - filters.width)).toBeLessThan(1);
     await page.locator('#flash-sale').getByRole('button', { name: /Khuy.n m.i/ }).click();
     await expect(cards).toHaveCount(1);
     await expect.poll(() => grid.evaluate(element => Math.abs(

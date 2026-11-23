@@ -156,13 +156,6 @@
 .customer-app .customer-home-page.customer-home-page #spa-section .home-spa-card-footer > div > div:first-child {
   color: #625653 !important;
 }
-.customer-app .customer-home-page.customer-home-page #flash-sale .flash-tab-indicator {
-  background: #B6A09B !important;
-}
-.customer-app .customer-home-page.customer-home-page #flash-sale .flash-tab-indicator.is-active {
-  background: #242020 !important;
-}
-
 /* Typography gives section titles emphasis without a marker or underline. */
 .customer-app .customer-home-page.customer-home-page :is(#flash-sale, #random-picks, #spa-section, #categories-section, #brand-partners, #store-catalog) h2.section-title-highlight {
   width: fit-content;

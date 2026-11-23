@@ -250,10 +250,3 @@
   background: #FFFFFF !important;
   color: var(--item-accent) !important;
 }
-.customer-app .customer-home-page #flash-sale .flash-tab-indicator {
-  background: #FFFFFF !important;
-  opacity: 1;
-}
-.customer-app .customer-home-page #flash-sale .flash-tab-indicator.is-active {
-  background: var(--item-highlight) !important;
-}

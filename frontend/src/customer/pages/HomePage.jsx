@@ -523,28 +523,6 @@ export const HomePage = ({ onNavigate }) => {
 
               <div className="flash-sale-header-actions">
                 <div className="flash-sale-controls">
-                  <div className="flash-sale-filters" style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FFE5D9', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
-                    {flashFilters.map(({ id, label, products }) => (
-                      <button
-                        key={id}
-                        type="button"
-                        aria-pressed={flashFilterType === id}
-                        style={{
-                          border: 0,
-                          padding: '4px 10px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          backgroundColor: flashFilterType === id ? '#FFB4A2' : 'transparent',
-                          color: flashFilterType === id ? '#FFFFFF' : '#4A3535',
-                        }}
-                        onClick={() => { setFlashFilterType(id); setCurrentFlashTab(0); }}
-                      >
-                        {label} ({products.length})
-                      </button>
-                    ))}
-                  </div>
                   {countdownTarget && (
                     <div className="flash-sale-countdown" style={{
                       display: 'inline-flex',
@@ -569,6 +547,28 @@ export const HomePage = ({ onNavigate }) => {
                       <span style={{ background: '#FFB4A2', color: '#FFF', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{flashCountdown.seconds}</span>
                     </div>
                   )}
+                  <div className="flash-sale-filters" style={{ display: 'inline-flex', gap: '6px', backgroundColor: '#FFE5D9', padding: '3px 6px', borderRadius: '6px', flexWrap: 'wrap' }}>
+                    {flashFilters.map(({ id, label, products }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={flashFilterType === id}
+                        style={{
+                          border: 0,
+                          padding: '4px 10px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          backgroundColor: flashFilterType === id ? '#FFB4A2' : 'transparent',
+                          color: flashFilterType === id ? '#FFFFFF' : '#4A3535',
+                        }}
+                        onClick={() => { setFlashFilterType(id); setCurrentFlashTab(0); }}
+                      >
+                        {label} ({products.length})
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {(flashFilterType === 'CLEARANCE' || flashFilterType === 'CURATED') && (
@@ -577,44 +577,6 @@ export const HomePage = ({ onNavigate }) => {
                   </p>
                 )}
 
-                {totalFlashTabs > 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="flash-tab-pills">
-                      {Array.from({ length: totalFlashTabs }, (_, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          className={`flash-tab-indicator ${currentFlashTab === idx ? 'is-active' : ''}`}
-                          onClick={() => setCurrentFlashTab(idx)}
-                          aria-label={`Chuyển đến nhóm ${idx + 1}`}
-                          title={`Nhóm ${idx + 1} (6 sản phẩm)`}
-                        />
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        type="button"
-                        className="carousel-nav-btn"
-                        style={{ width: '28px', height: '28px', borderRadius: '2px', fontSize: '15px' }}
-                        onClick={() => setCurrentFlashTab(prev => (prev - 1 + totalFlashTabs) % totalFlashTabs)}
-                        aria-label="Nhóm sản phẩm trước"
-                        title="Nhóm trước"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        type="button"
-                        className="carousel-nav-btn"
-                        style={{ width: '28px', height: '28px', borderRadius: '2px', fontSize: '15px' }}
-                        onClick={() => setCurrentFlashTab(prev => (prev + 1) % totalFlashTabs)}
-                        aria-label="Nhóm sản phẩm tiếp theo"
-                        title="Nhóm tiếp theo"
-                      >
-                        ›
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -930,7 +892,7 @@ export const HomePage = ({ onNavigate }) => {
             borderBottom: '1px solid rgba(229, 152, 155, 0.25)'
           }}>
             <div className="section-title-wrap recommendations-heading">
-              <span className="campaign-eyebrow"><Sparkles size={12} /> BEAUTY SELECTION</span>
+              <span className="campaign-eyebrow"><Sparkles size={12} /> DÀNH CHO BẠN</span>
               <div className="home-section-title-row">
                 <h2 className="section-title-highlight">
                   <Sparkles size={22} className="section-title-icon" />

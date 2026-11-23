@@ -365,32 +365,6 @@
   }
 }
 
-.flash-tab-pills {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.flash-tab-indicator {
-  width: 20px;
-  height: 6px;
-  border-radius: 3px;
-  border: none;
-  background: #E5E7EB;
-  cursor: pointer;
-  padding: 0;
-  transition: all 0.25s ease;
-}
-
-.flash-tab-indicator:hover {
-  background: #CBD5E1;
-}
-
-.flash-tab-indicator.is-active {
-  width: 32px;
-  background: var(--c-deal-red, #E31837);
-}
-
 @media (min-width: 769px) {
   #flash-sale .horizontal-carousel-wrapper:has(> .carousel-floating-btn) {
     padding-inline: 34px;
@@ -893,18 +867,6 @@
    ========================================================================= */
 
 /* 1. Flash Sale Section (#flash-sale) — Peach (#FFB4A2) & Dust Rose (#E5989B) */
-#flash-sale .flash-tab-indicator {
-  width: 16px !important;
-  height: 3px !important;
-  border-radius: 0 !important;
-  background: #FFE5D9 !important;
-  border: none !important;
-  transition: all 0.2s ease !important;
-}
-#flash-sale .flash-tab-indicator.is-active {
-  width: 28px !important;
-  background: #FFB4A2 !important;
-}
 #flash-sale .carousel-nav-btn {
   border-radius: 6px !important;
   border: 1px solid #FFB4A2 !important;
