@@ -141,6 +141,26 @@
   gap: 8px;
 }
 
+.pf-hero-account-details {
+  color: var(--pf-text-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.pf-hero-account-details > div {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 6px;
+}
+
+.pf-hero-account-details dt {
+  font-weight: 600;
+}
+
+.pf-hero-account-details dd {
+  min-width: 0;
+}
+
 .pf-hero-phone {
   font-size: 13.5px;
   color: var(--pf-text-muted);

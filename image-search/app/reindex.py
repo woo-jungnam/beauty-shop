@@ -18,12 +18,13 @@ logger = logging.getLogger("reindex_manager")
 
 
 class ReindexManager:
-    def __init__(self, settings, encoder, store):
+    def __init__(self, settings, encoder, store, image_work):
         self.settings = settings
         self.encoder = encoder
         self.store = store
+        self.image_work = image_work
 
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
 
         self.status = "IDLE"  # IDLE, IN_PROGRESS, COMPLETED, FAILED
@@ -94,8 +95,6 @@ class ReindexManager:
                 logger.info("Khong co anh nao trong database can danh chi muc.")
                 return
 
-            self.encoder.load_model()
-
             batch_images = []
             batch_meta = []
             batch_size = self.settings.image_search_batch_size
@@ -113,7 +112,8 @@ class ReindexManager:
                     continue
 
                 try:
-                    pil_img = decode_image_bytes(raw, self.settings.image_search_max_pixels)
+                    with self.image_work:
+                        pil_img = decode_image_bytes(raw, self.settings.image_search_max_pixels)
                 except Exception as exc:
                     logger.warning("Khong decode duoc anh san pham %s: %s", row.get("product_id"), exc)
                     with self._lock:
@@ -156,6 +156,10 @@ class ReindexManager:
                     self.elapsed_seconds = round(time.perf_counter() - self.start_time, 1)
 
     def _flush_batch(self, images, meta_list):
+        with self.image_work:
+            self._encode_and_store(images, meta_list)
+
+    def _encode_and_store(self, images, meta_list):
         try:
             img_vectors = self.encoder.encode(images, batch_size=len(images))
 

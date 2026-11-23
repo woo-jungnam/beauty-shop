@@ -74,6 +74,41 @@ test('Mobile search remains visible and submits an encoded keyword', async ({ pa
   await expect.poll(() => api.catalogRequests.some((query) => new URLSearchParams(query).get('keyword') === 'B5 & phục hồi')).toBeTruthy();
 });
 
+test('Header debounces product suggestions and displays at most five image results', async ({ page }) => {
+  await page.clock.install();
+  await storefront(page);
+  const requests = [];
+  const thumbnailUrl = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  const matches = Array.from({ length: 7 }, (_, index) => ({
+    id: 42 + index, name: `Serum B5 ${index + 1}`, thumbnailUrl,
+  }));
+  await page.route('**/api/v1/products/search?**', async route => {
+    const params = new URL(route.request().url()).searchParams;
+    requests.push({ keyword: params.get('keyword'), size: params.get('size') });
+    await route.fulfill({ json: { data: { content: matches } } });
+  });
+  await page.goto('/');
+  const search = page.getByRole('searchbox', { name: 'Tìm kiếm sản phẩm' });
+  await expect(search).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+  await search.fill('Se');
+  await page.clock.runFor(150);
+  await search.fill('Serum B5');
+  await page.clock.runFor(299);
+  expect(requests).toEqual([]);
+  await page.clock.runFor(1);
+  await page.clock.resume();
+
+  const results = page.getByRole('list', { name: 'Gợi ý sản phẩm' });
+  await expect(results.getByRole('button')).toHaveCount(5);
+  expect(requests).toEqual([{ keyword: 'Serum B5', size: '5' }]);
+  const first = results.getByRole('button', { name: 'Serum B5 1' });
+  await expect(first.locator('img')).toHaveAttribute('src', thumbnailUrl);
+  await first.click();
+  await expect(page).toHaveURL(/#\/product\/42$/);
+  await expect(results).toHaveCount(0);
+});
+
 test('Mobile menu traps keyboard focus and Escape restores its trigger', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await storefront(page);

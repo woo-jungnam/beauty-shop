@@ -46,6 +46,9 @@
   box-shadow: 0 0 0 3px #AD3F611F;
 }
 .customer-app .storefront-header .storefront-search input { color: #51303D; }
+.customer-app .storefront-header .storefront-search input:focus-visible {
+  outline: none !important;
+}
 .customer-app .storefront-header .storefront-search input::placeholder {
   color: #786066;
   opacity: 1;

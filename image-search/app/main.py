@@ -1,6 +1,9 @@
+from asyncio import sleep
 from contextlib import asynccontextmanager
 import logging
 import secrets
+from threading import Lock
+from time import monotonic
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
@@ -8,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
+from app.packaging_match import matches_printed_brand, matches_printed_family, printed_brand, printed_product_family
 from app.catalog import (
     decode_image_bytes,
     fetch_product_text_metadata,
@@ -27,6 +31,7 @@ settings = get_settings()
 encoder = None
 image_store = None
 reindex_manager = None
+image_work = Lock()
 
 
 @asynccontextmanager
@@ -35,7 +40,7 @@ async def lifespan(app: FastAPI):
     logger.info("Khoi tao Image Search Service tren cong %d...", settings.port)
     encoder = get_encoder(settings)
     image_store = get_image_store(settings)
-    reindex_manager = ReindexManager(settings, encoder, image_store)
+    reindex_manager = ReindexManager(settings, encoder, image_store, image_work)
     yield
     logger.info("Tat Image Search Service.")
 
@@ -60,6 +65,35 @@ def verify_token(x_image_search_token: str = Header(default="")):
     expected = settings.image_search_internal_token
     if expected and not secrets.compare_digest(x_image_search_token, expected):
         raise HTTPException(status_code=403, detail="Khong co quyen truy cap he thong tim kiem anh")
+
+
+@asynccontextmanager
+async def image_work_slot(sync: bool = False):
+    if sync:
+        deadline = monotonic() + 15
+        while image_work.locked() and monotonic() < deadline:
+            await sleep(0.1)
+
+    if not image_work.acquire(blocking=False):
+        raise HTTPException(
+            status_code=503,
+            detail="Dịch vụ đang xử lý ảnh khác. Vui lòng thử lại sau.",
+            headers={"Retry-After": "2"},
+        )
+    try:
+        yield
+    finally:
+        image_work.release()
+
+
+async def reserve_image_work():
+    async with image_work_slot():
+        yield
+
+
+async def reserve_sync_work():
+    async with image_work_slot(sync=True):
+        yield
 
 
 class SyncImageRequest(BaseModel):
@@ -104,7 +138,7 @@ async def get_index_status():
     }
 
 
-@app.post("/image-search/search", dependencies=[Depends(verify_token)], tags=["Tim kiem"])
+@app.post("/image-search/search", dependencies=[Depends(verify_token), Depends(reserve_image_work)], tags=["Tim kiem"])
 async def search_by_image(
     image: UploadFile = File(...),
     limit: int = Query(default=20, ge=1, le=50),
@@ -206,15 +240,23 @@ async def search_by_image(
 
     # 5. Truy vấn Qdrant Vector DB
     effective_min_sim = max(min_similarity, settings.min_similarity_threshold)
+    packaging_text = detected_meta.get("packaging_text")
+    brand_key = printed_brand(detected_meta.get("brand"), packaging_text)
+    product_family = printed_product_family(packaging_text)
     candidates = await run_in_threadpool(
         image_store.search,
         query_vector,
-        limit,
+        50 if brand_key or product_family else limit,
         filter_active=True,
         category_id=category_id,
         brand_id=brand_id,
         min_similarity=effective_min_sim,
     )
+
+    if brand_key:
+        candidates = [candidate for candidate in candidates if matches_printed_brand(candidate, brand_key)]
+    if product_family:
+        candidates = [candidate for candidate in candidates if matches_printed_family(candidate, product_family)]
 
     # 6. Re-ranking: Tăng nhẹ điểm tương đồng nếu chữ bao bì khớp với tên sản phẩm hoặc thương hiệu
     if candidates and (detected_meta.get("brand") or detected_meta.get("product_name")):
@@ -245,14 +287,17 @@ async def search_by_image(
         "match_status": "CANDIDATES" if candidates else "EMPTY",
         "index_version": "qdrant-clip-v2-vision",
         "detected": detected_meta,
-        "items": candidates,
+        "items": candidates[:limit],
+        **({"message": "Chưa tìm thấy sản phẩm phù hợp với thông tin trên bao bì."}
+           if (brand_key or product_family) and not candidates else {}),
     }
 
 
-@app.post("/image-search/sync", dependencies=[Depends(verify_token)], tags=["Dong bo"])
+@app.post("/image-search/sync", dependencies=[Depends(verify_token), Depends(reserve_sync_work)], tags=["Dong bo"])
 async def sync_single_image(req: SyncImageRequest):
     """Dong bo hoac cap nhat vector cho 1 anh don le khi admin upload/sua."""
-    raw = read_catalog_image(
+    raw = await run_in_threadpool(
+        read_catalog_image,
         upload_dir=settings.image_search_upload_dir,
         url=req.image_url,
         max_bytes=settings.image_search_max_bytes,

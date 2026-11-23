@@ -201,8 +201,8 @@ export function ImageSearch({ onNavigate }) {
 
   const getConfidenceLevel = (similarity) => {
     const score = Math.round((similarity || 0) * 100);
-    if (score >= 85) return { label: 'Trùng khớp cao', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0', score };
-    if (score >= 70) return { label: 'Tương đồng phù hợp', color: '#8c2a47', bg: '#fff0f3', border: '#f6d5de', score };
+    if (score >= 85) return { label: 'Tương đồng cao', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0', score };
+    if (score >= 70) return { label: 'Tương đồng hình ảnh', color: '#8c2a47', bg: '#fff0f3', border: '#f6d5de', score };
     return { label: 'Gợi ý tham khảo', color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb', score };
   };
 
@@ -429,10 +429,10 @@ export function ImageSearch({ onNavigate }) {
           <div className="image-search-results-header">
             <div>
               <h2>Kết quả tìm kiếm sản phẩm</h2>
-              <p>Danh sách sản phẩm tương đồng cao nhất được xếp theo độ khớp hình ảnh thực tế.</p>
+              <p>Kết quả được xếp theo độ tương đồng hình ảnh và thông tin đọc được trên bao bì.</p>
             </div>
             <span className="image-search-results-count">
-              {result.items?.length || 0} sản phẩm phù hợp
+              {result.items?.length || 0} kết quả gợi ý
             </span>
           </div>
 

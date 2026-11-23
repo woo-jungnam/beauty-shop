@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     image_search_upload_dir: str = "/app/uploads"
     image_search_max_bytes: int = 5 * 1024 * 1024  # 5 MiB
     image_search_max_pixels: int = 20_000_000
-    image_search_batch_size: int = 16
+    image_search_batch_size: int = 2
 
     # Target Detection & Packaging OCR (Gemini Vision)
     gemini_api_key: str = ""

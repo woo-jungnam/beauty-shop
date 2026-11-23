@@ -20,9 +20,9 @@ Your mission:
 2. If the image is solely a human face, a person, a spa facial/massage treatment, aesthetic clinic procedure, general lifestyle scene, pet, or landscape without a clear retail cosmetic product for purchase, set "has_product" to false and provide a helpful, polite explanation in "rejection_reason" in Vietnamese.
 3. If a cosmetic product is found:
    - Identify the primary cosmetic product and return its 2D bounding box "box_2d" in normalized coordinates [ymin, xmin, ymax, xmax] scaled 0 to 1000.
-   - Extract the brand name ("extracted_brand") if visible (e.g., Vichy, La Roche-Posay, COSRX, The Ordinary, Clinique).
+   - Extract the brand name ("extracted_brand") only if printed legibly on the primary product. Do not infer brand from the package color or shape.
    - Extract the product name ("extracted_product_name") if readable.
-   - Extract any other key active ingredients or text printed on the packaging ("packaging_text") (e.g., Retinol, Niacinamide 10%, Hyaluronic Acid, SPF 50+).
+   - Transcribe readable text from that same product into "packaging_text", including the exact printed brand when visible. Do not include text from other objects or add inferred words.
 
 Respond with ONLY a valid JSON object matching this schema:
 {

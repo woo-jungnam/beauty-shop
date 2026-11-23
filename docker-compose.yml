@@ -78,7 +78,7 @@ services:
       context: ./chatbot/product-agent
       dockerfile: Dockerfile
       args:
-        INSTALL_IMAGE_SEARCH: ${IMAGE_SEARCH_ENABLED:-false}
+        INSTALL_IMAGE_SEARCH: ${CHATBOT_LEGACY_IMAGE_SEARCH_ENABLED:-false}
     container_name: beautyshop_chatbot
     restart: unless-stopped
     env_file:
@@ -99,7 +99,7 @@ services:
       CHATBOT_CONTEXT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       CHATBOT_SESSION_REDIS_URL: ${COMPOSE_CHATBOT_SESSION_REDIS_URL:?COMPOSE_CHATBOT_SESSION_REDIS_URL is required}
       EMBEDDING_CACHE_DIR: /app/data/embedding_cache
-      IMAGE_SEARCH_ENABLED: ${IMAGE_SEARCH_ENABLED:-false}
+      IMAGE_SEARCH_ENABLED: ${CHATBOT_LEGACY_IMAGE_SEARCH_ENABLED:-false}
       IMAGE_SEARCH_SERVICE_URL: ${COMPOSE_IMAGE_SEARCH_SERVICE_URL:?COMPOSE_IMAGE_SEARCH_SERVICE_URL is required}
       IMAGE_SEARCH_INTERNAL_TOKEN: ${IMAGE_SEARCH_INTERNAL_TOKEN:-}
       IMAGE_SEARCH_MODEL_ID: ${IMAGE_SEARCH_MODEL_ID:-sentence-transformers/clip-ViT-B-32}
@@ -142,6 +142,7 @@ services:
       dockerfile: Dockerfile
     container_name: beautyshop_image_search
     restart: unless-stopped
+    mem_limit: ${IMAGE_SEARCH_MEMORY_LIMIT:-1100m}
     environment:
       HOST: 0.0.0.0
       PORT: 8001
@@ -159,6 +160,9 @@ services:
       IMAGE_SEARCH_CACHE_DIR: /app/data/model-cache
       IMAGE_SEARCH_UPLOAD_DIR: /app/uploads
       IMAGE_SEARCH_INTERNAL_TOKEN: ${IMAGE_SEARCH_INTERNAL_TOKEN:-}
+      IMAGE_SEARCH_BATCH_SIZE: ${IMAGE_SEARCH_REINDEX_BATCH_SIZE:-2}
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
       GEMINI_API_KEY: ${GEMINI_API_KEY:-${LLM_API_KEY:-}}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       TARGET_DETECTION_ENABLED: ${TARGET_DETECTION_ENABLED:-true}

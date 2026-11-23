@@ -258,6 +258,16 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
               <h1 className="pf-hero-name">
                 <span>{displayName}</span>
               </h1>
+              <dl className="pf-hero-account-details">
+                <div>
+                  <dt>Tên đăng nhập</dt>
+                  <dd>{profile.username || 'Chưa có thông tin'}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{profile.email || 'Chưa cập nhật'}</dd>
+                </div>
+              </dl>
               <div className="pf-hero-phone">
                 <span>{maskedPhone}</span>
               </div>

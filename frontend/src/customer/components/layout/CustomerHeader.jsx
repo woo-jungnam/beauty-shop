@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, Calendar, Camera, ChevronDown, Home, LayoutDashboard, LogOut, Menu,
   Package, Search, ShieldCheck, ShoppingBag, Sparkles, User, X,
@@ -6,9 +6,15 @@ import {
 import { useCustomerCart } from '../../stores/customerCartStore';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { apiClient } from '../../../shared/api/client';
+import { ENDPOINTS } from '../../../shared/api/endpoints';
 import { cleanDisplayName } from '../../../shared/utils/formatters';
+import { PRODUCT_PLACEHOLDER, resolveProductImage } from '../product/ProductCard';
 import { useCustomerDialog } from '../ui/useCustomerDialog';
 import { readCatalogFilters, catalogRoute } from '../../utils/catalogFilters';
+import { productPath } from '../../utils/productSelection';
+
+const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_RESULT_LIMIT = 5;
 
 const NAV_LINKS = [
   { id: 'home', label: 'Trang chủ', route: '', Icon: Home },
@@ -25,6 +31,8 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
   const { user, isAuthenticated, isOperator, logout } = useAuth();
   const [keyword, setKeyword] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchComposing, setSearchComposing] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -155,10 +163,41 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
     }, 180);
   };
 
-  const suggestions = useMemo(() => [...new Set([
-    ...brands.slice(0, 3).map((brand) => cleanDisplayName(brand.name)),
-    ...categories.slice(0, 3).map((category) => cleanDisplayName(category.name)),
-  ].filter(Boolean))], [brands, categories]);
+  const query = keyword.trim();
+  useEffect(() => {
+    if (!searchOpen || !query || searchComposing) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await apiClient.get(
+          `${ENDPOINTS.CATALOG.PUBLIC_SEARCH(query)}&size=${SEARCH_RESULT_LIMIT}`,
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
+        const data = response?.data ?? response;
+        const products = Array.isArray(data?.content) ? data.content : [];
+        setSearchResult({ query, products: products.slice(0, SEARCH_RESULT_LIMIT) });
+      } catch {
+        if (!controller.signal.aborted) setSearchResult({ query, error: true });
+      }
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, searchOpen, searchComposing]);
+
+  const visibleSearchResult = searchOpen && !searchComposing && searchResult?.query === query
+    ? searchResult : null;
+  const changeSearchKeyword = (event) => {
+    const value = event.target.value;
+    if (value.trim() !== query) setSearchResult(null);
+    setKeyword(value);
+    setSearchOpen(true);
+    setOpenDropdown(null);
+  };
 
   const navigate = (route) => {
     setOpenDropdown(null);
@@ -168,9 +207,9 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
   };
   const search = (event) => {
     event.preventDefault();
-    if (keyword.trim()) navigate(catalogFilters
-      ? catalogRoute({ ...catalogFilters, keyword: keyword.trim(), page: 0 })
-      : `products?search=${encodeURIComponent(keyword.trim())}`);
+    if (query && !searchComposing) navigate(catalogFilters
+      ? catalogRoute({ ...catalogFilters, keyword: query, page: 0 })
+      : `products?search=${encodeURIComponent(query)}`);
   };
   const catalogFilters = /^(products|catalog)(\?|$)/.test(currentRoute)
     ? readCatalogFilters(currentRoute.split('?')[1] || '') : null;
@@ -238,8 +277,18 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
         <div className="storefront-search">
           <form role="search" onSubmit={search}>
             <Search size={19} aria-hidden="true" />
-            <input ref={searchInputRef} type="search" aria-label="Tìm kiếm sản phẩm" placeholder="Tìm sản phẩm, thương hiệu, hoạt chất…" value={keyword} onChange={(event) => setKeyword(event.target.value)} onFocus={() => { setSearchOpen(true); setOpenDropdown(null); }} />
-            {keyword && <button className="storefront-search-clear" type="button" aria-label="Xóa từ khóa tìm kiếm" onClick={() => { setKeyword(''); searchInputRef.current?.focus(); }}><X size={16} /></button>}
+            <input
+              ref={searchInputRef}
+              type="search"
+              aria-label="Tìm kiếm sản phẩm"
+              placeholder="Tìm sản phẩm, thương hiệu, hoạt chất…"
+              value={keyword}
+              onChange={changeSearchKeyword}
+              onCompositionStart={() => setSearchComposing(true)}
+              onCompositionEnd={() => setSearchComposing(false)}
+              onFocus={() => { setSearchOpen(true); setOpenDropdown(null); }}
+            />
+            {keyword && <button className="storefront-search-clear" type="button" aria-label="Xóa từ khóa tìm kiếm" onClick={() => { setKeyword(''); setSearchResult(null); searchInputRef.current?.focus(); }}><X size={16} /></button>}
             <button
               type="button"
               className="storefront-search-camera-btn"
@@ -251,10 +300,24 @@ export const CustomerHeader = ({ onNavigate, currentRoute = '' }) => {
             </button>
             <button className="storefront-search-submit" type="submit" aria-label="Tìm kiếm"><ArrowRight size={20} /></button>
           </form>
-          {searchOpen && suggestions.length > 0 && (
+          {visibleSearchResult && (
             <div className="storefront-dropdown storefront-suggestions">
-              <strong>Gợi ý tìm kiếm</strong>
-              <div>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => navigate(`products?search=${encodeURIComponent(suggestion)}`)}>{suggestion}</button>)}</div>
+              {visibleSearchResult.error ? <p role="status">Chưa tải được gợi ý tìm kiếm.</p>
+                : visibleSearchResult.products.length === 0 ? <p role="status">Không tìm thấy sản phẩm phù hợp.</p>
+                : <ul aria-label="Gợi ý sản phẩm">
+                  {visibleSearchResult.products.map((product) => (
+                    <li key={product.id}>
+                      <button type="button" onClick={() => navigate(productPath(product))}>
+                        <img
+                          src={resolveProductImage(product)}
+                          alt=""
+                          onError={(event) => { if (event.currentTarget.getAttribute('src') !== PRODUCT_PLACEHOLDER) event.currentTarget.src = PRODUCT_PLACEHOLDER; }}
+                        />
+                        <span>{product.name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>}
             </div>
           )}
         </div>

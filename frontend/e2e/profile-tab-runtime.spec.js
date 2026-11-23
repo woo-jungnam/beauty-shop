@@ -40,6 +40,14 @@ test('profile shows loyalty-eligible spending from the statistics API', async ({
   await expect(spending.locator('.pf-stat-val')).toHaveText(/65\.000/);
 });
 
+test('profile shows the signed-in username and email', async ({ page }) => {
+  await setup(page);
+  await page.goto('/#/profile');
+  const identity = page.locator('.pf-hero-account-details');
+  await expect(identity.getByText(user.username, { exact: true })).toBeVisible();
+  await expect(identity.getByText(user.email, { exact: true })).toBeVisible();
+});
+
 test('every profile tab renders without uncaught errors when switching back and forth', async ({ page }) => {
   const errors = await setup(page);
   await page.goto('/#/profile');
