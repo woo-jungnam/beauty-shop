@@ -210,14 +210,14 @@ export const getRoleLabel = (roleName) => {
   const clean = roleName.replace(/^ROLE_/, '');
   switch (clean) {
     case 'SHIPPER':
-      return 'Tài xế (SHIPPER)';
+      return 'Tài xế';
     case 'ADMIN':
-      return 'Quản trị viên (ADMIN)';
+      return 'Quản trị viên';
     case 'STAFF':
-      return 'Nhân viên vận hành (STAFF)';
+      return 'Nhân viên vận hành';
     case 'USER':
     case 'CUSTOMER':
-      return 'Người dùng (USER)';
+      return 'Khách hàng';
     default:
       return clean;
   }
@@ -227,6 +227,8 @@ export const getPaymentStatusBadge = (status) => {
   switch (status) {
     case 'PAID':
       return { variant: 'success', text: 'Đã thanh toán' };
+    case 'PARTIALLY_REFUNDED':
+      return { variant: 'info', text: 'Đã hoàn một phần' };
     case 'PENDING':
       return { variant: 'warning', text: 'Chờ thanh toán' };
     case 'PARTIALLY_PAID':
@@ -272,7 +274,7 @@ export const getOutreachStatusBadge = (status) => {
     case 'RESOLVED':
       return { variant: 'success', text: 'Đã xử lý xong' };
     default:
-      return { variant: 'default', text: status || 'Chưa xử lý' };
+      return { variant: 'default', text: 'Chưa xác định' };
   }
 };
 
@@ -357,3 +359,15 @@ export const buildGoogleCalendarUrl = ({ title, date, startTime, durationMinutes
   }
 };
 
+
+
+const PURCHASE_ORDER_STATUS = {
+  PARTIALLY_RECEIVED: { label: 'Đã nhận một phần', variant: 'info' },
+  DRAFT: { label: 'Bản nháp', variant: 'warning' },
+  APPROVED: { label: 'Đã duyệt', variant: 'info' },
+  RECEIVED: { label: 'Đã nhập kho', variant: 'success' },
+  CANCELLED: { label: 'Đã hủy', variant: 'danger' },
+};
+
+export const getPurchaseOrderStatus = (status) =>
+  PURCHASE_ORDER_STATUS[status] || { label: 'Chưa xác định', variant: 'default' };

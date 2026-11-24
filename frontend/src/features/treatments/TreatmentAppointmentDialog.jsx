@@ -90,7 +90,7 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
         : <CustomerAppointmentSummary appointment={appointment} user={user} />}
       {appointment.items?.some(item => item.treatmentSessionItemId != null) && (
         <div className="treatment-notice info" style={{ marginBottom: 12 }}>
-          <span>Buổi chăm sóc này thuộc <strong>Lộ trình điều trị chuyên sâu</strong>. Nếu hồ sơ mới mua, Bác sĩ cần hoàn tất tiếp nhận lâm sàng (Intake) trước khi ca có thể bắt đầu.</span>
+          <span>Buổi chăm sóc này thuộc <strong>Lộ trình điều trị chuyên sâu</strong>. Nếu hồ sơ mới mua, Bác sĩ cần hoàn tất tiếp nhận lâm sàng trước khi ca có thể bắt đầu.</span>
           {operator && (
             <a href="#/staff/treatments" style={{ marginLeft: 8, textDecoration: 'underline', fontWeight: 600 }}>
               Mở Lộ trình điều trị →
@@ -122,7 +122,7 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
       {operator && <><label>Ghi chú / lý do thao tác<textarea maxLength={2000} rows={3} value={notes} onChange={event => setNotes(event.target.value)} disabled={Boolean(busy)} placeholder="Bắt buộc khi bỏ dịch vụ hoặc ghi nhận vắng hẹn" /></label>
         {(reception || appointment.items?.some(canPerformItem)) && <AppointmentMaterials appointment={appointment} canPerformItem={canPerformItem} />}
         <div className="treatment-actions">{reception && ['PENDING', 'CONFIRMED'].includes(appointment.status) && <Button disabled={Boolean(busy) || !appointment.items?.every(item => assignments[item.id] && staffOptions[item.id])} loading={busy === 'assign'} onClick={() => run('assign', () => updateStatus('CONFIRMED', { staffAssignments: Object.fromEntries(Object.entries(assignments).map(([key, value]) => [key, Number(value)])) }), 'Đã xác nhận lịch và phân công nhân viên.')}>Xác nhận & phân công</Button>}
-          {reception && appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <Button variant="outline" disabled={Boolean(busy)} loading={busy === 'checkin'} onClick={() => run('checkin', () => apiClient.put(`${base}/check-in`), 'Đã check-in khách.')}>Check-in</Button>}
+          {reception && appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <Button variant="outline" disabled={Boolean(busy)} loading={busy === 'checkin'} onClick={() => run('checkin', () => apiClient.put(`${base}/check-in`), 'Đã tiếp nhận khách.')}>Tiếp nhận khách</Button>}
           {canUpdateVisit && appointment.status === 'CONFIRMED' && appointment.checkedInAt && <Button disabled={Boolean(busy)} loading={busy === 'start'} onClick={() => run('start', () => updateStatus('IN_PROGRESS'), 'Đã bắt đầu lịch hẹn.')}>Bắt đầu buổi hẹn</Button>}
           {reception && appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <Button variant="outline" disabled={Boolean(busy) || !notes.trim()} loading={busy === 'noshow'} onClick={() => run('noshow', () => updateStatus('NO_SHOW'), 'Đã ghi nhận vắng hẹn theo chính sách; không tính là đã điều trị.')}>Ghi nhận vắng hẹn</Button>}
         </div>

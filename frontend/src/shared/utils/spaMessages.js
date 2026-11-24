@@ -7,7 +7,7 @@ export const spaErrorMessage = (error, fallback = 'Thao tác chưa hoàn tất. 
   if (typeof message === 'string' && message.trim()) {
     const raw = message.trim();
     if (raw.includes('Intake must be accepted') || raw.includes('chưa được Bác sĩ tiếp nhận')) {
-      return 'Hồ sơ liệu trình chưa được Bác sĩ tiếp nhận (Intake). Vui lòng hoàn tất khám sàng lọc trước khi bắt đầu dịch vụ.';
+      return 'Hồ sơ liệu trình chưa được Bác sĩ tiếp nhận. Vui lòng hoàn tất khám sàng lọc trước khi bắt đầu dịch vụ.';
     }
     if (raw.includes('Complete the previous') || raw.includes('hoàn tất buổi điều trị trước')) {
       return 'Cần hoàn tất buổi điều trị trước đó trước khi bắt đầu buổi này.';

@@ -193,7 +193,7 @@ export const ImageSearchAdminPanel = () => {
             Chỉ mục tìm kiếm bằng hình ảnh
           </h2>
           <p style={{ margin: '4px 0 0 0', fontSize: 13.5, color: 'var(--color-text-secondary, #6b7280)', lineHeight: 1.5 }}>
-            Quản lý kho vector đặc trưng hình ảnh Qdrant, đồng bộ catalog từ kho lưu trữ và kiểm tra độ chính xác mô hình thị giác.
+            Quản lý kho vector đặc trưng hình ảnh Qdrant, đồng bộ danh mục từ kho lưu trữ và kiểm tra độ chính xác mô hình thị giác.
           </p>
         </div>
 
@@ -242,14 +242,14 @@ export const ImageSearchAdminPanel = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div style={{ padding: '16px 20px', borderRadius: 10, border: '1px solid var(--color-border, #e5e7eb)', background: 'var(--color-surface, #ffffff)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--color-text-secondary, #6b7280)', marginBottom: 8 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Vector đã lập chỉ mục</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Vectơ đã lập chỉ mục</span>
             <Layers size={16} />
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--color-text-primary, #111827)' }}>
             {status?.total_vectors != null ? Number(status.total_vectors).toLocaleString('vi-VN') : '—'}
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-muted, #9ca3af)', marginTop: 4 }}>
-            Điểm vector trong collection product_images
+            Điểm vectơ trong bộ sưu tập product_images
           </div>
         </div>
 
@@ -268,11 +268,11 @@ export const ImageSearchAdminPanel = () => {
 
         <div style={{ padding: '16px 20px', borderRadius: 10, border: '1px solid var(--color-border, #e5e7eb)', background: 'var(--color-surface, #ffffff)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--color-text-secondary, #6b7280)', marginBottom: 8 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lưu trữ Vector</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lưu trữ vectơ</span>
             <Database size={16} />
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-primary, #111827)' }}>
-            Qdrant Engine Độc Lập
+            Kho dữ liệu Qdrant độc lập
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-muted, #9ca3af)', marginTop: 4 }}>
             Cổng 8001 · Tách biệt hoàn toàn Chatbot
@@ -644,7 +644,7 @@ export const ImageSearchAdminPanel = () => {
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleStartReindex}
         title="Xác nhận đồng bộ toàn bộ chỉ mục hình ảnh"
-        message="Hệ thống sẽ quét lại toàn bộ kho ảnh catalog trong cơ sở dữ liệu và nạp lại vào kho vector Qdrant."
+        message="Hệ thống sẽ quét lại toàn bộ kho ảnh danh mục trong cơ sở dữ liệu và nạp lại vào kho vector Qdrant."
         detail="Quá trình này sử dụng mô hình CLIP ViT-B/32 để trích xuất đặc trưng thị giác. Các sản phẩm mới hoặc đã cập nhật ảnh sẽ được lập chỉ mục đầy đủ."
         confirmText="Xác nhận thực thi"
         cancelText="Đóng"

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:beautyshop_shipper/core/theme/app_colors.dart';
 import 'package:beautyshop_shipper/data/models/shipper_order_model.dart';
 import 'package:beautyshop_shipper/providers/shipper_provider.dart';
+import 'shipper_order_detail_screen.dart';
 
 class DeliveryConfirmationScreen extends StatefulWidget {
   final ShipperOrderModel order;
@@ -357,6 +358,25 @@ class _DeliveryConfirmationScreenState
                 ),
                 const SizedBox(height: 20),
 
+                if (widget.order.items.isNotEmpty ||
+                    widget.order.itemsSummary.isNotEmpty) ...[
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kiểm tra sản phẩm',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          OrderItemsSection(order: widget.order),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // Proof of Delivery Photo Section
                 Container(
                   padding: const EdgeInsets.all(16),

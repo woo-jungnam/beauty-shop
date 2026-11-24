@@ -189,6 +189,7 @@ class OrderResponse {
   String get paymentStatusLabel => switch (paymentStatus) {
     'PENDING' => 'Chờ thanh toán',
     'PAID' => 'Đã thanh toán',
+    'PARTIALLY_REFUNDED' => 'Đã hoàn một phần',
     'FAILED' => 'Thanh toán thất bại',
     'REFUND_PENDING' => 'Chờ hoàn tiền',
     'REFUNDED' => 'Đã hoàn tiền',

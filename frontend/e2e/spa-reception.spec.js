@@ -351,9 +351,9 @@ test('mobile board and drawer fit viewport, trap focus and restore body scroll',
 
 test('check-in with unassigned staff opens qualified assignment and completes both API steps', async ({ page }) => {
   const calls = await setup(page);
-  await page.locator('[data-appointment-id="1"]').getByRole('button', { name: 'Check-in ngay' }).click();
+  await page.locator('[data-appointment-id="1"]').getByRole('button', { name: 'Tiếp nhận ngay' }).click();
   await page.getByLabel('Chăm sóc da chuyên sâu', { exact: true }).selectOption('11');
-  await page.getByRole('button', { name: 'Xác nhận & check-in' }).click();
+  await page.getByRole('button', { name: 'Xác nhận và tiếp nhận' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(calls.find(call => call.path.endsWith('/1/status')).body.staffAssignments).toEqual({ 1: 11 });
   expect(calls.some(call => call.path.endsWith('/1/check-in'))).toBe(true);
@@ -377,9 +377,9 @@ test('reception fills a missing room after check-in without changing the assigne
 test('confirmed appointment can fill both assignments before check-in', async ({ page }) => {
   const calls = await setup(page, { unassignedConfirmed: true });
   const card = page.locator('[data-appointment-id="2"]');
-  await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  await card.getByRole('button', { name: 'Tiếp nhận ngay' }).click();
   const dialog = page.getByRole('dialog');
-  const submit = dialog.getByRole('button', { name: 'Xác nhận & check-in' });
+  const submit = dialog.getByRole('button', { name: 'Xác nhận và tiếp nhận' });
   await expect(submit).toBeDisabled();
   await dialog.getByLabel('Chăm sóc da chuyên sâu', { exact: true }).selectOption('12');
   await dialog.getByLabel('Phòng / giường · Chăm sóc da chuyên sâu').selectOption('1');
@@ -393,12 +393,12 @@ test('confirmed appointment can fill both assignments before check-in', async ({
 test('failed check-in preserves assignment and retry does not save it again', async ({ page }) => {
   const calls = await setup(page, { failFirstCheckIn: true });
   const card = page.locator('[data-appointment-id="2"]');
-  await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  await card.getByRole('button', { name: 'Tiếp nhận ngay' }).click();
   await page.getByLabel('Phòng / giường · Chăm sóc da chuyên sâu').selectOption('1');
-  await page.getByRole('button', { name: 'Xác nhận & check-in' }).click();
+  await page.getByRole('button', { name: 'Xác nhận và tiếp nhận' }).click();
   await expect(page.getByText(/Đã lưu phân công/)).toBeVisible();
   await expect(card.getByRole('button', { name: 'Bắt đầu ca' })).toHaveCount(0);
-  await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  await card.getByRole('button', { name: 'Tiếp nhận ngay' }).click();
   await expect(card.getByRole('button', { name: 'Bắt đầu ca' })).toBeVisible();
   expect(calls.filter(call => call.path.endsWith('/2/status'))).toHaveLength(1);
   expect(calls.filter(call => call.path.endsWith('/2/check-in'))).toHaveLength(2);
@@ -432,9 +432,9 @@ test('start requires check-in; incomplete executions require explicit confirmati
   const calls = await setup(page);
   const card = page.locator('[data-appointment-id="2"]');
   await expect(card.getByRole('button', { name: 'Bắt đầu ca' })).toHaveCount(0);
-  await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  await card.getByRole('button', { name: 'Tiếp nhận ngay' }).click();
   await page.getByLabel('Phòng / giường · Chăm sóc da chuyên sâu').selectOption('1');
-  await page.getByRole('button', { name: 'Xác nhận & check-in' }).click();
+  await page.getByRole('button', { name: 'Xác nhận và tiếp nhận' }).click();
   await card.getByRole('button', { name: 'Bắt đầu ca' }).click();
   await card.getByRole('button', { name: 'Hoàn tất & thu ngân' }).click();
   const execution = page.getByRole('dialog', { name: /Lịch hẹn #2/ });

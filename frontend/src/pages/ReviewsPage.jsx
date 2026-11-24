@@ -193,7 +193,7 @@ export const ReviewsPage = () => {
     },
     {
       header: 'Khách hàng',
-      accessor: (row) => row.userName || `User #${row.userId}`,
+      accessor: (row) => row.userName || `Người dùng #${row.userId}`,
     },
     {
       header: 'Đánh giá',

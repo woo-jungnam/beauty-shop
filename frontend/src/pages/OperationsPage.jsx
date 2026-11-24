@@ -37,6 +37,7 @@ import { RecommendationAdminPanel } from './RecommendationAdminPanel';
 import { ImageSearchAdminPanel } from './ImageSearchAdminPanel';
 import { PaymentExceptionPanel } from './PaymentExceptionPanel';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
+import { auditActionLabel, auditResourceLabel } from '../shared/utils/adminAuditLabels';
 import './operations.css';
 
 const PUBLIC_CONFIG_KEYS = new Set([
@@ -357,7 +358,7 @@ export const OperationsPage = () => {
     {
       header: 'Người thao tác',
       accessor: (row) => {
-        const name = row.username === 'SYSTEM' ? 'Hệ thống tự động' : (row.username || 'Hệ thống');
+        const name = row.username === 'SYSTEM' ? 'Hệ thống tự động' : row.username === 'ANONYMOUS' ? 'Chưa đăng nhập' : (row.username || 'Hệ thống');
         const isSystem = row.username === 'SYSTEM';
 
         return (
@@ -388,7 +389,7 @@ export const OperationsPage = () => {
       header: 'Hành động',
       accessor: (row) => (
         <span style={{ fontWeight: 600, fontSize: '12.5px', color: 'var(--color-accent-700)' }}>
-          {row.action}
+          {auditActionLabel(row.action)}
         </span>
       ),
       width: '160px',
@@ -397,7 +398,7 @@ export const OperationsPage = () => {
       header: 'Đối tượng tác động',
       accessor: (row) => (
         <code style={{ fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--text-muted)' }}>
-          {row.resourceType || '-'} #{row.resourceId || '-'}
+          {auditResourceLabel(row.resourceType)} #{row.resourceId || '-'}
         </code>
       ),
       width: '180px',
@@ -415,7 +416,7 @@ export const OperationsPage = () => {
       header: 'Địa chỉ IP',
       accessor: (row) => (
         <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-          {row.ipAddress || '—'}
+          {row.ipAddress && row.ipAddress !== 'UNKNOWN' ? row.ipAddress : '—'}
         </span>
       ),
       width: '130px',
@@ -439,7 +440,7 @@ export const OperationsPage = () => {
           },
           {
             id: 'audit',
-            label: 'Nhật ký thao tác (Audit)',
+            label: 'Nhật ký thao tác',
             icon: FileText,
             description: 'Truy vết thay đổi dữ liệu của quản trị viên và nhân viên',
           },
@@ -597,7 +598,7 @@ export const OperationsPage = () => {
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <span className="card-title">Nhật ký truy vết thao tác người dùng (Audit Log)</span>
+              <span className="card-title">Nhật ký thao tác người dùng</span>
               <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
                 Lưu giữ mọi hành động thêm, sửa, xóa, duyệt của quản trị viên và nhân viên
               </span>
@@ -775,10 +776,10 @@ export const OperationsPage = () => {
               <div className="operations-card-title">
                 <h3>
                   <Database size={18} color="var(--color-accent-600)" />
-                  Đồng bộ Kiến thức Sản phẩm & Liệu trình vào Vector RAG
+                  Đồng bộ Kiến thức Sản phẩm & Liệu trình vào kho tri thức của trợ lý AI
                 </h3>
                 <p>
-                  Nhúng văn bản (Embedding) toàn bộ danh mục sản phẩm, hoạt chất da liễu và dịch vụ spa vào kho vector Qdrant.
+                  Tạo vectơ văn bản toàn bộ danh mục sản phẩm, hoạt chất da liễu và dịch vụ spa vào kho vector Qdrant.
                 </p>
               </div>
             </div>

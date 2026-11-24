@@ -545,7 +545,7 @@ export const UsersPage = () => {
           />
           <div>
             <div style={{ fontWeight: 700, fontFamily: 'monospace', fontSize: '13px' }}>
-              {row.roleName}
+              {getRoleLabel(row.roleName)}
             </div>
             {['ROLE_ADMIN', 'ROLE_STAFF', 'ROLE_USER', 'ROLE_CUSTOMER', 'ROLE_SHIPPER'].includes(row.roleName) && (
               <span style={{ fontSize: '10px', color: 'var(--color-accent-700)', fontWeight: 600 }}>
@@ -748,7 +748,7 @@ export const UsersPage = () => {
                 Chính sách phân quyền RBAC (Role-Based Access Control)
               </strong>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Hệ thống áp dụng chuẩn phân quyền Spring Security với tiền tố <code>ROLE_</code>. Các vai trò được gán trực tiếp vào token xác thực JWT để kiểm soát truy cập trên từng Controller.
+                Hệ thống áp dụng chuẩn phân quyền Spring Security với tiền tố <code>ROLE_</code>. Các vai trò được gán trực tiếp vào mã xác thực JWT để kiểm soát truy cập trên từng bộ điều khiển.
               </div>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -835,7 +835,7 @@ export const UsersPage = () => {
                 checked={selectedRoleIds.includes(role.id)}
                 onChange={(e) => setSelectedRoleIds((current) => e.target.checked ? [...current, role.id] : current.filter((id) => id !== role.id))}
               />
-              <span><strong>{role.roleName}</strong><br /><small>{role.description}</small></span>
+              <span><strong>{getRoleLabel(role.roleName)}</strong><br /><small>{role.description}</small></span>
             </label>
           ))}
         </div>
@@ -929,7 +929,7 @@ export const UsersPage = () => {
       <Modal
         isOpen={roleModalOpen}
         onClose={() => setRoleModalOpen(false)}
-        title={editingRole ? `Chỉnh sửa vai trò: ${editingRole.roleName}` : 'Tạo mới vai trò quyền hạn (Role)'}
+        title={editingRole ? `Chỉnh sửa vai trò: ${editingRole.roleName}` : 'Tạo mới vai trò'}
         footer={
           <>
             <Button variant="outline" onClick={() => setRoleModalOpen(false)}>

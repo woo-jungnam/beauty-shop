@@ -24,7 +24,7 @@ async function setup(page, state) {
       state.adminCalls++;
       if (state.gate) await state.gate;
       status = state.fail ? 503 : 200;
-      data = { ...listedOrder, items: [item] };
+      data = { ...listedOrder, items: state.items || [item] };
     }
     await route.fulfill({ status, json: { data, message: status === 503 ? 'Không tải được đơn hàng kiểm thử' : '' } });
   });
@@ -65,6 +65,12 @@ test('failed detail requests display an error and retry loads the products', asy
 });
 
 test('delivery proof shows the photo, shipper and products for the selected order', async ({ page }) => {
+  const proofItem = {
+    ...item,
+    productName: 'Sữa rửa mặt tạo bọt dành cho da thường đến da dầu',
+    quantity: 25,
+    price: 380000,
+  };
   const deliveredOrder = {
     ...order,
     status: 'DELIVERED',
@@ -77,17 +83,25 @@ test('delivery proof shows the photo, shipper and products for the selected orde
     deliveredNotes: 'Đã giao tận tay',
     shippingAddress: '123 Đường Kiểm Thử',
   };
-  const state = { customerCalls: 0, adminCalls: 0, order: deliveredOrder };
+  const state = { customerCalls: 0, adminCalls: 0, order: deliveredOrder, items: [proofItem] };
+  await page.setViewportSize({ width: 840, height: 820 });
   await setup(page, state);
   await page.getByTitle('Xem ảnh bằng chứng giao hàng (PoD)', { exact: true }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Bằng chứng giao hàng' });
   await expect(dialog.getByRole('img', { name: `Ảnh bằng chứng giao đơn ${order.orderNumber}` })).toBeVisible();
   await expect(dialog.getByText(deliveredOrder.shipperName)).toBeVisible();
+  await expect(dialog.getByText('Mã tài xế', { exact: true })).toBeVisible();
   await expect(dialog.getByText(deliveredOrder.shipperPhone)).toBeVisible();
   await expect(dialog.getByText(deliveredOrder.deliveredNotes)).toBeVisible();
   await expect(dialog.getByText(deliveredOrder.shippingAddress)).toBeVisible();
-  await expect(dialog.getByRole('row').filter({ hasText: item.productName })).toBeVisible();
+  const row = dialog.getByRole('row').filter({ hasText: proofItem.productName });
+  for (const width of [840, 390]) {
+    await page.setViewportSize({ width, height: 820 });
+    await expect(row.getByRole('cell', { name: '25', exact: true })).toHaveCSS('white-space', 'nowrap');
+    await expect(row.getByRole('cell', { name: /380\.000/ })).toHaveCSS('white-space', 'nowrap');
+    expect(await dialog.locator('table').evaluate(table => table.scrollWidth <= table.parentElement.clientWidth)).toBe(true);
+  }
   expect(state.adminCalls).toBe(1);
   expect(state.customerCalls).toBe(0);
 });

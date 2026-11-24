@@ -1,7 +1,9 @@
 package com.core.beautyshop.modules.order.application.service;
 
 import com.core.beautyshop.modules.catalog.application.service.MediaStorageService;
+import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.order.application.dto.response.ShipperOrderView;
+import com.core.beautyshop.modules.order.application.mapper.OrderMapper;
 import com.core.beautyshop.modules.order.domain.Order;
 import com.core.beautyshop.modules.order.application.dto.response.ShipperStatsView;
 import com.core.beautyshop.modules.order.domain.OrderRepository;
@@ -45,6 +47,7 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
     private final OrderRepository orderRepository;
     private final MediaStorageService mediaStorageService;
     private final OrderService orderService;
+    private final OrderMapper orderMapper;
 
     @Value("${SHIPPER_EARNING_PER_DELIVERY:}")
     private BigDecimal earningPerDelivery;
@@ -53,7 +56,8 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
     @Transactional(readOnly = true)
     public Page<ShipperOrderView> getShipperOrders(Long shipperId, OrderStatus status, Pageable pageable) {
         Page<Order> orders = orderRepository.findShipperDeliveries(shipperId, status, pageable);
-        return orders.map(this::toShipperView);
+        var variants = orderMapper.loadItemVariants(orders.stream());
+        return orders.map(order -> toShipperView(order, variants));
     }
 
     @Override
@@ -173,18 +177,22 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
     public Page<ShipperOrderView> getDeliveryHistory(Long shipperId, LocalDate from, LocalDate to,
                                                     OrderStatus status, Pageable pageable) {
         validateDates(from, to);
-        return orderRepository.findShipperHistory(shipperId, startOfDay(from), startOfDay(to.plusDays(1)),
-                status, pageable).map(entry -> {
-                    OrderStatusHistory failure = entry.getPreviousFailure();
-                    if (failure == null) return toShipperView(entry.getDelivery());
-                    return ShipperOrderView.builder()
-                            .id(entry.getDelivery().getId())
-                            .orderNumber(entry.getDelivery().getOrderNumber())
-                            .status(OrderStatus.DELIVERY_FAILED)
-                            .createdAt(failure.getCreatedAt())
-                            .notes(failure.getNotes())
-                            .build();
-                });
+        var entries = orderRepository.findShipperHistory(shipperId, startOfDay(from), startOfDay(to.plusDays(1)),
+                status, pageable);
+        var variants = orderMapper.loadItemVariants(entries.stream()
+                .filter(entry -> entry.getPreviousFailure() == null)
+                .map(OrderRepository.ShipperHistoryEntry::getDelivery));
+        return entries.map(entry -> {
+            OrderStatusHistory failure = entry.getPreviousFailure();
+            if (failure == null) return toShipperView(entry.getDelivery(), variants);
+            return ShipperOrderView.builder()
+                    .id(entry.getDelivery().getId())
+                    .orderNumber(entry.getDelivery().getOrderNumber())
+                    .status(OrderStatus.DELIVERY_FAILED)
+                    .createdAt(failure.getCreatedAt())
+                    .notes(failure.getNotes())
+                    .build();
+        });
     }
 
     @Override
@@ -238,6 +246,10 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
     }
 
     private ShipperOrderView toShipperView(Order order) {
+        return toShipperView(order, orderMapper.loadItemVariants(Stream.of(order)));
+    }
+
+    private ShipperOrderView toShipperView(Order order, Map<Long, ProductVariantSummaryDto> variants) {
         BigDecimal codAmount = outstandingCod(order);
 
         List<String> itemsSummary = order.getItems() != null ? order.getItems().stream()
@@ -259,6 +271,10 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
                 .customerPhone(order.getCustomerPhone())
                 .shippingAddress(fullAddress)
                 .totalAmount(order.getTotalAmount())
+                .subTotal(order.getSubTotal())
+                .shippingFee(order.getShippingFee())
+                .discountAmount(order.getDiscountAmount())
+                .paidAmount(order.getPaidAmount())
                 .codAmount(codAmount)
                 .paymentMethod(order.getPaymentMethod())
                 .paymentStatus(order.getPaymentStatus())
@@ -266,6 +282,10 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
                 .deliveryProofUrl(order.getDeliveryProofUrl())
                 .deliveredNotes(order.getDeliveredNotes())
                 .notes(order.getNotes())
+                .carrierName(order.getCarrierName())
+                .trackingCode(order.getTrackingCode())
+                .cancelReason(order.getCancelReason())
+                .paidAt(order.getPaidAt())
                 .createdAt(order.getCreatedAt())
                 .deliveredAt(order.getDeliveredAt())
                 .assignedAt(order.getShipperAssignedAt())
@@ -273,6 +293,10 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
                 .codCollected(order.getShipperCodCollected())
                 .codRemitted(order.getShipperCodRemitted())
                 .itemsSummary(itemsSummary)
+                .items(order.getItems() == null ? List.of() : order.getItems().stream()
+                        .map(item -> orderMapper.toOrderItemResponse(item, item.getProductVariantId() == null
+                                ? null : variants.get(item.getProductVariantId())))
+                        .toList())
                 .build();
     }
 

@@ -25,6 +25,10 @@ public class ShipperOrderView {
     private String customerPhone;
     private String shippingAddress;
     private BigDecimal totalAmount;
+    private BigDecimal subTotal;
+    private BigDecimal shippingFee;
+    private BigDecimal discountAmount;
+    private BigDecimal paidAmount;
     private BigDecimal codAmount;
     private BigDecimal codCollected;
     private BigDecimal codRemitted;
@@ -35,9 +39,14 @@ public class ShipperOrderView {
     private String deliveryProofUrl;
     private String deliveredNotes;
     private String notes;
+    private String carrierName;
+    private String trackingCode;
+    private String cancelReason;
+    private Instant paidAt;
     private Instant createdAt;
     private Instant deliveredAt;
     private Instant assignedAt;
     private List<String> itemsSummary;
+    private List<OrderItemResponse> items;
 }
 

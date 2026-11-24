@@ -8,11 +8,83 @@ import 'package:beautyshop_shipper/presentation/screens/dashboard/shipper_dashbo
 import 'package:beautyshop_shipper/providers/auth_provider.dart';
 import 'package:beautyshop_shipper/providers/shipper_provider.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await StorageService.init();
+  runApp(const _ShipperStartup());
+}
 
-  runApp(const ShipperApp());
+class _ShipperStartup extends StatefulWidget {
+  const _ShipperStartup();
+
+  @override
+  State<_ShipperStartup> createState() => _ShipperStartupState();
+}
+
+class _ShipperStartupState extends State<_ShipperStartup> {
+  static const _background = Color(0xFF7C6970);
+  static const _artwork = AssetImage('assets/pageloadingship.png');
+  Future<void>? _startup;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _startup ??= _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await Future.wait<void>([
+      StorageService.init(),
+      precacheImage(_artwork, context),
+    ]);
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _startup,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            !snapshot.hasError) {
+          return const ShipperApp();
+        }
+
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            backgroundColor: _background,
+            body:
+                snapshot.connectionState == ConnectionState.done &&
+                    snapshot.hasError
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Không thể khởi động BeautyShip.',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            setState(() => _startup = _initialize());
+                          },
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
+                  )
+                : SizedBox.expand(
+                    child: Image(
+                      image: _artwork,
+                      fit: BoxFit.cover,
+                      semanticLabel: 'Đang mở BeautyShip',
+                    ),
+                  ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class ShipperApp extends StatelessWidget {

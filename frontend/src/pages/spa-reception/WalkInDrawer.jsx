@@ -135,12 +135,12 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
         }
         await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointment.id));
       }
-      onBooked('Đã tạo lịch hẹn' + (willAutoCheckIn ? ' và check-in khách.' : ' cho khách.'));
+      onBooked('Đã tạo lịch hẹn' + (willAutoCheckIn ? ' và tiếp nhận khách.' : ' cho khách.'));
       onClose();
     } catch (err) {
       if (appointment) {
-        setError(`Đã tạo lịch SPA-${appointment.id}, nhưng chưa hoàn tất check-in. ${spaErrorMessage(err, 'Vui lòng kiểm tra lịch tại quầy và check-in lại.')}`);
-        onBooked('Lịch đã được tạo. Vui lòng kiểm tra bước xác nhận / check-in.', 'warning');
+        setError(`Đã tạo lịch SPA-${appointment.id}, nhưng chưa hoàn tất tiếp nhận. ${spaErrorMessage(err, 'Vui lòng kiểm tra lịch tại quầy và thử tiếp nhận lại.')}`);
+        onBooked('Lịch đã được tạo. Vui lòng kiểm tra bước xác nhận và tiếp nhận.', 'warning');
       } else if (bookingAttempted && (!(err.status || err.response?.status) || (err.status || err.response?.status) >= 500 || (err.status || err.response?.status) === 408)) {
         setUncertainBooking(true);
         setError('Kết nối gián đoạn khi đặt lịch. Vui lòng đóng drawer và kiểm tra lịch theo SĐT trước khi tạo lại.');
@@ -153,7 +153,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
       <p className="reception-muted">Tra cứu khách, chọn dịch vụ và chuẩn bị ca chăm sóc.</p>
       {willAutoCheckIn ? (
         <div style={{padding: '8px 12px', background: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontSize: '12px', marginBottom: '12px', fontWeight: 600}}>
-          ✓ Tiếp đón trực tiếp tại quầy: Tự động miễn thu cọc và cho phép check-in ca chăm sóc ngay.
+          ✓ Tiếp đón trực tiếp tại quầy: Tự động miễn thu cọc và cho phép tiếp nhận khách ngay.
         </div>
       ) : (
         !form.ticketId && financialPolicy && [financialPolicy.depositAmount,financialPolicy.cancellationFee,financialPolicy.noShowFee].some(n=>Number(n)>0)&&<label><input type="checkbox" checked={financialAccepted} onChange={e=>setFinancialAccepted(e.target.checked)}/>Đã thông báo và ghi nhận khách đồng ý chính sách {financialPolicy.version}: cọc tối đa {formatCurrency(financialPolicy.depositAmount)}, phí hủy sau hạn {formatCurrency(financialPolicy.cancellationFee)}, phí vắng hẹn {formatCurrency(financialPolicy.noShowFee)}.</label>
@@ -194,8 +194,8 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
         <PackageServicePicker ticket={ticket} serviceId={form.serviceId} selected={extraIds} onChange={setExtraIds} />
         {ticketError && <p role="alert" className="reception-muted">{ticketError}</p>}
         <Input label="Ghi chú tiếp đón" maxLength={450} value={form.notes} onChange={event => update('notes', event.target.value)} placeholder="Yêu cầu của khách, lưu ý khi đón…" />
-        <label className="reception-checkbox"><input type="checkbox" checked={form.autoCheckIn && checkInAllowed} disabled={!checkInAllowed} onChange={event => update('autoCheckIn', event.target.checked)} /> Check-in ngay sau khi tạo lịch</label>
-        {!checkInAllowed && <small className="reception-muted">Check-in áp dụng cho lịch hôm nay đã chọn KTV.</small>}
+        <label className="reception-checkbox"><input type="checkbox" checked={form.autoCheckIn && checkInAllowed} disabled={!checkInAllowed} onChange={event => update('autoCheckIn', event.target.checked)} /> Tiếp nhận ngay sau khi tạo lịch</label>
+        {!checkInAllowed && <small className="reception-muted">Chỉ tiếp nhận ngay đối với lịch hôm nay đã chọn KTV.</small>}
       </fieldset>
       <div className="drawer-submit"><div><small>Dịch vụ đã chọn</small><strong>{visitNames || 'Chưa chọn dịch vụ'}</strong><span>{form.ticketId ? 'Sử dụng vé liệu trình' : formatCurrency(service?.basePrice ?? service?.price ?? 0)}</span></div>
         {createdAppointment || uncertainBooking ? <Button onClick={onClose}>Đóng & kiểm tra lịch</Button> : <Button type="submit" loading={busy} disabled={!services.length || staffLoading || lookup.state === 'loading'}>Xác nhận đón khách</Button>}

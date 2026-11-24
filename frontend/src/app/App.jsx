@@ -215,7 +215,7 @@ const AdminShell = ({ tabName, activeSubTab, navigationItems }) => {
         </main>
         <footer className="admin-workspace-footer">
           <span>
-            BeautyShop <span className="footer-dot">/</span> Admin Atelier
+            BeautyShop <span className="footer-dot">/</span> Quản trị
           </span>
           <span>Chăm chút từng trải nghiệm.</span>
         </footer>

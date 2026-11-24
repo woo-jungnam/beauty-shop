@@ -156,7 +156,8 @@ export const LoginPage = ({ isAdminRoute = false, recoveryMode, recoveryToken })
     try {
       await login(username.trim(), password, { requireOperator: isAdminRoute });
     } catch (err) {
-      setError(getAuthErrorMessage(err, 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.'));
+      const fallback = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+      setError(isAdminRoute ? err?.message || fallback : getAuthErrorMessage(err, fallback));
     } finally {
       setLoading(false);
     }
@@ -199,8 +200,8 @@ export const LoginPage = ({ isAdminRoute = false, recoveryMode, recoveryToken })
               </div>
               <span className="admin-auth__star admin-auth__star--one" />
               <span className="admin-auth__star admin-auth__star--two" />
-              <span className="admin-auth__art-label"><Sparkles size={14} /> Beauty in every detail</span>
-              <span className="admin-auth__art-caption">CURATED WITH CARE — BEAUTYSHOP</span>
+              <span className="admin-auth__art-label"><Sparkles size={14} /> Chăm chút từng chi tiết</span>
+              <span className="admin-auth__art-caption">CHỌN LỌC KỸ LƯỠNG · BEAUTYSHOP</span>
             </div>
 
             <div className="admin-auth__brand-footer">

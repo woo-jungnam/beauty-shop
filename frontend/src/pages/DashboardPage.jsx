@@ -495,6 +495,7 @@ const statusLabels = {
 };
 const paymentLabels = {
   PAID: "Đã thanh toán",
+  PARTIALLY_REFUNDED: "Đã hoàn một phần",
   PENDING: "Chờ thanh toán",
   FAILED: "Thất bại",
   REFUNDED: "Đã hoàn tiền",
@@ -520,7 +521,7 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
     REVENUE: "Dòng tiền & Tiền thu theo nhóm trong kỳ",
     ORDERS: "Đơn hàng trong kỳ",
     PRODUCTS: "Hiệu suất sản phẩm mỹ phẩm",
-    SERVICES: "Top Dịch vụ Spa thực hiện",
+    SERVICES: "Dịch vụ Spa thực hiện nhiều nhất",
     SPA: "Hiệu suất lịch hẹn Spa",
     ORDER: `Đơn hàng ${report?.order ? orderCode(report.order) : ""}`,
   }[report?.type];
@@ -1054,7 +1055,6 @@ export const DashboardPage = () => {
           <span className="atelier-art-pearl atelier-art-pearl-two" />
           <div className="atelier-art-note">
             <Sparkles size={14} />
-            <span>Beauty in every detail</span>
           </div>
           <Sparkles size={24} className="atelier-art-star" />
         </div>
@@ -1324,10 +1324,6 @@ export const DashboardPage = () => {
         >
           <div className="atelier-panel-header" style={{ flexWrap: "wrap", gap: "12px" }}>
             <div>
-              <div className="atelier-panel-kicker">
-                <span className="atelier-color-dot" />
-                THE BIG PICTURE
-              </div>
               <h2>Chuyển động dòng tiền</h2>
             </div>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -1452,7 +1448,6 @@ export const DashboardPage = () => {
         >
           <div className="atelier-panel-header">
             <div>
-              <div className="atelier-panel-kicker">A MOMENT OF BALANCE</div>
               <h2>Nhịp điệu Spa</h2>
             </div>
             <span className="atelier-spa-icon">
@@ -1554,7 +1549,6 @@ export const DashboardPage = () => {
         >
           <div className="atelier-panel-header" style={{ flexWrap: "wrap", gap: "8px" }}>
             <div>
-              <div className="atelier-panel-kicker">THE BEAUTY EDIT</div>
               <h2>{rankingTab === 'products' ? 'Sản phẩm bán chạy' : 'Dịch vụ Spa thực hiện nhiều nhất'}</h2>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1581,7 +1575,7 @@ export const DashboardPage = () => {
                 className="atelier-text-link"
                 onClick={() => openReport(rankingTab === 'products' ? "PRODUCTS" : "SERVICES")}
               >
-                Top 10 <ArrowUpRight size={16} />
+                Xem 10 mục dẫn đầu <ArrowUpRight size={16} />
               </button>
             </div>
           </div>
@@ -1697,7 +1691,6 @@ export const DashboardPage = () => {
         >
           <div className="atelier-panel-header">
             <div>
-              <div className="atelier-panel-kicker">KEEP THINGS FLOWING</div>
               <h2>Ưu tiên hôm nay</h2>
             </div>
             <span className="atelier-live-label">
@@ -1779,9 +1772,6 @@ export const DashboardPage = () => {
       >
         <div className="atelier-panel-header">
           <div>
-            <div className="atelier-panel-kicker">
-              EVERY ORDER TELLS A STORY
-            </div>
             <h2>Những đơn hàng gần đây</h2>
           </div>
           <a className="atelier-text-link" href="#/admin/orders">

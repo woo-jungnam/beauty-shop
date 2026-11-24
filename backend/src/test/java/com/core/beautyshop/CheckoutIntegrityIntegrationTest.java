@@ -82,6 +82,8 @@ class CheckoutIntegrityIntegrationTest {
     @Autowired com.core.beautyshop.modules.spa.domain.ServicePackageRepository packages;
     @Autowired com.core.beautyshop.modules.spa.domain.UserServiceTicketRepository tickets;
     @Autowired com.core.beautyshop.modules.spa.application.service.AppointmentService appointments;
+    @Autowired com.core.beautyshop.modules.notification.application.service.CustomerNotificationService customerNotificationService;
+    @Autowired com.core.beautyshop.modules.promotion.application.VoucherService voucherService;
     @Value("${sepay.bank.account-number}") String bankAccount;
 
     record Fixture(String session, long stockId, long variantId) {}
@@ -710,5 +712,101 @@ class CheckoutIntegrityIntegrationTest {
             var entitlement = tickets.findById(ids[2]).orElseThrow().getEntitlements().get(ids[1]);
             assertEquals(0, entitlement.getUsed()); assertEquals(1, entitlement.getReserved()); return null;
         });
+    }
+
+    @Test
+    void evidenceUploadBankDetailsAndVoucherRefundWorkEndToEnd() throws Exception {
+        var fixture = fixture(6);
+        long[] userIds = tx(() -> {
+            var owner = users.save(com.core.beautyshop.modules.identity.domain.User.builder()
+                    .username("ret-owner-" + UUID.randomUUID()).fullName("Return Owner").build());
+            var other = users.save(com.core.beautyshop.modules.identity.domain.User.builder()
+                    .username("ret-other-" + UUID.randomUUID()).fullName("Other User").build());
+            return new long[]{owner.getId(), other.getId()};
+        });
+        long ownerId = userIds[0];
+        long otherId = userIds[1];
+
+        // Guest order cannot choose VOUCHER, and evidence upload blocks wrong guest session
+        var guestOrder = service.checkout(null, request(fixture, PaymentMethod.COD));
+        status(guestOrder.getId(), OrderStatus.PROCESSING);
+        status(guestOrder.getId(), OrderStatus.SHIPPED);
+        status(guestOrder.getId(), OrderStatus.DELIVERED);
+        byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00};
+        var file = new org.springframework.mock.web.MockMultipartFile("file", "damage.png", "image/png", pngBytes);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> productReturns.uploadEvidence(guestOrder.getId(), "wrong-session", file));
+        var uploaded = productReturns.uploadEvidence(guestOrder.getId(), fixture.session(), file);
+        assertTrue(uploaded.url().startsWith("/uploads/"));
+
+        var guestVoucherAttempt = new ProductReturnService.Request(
+                "Want voucher on guest order",
+                List.of(new ProductReturnService.Line(guestOrder.getItems().getFirst().getId(), 1)),
+                List.of(uploaded.url()),
+                "VOUCHER", null, null, null, null);
+        assertThrows(BusinessException.class,
+                () -> productReturns.request(guestOrder.getId(), fixture.session(), "guest-v-" + UUID.randomUUID(), guestVoucherAttempt));
+
+        // Authenticated user order with 2 units
+        var userCart = new com.core.beautyshop.modules.cart.application.dto.request.AddToCartRequest();
+        userCart.setVariantId(fixture.variantId());
+        userCart.setQuantity(2);
+        cartService.addToCart(ownerId, userCart);
+        var userReq = new CheckoutRequest();
+        userReq.setCustomerName("Return Owner");
+        userReq.setCustomerPhone("0987654321");
+        userReq.setShippingAddress("123 Le Loi");
+        userReq.setPaymentMethod(PaymentMethod.BANK);
+        userReq.setIdempotencyKey("ret-user-" + UUID.randomUUID());
+        var userOrder = asUser(ownerId, () -> service.checkout(ownerId, userReq));
+        var webhook = payment(userOrder, UUID.randomUUID().toString());
+        webhook.setTransferAmount(userOrder.getTotalAmount());
+        payments.processSePayWebhook(webhook);
+        status(userOrder.getId(), OrderStatus.SHIPPED);
+        status(userOrder.getId(), OrderStatus.DELIVERED);
+
+        // Unauthorized user cannot upload evidence
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> asUser(otherId, () -> productReturns.uploadEvidence(userOrder.getId(), null, file)));
+        var ownerUpload = asUser(ownerId, () -> productReturns.uploadEvidence(userOrder.getId(), null, file));
+
+        // 1) BANK_TRANSFER request stores bank info and updates paymentStatus to PARTIALLY_REFUNDED
+        var bankReq = new ProductReturnService.Request(
+                "Broken pump on bottle 1",
+                List.of(new ProductReturnService.Line(userOrder.getItems().getFirst().getId(), 1)),
+                List.of(ownerUpload.url()),
+                "BANK_TRANSFER", "970422", "MBBank", "0123456789", "RETURN OWNER");
+        var bankRow = asUser(ownerId, () -> productReturns.request(userOrder.getId(), null, "bank-" + UUID.randomUUID(), bankReq));
+        assertEquals("BANK_TRANSFER", bankRow.refundMethod());
+        assertEquals("970422", bankRow.bankBin());
+        assertEquals("0123456789", bankRow.accountNumber());
+        productReturns.decide(bankRow.id(), new ProductReturnService.Decision(true, "Approved bottle 1"));
+        productReturns.receive(bankRow.id(), new ProductReturnService.Confirmation("rcpt-1-" + UUID.randomUUID(), "Quarantined"));
+        asAdmin(() -> productReturns.refund(bankRow.id(), new ProductReturnService.Confirmation("bank-ref-" + UUID.randomUUID(), "Transferred via VietQR")));
+        assertEquals(PaymentStatus.PARTIALLY_REFUNDED, orders.findById(userOrder.getId()).orElseThrow().getPaymentStatus());
+
+        // 2) VOUCHER request for 2nd unit issues personal voucher locked to ownerId + sets REFUNDED
+        var voucherReq = new ProductReturnService.Request(
+                "Return bottle 2 for voucher",
+                List.of(new ProductReturnService.Line(userOrder.getItems().getFirst().getId(), 1)),
+                List.of(ownerUpload.url()),
+                "VOUCHER", null, null, null, null);
+        var voucherRow = asUser(ownerId, () -> productReturns.request(userOrder.getId(), null, "voucher-" + UUID.randomUUID(), voucherReq));
+        productReturns.decide(voucherRow.id(), new ProductReturnService.Decision(true, "Approved bottle 2"));
+        productReturns.receive(voucherRow.id(), new ProductReturnService.Confirmation("rcpt-2-" + UUID.randomUUID(), "Quarantined"));
+        var refundedVoucher = asAdmin(() -> productReturns.refund(voucherRow.id(), new ProductReturnService.Confirmation(null, "Issued personal refund voucher")));
+        assertEquals("REFUNDED", refundedVoucher.status());
+        assertNotNull(refundedVoucher.refundVoucherCode());
+        assertEquals(PaymentStatus.REFUNDED, orders.findById(userOrder.getId()).orElseThrow().getPaymentStatus());
+
+        // Other user cannot validate/apply owner's refund voucher
+        assertThrows(BusinessException.class,
+                () -> voucherService.validateForCustomer(refundedVoucher.refundVoucherCode(), otherId, new BigDecimal("100")));
+        var validForOwner = voucherService.validateForCustomer(refundedVoucher.refundVoucherCode(), ownerId, new BigDecimal("100"));
+        assertEquals(0, refundedVoucher.refundAmount().compareTo(validForOwner.discountAmount()));
+
+        // Notifications were published to owner for return lifecycle
+        var notifications = asUser(ownerId, () -> customerNotificationService.mine(0, 20).getContent());
+        assertTrue(notifications.stream().anyMatch(n -> n.title().contains("Voucher hoàn tiền")));
     }
 }

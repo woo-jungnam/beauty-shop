@@ -65,7 +65,7 @@ class _MainWrapperScreenState extends State<MainWrapperScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.spa_outlined),
             activeIcon: Icon(Icons.spa),
-            label: 'Spa & Làm Đẹp',
+            label: 'Dịch vụ',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.flash_on_outlined),

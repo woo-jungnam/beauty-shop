@@ -5,6 +5,10 @@ import { serverBaseUrl } from './baseUrl';
 
 const API_BASE_URL = serverBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
+const isAdminLocation = () => /^#\/?admin(?:[/?]|$)/.test(window.location.hash);
+const hasVietnameseText = (value) =>
+  typeof value === 'string' && /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(value);
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -122,20 +126,23 @@ apiClient.interceptors.response.use(
       }
     }
 
+    const isAdminPage = isAdminLocation();
     let message = error.response?.data?.message;
     const errors = error.response?.data?.errors;
     if (Array.isArray(errors) && errors.length > 0) {
       const fieldMessages = errors
         .map((e) => (typeof e === 'string' ? e : e?.message))
-        .filter(Boolean);
+        .filter((entry) => isAdminPage ? hasVietnameseText(entry) : Boolean(entry));
       if (fieldMessages.length > 0) {
         message = fieldMessages.join('; ');
       }
     }
 
+    if (isAdminPage && !hasVietnameseText(message)) message = undefined;
+
     if (!message) {
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        message = 'Yêu cầu quá thời gian chờ (timeout). Vui lòng thử lại.';
+        message = 'Yêu cầu quá thời gian chờ. Vui lòng thử lại.';
       } else if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
         message = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.';
       } else if (error.response?.status === 401) {
@@ -155,7 +162,9 @@ apiClient.interceptors.response.use(
       } else if (error.response?.status >= 502 && error.response?.status <= 504) {
         message = 'Dịch vụ máy chủ tạm thời không khả dụng. Vui lòng thử lại sau!';
       } else {
-        message = error.response?.data?.errorCode || error.message || 'Lỗi kết nối máy chủ';
+        message = isAdminPage
+          ? 'Không thể thực hiện yêu cầu. Vui lòng thử lại.'
+          : error.response?.data?.errorCode || error.message || 'Lỗi kết nối máy chủ';
       }
     }
 
@@ -186,7 +195,9 @@ export const uploadFile = async (endpoint, file) => {
   });
   if (!response.ok) {
     const errorJson = await response.json().catch(() => null);
+    const isAdminPage = isAdminLocation();
     let message = errorJson?.message;
+    if (isAdminPage && !hasVietnameseText(message)) message = undefined;
     if (!message) {
       if (response.status === 413) {
         message = 'Dung lượng tệp vượt quá giới hạn cho phép (Tối đa 10MB).';
@@ -195,7 +206,7 @@ export const uploadFile = async (endpoint, file) => {
       } else if (response.status === 403) {
         message = 'Bạn không có quyền tải lên tệp tin.';
       } else {
-        message = errorJson?.error || `Lỗi tải tệp: HTTP ${response.status}`;
+        message = isAdminPage ? 'Không thể tải tệp lên. Vui lòng thử lại.' : (errorJson?.error || `Lỗi tải tệp: HTTP ${response.status}`);
       }
     }
     throw new Error(message);

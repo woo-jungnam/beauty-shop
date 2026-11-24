@@ -118,9 +118,9 @@ export const RecommendationAdminPanel = () => {
   };
 
   return <div style={{ display: 'grid', gap: 20 }}>
-    <section className="card" aria-label="Trạng thái Content-Based">
+    <section className="card" aria-label="Trạng thái hệ thống gợi ý">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div><h2 style={{ fontSize: 18 }}><Activity size={18} /> Gợi ý sản phẩm Content-Based</h2><p>TF-IDF theo thuộc tính · Hồ sơ hành vi có trọng số · Xếp hạng cosine.</p></div>
+        <div><h2 style={{ fontSize: 18 }}><Activity size={18} /> Gợi ý sản phẩm theo nội dung</h2><p>TF-IDF theo thuộc tính · Hồ sơ hành vi có trọng số · Xếp hạng cosine.</p></div>
         <Button variant="outline" icon={RefreshCw} loading={busy} onClick={refresh}>Làm mới dữ liệu gợi ý</Button>
       </div>
       {loading ? <p role="status">Đang tải trạng thái gợi ý…</p> : status ? <div style={grid}>
@@ -145,9 +145,9 @@ export const RecommendationAdminPanel = () => {
         {kind === 'product' ? <label style={field}>ID sản phẩm<input className="form-input" type="number" min={1} step={1} required value={productId} onChange={event => setProductId(event.target.value)} /></label> : <><label style={field}>ID khách hàng (không bắt buộc)<input className="form-input" type="number" min={1} step={1} value={userId} onChange={event => setUserId(event.target.value)} /></label><label style={field}>Mã phiên (không bắt buộc)<input className="form-input" maxLength={100} value={sessionId} onChange={event => setSessionId(event.target.value)} /></label></>}
         <Button type="submit" icon={Search} loading={previewing}>Xem gợi ý</Button>
       </form>
-      {preview && <div aria-live="polite" style={{ marginTop: 20 }}><p>Nguồn: <strong>{SOURCES[preview.source] || preview.source}</strong> · {preview.total} kết quả · {preview.matched_history_products || 0} sản phẩm có tín hiệu lịch sử</p>
+      {preview && <div aria-live="polite" style={{ marginTop: 20 }}><p>Nguồn: <strong>{SOURCES[preview.source] || 'Chưa xác định'}</strong> · {preview.total} kết quả · {preview.matched_history_products || 0} sản phẩm có tín hiệu lịch sử</p>
         {preview.history_error && <p role="alert">{preview.history_error}</p>}
-        {preview.items?.length ? <ol style={{ display: 'grid', gap: 12, paddingLeft: 22 }}>{preview.items.map(item => <li key={item.id}><strong>#{item.id} · {item.name}</strong><p style={{ marginBlock: 4 }}>Cosine: {item.score == null ? 'Không áp dụng cho fallback phổ biến' : Number(item.score).toFixed(4)} · {item.reason}</p></li>)}</ol> : <p>Chưa có ứng viên phù hợp với dữ liệu và điều kiện hiện tại.</p>}
+        {preview.items?.length ? <ol style={{ display: 'grid', gap: 12, paddingLeft: 22 }}>{preview.items.map(item => <li key={item.id}><strong>#{item.id} · {item.name}</strong><p style={{ marginBlock: 4 }}>Cosine: {item.score == null ? 'Không áp dụng khi gợi ý theo độ phổ biến' : Number(item.score).toFixed(4)} · {item.reason}</p></li>)}</ol> : <p>Chưa có ứng viên phù hợp với dữ liệu và điều kiện hiện tại.</p>}
       </div>}
     </section>
   </div>;

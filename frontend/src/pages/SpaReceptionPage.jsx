@@ -19,7 +19,7 @@ import './spa-reception/spa-reception.css';
 
 
 const Status = ({ appointment }) => <span className={`reception-status ${SPA_STATUS[appointment.status]?.tone || 'neutral'}`}>
-  {appointment.status === 'CONFIRMED' ? appointment.checkedInAt ? 'Đã check-in' : 'Chưa check-in' : SPA_STATUS[appointment.status]?.label || 'Chưa xác định'}
+  {appointment.status === 'CONFIRMED' ? appointment.checkedInAt ? 'Đã tiếp nhận' : 'Chưa tiếp nhận' : SPA_STATUS[appointment.status]?.label || 'Chưa xác định'}
 </span>;
 
 const hasFacility = item => Boolean(item.facilityId || item.resources?.length);
@@ -69,16 +69,16 @@ const AssignDialog = ({ appointment, checkIn, fillMissing, facilities, onClose, 
       if (checkIn) {
         try { await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointment.id)); }
         catch (err) {
-          const message = spaErrorMessage(err, 'Chưa check-in được khách. Vui lòng kiểm tra lịch và thử lại.');
+          const message = spaErrorMessage(err, 'Chưa thể tiếp nhận khách. Vui lòng kiểm tra lịch và thử lại.');
           if (!shouldSave) { setError(message); return; }
           onAssign('Đã lưu phân công. ' + message, 'warning'); onClose(); return;
         }
       }
-      onAssign(checkIn ? 'Đã check-in khách tại quầy.' : fillMissing ? 'Đã lưu phân công tại quầy.' : (appointment.status === 'CONFIRMED' ? 'Đã cập nhật kỹ thuật viên.' : 'Đã chỉ định KTV và xác nhận lịch.')); onClose();
+      onAssign(checkIn ? 'Đã tiếp nhận khách tại quầy.' : fillMissing ? 'Đã lưu phân công tại quầy.' : (appointment.status === 'CONFIRMED' ? 'Đã cập nhật kỹ thuật viên.' : 'Đã chỉ định KTV và xác nhận lịch.')); onClose();
     } catch (err) { setError(spaErrorMessage(err, 'Chưa lưu được phân công. Vui lòng kiểm tra phòng và lịch làm việc của KTV.')); }
     finally { submitting.current = false; setBusy(false); }
   };
-  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Xếp phòng, KTV & check-in' : fillMissing ? 'Bổ sung phòng / KTV' : (appointment.status === 'CONFIRMED' ? 'Đổi chuyên viên' : 'Chỉ định KTV nhanh')} className="reception-dialog">
+  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Xếp phòng, chỉ định kỹ thuật viên và tiếp nhận' : fillMissing ? 'Bổ sung phòng / KTV' : (appointment.status === 'CONFIRMED' ? 'Đổi chuyên viên' : 'Chỉ định KTV nhanh')} className="reception-dialog">
     <form className="reception-form" onSubmit={submit}>
       <p><strong>{appointment.customerName}</strong> · {appointmentCode(appointment)}<br /><small className="reception-muted">{formatDate(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</small></p>
       {error && <div role="alert" className="reception-notice error">{error}</div>}
@@ -92,7 +92,7 @@ const AssignDialog = ({ appointment, checkIn, fillMissing, facilities, onClose, 
           ...facilities.filter(room => room.active !== false).map(room => ({ value: String(room.id), label: room.name })),
         ]} />)}
       <p className="reception-muted">Hệ thống kiểm tra sức chứa phòng, ca làm việc và lịch trùng khi lưu phân công.</p>
-      <Button type="submit" loading={busy} disabled={!canSubmit}>{checkIn ? 'Xác nhận & check-in' : fillMissing ? 'Lưu phân công' : (appointment.status === 'CONFIRMED' ? 'Lưu thay đổi kỹ thuật viên' : 'Xác nhận chỉ định KTV')}</Button>
+      <Button type="submit" loading={busy} disabled={!canSubmit}>{checkIn ? 'Xác nhận và tiếp nhận' : fillMissing ? 'Lưu phân công' : (appointment.status === 'CONFIRMED' ? 'Lưu thay đổi kỹ thuật viên' : 'Xác nhận chỉ định KTV')}</Button>
     </form>
   </Modal>;
 };
@@ -258,7 +258,7 @@ export const SpaReceptionPage = () => {
         status: 'CONFIRMED', staffAssignments: Object.fromEntries((appointment.items || []).map(item => [item.id, item.staffId])),
       });
       await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointment.id));
-    }, 'Đã check-in khách tại quầy.');
+    }, 'Đã tiếp nhận khách tại quầy.');
   };
   const complete = appointment => run(`finish-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), {
     status: 'COMPLETED', notes: 'Lễ tân xác nhận khách đã hoàn tất dịch vụ.',
@@ -316,7 +316,7 @@ export const SpaReceptionPage = () => {
   };
   const extendGracePeriod = appointment => {
     if (appointment.checkedInAt) {
-      setNotice({ tone: 'warning', message: 'Khách hàng đã check-in tại quầy, không thể gia hạn giữ chỗ.' });
+      setNotice({ tone: 'warning', message: 'Khách hàng đã được tiếp nhận tại quầy, không thể gia hạn giữ chỗ.' });
       return;
     }
     const notes = appointment.notes || '';
@@ -347,7 +347,7 @@ export const SpaReceptionPage = () => {
   };
   const actions = appointment => <div className="reception-card-actions">
     {['PENDING', 'CONFIRMED'].includes(appointment.status) && !appointment.checkedInAt && <>
-      <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now)} loading={busy === `check-${appointment.id}`} onClick={() => checkIn(appointment)}><Check size={15} /> Check-in ngay</Button>
+      <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now)} loading={busy === `check-${appointment.id}`} onClick={() => checkIn(appointment)}><Check size={15} /> Tiếp nhận ngay</Button>
       <Button size="sm" variant="outline" disabled={Boolean(busy)} loading={busy === `grace-${appointment.id}`} onClick={() => extendGracePeriod(appointment)} title="Khách báo trễ kẹt xe: Gia hạn giữ chỗ thêm 15 phút">+15p giữ chỗ</Button>
     </>}
     {appointment.status === 'PENDING' && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Chỉ định KTV</Button>}
@@ -358,7 +358,7 @@ export const SpaReceptionPage = () => {
         onClick={() => {
           const isPast = localInstant(appointment.appointmentDate, appointment.endTime || appointment.startTime) < now.getTime();
           const startNotes = isPast
-            ? `Lễ tân bắt đầu ca hẹn đã check-in lúc ${spaTime(new Date(appointment.checkedInAt || now))}, điều phối phục vụ trực tiếp.`
+            ? `Khách đã được tiếp nhận lúc ${spaTime(new Date(appointment.checkedInAt || now))}. Có thể điều phối phục vụ ngay.`
             : 'Lễ tân bắt đầu dịch vụ.';
           run(`start-${appointment.id}`, () => apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'IN_PROGRESS', notes: startNotes }), 'Đã bắt đầu dịch vụ.');
         }} aria-label="Bắt đầu ca"><ArrowRight size={15} /> Bắt đầu dịch vụ</Button>
@@ -389,7 +389,7 @@ export const SpaReceptionPage = () => {
   ];
   return <div className="spa-reception-page">
     {workspaceId && <TreatmentAppointmentDialog appointmentId={workspaceId} role="staff" onClose={() => setWorkspaceId(null)} onSaved={afterAction} />}
-    <header className="reception-header"><div className="reception-brand"><span><Sparkles size={22} /></span><div><strong>BeautyShop <em>Atelier Spa</em></strong><small>KHÔNG GIAN CHĂM SÓC · QUẦY LỄ TÂN</small></div></div>
+    <header className="reception-header"><div className="reception-brand"><span><Sparkles size={22} /></span><div><strong>BeautyShop <em>Spa</em></strong><small>KHÔNG GIAN CHĂM SÓC · QUẦY LỄ TÂN</small></div></div>
       <div className="reception-user"><span><strong>{user?.fullName || user?.username || 'Lễ tân'}</strong><small>{spaTime(now)} · {formatDate(today)}</small></span><a href="#/staff/treatments">Lộ trình điều trị</a><a href="#/staff">Ca KTV</a>{isAdmin && <a href="#/admin/spa">Quản trị Spa</a>}<Button variant="ghost" size="sm" onClick={logout} aria-label="Đăng xuất"><LogOut size={17} /></Button></div>
     </header>
     <main className="reception-main">
@@ -586,9 +586,9 @@ export const SpaReceptionPage = () => {
           </section>
 
           <div className="reception-kpi-bar" aria-label="Chỉ số tiếp đón hôm nay">
-            <div className="reception-kpi-pill rose" title="Khách đã check-in tại quầy">
+            <div className="reception-kpi-pill rose" title="Khách đã được tiếp nhận tại quầy">
               <CheckCircle2 size={14} />
-              <span>Đã check-in:</span>
+              <span>Đã tiếp nhận:</span>
               <strong>{checkedInCount}</strong>
             </div>
             <div className="reception-kpi-pill blue" title="Khách đang thực hiện dịch vụ">
@@ -659,7 +659,7 @@ export const SpaReceptionPage = () => {
         </>
       )}
 
-      <footer className="reception-footer"><Sparkles size={14} /> BeautyShop Atelier Spa <span>Chăm sóc tận tâm, vận hành rõ ràng.</span></footer>
+      <footer className="reception-footer"><Sparkles size={14} /> BeautyShop Spa <span>Chăm sóc tận tâm, vận hành rõ ràng.</span></footer>
     </main>
     {walkIn && <WalkInDrawer key={walkIn.facilityId || 'walkin'} services={data.services} facilities={data.facilities} facilityId={walkIn.facilityId} onClose={() => setWalkIn(null)} onBooked={afterAction} />}
     {assign && <AssignDialog {...assign} facilities={data.facilities} onClose={() => setAssign(null)} onAssign={afterAction} />}

@@ -49,14 +49,14 @@ export function DeliveryProofDetails({ order }) {
         alt={`Ảnh bằng chứng giao đơn ${data.orderNumber || `#${data.id}`}`} />
       <div className="delivery-proof-details">
         <section>
-          <h4>Thông tin shipper</h4>
+          <h4>Thông tin tài xế</h4>
           <dl>
             <dt>Họ tên</dt><dd>{data.shipperName || 'Chưa ghi nhận'}</dd>
-            <dt>Mã shipper</dt><dd>{data.shipperId ?? '—'}</dd>
+            <dt>Mã tài xế</dt><dd>{data.shipperId ?? '—'}</dd>
             <dt>Số điện thoại</dt><dd>{data.shipperPhone || '—'}</dd>
             <dt>Thời gian giao</dt><dd>{data.deliveredAt ? formatDateTime(data.deliveredAt) : '—'}</dd>
             {data.shipperCodCollected != null && (
-              <><dt>COD đã thu</dt><dd>{formatAmount(data.shipperCodCollected)}</dd></>
+              <><dt>Tiền thu hộ đã thu</dt><dd>{formatAmount(data.shipperCodCollected)}</dd></>
             )}
             <dt>Ghi chú giao hàng</dt><dd>{data.deliveredNotes || '—'}</dd>
           </dl>

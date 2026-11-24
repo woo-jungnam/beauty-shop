@@ -335,10 +335,10 @@ export const SpaPage = () => {
   const handleCheckIn = async (aptId) => {
     try {
       await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(aptId));
-      alert('Đã ghi nhận khách check-in thành công!');
+      alert('Đã tiếp nhận khách!');
       fetchAppointments(aptPage);
     } catch (err) {
-      alert(err.message || 'Lỗi check-in');
+      alert(err.message || 'Không thể tiếp nhận khách');
     }
   };
 
@@ -772,7 +772,7 @@ export const SpaPage = () => {
             <Badge variant={badge.variant}>{badge.text}</Badge>
             {row.checkedInAt && (
               <div style={{ fontSize: '10.5px', color: '#059669', fontWeight: 700, marginTop: '2px' }}>
-                ✓ Đã check-in
+                ✓ Đã tiếp nhận
               </div>
             )}
           </div>
@@ -786,8 +786,8 @@ export const SpaPage = () => {
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <Button variant="outline" size="sm" onClick={()=>setWorkspaceId(row.id)}>Chuẩn bị / thực hiện</Button>
           {isSpaReception && row.status === 'CONFIRMED' && !row.checkedInAt && (
-            <Button variant="outline" size="sm" onClick={() => handleCheckIn(row.id)} icon={UserCheck} title="Check-in khách">
-              Check-in
+            <Button variant="outline" size="sm" onClick={() => handleCheckIn(row.id)} icon={UserCheck} title="Tiếp nhận khách">
+              Tiếp nhận khách
             </Button>
           )}
           {isSpaReception && (
@@ -844,7 +844,7 @@ export const SpaPage = () => {
   const categoryColumns = [
     { header: 'ID', accessor: 'id', width: '60px' },
     { header: 'Tên danh mục', accessor: (row) => <strong>{row.name}</strong> },
-    { header: 'Slug', accessor: (row) => <code style={{ fontSize: '12px' }}>/{row.slug}</code> },
+    { header: 'Đường dẫn rút gọn', accessor: (row) => <code style={{ fontSize: '12px' }}>/{row.slug}</code> },
     { header: 'Mô tả', accessor: (row) => row.description || '—' },
     {
       header: 'Trạng thái',
@@ -1293,7 +1293,7 @@ export const SpaPage = () => {
         <form onSubmit={handleSubmitCategory}>
           <Input label="Tên danh mục *" value={catName} onChange={(e) => setCatName(e.target.value)} required placeholder="Chăm sóc da mặt chuyên sâu" />
           <div style={{ marginTop: '12px' }}>
-            <Input label="Đường dẫn Slug" value={catSlug} onChange={(e) => setCatSlug(e.target.value)} placeholder="cham-soc-da-mat" />
+            <Input label="Đường dẫn rút gọn" value={catSlug} onChange={(e) => setCatSlug(e.target.value)} placeholder="cham-soc-da-mat" />
           </div>
           <div style={{ marginTop: '12px' }}>
             <label className="form-label">Mô tả danh mục</label>

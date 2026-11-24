@@ -1,6 +1,9 @@
 import 'dart:convert';
 import '../../../core/utils/idempotency_key.dart';
+import 'package:dio/dio.dart' as dio_pkg;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:printing/printing.dart';
 import 'order_invoice.dart';
@@ -23,11 +26,33 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  static const _vietnamBanks = [
+    {'bin': '970422', 'name': 'MBBank'},
+    {'bin': '970436', 'name': 'Vietcombank'},
+    {'bin': '970415', 'name': 'VietinBank'},
+    {'bin': '970418', 'name': 'BIDV'},
+    {'bin': '970407', 'name': 'Techcombank'},
+    {'bin': '970416', 'name': 'ACB'},
+    {'bin': '970423', 'name': 'TPBank'},
+    {'bin': '970432', 'name': 'VPBank'},
+    {'bin': '970405', 'name': 'Agribank'},
+    {'bin': '970403', 'name': 'Sacombank'},
+    {'bin': '970441', 'name': 'VIB'},
+    {'bin': '970448', 'name': 'OCB'},
+  ];
+
   final api = ApiClient();
+  final _picker = ImagePicker();
   Map<String, dynamic>? order;
   List<dynamic> returns = [];
   Map<int, int> quantities = {};
-  final reason = TextEditingController(), evidence = TextEditingController();
+  final reason = TextEditingController();
+  final accountNumber = TextEditingController();
+  final accountName = TextEditingController();
+  final List<String> evidenceUrls = [];
+  String refundMethod = 'BANK_TRANSFER';
+  String selectedBankBin = '970422';
+  bool uploadingEvidence = false;
   String? error;
   bool returnsLoaded = false;
   String? returnFingerprint, returnKey;
@@ -44,7 +69,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   void dispose() {
     reason.dispose();
-    evidence.dispose();
+    accountNumber.dispose();
+    accountName.dispose();
     super.dispose();
   }
 
@@ -112,6 +138,54 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return remaining.clamp(0, 999999);
   }
 
+  Future<void> _pickAndUploadEvidence(ImageSource source) async {
+    if (evidenceUrls.length >= 8) {
+      setState(() => error = 'Tối đa 8 ảnh bằng chứng cho mỗi yêu cầu.');
+      return;
+    }
+    try {
+      final file = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 10 * 1024 * 1024) {
+        if (mounted) {
+          setState(() => error = 'Ảnh vượt quá giới hạn 10MB.');
+        }
+        return;
+      }
+      setState(() {
+        uploadingEvidence = true;
+        error = null;
+      });
+      final formData = dio_pkg.FormData.fromMap({
+        'file': dio_pkg.MultipartFile.fromBytes(
+          bytes,
+          filename: file.name.isNotEmpty ? file.name : 'evidence.jpg',
+        ),
+      });
+      final response = await api.post<dynamic>(
+        '/api/v1/orders/${widget.orderId}/returns/evidence',
+        data: formData,
+      );
+      final data = response.data;
+      final uploadedUrl = data is Map ? (data['url'] ?? data['publicUrl'])?.toString() : null;
+      if (mounted && uploadedUrl != null && uploadedUrl.isNotEmpty) {
+        setState(() => evidenceUrls.add(uploadedUrl));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => error = 'Không thể tải ảnh lên: $e');
+      }
+    } finally {
+      if (mounted) setState(() => uploadingEvidence = false);
+    }
+  }
+
   Future<void> sendReturn() async {
     final lines = quantities.entries
         .where((e) => e.value > 0)
@@ -121,18 +195,26 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       setState(() => error = 'Chọn sản phẩm và nhập lý do ít nhất 5 ký tự.');
       return;
     }
-    final urls = evidence.text
-        .split('\n')
-        .map((url) => url.trim())
-        .where((url) => url.isNotEmpty)
-        .toList();
-    if (urls.length > 8 ||
-        urls.any((url) => !RegExp(r'^https?://').hasMatch(url)))
-      throw StateError('Dùng tối đa 8 đường dẫn ảnh HTTP hoặc HTTPS.');
+    if (refundMethod == 'BANK_TRANSFER' &&
+        (accountNumber.text.trim().isEmpty || accountName.text.trim().isEmpty)) {
+      setState(
+        () => error = 'Vui lòng nhập số tài khoản và tên chủ tài khoản nhận hoàn tiền.',
+      );
+      return;
+    }
+    final bank = _vietnamBanks.firstWhere(
+      (b) => b['bin'] == selectedBankBin,
+      orElse: () => _vietnamBanks.first,
+    );
     final payload = {
       'reason': reason.text.trim(),
       'lines': lines,
-      'evidenceUrls': urls,
+      'evidenceUrls': List<String>.from(evidenceUrls),
+      'refundMethod': refundMethod,
+      'bankBin': refundMethod == 'BANK_TRANSFER' ? bank['bin'] : null,
+      'bankName': refundMethod == 'BANK_TRANSFER' ? bank['name'] : null,
+      'accountNumber': refundMethod == 'BANK_TRANSFER' ? accountNumber.text.trim() : null,
+      'accountName': refundMethod == 'BANK_TRANSFER' ? accountName.text.trim() : null,
     };
     final fingerprint = jsonEncode(payload);
     if (fingerprint != returnFingerprint) {
@@ -148,7 +230,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     returnKey = null;
     quantities = {};
     reason.clear();
-    evidence.clear();
+    evidenceUrls.clear();
+    accountNumber.clear();
+    accountName.clear();
   }
 
   Future<void> _printInvoice(OrderResponse order) async {
@@ -384,15 +468,98 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
             ...returns.map(
               (row) => Card(
-                child: ListTile(
-                  title: Text('#${row['id']} · ${row['status']}'),
-                  subtitle: Text(
-                    '${row['reason']}\nPhản hồi: ${row['decisionReason'] ?? 'Đang xử lý'}\nTiền hoàn: ${money(row['refundAmount'])}',
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '#${row['id']} · ${row['status']} · Hoàn ${money(row['refundAmount'])}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Lý do: ${row['reason']}'),
+                      Text(
+                        'Hình thức: ${row['refundMethod'] == 'VOUCHER' ? 'Voucher hoàn tiền' : 'Chuyển khoản ngân hàng'}'
+                        '${row['accountNumber'] != null ? ' (${row['bankName'] ?? ''} · ${row['accountNumber']})' : ''}',
+                      ),
+                      Text('Phản hồi: ${row['decisionReason'] ?? 'Đang xử lý'}'),
+                      if (row['refundVoucherCode'] != null &&
+                          row['refundVoucherCode'].toString().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Mã Voucher: ${row['refundVoucherCode']}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF065F46),
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Clipboard.setData(
+                                    ClipboardData(
+                                      text: row['refundVoucherCode'].toString(),
+                                    ),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Đã sao chép mã Voucher'),
+                                    ),
+                                  );
+                                },
+                                child: const Text('Sao chép'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if ((row['evidenceUrls'] as List? ?? []).isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: (row['evidenceUrls'] as List)
+                              .map((url) => ImageUtils.resolveUrl(url?.toString()))
+                              .whereType<String>()
+                              .map(
+                                (resolved) => ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    resolved,
+                                    width: 56,
+                                    height: 56,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.broken_image_outlined,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
             ),
             if (value['status'] == 'DELIVERED' && returnsLoaded) ...[
+              const SizedBox(height: 8),
               const Text('Chọn số lượng cần đổi trả'),
               ...(value['items'] as List? ?? []).map((item) {
                 final max = returnable(item);
@@ -418,15 +585,137 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Lý do đổi trả'),
               ),
-              TextField(
-                controller: evidence,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Ảnh/chứng từ: mỗi URL HTTPS một dòng',
-                ),
+              const SizedBox(height: 8),
+              const Text(
+                'Ảnh bằng chứng (tối đa 8 ảnh)',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: busy || uploadingEvidence
+                        ? null
+                        : () => _pickAndUploadEvidence(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined, size: 18),
+                    label: const Text('Chọn ảnh'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: busy || uploadingEvidence
+                        ? null
+                        : () => _pickAndUploadEvidence(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                    label: const Text('Chụp ảnh'),
+                  ),
+                ],
+              ),
+              if (uploadingEvidence)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 6),
+                  child: LinearProgressIndicator(),
+                ),
+              if (evidenceUrls.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: evidenceUrls.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final resolved = ImageUtils.resolveUrl(entry.value) ?? '';
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(
+                            resolved,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(
+                              width: 64,
+                              height: 64,
+                              child: Icon(Icons.image_outlined),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: InkWell(
+                            onTap: () =>
+                                setState(() => evidenceUrls.removeAt(idx)),
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Text(
+                'Hình thức nhận hoàn tiền',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                value: 'BANK_TRANSFER',
+                groupValue: refundMethod,
+                title: const Text('Chuyển khoản ngân hàng'),
+                onChanged: busy
+                    ? null
+                    : (v) => setState(() => refundMethod = v ?? 'BANK_TRANSFER'),
+              ),
+              if (value['userId'] != null)
+                RadioListTile<String>(
+                  contentPadding: EdgeInsets.zero,
+                  value: 'VOUCHER',
+                  groupValue: refundMethod,
+                  title: const Text('Nhận Voucher hoàn tiền ngay (dùng 180 ngày)'),
+                  onChanged: busy
+                      ? null
+                      : (v) => setState(() => refundMethod = v ?? 'VOUCHER'),
+                ),
+              if (refundMethod == 'BANK_TRANSFER') ...[
+                DropdownButtonFormField<String>(
+                  value: selectedBankBin,
+                  decoration: const InputDecoration(labelText: 'Ngân hàng nhận hoàn'),
+                  items: _vietnamBanks
+                      .map(
+                        (b) => DropdownMenuItem(
+                          value: b['bin'],
+                          child: Text(b['name']!),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: busy
+                      ? null
+                      : (v) => setState(() => selectedBankBin = v ?? '970422'),
+                ),
+                TextField(
+                  controller: accountNumber,
+                  decoration: const InputDecoration(labelText: 'Số tài khoản'),
+                ),
+                TextField(
+                  controller: accountName,
+                  decoration: const InputDecoration(labelText: 'Tên chủ tài khoản'),
+                ),
+              ],
+              const SizedBox(height: 12),
               FilledButton(
-                onPressed: busy ? null : () => run(sendReturn),
+                onPressed: busy || uploadingEvidence ? null : () => run(sendReturn),
                 child: const Text('Gửi yêu cầu đổi trả'),
               ),
             ],

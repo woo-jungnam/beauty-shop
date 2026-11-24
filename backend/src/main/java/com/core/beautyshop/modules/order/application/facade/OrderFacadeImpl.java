@@ -142,7 +142,9 @@ public class OrderFacadeImpl implements OrderFacade {
     public Optional<Instant> findPaidAtForUser(Long orderId, Long userId) {
         if (orderId == null || userId == null) return Optional.empty();
         return orderRepository.findById(orderId).filter(order -> !Boolean.TRUE.equals(order.getIsDeleted()))
-                .filter(order -> userId.equals(order.getUserId()) && order.getPaymentStatus() == PaymentStatus.PAID)
+                .filter(order -> userId.equals(order.getUserId())
+                        && (order.getPaymentStatus() == PaymentStatus.PAID
+                            || order.getPaymentStatus() == PaymentStatus.PARTIALLY_REFUNDED))
                 .map(Order::getPaidAt);
     }
 
@@ -281,7 +283,7 @@ public class OrderFacadeImpl implements OrderFacade {
             return true;
         }
 
-        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+        if (order.getPaymentStatus() == PaymentStatus.PAID || order.getPaymentStatus() == PaymentStatus.PARTIALLY_REFUNDED) {
             orderRepository.save(order);
             log.info("Order {} was already paid; recorded the additional transfer", orderNumber);
             return true;
@@ -354,7 +356,8 @@ public class OrderFacadeImpl implements OrderFacade {
         }
         return orderRepository.findById(orderId)
                 .filter(order -> userId.equals(order.getUserId()))
-                .filter(order -> order.getPaymentStatus() == PaymentStatus.PAID)
+                .filter(order -> order.getPaymentStatus() == PaymentStatus.PAID
+                        || order.getPaymentStatus() == PaymentStatus.PARTIALLY_REFUNDED)
                 .isPresent();
     }
 

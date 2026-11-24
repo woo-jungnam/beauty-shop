@@ -202,7 +202,7 @@ export const VouchersPage = () => {
       setModalOpen(false);
       fetchVouchers(page);
     } catch (err) {
-      setFormError(err.message || 'Lỗi lưu thông tin voucher');
+      setFormError(err.message || 'Lỗi lưu mã giảm giá');
     } finally {
       setSubmitting(false);
     }
@@ -210,9 +210,9 @@ export const VouchersPage = () => {
 
   const handleDelete = (voucher) => {
     askConfirm({
-      title: 'Xác nhận xóa voucher',
+      title: 'Xác nhận xóa mã giảm giá',
       message: `Bạn có chắc muốn xóa mã khuyến mãi "${voucher.code || voucher.id}"?`,
-      detail: 'Mã khuyến mãi sẽ được ngừng kích hoạt và ẩn khỏi hệ thống. Lịch sử các đơn hàng đã áp dụng voucher này không bị ảnh hưởng.',
+      detail: 'Mã khuyến mãi sẽ được ngừng kích hoạt và ẩn khỏi hệ thống. Lịch sử các đơn hàng đã áp dụng mã này không bị ảnh hưởng.',
       isPermanent: false,
       onConfirm: async () => {
         await apiClient.delete(ENDPOINTS.VOUCHERS.DELETE(voucher.id));
@@ -223,7 +223,7 @@ export const VouchersPage = () => {
 
   const columns = [
     {
-      header: 'Mã Voucher',
+      header: 'Mã giảm giá',
       accessor: (row) => (
         <div>
           <span
@@ -324,20 +324,20 @@ export const VouchersPage = () => {
         rootTitle="Tiếp thị & Khuyến mãi"
         activeTab={activeSection}
         onChange={setActiveSection}
-        subtitle="Cấu hình mã giảm giá (Vouchers), chiến dịch Flash Sale theo khung giờ và hạn mức suất bán"
+        subtitle="Cấu hình mã giảm giá, chiến dịch giảm giá theo khung giờ và hạn mức suất bán"
         items={[
           {
             id: 'vouchers',
-            label: 'Mã giảm giá Voucher',
+            label: 'Mã giảm giá',
             count: totalElements,
             icon: TicketPercent,
             description: 'Mã coupon giảm giá đơn hàng, điều kiện kích hoạt và giới hạn lượt dùng'
           },
           {
             id: 'flash-sales',
-            label: 'Chiến dịch Flash Sale',
+            label: 'Giảm giá theo khung giờ',
             icon: Zap,
-            description: 'Lên lịch Flash Sale theo giờ vàng, hạn ngạch suất bán và đồng hồ đếm ngược'
+            description: 'Lên lịch giảm giá theo khung giờ, hạn ngạch suất bán và đồng hồ đếm ngược'
           }
         ]}
         actions={
@@ -358,7 +358,7 @@ export const VouchersPage = () => {
                 onClick={handleOpenCreate}
                 icon={Plus}
               >
-                Tạo Voucher mới
+                Tạo mã giảm giá
               </Button>
             </>
           ) : null
@@ -387,7 +387,7 @@ export const VouchersPage = () => {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingVoucher ? `Chỉnh sửa Voucher: ${editingVoucher.code}` : 'Tạo mới mã Voucher'}
+        title={editingVoucher ? `Chỉnh sửa mã giảm giá: ${editingVoucher.code}` : 'Tạo mã giảm giá'}
         maxWidth="620px"
         footer={
           <>
@@ -400,7 +400,7 @@ export const VouchersPage = () => {
               loading={submitting}
               icon={TicketPercent}
             >
-              Lưu Voucher
+              Lưu mã giảm giá
             </Button>
           </>
         }
@@ -423,7 +423,7 @@ export const VouchersPage = () => {
 
           <div className="grid-2" style={{ gap: '12px' }}>
             <Input
-              label="Mã Voucher (Code)"
+              label="Mã giảm giá"
               placeholder="BEAUTY2026, SUMMER50..."
               value={code}
               onChange={(e) => setCode(e.target.value)}

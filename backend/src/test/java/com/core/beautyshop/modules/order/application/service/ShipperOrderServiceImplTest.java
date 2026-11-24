@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.order.application.service;
 
 import com.core.beautyshop.modules.catalog.application.service.MediaStorageService;
+import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
 import com.core.beautyshop.modules.order.application.dto.request.AssignShipperRequest;
 import com.core.beautyshop.modules.order.application.dto.response.OrderResponse;
 import com.core.beautyshop.modules.order.application.dto.response.ShipperOrderView;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -27,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,6 +48,9 @@ class ShipperOrderServiceImplTest {
 
     @Mock
     private OrderService orderService;
+
+    @Spy
+    private OrderMapper orderMapper = new OrderMapper();
 
     @InjectMocks
     private ShipperOrderServiceImpl shipperOrderService;
@@ -72,8 +78,10 @@ class ShipperOrderServiceImplTest {
         testOrder.setId(100L);
 
         OrderItem item = OrderItem.builder()
+                .sku("CERAVE-50")
                 .productName("Kem dưỡng ẩm Cerave")
                 .variantName("50ml")
+                .imageUrl("/uploads/cerave.jpg")
                 .quantity(2)
                 .price(new BigDecimal("250000"))
                 .build();
@@ -96,6 +104,11 @@ class ShipperOrderServiceImplTest {
         assertEquals("Nguyễn Văn A", view.getCustomerName());
         assertEquals(1, view.getItemsSummary().size());
         assertTrue(view.getItemsSummary().get(0).contains("Kem dưỡng ẩm Cerave"));
+        var item = view.getItems().getFirst();
+        assertEquals("CERAVE-50", item.getSku());
+        assertEquals("/uploads/cerave.jpg", item.getImageUrl());
+        assertEquals(2, item.getQuantity());
+        assertEquals(new BigDecimal("250000"), item.getPrice());
     }
 
     @Test
@@ -105,6 +118,27 @@ class ShipperOrderServiceImplTest {
         assertThrows(com.core.beautyshop.shared.exception.ResourceNotFoundException.class,
                 () -> shipperOrderService.startDelivery(100L, 51L));
         verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void detailUsesCatalogImageForLegacyItemWithNoOrderSnapshot() {
+        OrderItem item = testOrder.getItems().getFirst();
+        item.setProductVariantId(12L);
+        item.setImageUrl(null);
+        var variant = ProductVariantSummaryDto.builder()
+                .productId(44L)
+                .productThumbnailUrl("/uploads/catalog-image.jpg")
+                .build();
+        doReturn(Map.of(12L, variant)).when(orderMapper).loadItemVariants(any());
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(testOrder));
+
+        var view = shipperOrderService.getShipperOrderDetail(100L, 50L);
+
+        assertEquals("/uploads/catalog-image.jpg", view.getItems().getFirst().getImageUrl());
+        assertEquals("Kem dưỡng ẩm Cerave", view.getItems().getFirst().getProductName());
+        assertEquals(44L, view.getItems().getFirst().getProductId());
+        assertThrows(com.core.beautyshop.shared.exception.ResourceNotFoundException.class,
+                () -> shipperOrderService.getShipperOrderDetail(100L, 51L));
     }
 
     @Test

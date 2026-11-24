@@ -487,7 +487,7 @@ export const Topbar = ({
             </p>
           </div>
           <Badge variant={health.status === "UP" ? "success" : "warning"}>
-            {health.status}
+            {health.status === "UP" ? "Đang hoạt động" : health.status === "DOWN" ? "Mất kết nối" : "Đang kiểm tra"}
           </Badge>
         </div>
         {health.details && (
@@ -506,7 +506,7 @@ export const Topbar = ({
                 <Badge
                   variant={component?.status === "UP" ? "success" : "warning"}
                 >
-                  {component?.status || "Chưa xác minh"}
+                  {component?.status === "UP" ? "Đang hoạt động" : component?.status === "DOWN" || component?.status === "OUT_OF_SERVICE" ? "Gián đoạn" : "Chưa xác minh"}
                 </Badge>
               </div>
             ))}

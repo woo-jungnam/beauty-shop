@@ -12,6 +12,7 @@ import 'package:beautyshop_shipper/providers/shipper_provider.dart';
 import 'package:beautyshop_shipper/presentation/screens/delivery/delivery_confirmation_screen.dart';
 
 import '../delivery/delivery_history_screen.dart';
+import '../delivery/shipper_order_detail_screen.dart';
 import '../delivery/shipper_stats_screen.dart';
 import '../notification/notification_screen.dart';
 
@@ -653,30 +654,24 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                 ),
                 const SizedBox(height: 10),
 
-                // Items Summary
-                if (order.itemsSummary.isNotEmpty) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.inventory_2_outlined,
-                        size: 18,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          order.itemsSummary.join(' • '),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                    ],
+                if (order.items.isNotEmpty ||
+                    order.itemsSummary.isNotEmpty) ...[
+                  const Text(
+                    'Sản phẩm trong đơn',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
+                  OrderItemsSection(order: order, preview: true),
                   const SizedBox(height: 10),
                 ],
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ShipperOrderDetailScreen(order: order),
+                    ),
+                  ),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text('Xem chi tiết đơn'),
+                ),
 
                 // COD / Payment Info Box
                 Container(

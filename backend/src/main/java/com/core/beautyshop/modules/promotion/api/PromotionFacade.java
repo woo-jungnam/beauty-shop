@@ -6,6 +6,7 @@ public interface PromotionFacade {
     AppliedVoucher validate(String code, Long userId, BigDecimal orderAmount);
     void redeem(AppliedVoucher voucher, Long userId, Long orderId);
     void releaseVoucher(Long orderId);
+    String issueRefundVoucher(Long userId, BigDecimal amount, Long orderId, Long returnId);
 
     record AppliedVoucher(Long id, String code, BigDecimal discountAmount) { }
 }

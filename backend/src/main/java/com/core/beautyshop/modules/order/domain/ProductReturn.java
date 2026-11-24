@@ -20,4 +20,10 @@ public class ProductReturn extends Base {
     @Column(name="replacement_reason",length=500) private String replacementReason;
     @Column(name="replacement_linked_at") private Instant replacementLinkedAt;
     @Column(name="replacement_linked_by") private Long replacementLinkedBy;
+    @Column(name="refund_method",nullable=false,length=30) private String refundMethod="BANK_TRANSFER";
+    @Column(name="refund_bank_bin",length=20) private String refundBankBin;
+    @Column(name="refund_bank_name",length=100) private String refundBankName;
+    @Column(name="refund_account_number",length=50) private String refundAccountNumber;
+    @Column(name="refund_account_name",length=120) private String refundAccountName;
+    @Column(name="refund_voucher_code",length=50) private String refundVoucherCode;
 }

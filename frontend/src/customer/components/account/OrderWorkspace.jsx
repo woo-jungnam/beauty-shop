@@ -43,6 +43,7 @@ import {
   formatCurrency,
   formatDateTime
 } from '../../../shared/utils/formatters';
+import { VIETNAM_BANKS } from '../../../shared/utils/vietnamBanks';
 import { ServiceBookingOrders } from '../../../features/spa/ServiceBookingOrders';
 import { PRODUCT_PLACEHOLDER, resolveProductImage } from '../product/ProductCard';
 
@@ -141,6 +142,7 @@ const statuses = {
   REJECTED: 'Từ chối',
   RECEIVED: 'Đã nhận hàng trả',
   REFUNDED: 'Đã hoàn tiền',
+  PARTIALLY_REFUNDED: 'Đã hoàn một phần',
   REFUND_PENDING: 'Chờ hoàn tiền',
   PAID: 'Đã thanh toán'
 };
@@ -183,6 +185,8 @@ const getPaymentBadgeStyle = (paymentStatus) => {
     case 'UNPAID':
       return { bg: '#FFFBEB', color: '#B45309', border: '#FDE68A' };
     case 'PARTIALLY_PAID':
+      return { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+    case 'PARTIALLY_REFUNDED':
       return { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
     case 'OVERDUE':
     case 'FAILED':
@@ -1202,7 +1206,13 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
   const [reason, setReason] = useState('');
   const returnReplay = useRef({ fingerprint: '', key: '' });
   const operationLock = useRef(false);
-  const [evidence, setEvidence] = useState('');
+  const [evidenceUrls, setEvidenceUrls] = useState([]);
+  const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [refundMethod, setRefundMethod] = useState('BANK_TRANSFER');
+  const [bankBin, setBankBin] = useState(VIETNAM_BANKS[0].bin);
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [copiedVoucher, setCopiedVoucher] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const dialogRequest = useRef(null);
@@ -1277,6 +1287,39 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
   const paymentStyle = order ? getPaymentBadgeStyle(order.paymentStatus) : {};
   const typeBadge = order ? getOrderTypeBadge(order) : null;
   const isSpaOrder = order ? getOrderType(order) !== 'PRODUCT' : false;
+  const canRefundVoucher = Boolean(isAuthenticated || order?.userId);
+
+  const handleEvidenceFiles = async (fileList) => {
+    const picked = Array.from(fileList || []).filter(Boolean);
+    if (!picked.length) return;
+    const slots = Math.max(0, 8 - evidenceUrls.length);
+    if (slots === 0) {
+      setError('Tối đa 8 ảnh bằng chứng cho mỗi yêu cầu đổi trả.');
+      return;
+    }
+    setUploadingEvidence(true);
+    setError('');
+    try {
+      const uploaded = [];
+      for (const file of picked.slice(0, slots)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await apiClient.post(`/api/v1/orders/${order.id}/returns/evidence`, formData, {
+          headers: { 'X-Guest-Session-Id': getGuestSessionId() },
+        });
+        const media = unwrap(res);
+        const url = media?.url || media?.publicUrl;
+        if (url) uploaded.push(url);
+      }
+      if (uploaded.length) {
+        setEvidenceUrls(prev => [...prev, ...uploaded].slice(0, 8));
+      }
+    } catch (err) {
+      setError(err?.message || 'Không thể tải ảnh lên. Vui lòng chọn ảnh JPG/PNG/WEBP dưới 10MB.');
+    } finally {
+      setUploadingEvidence(false);
+    }
+  };
 
   return (
     <Modal
@@ -1860,6 +1903,42 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                     <p style={{ margin: '0 0 4px', fontSize: 12, color: '#6B7280' }}>
                       Sản phẩm: {(row.lines || []).map(line => `${order.items?.find(item => Number(item.id) === Number(line.orderItemId))?.productName || `Dòng #${line.orderItemId}`} × ${line.quantity}`).join(', ')}
                     </p>
+                    <p style={{ margin: '0 0 4px', fontSize: 12, color: '#4B5563' }}>
+                      Hình thức nhận hoàn: <strong>{row.refundMethod === 'VOUCHER' ? 'Voucher hoàn tiền' : 'Chuyển khoản ngân hàng'}</strong>
+                      {row.bankName && row.accountNumber ? ` · ${row.bankName} - ${row.accountNumber} (${row.accountName || ''})` : ''}
+                    </p>
+                    {row.refundVoucherCode && (
+                      <div style={{ margin: '6px 0', padding: '8px 10px', borderRadius: 6, backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12.5, color: '#065F46' }}>
+                          Mã Voucher hoàn tiền: <strong style={{ fontFamily: 'monospace', fontSize: 13.5 }}>{row.refundVoucherCode}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          className="btn-luxury-outline"
+                          style={{ padding: '3px 10px', fontSize: 11.5 }}
+                          onClick={() => {
+                            navigator.clipboard?.writeText(row.refundVoucherCode);
+                            setCopiedVoucher(row.refundVoucherCode);
+                            setTimeout(() => setCopiedVoucher(''), 2500);
+                          }}
+                        >
+                          {copiedVoucher === row.refundVoucherCode ? 'Đã chép' : 'Sao chép mã'}
+                        </button>
+                      </div>
+                    )}
+                    {row.evidenceUrls?.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '6px 0' }}>
+                        {row.evidenceUrls.map((url, idx) => (
+                          <a key={`${url}-${idx}`} href={resolveMediaUrl(url)} target="_blank" rel="noreferrer">
+                            <img
+                              src={resolveMediaUrl(url)}
+                              alt={`Bằng chứng ${idx + 1}`}
+                              style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 6, border: '1px solid #E5E7EB' }}
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     {row.decisionReason && (
                       <p style={{ margin: 0, fontSize: 12, color: '#1E40AF', backgroundColor: '#EFF6FF', padding: '4px 8px', borderRadius: 4 }}>
                         Phản hồi từ shop: {row.decisionReason}
@@ -1881,15 +1960,22 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                         setError('Chọn ít nhất một sản phẩm cần đổi trả.');
                         return;
                       }
+                      if (refundMethod === 'BANK_TRANSFER' && (!accountNumber.trim() || !accountName.trim())) {
+                        setError('Vui lòng nhập đầy đủ số tài khoản và tên chủ tài khoản nhận tiền hoàn.');
+                        return;
+                      }
+                      const bank = VIETNAM_BANKS.find(item => item.bin === bankBin);
                       run(async () => {
                         const payload = {
                           reason: reason.trim(),
                           lines,
-                          evidenceUrls: evidence.split('\n').map(url => url.trim()).filter(Boolean)
+                          evidenceUrls,
+                          refundMethod,
+                          bankBin: refundMethod === 'BANK_TRANSFER' ? (bank?.bin || bankBin) : null,
+                          bankName: refundMethod === 'BANK_TRANSFER' ? (bank?.shortName || bank?.name || 'Ngân hàng') : null,
+                          accountNumber: refundMethod === 'BANK_TRANSFER' ? accountNumber.trim() : null,
+                          accountName: refundMethod === 'BANK_TRANSFER' ? accountName.trim() : null,
                         };
-                        if (payload.evidenceUrls.length > 8 || payload.evidenceUrls.some(url => !/^https?:\/\//i.test(url))) {
-                          throw new Error('Dùng tối đa 8 đường dẫn ảnh HTTP hoặc HTTPS.');
-                        }
                         const fingerprint = JSON.stringify(payload);
                         if (returnReplay.current.fingerprint !== fingerprint) {
                           returnReplay.current = { fingerprint, key: crypto.randomUUID() };
@@ -1902,8 +1988,10 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                         });
                         returnReplay.current = { fingerprint: '', key: '' };
                         setReason('');
-                        setEvidence('');
+                        setEvidenceUrls([]);
                         setQuantities({});
+                        setAccountNumber('');
+                        setAccountName('');
                       });
                     }}
                   >
@@ -1940,20 +2028,114 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                         style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #D1D5DB', minHeight: 70 }}
                       />
                     </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-                      Ảnh/chứng từ (mỗi URL HTTPS một dòng)
-                      <textarea
-                        value={evidence}
-                        onChange={event => setEvidence(event.target.value)}
-                        placeholder="https://example.com/image1.jpg"
-                        style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #D1D5DB', minHeight: 60 }}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                      <span>Ảnh bằng chứng sản phẩm (tối đa 8 ảnh)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        disabled={busy || uploadingEvidence || evidenceUrls.length >= 8}
+                        onChange={event => {
+                          handleEvidenceFiles(event.target.files);
+                          event.target.value = '';
+                        }}
                       />
-                    </label>
+                      {uploadingEvidence && <span style={{ fontSize: 12, color: '#6B7280' }}>Đang tải ảnh lên...</span>}
+                      {evidenceUrls.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {evidenceUrls.map((url, idx) => (
+                            <div key={`${url}-${idx}`} style={{ position: 'relative' }}>
+                              <img
+                                src={resolveMediaUrl(url)}
+                                alt={`Ảnh ${idx + 1}`}
+                                style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid #D1D5DB' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setEvidenceUrls(prev => prev.filter((_, i) => i !== idx))}
+                                title="Xóa ảnh"
+                                style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 0, background: '#EF4444', color: '#fff', fontSize: 11, cursor: 'pointer', lineHeight: '20px', padding: 0 }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                      <span>Hình thức nhận hoàn tiền</span>
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="returnRefundMethod"
+                            value="BANK_TRANSFER"
+                            checked={refundMethod === 'BANK_TRANSFER'}
+                            onChange={() => setRefundMethod('BANK_TRANSFER')}
+                          />
+                          <span>Chuyển khoản ngân hàng</span>
+                        </label>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: canRefundVoucher ? 'pointer' : 'not-allowed', opacity: canRefundVoucher ? 1 : 0.6 }}>
+                          <input
+                            type="radio"
+                            name="returnRefundMethod"
+                            value="VOUCHER"
+                            disabled={!canRefundVoucher}
+                            checked={refundMethod === 'VOUCHER'}
+                            onChange={() => setRefundMethod('VOUCHER')}
+                          />
+                          <span>Nhận Voucher hoàn tiền ngay {!canRefundVoucher ? '(Cần đăng nhập)' : ''}</span>
+                        </label>
+                      </div>
+                    </div>
+                    {refundMethod === 'BANK_TRANSFER' ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5 }}>
+                          Ngân hàng nhận hoàn *
+                          <select
+                            value={bankBin}
+                            onChange={event => setBankBin(event.target.value)}
+                            style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #D1D5DB', backgroundColor: '#fff' }}
+                          >
+                            {VIETNAM_BANKS.map(bank => (
+                              <option key={bank.bin} value={bank.bin}>{bank.shortName} - {bank.name}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5 }}>
+                          Số tài khoản *
+                          <input
+                            required
+                            maxLength={40}
+                            value={accountNumber}
+                            onChange={event => setAccountNumber(event.target.value)}
+                            placeholder="Nhập số tài khoản..."
+                            style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #D1D5DB' }}
+                          />
+                        </label>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5 }}>
+                          Tên chủ tài khoản *
+                          <input
+                            required
+                            maxLength={120}
+                            value={accountName}
+                            onChange={event => setAccountName(event.target.value)}
+                            placeholder="VD: NGUYEN VAN A"
+                            style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #D1D5DB' }}
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, padding: '8px 10px', borderRadius: 6, backgroundColor: '#ECFDF5', color: '#065F46', fontSize: 12 }}>
+                        Sau khi kho kiểm nhận hàng hoàn, hệ thống sẽ cấp mã Voucher cá nhân trị giá đúng bằng tiền hoàn (hạn dùng 180 ngày, không yêu cầu đơn tối thiểu).
+                      </p>
+                    )}
                     <p style={{ margin: 0, fontSize: 12, color: '#6B7280' }}>
                       Yêu cầu được nhân viên xét duyệt; số tiền hoàn hiển thị theo kết quả xử lý.
                     </p>
                     <button
-                      disabled={busy}
+                      disabled={busy || uploadingEvidence}
                       className="btn-luxury-primary"
                       style={{ alignSelf: 'flex-start', padding: '8px 18px', fontSize: 13 }}
                     >

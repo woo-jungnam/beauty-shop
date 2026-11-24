@@ -43,4 +43,6 @@ public class Voucher extends Base {
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
+    @Column(name = "assigned_user_id")
+    private Long assignedUserId;
 }

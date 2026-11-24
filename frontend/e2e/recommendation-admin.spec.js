@@ -14,7 +14,7 @@ async function setup(page, options = {}) {
   }, user);
   const calls = [];
   let values = { ...config };
-  await page.route('**/api/**', async route => {
+  await page.route('**/api/v1/**', async route => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -39,9 +39,8 @@ async function setup(page, options = {}) {
     }
     await route.fulfill({ json: { status: 200, message, data } });
   });
-  await page.goto('/#/admin/operations');
-  await page.getByRole('button', { name: 'Gợi ý Content-Based', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Gợi ý sản phẩm Content-Based' })).toBeVisible();
+  await page.goto('/#/admin/operations?tab=recommendations');
+  await expect(page.getByRole('heading', { name: 'Gợi ý sản phẩm theo nội dung' })).toBeVisible();
   return calls;
 }
 
@@ -88,7 +87,7 @@ test('Popular fallback không có điểm cosine giả', async ({ page }) => {
   await setup(page, { coldStart: true });
   await page.getByLabel('Kiểu gợi ý').selectOption('user');
   await page.getByRole('button', { name: 'Xem gợi ý', exact: true }).click();
-  await expect(page.getByText(/Không áp dụng cho fallback phổ biến/)).toBeVisible();
+  await expect(page.getByText(/Không áp dụng khi gợi ý theo độ phổ biến/)).toBeVisible();
 });
 
 test('Dịch vụ lỗi vẫn tải được cấu hình và không hiển thị online', async ({ page }) => {

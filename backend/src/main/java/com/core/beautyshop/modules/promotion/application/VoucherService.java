@@ -76,6 +76,9 @@ public class VoucherService implements PromotionFacade {
         if (userId == null) throw new BusinessException("Vui lòng đăng nhập để sử dụng mã khuyến mãi");
         Voucher voucher = voucherRepository.findByCodeForUpdate(normalize(code))
                 .orElseThrow(() -> new BusinessException("Mã khuyến mãi không hợp lệ"));
+        if (voucher.getAssignedUserId() != null && !voucher.getAssignedUserId().equals(userId)) {
+            throw new BusinessException("Mã khuyến mãi này được cấp riêng cho tài khoản khác");
+        }
         Instant now = Instant.now();
         if (!Boolean.TRUE.equals(voucher.getIsActive()) || now.isBefore(voucher.getStartsAt()) || !now.isBefore(voucher.getEndsAt())) {
             throw new BusinessException("Mã khuyến mãi chưa kích hoạt hoặc đã hết hạn");
@@ -109,6 +112,9 @@ public class VoucherService implements PromotionFacade {
         }
         Voucher voucher = voucherRepository.findByCodeAndIsDeletedFalse(normalize(code))
                 .orElseThrow(() -> new BusinessException("Mã giảm giá không tồn tại hoặc không hợp lệ"));
+        if (voucher.getAssignedUserId() != null && !voucher.getAssignedUserId().equals(userId)) {
+            throw new BusinessException("Mã giảm giá này được cấp riêng cho tài khoản khác");
+        }
         Instant now = Instant.now();
         if (!Boolean.TRUE.equals(voucher.getIsActive()) || now.isBefore(voucher.getStartsAt()) || !now.isBefore(voucher.getEndsAt())) {
             throw new BusinessException("Mã giảm giá chưa kích hoạt hoặc đã hết hạn sử dụng");
@@ -176,6 +182,43 @@ public class VoucherService implements PromotionFacade {
                 }
             });
         });
+    }
+
+    @Override
+    @Transactional
+    public String issueRefundVoucher(Long userId, BigDecimal amount, Long orderId, Long returnId) {
+        if (userId == null || amount == null || amount.signum() <= 0) {
+            throw new BusinessException("Thông tin cấp voucher hoàn tiền không hợp lệ");
+        }
+        BigDecimal value = amount.setScale(0, RoundingMode.DOWN);
+        if (value.signum() <= 0) {
+            throw new BusinessException("Giá trị voucher hoàn tiền phải lớn hơn 0");
+        }
+        String code;
+        do {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase(Locale.ROOT);
+            code = ("HOAN-" + (orderId == null ? "0" : orderId) + "-" + (returnId == null ? "0" : returnId) + "-" + suffix);
+            if (code.length() > 50) code = code.substring(0, 50);
+        } while (voucherRepository.existsByCodeIgnoreCase(code));
+
+        Instant now = Instant.now();
+        Voucher voucher = Voucher.builder()
+                .code(code)
+                .name("Voucher hoàn tiền đơn #" + (orderId == null ? "" : orderId))
+                .description("Mã giảm giá hoàn tiền cho yêu cầu đổi trả #" + (returnId == null ? "" : returnId))
+                .discountType(DiscountType.FIXED_AMOUNT)
+                .discountValue(value)
+                .minOrderAmount(BigDecimal.ZERO)
+                .startsAt(now.minusSeconds(5))
+                .endsAt(now.plus(java.time.Duration.ofDays(180)))
+                .usageLimit(1)
+                .perUserLimit(1)
+                .usedCount(0)
+                .assignedUserId(userId)
+                .isActive(true)
+                .build();
+        voucherRepository.save(voucher);
+        return voucher.getCode();
     }
 
     private Voucher find(Long id) {
@@ -269,6 +312,7 @@ public class VoucherService implements PromotionFacade {
         Instant now = Instant.now();
         List<Voucher> active = voucherRepository.findActiveVouchers(now);
         return active.stream()
+                .filter(v -> v.getAssignedUserId() == null || (userId != null && v.getAssignedUserId().equals(userId)))
                 .filter(v -> v.getUsageLimit() == null || v.getUsedCount() < v.getUsageLimit())
                 .filter(v -> {
                     if (userId == null) return true;

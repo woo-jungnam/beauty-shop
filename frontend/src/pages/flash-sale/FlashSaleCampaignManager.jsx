@@ -133,7 +133,7 @@ export const FlashSaleCampaignManager = () => {
       setTotalPages(pageData.totalPages ?? 1);
       setTotalElements(pageData.totalElements ?? 0);
     } catch (err) {
-      setFormError(err.message || 'Không thể tải danh sách chiến dịch Flash Sale.');
+      setFormError(err.message || 'Không thể tải danh sách chiến dịch giảm giá theo khung giờ.');
     } finally {
       setLoading(false);
     }
@@ -333,7 +333,7 @@ export const FlashSaleCampaignManager = () => {
     e.preventDefault();
     setFormError('');
     if (!name.trim()) {
-      setFormError('Vui lòng nhập tên chiến dịch Flash Sale');
+      setFormError('Vui lòng nhập tên chiến dịch giảm giá theo khung giờ');
       return;
     }
     if (!startsAt || !endsAt) {
@@ -345,7 +345,7 @@ export const FlashSaleCampaignManager = () => {
       return;
     }
     if (items.length === 0) {
-      setFormError('Vui lòng thêm ít nhất một biến thể SKU tham gia Flash Sale');
+      setFormError('Vui lòng thêm ít nhất một biến thể SKU tham gia giảm giá theo khung giờ');
       return;
     }
 
@@ -358,11 +358,11 @@ export const FlashSaleCampaignManager = () => {
       }
       const priceNum = parseFloat(it.flashPrice);
       if (isNaN(priceNum) || priceNum <= 0) {
-        setFormError(`Dòng #${i + 1}: Giá Flash Sale phải là số dương`);
+        setFormError(`Dòng #${i + 1}: Giá ưu đãi phải là số dương`);
         return;
       }
       if (it.originalPrice > 0 && priceNum >= it.originalPrice) {
-        setFormError(`Dòng #${i + 1}: Giá Flash Sale (${formatCurrency(priceNum)}) phải thấp hơn giá niêm yết gốc (${formatCurrency(it.originalPrice)})`);
+        setFormError(`Dòng #${i + 1}: Giá ưu đãi (${formatCurrency(priceNum)}) phải thấp hơn giá niêm yết gốc (${formatCurrency(it.originalPrice)})`);
         return;
       }
       const quotaNum = parseInt(it.quantityQuota, 10);
@@ -395,12 +395,12 @@ export const FlashSaleCampaignManager = () => {
         setNotice(`Đã cập nhật chiến dịch "${name}" thành công.`);
       } else {
         await apiClient.post(ENDPOINTS.FLASH_SALES.ADMIN_CREATE, payload);
-        setNotice(`Đã tạo chiến dịch Flash Sale "${name}" thành công.`);
+        setNotice(`Đã tạo chiến dịch giảm giá theo khung giờ "${name}" thành công.`);
       }
       setModalOpen(false);
       fetchCampaigns(page);
     } catch (err) {
-      setFormError(err.message || 'Lỗi khi lưu chiến dịch Flash Sale');
+      setFormError(err.message || 'Lỗi khi lưu chiến dịch giảm giá theo khung giờ');
     } finally {
       setSubmitting(false);
     }
@@ -408,9 +408,9 @@ export const FlashSaleCampaignManager = () => {
 
   const handleDelete = (campaign) => {
     askConfirm({
-      title: 'Xác nhận xóa Flash Sale',
+      title: 'Xác nhận xóa chiến dịch giảm giá',
       message: `Bạn có chắc muốn xóa chiến dịch "${campaign.name || `#${campaign.id}`}"?`,
-      detail: 'Chiến dịch Flash Sale sẽ bị kết thúc ngay lập tức và đưa vào lưu trữ ẩn. Khách hàng sẽ không còn mua được giá ưu đãi.',
+      detail: 'Chiến dịch giảm giá sẽ bị kết thúc ngay lập tức và đưa vào lưu trữ ẩn. Khách hàng sẽ không còn mua được giá ưu đãi.',
       isPermanent: false,
       onConfirm: async () => {
         await apiClient.delete(ENDPOINTS.FLASH_SALES.ADMIN_DELETE(campaign.id));
@@ -435,7 +435,7 @@ export const FlashSaleCampaignManager = () => {
       align: 'center',
     },
     {
-      header: 'Tên chiến dịch Flash Sale',
+      header: 'Tên chiến dịch giảm giá theo khung giờ',
       accessor: (row) => (
         <div style={{ minWidth: '220px' }}>
           <strong style={{ color: 'var(--text-main)', fontSize: '13.5px' }}>{row.name}</strong>
@@ -554,7 +554,7 @@ export const FlashSaleCampaignManager = () => {
             <Boxes size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 650 }}>Suất Flash Sale đã bán</div>
+            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', fontWeight: 650 }}>Suất ưu đãi đã bán</div>
             <div style={{ fontSize: '20px', fontWeight: 750, color: 'var(--text-main)', fontVariantNumeric: 'tabular-nums' }}>
               {formatNumber(totalSoldAll)} <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)' }}>suất</span>
             </div>
@@ -580,7 +580,7 @@ export const FlashSaleCampaignManager = () => {
       <div className="card">
         <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <span className="card-title">Danh sách các chiến dịch Flash Sale theo khung giờ</span>
+            <span className="card-title">Danh sách các chiến dịch giảm giá theo khung giờ</span>
             <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
               Tự động kích hoạt giá ưu đãi & đồng hồ đếm ngược trên Trang chủ khi đến khung giờ
             </span>
@@ -590,7 +590,7 @@ export const FlashSaleCampaignManager = () => {
               Làm mới
             </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={handleOpenCreate}>
-              Tạo chiến dịch Flash Sale
+              Tạo chiến dịch giảm giá theo khung giờ
             </Button>
           </div>
         </div>
@@ -599,7 +599,7 @@ export const FlashSaleCampaignManager = () => {
           columns={columns}
           data={campaigns}
           loading={loading}
-          emptyMessage="Chưa có chiến dịch Flash Sale nào. Bấm 'Tạo chiến dịch Flash Sale' để lên lịch khung giờ vàng."
+          emptyMessage="Chưa có chiến dịch giảm giá theo khung giờ nào. Bấm 'Tạo chiến dịch giảm giá theo khung giờ' để lên lịch khung giờ vàng."
           page={page}
           totalPages={totalPages}
           totalElements={totalElements}
@@ -611,7 +611,7 @@ export const FlashSaleCampaignManager = () => {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingCampaign ? `Cập nhật Chiến dịch #${editingCampaign.id}` : 'Lên lịch Chiến dịch Flash Sale Mới'}
+        title={editingCampaign ? `Cập nhật Chiến dịch #${editingCampaign.id}` : 'Lên lịch giảm giá theo khung giờ'}
         maxWidth="980px"
       >
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -626,9 +626,9 @@ export const FlashSaleCampaignManager = () => {
 
           <div className="grid-2">
             <Input
-              label="Tên chiến dịch Flash Sale *"
+              label="Tên chiến dịch giảm giá theo khung giờ *"
               required
-              placeholder="VD: Flash Sale Giờ Vàng Buổi Trưa (12h - 14h)"
+              placeholder="VD: Giảm giá giờ vàng buổi trưa (12h - 14h)"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -675,10 +675,10 @@ export const FlashSaleCampaignManager = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
               <div>
                 <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
-                  Danh mục Biến thể SKU tham gia Flash Sale ({items.length})
+                  Danh mục Biến thể SKU tham gia giảm giá theo khung giờ ({items.length})
                 </strong>
                 <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Giá Flash Sale sẽ tự động áp dụng và trừ vào số suất bán khi khách mua hàng
+                  Giá ưu đãi sẽ tự động áp dụng và trừ vào số suất bán khi khách mua hàng
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -692,7 +692,7 @@ export const FlashSaleCampaignManager = () => {
                     setBatchModalOpen(true);
                   }}
                   style={{ color: 'var(--color-accent-700, #7457e8)', borderColor: 'var(--color-accent-300, #c4b5fd)' }}
-                  title="Xem các lô hàng tồn kho & hạn dùng để chọn vào Flash Sale"
+                  title="Xem các lô hàng tồn kho & hạn dùng để chọn vào chương trình giảm giá"
                 >
                   Xem & Chọn từ Lô Hàng Kho
                 </Button>
@@ -776,7 +776,7 @@ export const FlashSaleCampaignManager = () => {
 
                         <div>
                           <label style={{ fontSize: '10.5px', color: 'var(--color-accent-700)', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
-                            Giá Flash Sale (VNĐ) *
+                            Giá ưu đãi (VNĐ) *
                           </label>
                           <input
                             type="number"
@@ -892,7 +892,7 @@ export const FlashSaleCampaignManager = () => {
                           <span>Giá vốn nhập: <strong>{formatCurrency(it.selectedBatch.costPrice || 0)}</strong></span>
                           {isCostWarning && (
                             <span style={{ color: '#DC2626', fontWeight: 700 }}>
-                              Lưu ý: Giá Flash Sale thấp hơn giá vốn!
+                              Lưu ý: Giá ưu đãi thấp hơn giá vốn!
                             </span>
                           )}
                         </div>
@@ -928,7 +928,7 @@ export const FlashSaleCampaignManager = () => {
       <Modal
         isOpen={batchModalOpen}
         onClose={() => setBatchModalOpen(false)}
-        title="Danh Sách Lô Hàng Kho Bãi & Hạn Sử Dụng (Flash Sale Batch Picker)"
+        title="Chọn lô hàng tham gia giảm giá theo khung giờ"
         maxWidth="960px"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -970,7 +970,7 @@ export const FlashSaleCampaignManager = () => {
             borderRadius: '6px',
             border: '1px solid var(--border-subtle, #eee9f4)'
           }}>
-            <strong>Gợi ý quản trị:</strong> Chọn các lô hàng cận hạn (dưới 90 ngày) để đưa vào khung giờ Flash Sale. Hệ thống sẽ tự động điền số lượng suất bán bằng tồn của lô và gợi ý giá bán tối ưu để giải phóng hàng.
+            <strong>Gợi ý quản trị:</strong> Chọn các lô hàng cận hạn (dưới 90 ngày) để đưa vào khung giờ giảm giá. Hệ thống sẽ tự động điền số lượng suất bán bằng tồn của lô và gợi ý giá bán tối ưu để giải phóng hàng.
           </div>
 
           {/* Table of Batches */}

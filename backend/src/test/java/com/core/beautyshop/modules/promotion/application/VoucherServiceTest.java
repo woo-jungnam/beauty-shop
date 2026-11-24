@@ -73,4 +73,34 @@ class VoucherServiceTest {
         assertEquals(5, voucher.getUsedCount());
         verify(vouchers, never()).save(any());
     }
+
+    @Test
+    void refundVoucherIsRestrictedToAssignedUserAndFilteredFromOtherCustomers() {
+        when(vouchers.existsByCodeIgnoreCase(anyString())).thenReturn(false);
+        when(vouchers.save(any(Voucher.class))).thenAnswer(inv -> {
+            Voucher saved = inv.getArgument(0);
+            saved.setId(99L);
+            return saved;
+        });
+
+        String code = service.issueRefundVoucher(10L, new BigDecimal("150000"), 12L, 34L);
+        assertTrue(code.startsWith("HOAN-12-34-"));
+
+        ArgumentCaptor<Voucher> captor = ArgumentCaptor.forClass(Voucher.class);
+        verify(vouchers).save(captor.capture());
+        Voucher issued = captor.getValue();
+        assertEquals(10L, issued.getAssignedUserId());
+        assertEquals(DiscountType.FIXED_AMOUNT, issued.getDiscountType());
+        assertEquals(new BigDecimal("150000"), issued.getDiscountValue());
+
+        when(vouchers.findByCodeForUpdate(code)).thenReturn(Optional.of(issued));
+        when(usages.countByVoucherIdAndUserIdAndIsDeletedFalse(99L, 10L)).thenReturn(0L);
+        assertThrows(BusinessException.class, () -> service.validate(code, 20L, new BigDecimal("200000")));
+        var applied = service.validate(code, 10L, new BigDecimal("200000"));
+        assertEquals(new BigDecimal("150000"), applied.discountAmount());
+
+        when(vouchers.findActiveVouchers(any())).thenReturn(java.util.List.of(issued));
+        assertTrue(service.getAvailableVouchersForCustomer(20L).isEmpty());
+        assertEquals(1, service.getAvailableVouchersForCustomer(10L).size());
+    }
 }

@@ -385,7 +385,7 @@ export const OrdersPage = () => {
       }
       fetchOrders(page);
     } catch (err) {
-      setErrorMessage(err.message || 'Lỗi điều phối shipper');
+      setErrorMessage(err.message || 'Lỗi phân công tài xế');
     } finally {
       setSubmitting(false);
     }
@@ -567,7 +567,7 @@ export const OrdersPage = () => {
               variant="outline"
               size="sm"
               onClick={() => handleOpenAssignModal(row)}
-              title={row.shipperName ? `Đổi shipper (${row.shipperName})` : 'Điều phối tài xế giao'}
+              title={row.shipperName ? `Đổi tài xế (${row.shipperName})` : 'Điều phối tài xế giao'}
               style={row.shipperName ? { color: '#4F46E5', borderColor: '#818CF8' } : {}}
             >
               <Truck size={14} />
@@ -632,7 +632,7 @@ export const OrdersPage = () => {
               variant="outline"
               size="sm"
               onClick={() => handleOpenAssignModal(row)}
-              title={row.shipperName ? `Đổi shipper (${row.shipperName})` : 'Điều phối tài xế giao'}
+              title={row.shipperName ? `Đổi tài xế (${row.shipperName})` : 'Điều phối tài xế giao'}
               style={row.shipperName ? { color: '#4F46E5', borderColor: '#818CF8' } : {}}
             >
               <Truck size={14} />
@@ -929,6 +929,7 @@ export const OrdersPage = () => {
             <option value="PARTIALLY_PAID">Thanh toán một phần</option>
             <option value="UNPAID">Chưa thanh toán</option>
             <option value="REFUND_PENDING">Chờ hoàn tiền</option>
+            <option value="PARTIALLY_REFUNDED">Đã hoàn một phần</option>
             <option value="REFUNDED">Đã hoàn tiền</option>
             <option value="FAILED">Thanh toán thất bại</option>
           </Select>
@@ -1301,7 +1302,7 @@ export const OrdersPage = () => {
                         {renderRow('Đơn vị vận chuyển:', selectedOrder.carrierName || 'Chưa chỉ định')}
                         {renderRow('Mã vận đơn:', selectedOrder.trackingCode || 'Chưa tạo vận đơn')}
                         {renderRow(
-                          'Tài xế nội bộ (Shipper):',
+                          'Tài xế nội bộ:',
                           selectedOrder.shipperName ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span style={{ fontWeight: 600, color: '#1E293B' }}>
@@ -1642,7 +1643,7 @@ export const OrdersPage = () => {
                     )}
                     {selectedOrder.discountAmount != null && Number(selectedOrder.discountAmount) > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #F1F5F9', fontSize: '12.5px', color: '#059669' }}>
-                        <span>Giảm giá / Voucher:</span>
+                        <span>Mã giảm giá:</span>
                         <span style={{ fontWeight: 600 }}>-{formatCurrency(selectedOrder.discountAmount)}</span>
                       </div>
                     )}
@@ -1854,7 +1855,7 @@ export const OrdersPage = () => {
                 required
               />
               <Input
-                label="Mã vận đơn theo dõi (Tracking Code)"
+                label="Mã vận đơn"
                 placeholder="Ví dụ: GHTK893284920"
                 value={trackingCode}
                 onChange={(e) => setTrackingCode(e.target.value)}

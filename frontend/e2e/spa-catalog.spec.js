@@ -172,7 +172,7 @@ test('service creation retains its saved ID when resource save fails and retries
   await page.getByRole('button', { name: 'Thêm dịch vụ', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Tên dịch vụ', { exact: true }).fill('Trẻ hóa da công nghệ mới');
-  await dialog.getByLabel('Đường dẫn slug').fill('tre-hoa-da-cong-nghe-moi');
+  await dialog.getByLabel('Đường dẫn rút gọn').fill('tre-hoa-da-cong-nghe-moi');
   await dialog.getByLabel('Giá niêm yết (VND)').fill('800000');
   await dialog.getByLabel('Thời gian thực hiện (phút)').fill('60');
   await dialog.getByLabel('Khử trùng / chuẩn bị (phút)').fill('15');

@@ -322,7 +322,7 @@ test('STAFF stops an interrupted treatment item only with an explicit reason', a
   await page.getByRole('button', { name: 'Mở hồ sơ & tiến độ' }).click();
   await page.getByRole('button', { name: 'Chuẩn bị / phân công / thực hiện', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('button', { name: 'Check-in', exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Tiếp nhận khách', exact: true })).toHaveCount(0);
   await expect(dialog.getByText('Cọc, phí hủy/vắng hẹn & hoàn cọc', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Dừng do sự cố', exact: true })).toBeDisabled();
   await dialog.getByLabel('Ghi chú / lý do thao tác').fill('Khách có phản ứng trong lúc thực hiện, đã dừng để đánh giá.');
@@ -344,7 +344,7 @@ test('SPA reception coordinates appointments and receipts without fetching treat
   await page.getByRole('button', { name: 'Mở hồ sơ & tiến độ' }).click();
   await page.getByRole('button', { name: 'Chuẩn bị / phân công / thực hiện', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('button', { name: 'Check-in', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Tiếp nhận khách', exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Xác nhận & phân công', exact: true })).toBeVisible();
   await dialog.getByText('Cọc, phí hủy/vắng hẹn & hoàn cọc', { exact: true }).click();
   await expect(dialog.getByLabel('Loại phiếu')).toBeVisible();

@@ -380,7 +380,7 @@ export const CrmPage = () => {
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm kiếm theo họ tên, username, số điện thoại hoặc email khách hàng..."
+              placeholder="Tìm kiếm theo họ tên, tên đăng nhập, số điện thoại hoặc email khách hàng..."
             />
           </div>
 

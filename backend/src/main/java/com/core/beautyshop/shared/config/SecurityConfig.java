@@ -106,7 +106,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/*/payment-subscription").permitAll()
-                        .requestMatchers("/api/v1/orders/*/returns").permitAll()
+                        .requestMatchers("/api/v1/orders/*/returns", "/api/v1/orders/*/returns/**").permitAll()
                         .requestMatchers(
                                 "/api/v1/cart/**",
                                 "/api/v1/orders/checkout",

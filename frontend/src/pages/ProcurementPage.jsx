@@ -13,7 +13,7 @@ import { DataTable } from '../shared/ui/DataTable';
 import { Badge } from '../shared/ui/Badge';
 import { AlertBanner } from '../shared/ui/AlertBanner';
 import { AdminSectionNav } from '../shared/ui/AdminSectionNav';
-import { formatCurrency, formatDate, formatDateTime } from '../shared/utils/formatters';
+import { getPurchaseOrderStatus, formatCurrency, formatDate, formatDateTime } from '../shared/utils/formatters';
 
 const blankItem = () => ({ variantId: '', quantity: 1, unitCost: '', batchCode: '', expirationDate: '' });
 
@@ -382,14 +382,6 @@ export const ProcurementPage = () => {
     }
   };
 
-  const ORDER_STATUS_MAP = {
-    PARTIALLY_RECEIVED: { label: 'Đã nhận một phần', variant: 'info' },
-    DRAFT: { label: 'Bản nháp', variant: 'warning' },
-    APPROVED: { label: 'Đã duyệt', variant: 'info' },
-    RECEIVED: { label: 'Đã nhập kho', variant: 'success' },
-    CANCELLED: { label: 'Đã hủy', variant: 'danger' },
-  };
-
   const supplierColumns = [
     { header: 'Mã', accessor: 'code' }, { header: 'Nhà cung cấp', accessor: (row) => <strong>{row.name}</strong> },
     { header: 'Liên hệ', accessor: (row) => <div>{row.contactName}<br /><small>{row.phone} · {row.email}</small></div> },
@@ -406,7 +398,7 @@ export const ProcurementPage = () => {
     {
       header: 'Trạng thái',
       accessor: (row) => {
-        const meta = ORDER_STATUS_MAP[row.status] || { label: row.status, variant: 'default' };
+        const meta = getPurchaseOrderStatus(row.status);
         return <Badge variant={meta.variant}>{meta.label}</Badge>;
       },
     },
@@ -490,7 +482,7 @@ export const ProcurementPage = () => {
         <dl className="grid-2">
           <div><dt>Nhà cung cấp</dt><dd>{detail.supplierName}</dd></div>
           <div><dt>Kho nhận hàng</dt><dd>{warehouses.find(w => w.id === detail.warehouseId)?.name || `Kho #${detail.warehouseId}`}</dd></div>
-          <div><dt>Trạng thái</dt><dd><Badge variant={ORDER_STATUS_MAP[detail.status]?.variant || 'default'}>{ORDER_STATUS_MAP[detail.status]?.label || detail.status}</Badge></dd></div>
+          <div><dt>Trạng thái</dt><dd><Badge variant={getPurchaseOrderStatus(detail.status).variant}>{getPurchaseOrderStatus(detail.status).label}</Badge></dd></div>
           <div><dt>Ngày tạo</dt><dd>{formatDateTime(detail.createdAt)}</dd></div>
           <div><dt>Ngày dự kiến nhận</dt><dd>{formatDate(detail.expectedDate)}</dd></div>
           <div><dt>Lần nhập gần nhất</dt><dd>{formatDateTime(detail.receivedAt)}</dd></div>

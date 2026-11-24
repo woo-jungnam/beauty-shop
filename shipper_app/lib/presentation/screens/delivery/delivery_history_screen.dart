@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/shipper_order_model.dart';
 import '../../../providers/shipper_provider.dart';
 import 'delivery_dates.dart';
+import 'shipper_order_detail_screen.dart';
 
 class DeliveryHistoryScreen extends StatefulWidget {
   const DeliveryHistoryScreen({super.key});
@@ -129,6 +130,12 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
             for (final order in group.value)
               Card(
                 child: ListTile(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ShipperOrderDetailScreen(order: order),
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
                   title: Text(
                     '#${order.orderNumber}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -137,7 +144,7 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        order.customerPhone.isEmpty && order.notes != null
+                        !order.hasOrderDetails && order.notes != null
                             ? order.notes!
                             : order.customerName,
                       ),
@@ -145,6 +152,9 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
                         Text(
                           'COD chờ bàn giao: ${currency.format(order.codCollected - order.codRemitted)}',
                         ),
+                      if (order.items.isNotEmpty ||
+                          order.itemsSummary.isNotEmpty)
+                        OrderItemsSection(order: order, preview: true),
                       const SizedBox(height: 6),
                       DecoratedBox(
                         decoration: BoxDecoration(

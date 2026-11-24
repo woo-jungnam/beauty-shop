@@ -5,67 +5,67 @@ export const BOOKING_HERO_POSITION = 'BOOKING_HERO';
 export const BANNER_POSITIONS = [
   {
     value: 'HERO_SLIDE',
-    label: 'Slide chính trang chủ (Hero Slider)',
-    shortLabel: 'Slide chính',
-    group: 'Trang chủ - Hero',
+    label: 'Ảnh trình chiếu đầu trang chủ',
+    shortLabel: 'Ảnh trình chiếu chính',
+    group: 'Đầu trang chủ',
     isSectionBanner: false,
     recommendedRatio: '16:7 (~1600×700px)',
   },
   {
     value: 'HERO_SIDE',
-    label: 'Banner phụ bên cạnh Hero Slider',
-    shortLabel: 'Banner phụ',
-    group: 'Trang chủ - Hero',
+    label: 'Ảnh phụ cạnh ảnh trình chiếu',
+    shortLabel: 'Ảnh phụ',
+    group: 'Đầu trang chủ',
     isSectionBanner: false,
     recommendedRatio: '8:4 (~800×400px)',
   },
   {
     value: 'SECTION_FLASH_SALE',
-    label: 'Banner dưới H2: Flash Sale Giờ Vàng',
-    shortLabel: 'Flash Sale',
-    group: 'Banner Section (Dưới H2)',
+    label: 'Ảnh dưới tiêu đề Giảm giá theo khung giờ',
+    shortLabel: 'Giảm giá theo khung giờ',
+    group: 'Ảnh dưới tiêu đề từng mục',
     isSectionBanner: true,
-    recommendedRatio: 'Full section width (~1600 x 332px)',
+    recommendedRatio: 'Rộng bằng khu vực hiển thị (~1600 x 332px)',
   },
   {
     value: 'SECTION_CATEGORIES',
-    label: '3 banner nhỏ dưới H2: Danh Mục Sản Phẩm',
+    label: '3 ảnh nhỏ dưới tiêu đề Danh mục sản phẩm',
     shortLabel: 'Danh mục SP',
-    group: 'Banner Section (Dưới H2)',
+    group: 'Ảnh dưới tiêu đề từng mục',
     isSectionBanner: true,
-    recommendedRatio: '3:1 (~900 x 300px), tối đa 3 banner theo thứ tự',
+    recommendedRatio: '3:1 (~900 x 300px), tối đa 3 ảnh theo thứ tự',
   },
   {
     value: 'SECTION_BRANDS',
-    label: '3 banner nhỏ dưới H2: Thương Hiệu Đối Tác',
+    label: '3 ảnh nhỏ dưới tiêu đề Thương hiệu đối tác',
     shortLabel: 'Thương hiệu',
-    group: 'Banner Section (Dưới H2)',
+    group: 'Ảnh dưới tiêu đề từng mục',
     isSectionBanner: true,
-    recommendedRatio: '3:1 (~900 x 300px), tối đa 3 banner theo thứ tự',
+    recommendedRatio: '3:1 (~900 x 300px), tối đa 3 ảnh theo thứ tự',
   },
   {
     value: 'SECTION_RECOMMENDATIONS',
-    label: 'Banner dưới H2: Gợi Ý Cho Bạn',
+    label: 'Ảnh dưới tiêu đề Gợi ý cho bạn',
     shortLabel: 'Gợi ý cho bạn',
-    group: 'Banner Section (Dưới H2)',
+    group: 'Ảnh dưới tiêu đề từng mục',
     isSectionBanner: true,
-    recommendedRatio: 'Full section width (~1600 x 332px)',
+    recommendedRatio: 'Rộng bằng khu vực hiển thị (~1600 x 332px)',
   },
   {
     value: 'SECTION_CATALOG',
-    label: 'Banner dưới H2: Tất Cả Sản Phẩm',
+    label: 'Ảnh dưới tiêu đề Tất cả sản phẩm',
     shortLabel: 'Tất cả sản phẩm',
-    group: 'Banner Section (Dưới H2)',
+    group: 'Ảnh dưới tiêu đề từng mục',
     isSectionBanner: true,
-    recommendedRatio: 'Full section width (~1600 x 332px)',
+    recommendedRatio: 'Rộng bằng khu vực hiển thị (~1600 x 332px)',
   },
   {
     value: 'SECTION_SPA',
-    label: 'Banner dưới H2: Dịch Vụ Spa Làm Đẹp',
+    label: 'Ảnh dưới tiêu đề Dịch vụ Spa làm đẹp',
     shortLabel: 'Dịch vụ Spa',
-    group: 'Banner Section (Dưới H2)',
+    group: 'Ảnh dưới tiêu đề từng mục',
     isSectionBanner: true,
-    recommendedRatio: 'Full section width (~1600 x 332px)',
+    recommendedRatio: 'Rộng bằng khu vực hiển thị (~1600 x 332px)',
   },
   {
     value: TREATMENT_HERO_POSITION,
@@ -99,8 +99,8 @@ export const BANNER_POSITIONS = [
   },
   {
     value: 'PROMO',
-    label: 'Khuyến mãi khác / Promo chung',
-    shortLabel: 'Khác (Promo)',
+    label: 'Khuyến mãi khác',
+    shortLabel: 'Khác',
     group: 'Khác',
     isSectionBanner: false,
     recommendedRatio: 'Tùy chọn',
@@ -113,7 +113,7 @@ export const BANNER_POSITION_MAP = Object.fromEntries(
 
 export function getBannerPositionLabel(position) {
   if (!position) return 'Mặc định';
-  return BANNER_POSITION_MAP[position]?.shortLabel || BANNER_POSITION_MAP[position]?.label || position;
+  return BANNER_POSITION_MAP[position]?.shortLabel || BANNER_POSITION_MAP[position]?.label || 'Vị trí chưa xác định';
 }
 
 export function isSectionBanner(position) {

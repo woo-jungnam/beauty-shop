@@ -1009,7 +1009,7 @@ export const ProductsPage = () => {
         prev.map((b) => (b.id === banner.id ? { ...b, isActive: targetStatus } : b))
       );
     } catch (err) {
-      alert(err.message || 'Lỗi cập nhật trạng thái banner');
+      alert(err.message || 'Lỗi cập nhật trạng thái ảnh quảng cáo');
       fetchBanners();
     } finally {
       setTogglingBannerId(null);
@@ -1059,15 +1059,15 @@ export const ProductsPage = () => {
   const handleSubmitBanner = async (e) => {
     e.preventDefault();
     if (!bannerForm.title || !bannerForm.title.trim()) {
-      alert('Vui lòng nhập tên banner / mô tả ảnh.');
+      alert('Vui lòng nhập tên ảnh quảng cáo / mô tả ảnh.');
       return;
     }
     if (!bannerForm.imageUrl || !bannerForm.imageUrl.trim()) {
-      alert('Vui lòng chọn hoặc nhập đường dẫn ảnh banner.');
+      alert('Vui lòng chọn hoặc nhập đường dẫn ảnh quảng cáo.');
       return;
     }
     if (!bannerForm.position) {
-      alert('Vui lòng chọn vị trí hiển thị cho banner.');
+      alert('Vui lòng chọn vị trí hiển thị cho ảnh quảng cáo.');
       return;
     }
     if (bannerForm.sortOrder < 0 || isNaN(bannerForm.sortOrder)) {
@@ -1097,7 +1097,7 @@ export const ProductsPage = () => {
       setBannerModalOpen(false);
       fetchBanners();
     } catch (err) {
-      alert(err.message || 'Lỗi lưu banner');
+      alert(err.message || 'Lỗi lưu ảnh quảng cáo');
     } finally {
       setBannerSubmitting(false);
     }
@@ -1105,9 +1105,9 @@ export const ProductsPage = () => {
 
   const handleDeleteBanner = (id) => {
     askConfirm({
-      title: 'Xác nhận xóa banner',
-      message: `Bạn có chắc muốn xóa banner #${id}?`,
-      detail: 'Banner quảng bá sẽ được gỡ khỏi vị trí hiển thị và đưa vào lưu trữ ẩn.',
+      title: 'Xác nhận xóa ảnh quảng cáo',
+      message: `Bạn có chắc muốn xóa ảnh quảng cáo #${id}?`,
+      detail: 'Ảnh quảng cáo sẽ được gỡ khỏi vị trí hiển thị và đưa vào lưu trữ ẩn.',
       isPermanent: false,
       onConfirm: async () => {
         await apiClient.delete(ENDPOINTS.CATALOG.BANNER_DETAIL(id));
@@ -1454,7 +1454,7 @@ export const ProductsPage = () => {
   const tagColumns = [
     { header: 'ID', accessor: 'id', width: '70px' },
     { header: 'Tên thẻ', accessor: (row) => <strong style={{ color: 'var(--text-main)' }}>{row.name}</strong> },
-    { header: 'Slug', accessor: (row) => <code style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{row.slug}</code> },
+    { header: 'Đường dẫn rút gọn', accessor: (row) => <code style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{row.slug}</code> },
     { header: 'Số sản phẩm gắn', accessor: (row) => row.productCount ?? 0, width: '140px', align: 'center' },
     {
       header: 'Thao tác',
@@ -1496,7 +1496,7 @@ export const ProductsPage = () => {
       width: '135px'
     },
     {
-      header: 'Tên banner',
+      header: 'Tên ảnh quảng cáo',
       accessor: (row) => (
         <div>
           <strong style={{ fontSize: '13px', display: 'block', color: 'var(--text-main)' }}>{row.title}</strong>
@@ -1539,7 +1539,7 @@ export const ProductsPage = () => {
           type="button"
           onClick={() => handleToggleBannerStatus(row)}
           disabled={togglingBannerId === row.id}
-          title={row.isActive ? 'Bấm để Tắt banner này trên giao diện' : 'Bấm để Bật banner này'}
+          title={row.isActive ? 'Bấm để Tắt ảnh quảng cáo này trên giao diện' : 'Bấm để Bật ảnh quảng cáo này'}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -1579,8 +1579,8 @@ export const ProductsPage = () => {
       header: 'Thao tác',
       accessor: (row) => (
         <div className="table-actions">
-          <Button variant="outline" size="sm" onClick={() => handleOpenEditBanner(row)} icon={Edit} title="Sửa banner" />
-          <Button variant="outline" size="sm" onClick={() => handleDeleteBanner(row.id)} icon={Trash2} title="Xóa banner" />
+          <Button variant="outline" size="sm" onClick={() => handleOpenEditBanner(row)} icon={Edit} title="Sửa ảnh quảng cáo" />
+          <Button variant="outline" size="sm" onClick={() => handleDeleteBanner(row.id)} icon={Trash2} title="Xóa ảnh quảng cáo" />
         </div>
       ),
       align: 'right',
@@ -1643,7 +1643,7 @@ export const ProductsPage = () => {
       width: '140px',
     },
     {
-      header: 'Đường dẫn Slug',
+      header: 'Đường dẫn rút gọn',
       accessor: (row) => (
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--color-primary-600, #2563eb)' }}>
           /{row.slug}
@@ -1797,10 +1797,10 @@ export const ProductsPage = () => {
           },
           {
             id: 'banners',
-            label: 'Ảnh bìa & Banner quảng cáo',
+            label: 'Ảnh bìa và ảnh quảng cáo',
             count: banners.length,
             icon: Image,
-            description: 'Banner quảng bá truyền thông và trang chủ'
+            description: 'Ảnh quảng bá trên trang chủ'
           }
         ]}
         actions={
@@ -1847,7 +1847,7 @@ export const ProductsPage = () => {
             )}
             {activeTab === 'banners' && (
               <Button variant="primary" size="sm" onClick={handleOpenCreateBanner} icon={Plus}>
-                Thêm banner mới
+                Thêm ảnh quảng cáo mới
               </Button>
             )}
             <Button
@@ -1929,7 +1929,7 @@ export const ProductsPage = () => {
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
                 <div style={{ minWidth: '240px', flex: 1, maxWidth: '360px' }}>
                   <Input
-                    placeholder="Tìm kiếm danh mục theo tên, slug..."
+                    placeholder="Tìm kiếm danh mục theo tên hoặc đường dẫn rút gọn..."
                     value={catSearch}
                     onChange={(e) => setCatSearch(e.target.value)}
                   />
@@ -2044,7 +2044,7 @@ export const ProductsPage = () => {
                     className={`btn btn-sm ${bannerFilterPosition === 'HERO_SLIDE' ? 'btn-primary' : 'btn-outline'}`}
                     style={{ borderRadius: '16px', fontSize: '12px', padding: '4px 12px' }}
                   >
-                    Slide Hero ({banners.filter((b) => b.position === 'HERO_SLIDE').length})
+                    Ảnh trình chiếu đầu trang ({banners.filter((b) => b.position === 'HERO_SLIDE').length})
                   </button>
                   <button
                     type="button"
@@ -2052,7 +2052,7 @@ export const ProductsPage = () => {
                     className={`btn btn-sm ${bannerFilterPosition === 'SECTIONS' ? 'btn-primary' : 'btn-outline'}`}
                     style={{ borderRadius: '16px', fontSize: '12px', padding: '4px 12px' }}
                   >
-                    Banner dài Section ({banners.filter((b) => isSectionBanner(b.position)).length})
+                    Ảnh quảng cáo theo khu vực ({banners.filter((b) => isSectionBanner(b.position)).length})
                   </button>
                 </div>
               </div>
@@ -2063,7 +2063,7 @@ export const ProductsPage = () => {
                   onChange={(e) => setBannerFilterPosition(e.target.value)}
                   options={[
                     { label: `Tất cả vị trí (${banners.length})`, value: 'ALL' },
-                    { label: `Chỉ banner dài Section (${banners.filter((b) => isSectionBanner(b.position)).length})`, value: 'SECTIONS' },
+                    { label: `Chỉ ảnh quảng cáo theo khu vực (${banners.filter((b) => isSectionBanner(b.position)).length})`, value: 'SECTIONS' },
                     ...BANNER_POSITIONS.map((p) => ({
                       label: `${p.label} (${banners.filter((b) => b.position === p.value).length})`,
                       value: p.value,
@@ -2072,7 +2072,7 @@ export const ProductsPage = () => {
                   style={{ minWidth: '240px', fontSize: '12.5px' }}
                 />
                 <Badge variant="outline">
-                  {filteredBanners.length} banner ({activeCount} bật / {inactiveCount} tắt)
+                  {filteredBanners.length} ảnh quảng cáo ({activeCount} bật / {inactiveCount} tắt)
                 </Badge>
               </div>
             </div>
@@ -2083,8 +2083,8 @@ export const ProductsPage = () => {
               loading={false}
               emptyMessage={
                 bannerFilterPosition === 'ALL'
-                  ? 'Chưa có banner quảng cáo nào.'
-                  : `Không có banner nào ở vị trí "${getBannerPositionLabel(bannerFilterPosition)}".`
+                  ? 'Chưa có ảnh quảng cáo nào.'
+                  : `Không có ảnh quảng cáo nào ở vị trí "${getBannerPositionLabel(bannerFilterPosition)}".`
               }
             />
           </div>
@@ -2104,7 +2104,7 @@ export const ProductsPage = () => {
           {productDetailLoading && !productFormError && <p role="status">Đang tải thông tin đầy đủ; chưa thể lưu.</p>}
           <div className="grid-2">
             <Input label="Tên sản phẩm *" value={name} onChange={(e) => setName(e.target.value)} required />
-            <Input label="Đường dẫn Slug (tự tạo nếu để trống)" value={slug} onChange={(e) => setSlug(e.target.value)} />
+            <Input label="Đường dẫn rút gọn (tự tạo nếu để trống)" value={slug} onChange={(e) => setSlug(e.target.value)} />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <div>
@@ -2677,9 +2677,9 @@ export const ProductsPage = () => {
           <div className="grid-2" style={{ marginTop: '12px', alignItems: 'flex-start' }}>
             <Input label="Giá bán niêm yết (VNĐ) *" type="number" value={varPrice} onChange={(e) => setVarPrice(e.target.value)} required />
             <div>
-              <Input label="Giá Flash Sale / Khuyến mãi (VNĐ)" type="number" value={varDiscountPrice} onChange={(e) => setVarDiscountPrice(e.target.value)} placeholder="Nhập để đưa vào Flash Sale" />
+              <Input label="Giá khuyến mãi (VNĐ)" type="number" value={varDiscountPrice} onChange={(e) => setVarDiscountPrice(e.target.value)} placeholder="Nhập để tham gia giảm giá theo khung giờ" />
               <small style={{ color: '#DC2626', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-                Nhập giá nhỏ hơn giá niêm yết để sản phẩm này tự động tham gia cụm Flash Sale trên Trang chủ.
+                Nhập giá nhỏ hơn giá niêm yết để sản phẩm này tự động tham gia mục giảm giá theo khung giờ trên Trang chủ.
               </small>
             </div>
           </div>
@@ -2717,7 +2717,7 @@ export const ProductsPage = () => {
 
           <div style={{ marginTop: '12px' }}>
             <Input
-              label="Đường dẫn Slug (tự tạo nếu để trống)"
+              label="Đường dẫn rút gọn (tự tạo nếu để trống)"
               value={catSlug}
               onChange={(e) => setCatSlug(e.target.value)}
               placeholder="cham-soc-da-mat"
@@ -2856,7 +2856,7 @@ export const ProductsPage = () => {
         <form onSubmit={handleSubmitBrand}>
           <Input label="Tên thương hiệu *" value={brandName} onChange={(e) => setBrandName(e.target.value)} required />
           <div style={{ marginTop: '12px' }}>
-            <Input label="Đường dẫn Slug" value={brandSlug} onChange={(e) => setBrandSlug(e.target.value)} />
+            <Input label="Đường dẫn rút gọn" value={brandSlug} onChange={(e) => setBrandSlug(e.target.value)} />
           </div>
           <div style={{ marginTop: '12px' }}>
             <Input label="Quốc gia xuất xứ" value={brandCountry} onChange={(e) => setBrandCountry(e.target.value)} placeholder="Pháp, Hàn Quốc, Nhật Bản..." />
@@ -2910,7 +2910,7 @@ export const ProductsPage = () => {
             <Input label="Tên khoa học quốc tế (INCI Name) *" value={ingInci} onChange={(e) => setIngInci(e.target.value)} required placeholder="VD: Nicotinamide, Vitamin B3" />
           </div>
           <div style={{ marginTop: '12px' }}>
-            <Input label="Mã Slug *" value={ingSlug} onChange={(e) => setIngSlug(e.target.value)} required placeholder="niacinamide" />
+            <Input label="Đường dẫn rút gọn *" value={ingSlug} onChange={(e) => setIngSlug(e.target.value)} required placeholder="niacinamide" />
           </div>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Input label="Điểm an toàn EWG (1-10)" type="number" min="1" max="10" value={ingEwg} onChange={(e) => setIngEwg(e.target.value)} />
@@ -3162,12 +3162,12 @@ export const ProductsPage = () => {
       <Modal
         isOpen={bannerModalOpen}
         onClose={() => setBannerModalOpen(false)}
-        title={editingBanner ? `Cập nhật Banner #${editingBanner.id}` : 'Thêm Banner Quảng Cáo Mới'}
+        title={editingBanner ? `Cập nhật ảnh quảng cáo #${editingBanner.id}` : 'Thêm ảnh quảng cáo'}
         maxWidth="600px"
       >
         <form onSubmit={handleSubmitBanner}>
           <Input
-            label="Tên banner / mô tả ảnh *"
+            label="Tên ảnh quảng cáo / mô tả ảnh *"
             value={bannerForm.title}
             onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })}
             required
@@ -3176,7 +3176,7 @@ export const ProductsPage = () => {
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Tên dùng để quản lý và mô tả ảnh cho trình đọc màn hình.</p>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Select
-              label="Vị trí hiển thị banner *"
+              label="Vị trí hiển thị ảnh quảng cáo *"
               value={bannerForm.position}
               onChange={(e) => {
                 const newPos = e.target.value;
@@ -3205,7 +3205,7 @@ export const ProductsPage = () => {
           </div>
           <div className="form-group" style={{ marginTop: '12px' }}>
             <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>
-              Hình ảnh banner *
+              Ảnh quảng cáo *
             </label>
             <div className="media-upload-zone" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
               <div
@@ -3224,7 +3224,7 @@ export const ProductsPage = () => {
                 {bannerForm.imageUrl ? (
                   <img
                     src={resolveMediaUrl(bannerForm.imageUrl)}
-                    alt="Banner preview"
+                    alt="Xem trước ảnh quảng cáo"
                     className="media-preview-img"
                     style={{ objectFit: 'cover' }}
                     onError={(e) => { e.currentTarget.style.opacity = '0.3'; }}
@@ -3289,20 +3289,20 @@ export const ProductsPage = () => {
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
             {bannerForm.position === TREATMENT_HERO_POSITION
-              ? 'Lộ trình chăm sóc: Dùng ảnh ngang khoảng 1200 × 500 px. Trang hiển thị một banner đang bật, ưu tiên thứ tự nhỏ nhất. Dùng #treatment-catalog để cuộn tới danh sách lộ trình.'
+              ? 'Lộ trình chăm sóc: Dùng ảnh ngang khoảng 1200 × 500 px. Trang hiển thị một ảnh quảng cáo đang bật, ưu tiên thứ tự nhỏ nhất. Dùng #treatment-catalog để cuộn tới danh sách lộ trình.'
               : bannerForm.position === CATALOG_HERO_POSITION
-              ? 'Danh sách sản phẩm: Dùng ảnh ngang khoảng 1600 × 332 px. Trang hiển thị một banner đang bật, ưu tiên thứ tự nhỏ nhất. Dùng #catalog-results để cuộn tới danh sách.'
+              ? 'Danh sách sản phẩm: Dùng ảnh ngang khoảng 1600 × 332 px. Trang hiển thị một ảnh quảng cáo đang bật, ưu tiên thứ tự nhỏ nhất. Dùng #catalog-results để cuộn tới danh sách.'
               : bannerForm.position === BOOKING_HERO_POSITION
-              ? 'Đặt lịch Spa: Dùng ảnh ngang khoảng 1600 × 360 px. Banner xuất hiện phía trên phần giới thiệu. Dùng #spa-booking-form để cuộn tới bước chọn dịch vụ.'
+              ? 'Đặt lịch Spa: Dùng ảnh ngang khoảng 1600 × 360 px. Ảnh quảng cáo xuất hiện phía trên phần giới thiệu. Dùng #spa-booking-form để cuộn tới bước chọn dịch vụ.'
               : bannerForm.position === 'SECTION_BRANDS'
-              ? 'Thương hiệu: Tạo 3 banner riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 banner đang bật theo thứ tự tăng dần, dưới tiêu đề thương hiệu. Mỗi banner có ảnh và liên kết riêng.'
+              ? 'Thương hiệu: Tạo 3 ảnh quảng cáo riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 ảnh quảng cáo đang bật theo thứ tự tăng dần, dưới tiêu đề thương hiệu. Mỗi ảnh có liên kết riêng.'
               : bannerForm.position === 'SECTION_CATEGORIES'
-              ? 'Danh mục: Tạo 3 banner riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 banner đang bật theo thứ tự tăng dần, ngay dưới tiêu đề H2 danh mục. Mỗi banner có ảnh và liên kết riêng.'
+              ? 'Danh mục: Tạo 3 ảnh quảng cáo riêng tại vị trí này, ảnh ngang 900 x 300px (3:1). Trang chủ hiển thị tối đa 3 ảnh quảng cáo đang bật theo thứ tự tăng dần, ngay dưới tiêu đề danh mục. Mỗi ảnh có liên kết riêng.'
               : isSectionBanner(bannerForm.position)
-              ? 'Banner section: Ngang bằng section, cao tối đa 332px; tự thu gọn trên điện thoại. Ảnh gợi ý 1600 x 332px, cắt căn giữa để vừa khung.'
+              ? 'Ảnh quảng cáo theo khu vực: Rộng bằng khu vực hiển thị, cao tối đa 332px; tự thu gọn trên điện thoại. Ảnh gợi ý 1600 x 332px, cắt căn giữa để vừa khung.'
               : bannerForm.position === 'HERO_SIDE'
-              ? '💡 Banner phụ Hero: Nên dùng ảnh ngang tỉ lệ ~2:1 (khoảng 800×400 px).'
-              : '💡 Slide chính Hero: Nên dùng ảnh ngang tỉ lệ ~16:7 (khoảng 1600×700 px).'}
+              ? '💡 Ảnh phụ ở đầu trang: Nên dùng ảnh ngang tỉ lệ ~2:1 (khoảng 800×400 px).'
+              : '💡 Ảnh trình chiếu đầu trang: Nên dùng ảnh ngang tỉ lệ ~16:7 (khoảng 1600×700 px).'}
           </p>
           <div className="grid-2" style={{ marginTop: '12px' }}>
             <Input
@@ -3326,7 +3326,7 @@ export const ProductsPage = () => {
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
             <Button variant="outline" type="button" onClick={() => setBannerModalOpen(false)}>Hủy</Button>
             <Button variant="primary" type="submit" loading={bannerSubmitting} disabled={bannerUploading}>
-              {bannerUploading ? 'Đang tải ảnh...' : 'Lưu banner'}
+              {bannerUploading ? 'Đang tải ảnh...' : 'Lưu ảnh quảng cáo'}
             </Button>
           </div>
         </form>

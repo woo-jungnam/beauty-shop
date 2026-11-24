@@ -97,7 +97,7 @@ export const ADMIN_SECTIONS = [
       {
         id: "products",
         subTab: "banners",
-        label: "Ảnh bìa & Banner",
+        label: "Ảnh bìa và ảnh quảng cáo",
         description: "Ảnh hiển thị trên trang chủ, danh sách sản phẩm, đặt lịch Spa và lộ trình",
         icon: Image,
         role: "ROLE_STAFF",
@@ -111,7 +111,7 @@ export const ADMIN_SECTIONS = [
       {
         id: "spa-reception",
         label: "Lễ tân & Thu ngân quầy",
-        description: "Tiếp đón, check-in, chỉ định KTV & thu ngân tại quầy",
+        description: "Tiếp nhận khách, chỉ định kỹ thuật viên và thu ngân tại quầy",
         icon: UserCheck,
         role: "ROLE_STAFF",
         keywords:
@@ -178,8 +178,8 @@ export const ADMIN_SECTIONS = [
         role: "ROLE_STAFF",
         keywords: "voucher promotion giảm giá ưu đãi khuyến mãi",
         subItems: [
-          { id: "vouchers", label: "Mã giảm giá Voucher" },
-          { id: "flash-sales", label: "Chiến dịch Flash Sale" },
+          { id: "vouchers", label: "Mã giảm giá" },
+          { id: "flash-sales", label: "Giảm giá theo khung giờ" },
         ],
       },
     ],
@@ -208,7 +208,7 @@ export const ADMIN_SECTIONS = [
         keywords: "user account tài khoản phân quyền bảo mật nhân viên",
         subItems: [
           { id: "users", label: "Danh sách tài khoản" },
-          { id: "roles", label: "Vai trò & Phân quyền RBAC" },
+          { id: "roles", label: "Vai trò và phân quyền" },
         ],
       },
       {
@@ -220,7 +220,7 @@ export const ADMIN_SECTIONS = [
         keywords:
           "system audit cấu hình kiểm toán chatbot ai rag vector qdrant nlu thao tác",
         subItems: [
-          { id: "audit", label: "Nhật ký thao tác (Audit)" },
+          { id: "audit", label: "Nhật ký thao tác" },
           { id: "config", label: "Chỉ tiêu & Cấu hình" },
           { id: "chatbot", label: "Trợ lý tư vấn AI" },
           { id: "recommendations", label: "Gợi ý sản phẩm tương tự" },

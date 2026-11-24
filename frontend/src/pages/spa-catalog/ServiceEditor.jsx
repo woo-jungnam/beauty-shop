@@ -113,7 +113,7 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
     if (submitting.current || !resourceLoaded || uncertain) return;
     const payload = payloadOf(form);
     if (!payload.name || payload.name.length > 150 || !payload.slug || payload.slug.length > 150 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.slug)) {
-      setTab('info'); setError('Tên dịch vụ và slug phải từ 1 đến 150 ký tự. Slug dùng chữ thường không dấu, số và dấu gạch ngang.'); return;
+      setTab('info'); setError('Tên dịch vụ và đường dẫn rút gọn phải có từ 1 đến 150 ký tự. Đường dẫn dùng chữ thường không dấu, số và dấu gạch ngang.'); return;
     }
     if (form.basePrice === '' || !Number.isSafeInteger(payload.basePrice) || payload.basePrice < 0 || payload.basePrice > 99999999) { setTab('info'); setError('Giá niêm yết phải là số nguyên từ 0 đến 99.999.999 VND.'); return; }
     if (!Number.isInteger(payload.durationMinutes) || payload.durationMinutes <= 0 || form.preparationTimeMinutes === '' || !Number.isInteger(payload.preparationTimeMinutes) || payload.preparationTimeMinutes < 0 || payload.durationMinutes + payload.preparationTimeMinutes > 720) {
@@ -139,7 +139,7 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
         const saved = unwrap(response);
         if (!Number.isSafeInteger(Number(saved?.id)) || Number(saved.id) <= 0) {
           if (creating) setUncertain(true);
-          throw new Error('Chưa xác minh được mã dịch vụ sau khi lưu. Vui lòng làm mới danh mục và kiểm tra slug.');
+          throw new Error('Chưa xác minh được mã dịch vụ sau khi lưu. Vui lòng làm mới danh mục và kiểm tra đường dẫn rút gọn.');
         }
         serviceId.current = saved.id;
         stagedCreate.current = staging;
@@ -162,7 +162,7 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
         setError('Thông tin dịch vụ đã được lưu, nhưng cấu hình tài nguyên / kích hoạt chưa hoàn tất. ' + (stagedCreate.current && resourcesPending ? 'Dịch vụ mới vẫn tạm dừng để tránh nhận lịch thiếu tài nguyên. ' : stagedCreate.current ? 'Tài nguyên đã lưu; cần kiểm tra lại trạng thái kích hoạt. ' : '') + spaErrorMessage(err, 'Vui lòng kiểm tra và bấm lưu lại; hệ thống sẽ dùng đúng dịch vụ vừa tạo.'));
         onSaved('Đã lưu thông tin dịch vụ. Cần hoàn tất tài nguyên và trạng thái hoạt động.', 'warning');
       } else if (creating && (!(err.status || err.response?.status) || (err.status || err.response?.status) >= 500)) {
-        setUncertain(true); setError('Kết nối gián đoạn khi tạo dịch vụ. Vui lòng đóng cửa sổ, làm mới danh mục và kiểm tra slug trước khi tạo lại.');
+        setUncertain(true); setError('Kết nối gián đoạn khi tạo dịch vụ. Vui lòng đóng cửa sổ, làm mới danh mục và kiểm tra đường dẫn rút gọn trước khi tạo lại.');
         onSaved('Vui lòng kiểm tra danh mục trước khi tạo lại dịch vụ.', 'warning');
       } else setError(spaErrorMessage(err, 'Chưa lưu được dịch vụ. Vui lòng kiểm tra thông tin và thử lại.'));
     } finally { submitting.current = false; setBusy(false); }
@@ -195,7 +195,7 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
             <Input label="Tên dịch vụ" required maxLength={150} value={form.name} onChange={event => handleNameChange(event.target.value)} placeholder="Ví dụ: Phục hồi da chuyên sâu" />
             <Select label="Loại dịch vụ" value={form.serviceType} onChange={event => update('serviceType', event.target.value)} options={[{ value: 'SINGLE_SESSION', label: 'Một lần — sử dụng trong ngày hẹn' }, { value: 'TREATMENT_COURSE', label: 'Điều trị theo lộ trình — nhiều buổi có theo dõi' }]} helperText="Dịch vụ theo lộ trình cần mẫu đã xuất bản tại mục Lộ trình điều trị trước khi khách mua." />
             <div style={{ position: 'relative' }}>
-              <Input label="Đường dẫn slug" maxLength={150} value={form.slug} onChange={event => update('slug', event.target.value)} helperText={`Đường dẫn: /${form.slug || slugify(form.name) || 'ten-dich-vu'} · Tự động sinh từ tên dịch vụ.`} placeholder="phuc-hoi-da-chuyen-sau" />
+              <Input label="Đường dẫn rút gọn" maxLength={150} value={form.slug} onChange={event => update('slug', event.target.value)} helperText={`Đường dẫn: /${form.slug || slugify(form.name) || 'ten-dich-vu'} · Tự động sinh từ tên dịch vụ.`} placeholder="phuc-hoi-da-chuyen-sau" />
               {form.name && (
                 <button
                   type="button"
@@ -211,9 +211,9 @@ export const ServiceEditor = ({ service, categories, facilities, initialTab = 'i
                     cursor: 'pointer',
                     fontWeight: 600
                   }}
-                  title="Tạo lại slug từ tên hiện tại"
+                  title="Tạo lại đường dẫn từ tên hiện tại"
                 >
-                  Tạo lại slug
+                  Tạo lại đường dẫn
                 </button>
               )}
             </div>

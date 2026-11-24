@@ -35,6 +35,7 @@ assert.equal(getOrderStatusBadge('RETURN_TO_SENDER').text, 'Hàng hoàn về kho
 
 // Test 3: getPaymentStatusBadge
 assert.equal(getPaymentStatusBadge('PARTIALLY_PAID').text, 'Thanh toán một phần');
+assert.equal(getPaymentStatusBadge('PARTIALLY_REFUNDED').text, 'Đã hoàn một phần');
 assert.equal(getPaymentStatusBadge('UNPAID').text, 'Chưa thanh toán');
 assert.equal(getPaymentStatusBadge('OVERDUE').text, 'Quá hạn thanh toán');
 assert.equal(getPaymentStatusBadge('PAID').text, 'Đã thanh toán');

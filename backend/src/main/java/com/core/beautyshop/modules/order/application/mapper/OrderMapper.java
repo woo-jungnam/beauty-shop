@@ -36,12 +36,7 @@ public class OrderMapper {
             return null;
         }
 
-        List<Long> variantIds = (order.getItems() != null && catalogFacade != null)
-                ? order.getItems().stream().map(OrderItem::getProductVariantId).distinct().toList()
-                : List.of();
-        Map<Long, ProductVariantSummaryDto> variantMap = variantIds.isEmpty()
-                ? Map.of()
-                : catalogFacade.getVariantSummariesByIds(variantIds);
+        Map<Long, ProductVariantSummaryDto> variantMap = loadItemVariants(Stream.of(order));
 
         return OrderResponse.builder()
                 .id(order.getId())
@@ -104,6 +99,16 @@ public class OrderMapper {
 
     public OrderItemResponse toOrderItemResponse(OrderItem item) {
         return toOrderItemResponse(item, null);
+    }
+
+    public Map<Long, ProductVariantSummaryDto> loadItemVariants(Stream<Order> orders) {
+        if (catalogFacade == null) {
+            return Map.of();
+        }
+        List<Long> ids = orders.map(Order::getItems).filter(Objects::nonNull)
+                .flatMap(List::stream).map(OrderItem::getProductVariantId)
+                .filter(Objects::nonNull).distinct().toList();
+        return ids.isEmpty() ? Map.of() : catalogFacade.getVariantSummariesByIds(ids);
     }
 
     public OrderItemResponse toOrderItemResponse(OrderItem item, ProductVariantSummaryDto variant) {
