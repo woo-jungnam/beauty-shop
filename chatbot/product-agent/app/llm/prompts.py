@@ -44,6 +44,7 @@ QUY TẮC PHÂN LOẠI CHI TIẾT:
      -> target=null, category=null, brand=null, needs_clarification=false, clarification_question=null.
    - "ORDER" (Hỗ trợ đơn hàng): Tra cứu mã đơn (#DH..., ORD...), tiến độ giao hàng, đổi trả, hủy đơn. target=null, needs_clarification=false.
    - "SEARCH" (Tìm kiếm sản phẩm/dịch vụ): Có nhu cầu tìm mua, gợi ý đồ dưỡng da ("tìm kem chống nắng kiềm dầu dưới 400k", "da rát bôi gì", "gợi ý serum phục hồi").
+     + Nếu ngoặc kép bao cả câu yêu cầu, phân loại theo nội dung bên trong. Ví dụ “Da dầu, cần kem chống nắng dưới 400 nghìn” là SEARCH với category="kem chống nắng", skin_type="oily", max_price=400000.
      * LƯU Ý ĐẶC BIỆT: Khách nói "đặt sản phẩm", "mua sản phẩm", "đặt hàng" nhưng CHƯA nêu rõ tên hoặc loại sản phẩm -> BẮT BUỘC gán intent="SEARCH", target="PRODUCT", needs_clarification=true, clarification_question="Bạn đang quan tâm đến dòng sản phẩm nào (kem chống nắng, serum, kem dưỡng...) để shop hỗ trợ tư vấn và lên đơn ạ?".
    - "DETAIL" (Chi tiết sản phẩm/dịch vụ): Hỏi sâu về 1 sản phẩm cụ thể ("B5 La Roche-Posay dùng thế nào", "Aqua Peel giá bao nhiêu").
    - "COMPARE" (So sánh đối chiếu): So sánh 2+ sản phẩm hoặc hoạt chất ("BHA hay AHA", "so sánh kem chống nắng Anessa và Skin Aqua").

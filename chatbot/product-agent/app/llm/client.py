@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from collections import OrderedDict
+from contextlib import asynccontextmanager
 import time
 from typing import Any, Optional
 import httpx
@@ -110,6 +111,13 @@ class LLMClient:
         rawClient = httpClient if httpClient is not None else kwargs.get("http_client")
         self.baseUrl = self.settings.llmBaseUrl.rstrip("/")
         self.apiKey = self.settings.llmApiKey
+        configuredKeys = [self.apiKey, *getattr(self.settings, "llm_api_keys", "").split(",")]
+        self.projectKeys = tuple(dict.fromkeys(
+            key.strip() for key in configuredKeys
+            if key and key.strip() not in ("", "your_llm_api_key_here", "your_gemini_api_key_here")
+        ))
+        self.nextProject = 0
+        self.projectCooldowns: dict[tuple[str, str], float] = {}
         self.model = self.settings.llmModel
         self.fallbackModel = getattr(self.settings, "llmFallbackModel", getattr(self.settings, "llm_fallback_model", None))
         self.maxTokens = getattr(self.settings, "llmMaxTokens", getattr(self.settings, "llm_max_tokens", 600))
@@ -229,6 +237,41 @@ class LLMClient:
 
     _extract_retry_delay = extractRetryDelay
 
+    def nextAvailableProject(self, model: str, excluded: set[str]) -> str | None:
+        now = time.monotonic()
+        for _ in self.projectKeys:
+            key = self.projectKeys[self.nextProject]
+            self.nextProject = (self.nextProject + 1) % len(self.projectKeys)
+            if key not in excluded and self.projectCooldowns.get((model, key), 0) <= now:
+                return key
+        return None
+
+    @asynccontextmanager
+    async def projectResponse(self, client, endpoint, payload, *, stream=False):
+        model = payload["model"]
+        tried: set[str] = set()
+        lastResponse = httpx.Response(429)
+        for _ in range(2):
+            key = self.nextAvailableProject(model, tried)
+            if key is None:
+                break
+            tried.add(key)
+            headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            if stream:
+                async with client.stream("POST", endpoint, json=payload, headers=headers) as response:
+                    if response.status_code != 429 or len(self.projectKeys) == 1:
+                        yield response
+                        return
+                    await response.aread()
+            else:
+                response = await self.sendRequest(client, endpoint, payload, headers)
+                if response.status_code != 429 or len(self.projectKeys) == 1:
+                    yield response
+                    return
+            self.projectCooldowns[model, key] = time.monotonic() + self.extractRetryDelay(response, 4.0)
+            lastResponse = response
+        yield lastResponse
+
     async def understand(
         self,
         message: str,
@@ -236,7 +279,7 @@ class LLMClient:
         **kwargs: Any,
     ) -> UnderstandingResult:
         curState = currentState if currentState is not None else kwargs.get("current_state")
-        if not self.apiKey or self.apiKey in ("your_llm_api_key_here", ""):
+        if not self.projectKeys:
             raise LLMAuthenticationError("Chưa cấu hình LLM_API_KEY hợp lệ trong môi trường.")
 
         cached = self._cache.get(message, curState)
@@ -246,10 +289,6 @@ class LLMClient:
 
         messages = buildUnderstandingPrompt(message, curState)
         endpoint = f"{self.baseUrl}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.apiKey}",
-            "Content-Type": "application/json",
-        }
 
         payload: dict[str, Any] = {
             "model": self.model,
@@ -271,8 +310,13 @@ class LLMClient:
             attempts = self.maxRetries + 1
 
             for attempt in range(attempts):
-                response = await self.sendRequest(client, endpoint, payload, headers)
-                lastResponse = response
+                async with self.projectResponse(client, endpoint, payload) as response:
+                    lastResponse = response
+
+                if response.status_code == 429 and len(self.projectKeys) > 1:
+                    if modelIdx < len(modelsToTry) - 1:
+                        break
+                    self.checkHttpStatus(response)
 
                 if response.status_code in (429, 502, 503, 504):
                     if attempt < attempts - 1:
@@ -324,7 +368,7 @@ class LLMClient:
         sysInst = systemInstruction if "systemInstruction" in kwargs or systemInstruction != "Bạn là trợ lý tư vấn mỹ phẩm cao cấp và tận tâm." else kwargs.get("system_instruction", systemInstruction)
         mTokens = maxTokens if "maxTokens" in kwargs or maxTokens != 200 else kwargs.get("max_tokens", maxTokens)
 
-        if not self.apiKey or self.apiKey in ("your_llm_api_key_here", ""):
+        if not self.projectKeys:
             raise LLMAuthenticationError("Chưa cấu hình LLM_API_KEY hợp lệ trong môi trường.")
 
         messages = []
@@ -333,10 +377,6 @@ class LLMClient:
         messages.append({"role": "user", "content": prompt})
 
         endpoint = f"{self.baseUrl}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.apiKey}",
-            "Content-Type": "application/json",
-        }
 
         payload: dict[str, Any] = {
             "model": self.model,
@@ -357,8 +397,13 @@ class LLMClient:
             attempts = self.maxRetries + 1
 
             for attempt in range(attempts):
-                response = await self.sendRequest(client, endpoint, payload, headers)
-                lastResponse = response
+                async with self.projectResponse(client, endpoint, payload) as response:
+                    lastResponse = response
+
+                if response.status_code == 429 and len(self.projectKeys) > 1:
+                    if modelIdx < len(modelsToTry) - 1:
+                        break
+                    self.checkHttpStatus(response)
 
                 if response.status_code in (429, 502, 503, 504):
                     if attempt < attempts - 1:
@@ -400,7 +445,7 @@ class LLMClient:
         sysInst = systemInstruction if "systemInstruction" in kwargs or systemInstruction != "Bạn là trợ lý tư vấn mỹ phẩm cao cấp và tận tâm." else kwargs.get("system_instruction", systemInstruction)
         mTokens = maxTokens if "maxTokens" in kwargs or maxTokens != 200 else kwargs.get("max_tokens", maxTokens)
 
-        if not self.apiKey or self.apiKey in ("your_llm_api_key_here", ""):
+        if not self.projectKeys:
             raise LLMAuthenticationError("Chưa cấu hình LLM_API_KEY hợp lệ trong môi trường.")
 
         messages = []
@@ -409,10 +454,6 @@ class LLMClient:
         messages.append({"role": "user", "content": prompt})
 
         endpoint = f"{self.baseUrl}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.apiKey}",
-            "Content-Type": "application/json",
-        }
 
         payload: dict[str, Any] = {
             "model": self.model,
@@ -432,9 +473,13 @@ class LLMClient:
             payload["model"] = targetModel
             for attempt in range(self.maxRetries + 1):
                 try:
-                    async with client.stream("POST", endpoint, json=payload, headers=headers) as resp:
+                    async with self.projectResponse(client, endpoint, payload, stream=True) as resp:
                         if resp.status_code != 200:
                             await resp.aread()
+                            if resp.status_code == 429 and len(self.projectKeys) > 1:
+                                if modelIdx < len(modelsToTry) - 1:
+                                    break
+                                self.checkHttpStatus(resp)
                             if resp.status_code in (429, 502, 503, 504):
                                 if attempt < self.maxRetries:
                                     defaultWait = max(4.0, 4.0 * 2 ** attempt) if resp.status_code in (429, 503) else self.retryDelay * 2 ** attempt

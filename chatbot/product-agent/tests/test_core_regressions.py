@@ -4,6 +4,11 @@ import hmac
 import json
 from types import SimpleNamespace
 
+import httpx
+import pytest
+
+from app.core.config import Settings
+from app.llm.client import LLMClient
 from app.schemas.chat import ChatRequest
 from app.schemas.product import ProductRead
 from app.schemas.query import Intent, UnderstandingResult
@@ -14,6 +19,45 @@ from app.services.agent.generation import generationService
 from app.services.agent.dialogue import ConversationContext, RedisSessionStore
 from app.services.retrieval import search
 from app.services.ingestion.pipeline import ProductChunker
+
+
+@pytest.mark.asyncio
+async def test_llm_rotates_projects_and_skips_rate_limited_key():
+    requests = []
+
+    def complete(request):
+        key = request.headers["Authorization"]
+        requests.append(key)
+        if key == "Bearer project-a":
+            return httpx.Response(429, headers={"Retry-After": "60"})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    settings = Settings(
+        llm_api_key="project-a", llm_api_keys="project-b, project-c, project-b",
+        llm_max_retries=0,
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(complete)) as http_client:
+        client = LLMClient(settings=settings, httpClient=http_client)
+        for _ in range(3):
+            assert await client.generateText("hello") == "ok"
+
+    assert requests == ["Bearer project-a", "Bearer project-b", "Bearer project-c", "Bearer project-b"]
+
+
+def test_nlu_routes_quoted_shopping_request_to_discovery():
+    request = "Da dầu, cần kem chống nắng dưới 400 nghìn"
+    search_result = UnderstandingResult(
+        intent=Intent.PRODUCT_SEARCH, raw_query=request, category="kem chống nắng",
+        constraints={"skin_type": "oily", "max_price": 400000},
+    )
+    detail_result = search_result.model_copy(update={"intent": Intent.PRODUCT_DETAIL})
+
+    for quoted in (f'"{request}"', f"“{request}”"):
+        assert orchestrator.is_quoted_discovery(quoted, search_result)
+        assert not orchestrator.is_quoted_discovery(quoted, detail_result)
+    assert not orchestrator.is_quoted_discovery(
+        'Tìm “Kem chống nắng Sun Gel” dưới 400k', search_result,
+    )
 
 
 def test_vector_search_keeps_embedding_space_when_relaxing_filters():

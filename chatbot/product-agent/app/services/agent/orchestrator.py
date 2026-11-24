@@ -28,6 +28,17 @@ def catalog_identity(text: str) -> str:
     return " ".join(re.findall(r"[^\W_]+\+?", cleaned))
 
 
+def is_quoted_discovery(message: str, understanding: UnderstandingResult) -> bool:
+    if not re.fullmatch(r'"[^"“”]+"|“[^"“”]+”', message.strip()):
+        return False
+    constraints = understanding.constraints or {}
+    return (
+        understanding.intent == Intent.PRODUCT_SEARCH
+        and bool(understanding.category or constraints.get("category"))
+        and any(constraints.get(key) is not None for key in ("skin_type", "min_price", "max_price"))
+    )
+
+
 def explicit_catalog_ids(message: str, repository) -> list[str] | None:
     """None means discovery. An empty list means a quoted name did not resolve."""
     query = f" {catalog_identity(message)} "
@@ -388,6 +399,8 @@ class AgentOrchestrator:
             except Exception:
                 logger.exception("Could not resolve catalog identity")
                 explicitIds = [] if re.search(r'["“][^"”]+["”]', safeMessage) else None
+        if explicitIds == [] and is_quoted_discovery(safeMessage, understanding):
+            explicitIds = None
         if explicitIds is None:
             with tracker.measure("hybrid_retrieval"):
                 retrievalRes = await retrievalService.retrieve(mergedUnderstanding, topK=15)

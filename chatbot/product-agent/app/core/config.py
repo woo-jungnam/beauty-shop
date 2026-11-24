@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     embedding_cache_dir: str = ""
 
     llm_api_key: str = ""
+    llm_api_keys: str = ""
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
     llm_model: str = "gemini-3.5-flash-lite"
     llm_fallback_model: str = "gemini-2.5-flash"
