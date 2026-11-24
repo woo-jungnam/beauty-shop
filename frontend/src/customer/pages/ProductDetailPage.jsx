@@ -13,7 +13,7 @@ import { ProductReviews } from './product-detail/ProductReviews';
 import '../styles/product-detail-gallery.css';
 import '../styles/product-detail-dust-rose.css';
 import { knownCount, knownNumber, variantPrice } from '../utils/productSelection';
-import { activeVariants, chooseVariant, detailError, IMAGE_TYPES, productGallery, SKIN_LABELS, skinName, textList, unitPriceReference, unwrap, variantChoiceLabels, variantLabel } from './product-detail/detailUtils';
+import { activeVariants, chooseVariant, detailError, IMAGE_TYPES, productGallery, SKIN_LABELS, skinName, textList, unwrap, variantChoiceLabels, variantLabel } from './product-detail/detailUtils';
 
 const SECTIONS = [ ['product-overview', 'Thông tin sản phẩm'], ['product-ingredients', 'Thành phần & INCI'], ['product-usage', 'Hướng dẫn sử dụng'], ['product-reviews', 'Đánh giá & bình luận'] ];
 const normalText = value => String(value || '').replace(/\s+/g, ' ').trim();
@@ -198,7 +198,6 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
   const frequency = typeof readyProduct.usage?.frequency === 'string' ? readyProduct.usage.frequency.trim() : '';
   const rawUsage = typeof readyProduct.howToUse === 'string' ? readyProduct.howToUse.trim() : '';
   const showRawUsage = rawUsage && ![...instructions, ...whenToUse, frequency, instructions.join(' '), instructions.join('\n')].some(value => normalText(value) === normalText(rawUsage));
-  const reference = unitPriceReference(selectedVariant, price);
   const attrs = (readyProduct.attributeValues || []).filter(attribute => attribute.productVariantId == null || String(attribute.productVariantId) === String(selectedVariant?.id));
   const formula = value => value == null ? 'Chưa công bố' : value ? 'Có trong công thức được công bố' : 'Không có theo dữ liệu công bố';
   const buyDisabled = loading || adding || cartBusy || !purchasable;
@@ -215,7 +214,7 @@ const ProductDetailContent = ({ productId, requestedVariantId, onNavigate }) => 
       </section>
       <section className="pd-buy-panel" aria-label="Thông tin mua sản phẩm">{brand && <p className="pd-brand">{brand}</p>}<h1>{readyProduct.name}</h1><div className="pd-top-meta">{Number(readyProduct.totalReviews) > 0 ? <a href="#product-reviews" onClick={event => navigateSection(event, 'product-reviews')}><Star size={15} fill="currentColor" />{Number(readyProduct.averageRating ?? 0).toFixed(1)} / 5 · {readyProduct.totalReviews} lượt chấm sao mua xác thực</a> : <span>Chưa có lượt chấm sao mua xác thực</span>}{Number(readyProduct.totalSold) > 0 && <span>Đã bán {readyProduct.totalSold}</span>}</div>
         {textList((readyProduct.tags || []).map(tag => tag.name)).length > 0 && <div className="pd-tags">{textList(readyProduct.tags.map(tag => tag.name)).map(tag => <span key={tag}>{tag}</span>)}</div>}
-        <div className="pd-price"><strong>{price == null ? 'Chưa xác minh giá bán' : formatCurrency(price)}</strong>{discount > 0 && <del>{formatCurrency(original)}</del>}</div>{reference && <p className="pd-unit-price">Tham khảo: {formatCurrency(reference.value)} / 100 {reference.unit} · Không phải giá bán</p>}
+        <div className="pd-price"><strong>{price == null ? 'Chưa xác minh giá bán' : formatCurrency(price)}</strong>{discount > 0 && <del>{formatCurrency(original)}</del>}</div>
         {readyProduct.shortDescription && <p className="pd-lead">{readyProduct.shortDescription}</p>}
         <div className="pd-variants"><span className="pd-label">Chọn phân loại</span>{variants.length ? <div role="group" aria-label="Phân loại sản phẩm">{variants.map(variant => <button type="button" key={variant.id} aria-pressed={String(variant.id) === variantId} disabled={adding} onClick={() => changeVariant(variant.id)}>{variantChoices.get(String(variant.id))}{String(variant.id) === variantId && <Check size={14} />}</button>)}</div> : <p className="pd-muted">Sản phẩm chưa có phân loại đang kinh doanh.</p>}</div>
         <div role={missingSelection || stock === 0 ? 'alert' : undefined} className={`pd-stock ${stock === 0 || !validVariant ? 'unavailable' : stock == null ? 'unknown' : ''}`}><i />{stockLabel}</div>

@@ -25,16 +25,3 @@ export const detailError = (error, fallback) => {
   const message = error?.response?.data?.message || error?.message || '';
   return /[àáạảãâăèéẹẻẽêìíịỉĩòóọỏõôơùúụủũưỳýỵỷỹđ]/i.test(message) && !/Exception|SQL|java\./i.test(message) ? message : fallback;
 };
-export const unitPriceReference = (variant, price) => {
-  if (!variant || price == null || !Number.isFinite(Number(price)) || Number(price) < 0) return null;
-  let value = Number(variant.volumeValue);
-  let unit = String(variant.volumeUnit || '').toLowerCase().trim();
-  if (!Number.isFinite(value) || value <= 0 || !['ml', 'l', 'g', 'kg'].includes(unit)) {
-    const matched = String(variant.volume || '').match(/^\s*(\d+(?:[.,]\d+)?)\s*(ml|l|g|kg)\s*$/i);
-    if (!matched) return null;
-    value = Number(matched[1].replace(',', '.')); unit = matched[2].toLowerCase();
-  }
-  if (value <= 0) return null;
-  const amount = value * (['l', 'kg'].includes(unit) ? 1000 : 1);
-  return { value: Number(price) * 100 / amount, unit: ['ml', 'l'].includes(unit) ? 'ml' : 'g' };
-};

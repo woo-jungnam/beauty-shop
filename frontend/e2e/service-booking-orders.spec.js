@@ -14,6 +14,10 @@ for (const role of ['CUSTOMER', 'ADMIN']) {
     const invoice = { id: 101, orderNumber: 'ORD-SERVICE-101', appointmentId: 31, status: 'COMPLETED', paymentStatus: 'PAID',
       paymentMethod: 'BANK', totalAmount: 500000, paidAmount: 500000, items: [],
       spaVisitItems: [{ appointmentItemId: 1, serviceId: 2, serviceName: booking.services[0], unitPrice: 500000 }] };
+    const courseOrder = { ...invoice, id: 102, orderNumber: 'ORD-COURSE-102', appointmentId: null,
+      servicePackageId: 8, spaBenefitType: 'TREATMENT_COURSE', spaVisitItems: [] };
+    const unlinkedOrder = { ...courseOrder, id: 103, orderNumber: 'ORD-COURSE-103' };
+    const invoices = role === 'ADMIN' ? [invoice] : [invoice, courseOrder, unlinkedOrder];
     await page.route('**/api/v1/**', async route => {
       const path = new URL(route.request().url()).pathname;
       let data = [];
@@ -22,8 +26,9 @@ for (const role of ['CUSTOMER', 'ADMIN']) {
         content: invoiced ? [] : [booking], totalElements: invoiced ? 0 : 1, totalPages: 1, page: 0,
       };
       else if (path.endsWith('/orders/my-orders') || path.endsWith('/admin/orders')) data = {
-        content: invoiced ? [invoice] : [], totalElements: invoiced ? 1 : 0, totalPages: 1, page: 0,
+        content: invoiced ? invoices : [], totalElements: invoiced ? invoices.length : 0, totalPages: 1, page: 0,
       };
+      else if (path.endsWith('/tickets/my-tickets')) data = [{ id: 9, orderId: 102, treatmentCourseId: 16 }];
       else if (path.endsWith('/appointments/31/finance')) data = {
         status: 'CONFIRMED', depositRequired: 500000, depositCollected: 500000, depositDue: 0, refunded: 0,
         depositPayment: { canPay: false }, reviewReasons: [], entries: [],
@@ -48,7 +53,7 @@ for (const role of ['CUSTOMER', 'ADMIN']) {
     await expect(section.getByText('LH-31', { exact: true })).toBeVisible();
     await expect(section.getByText(booking.services[0], { exact: true })).toBeVisible();
     await expect(section.getByText('Đã xác nhận', { exact: true })).toBeVisible();
-    await section.getByRole('button', { name: 'Xem dịch vụ' }).click();
+    await section.getByRole('button', { name: 'Xem chi tiết lịch hẹn' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('Đã nhận thanh toán thành công');
     await page.keyboard.press('Escape');
@@ -57,6 +62,16 @@ for (const role of ['CUSTOMER', 'ADMIN']) {
     await page.locator('button.btn-luxury-outline').filter({ hasText: /^Làm mới$/ }).click();
     await expect(section.getByText('LH-31', { exact: true })).toHaveCount(0);
     await expect(page.getByText('ORD-SERVICE-101', { exact: true })).toBeVisible();
+    const linked = page.getByRole('article').filter({ hasText: courseOrder.orderNumber });
+    const unlinked = page.getByRole('article').filter({ hasText: unlinkedOrder.orderNumber });
+    for (const card of [linked, unlinked]) {
+      await expect(card.getByRole('button', { name: 'Xem chi tiết hóa đơn' })).toBeVisible();
+      await expect(card.getByRole('button', { name: 'Mua lại', exact: true })).toHaveCount(0);
+    }
+    await expect(linked.getByRole('button', { name: 'Xem tiến trình lộ trình' })).toBeVisible();
+    await expect(unlinked.getByRole('button', { name: 'Xem tiến trình lộ trình' })).toHaveCount(0);
+    await linked.getByRole('button', { name: 'Xem tiến trình lộ trình' }).click();
+    await expect(page).toHaveURL(/course=16/);
     expect(errors).toEqual([]);
   });
 }

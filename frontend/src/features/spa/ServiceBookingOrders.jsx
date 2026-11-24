@@ -41,7 +41,7 @@ export function ServiceBookingOrders({ admin = false, refreshKey = 0, onNavigate
     { header: 'Giá dự kiến', accessor: row => formatCurrency(row.estimatedAmount), align: 'right' },
     { header: 'Đã thu', accessor: row => formatCurrency(row.collectedAmount), align: 'right' },
     { header: 'Đã hoàn', accessor: row => formatCurrency(row.refundedAmount), align: 'right' },
-    { header: 'Chi tiết', accessor: row => <Button size="sm" variant="outline" onClick={() => setSelected(row)}>Xem dịch vụ</Button> },
+    { header: 'Chi tiết', accessor: row => <Button size="sm" variant="outline" onClick={() => setSelected(row)}>{admin ? 'Xem dịch vụ' : 'Xem chi tiết lịch hẹn'}</Button> },
   ];
   return <section className="card" aria-label="Dịch vụ đơn đã đặt" style={{ padding: 20, margin: '20px 0' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

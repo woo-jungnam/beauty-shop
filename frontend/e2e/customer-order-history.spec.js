@@ -77,7 +77,11 @@ const mockOrders = [
   }
 ];
 
+const deliveredOrder = { ...mockOrders[0], id: 103, orderNumber: 'ORD-DELIVERED-103', status: 'DELIVERED' };
+const unavailableOrder = { ...mockOrders[1], id: 104, orderNumber: 'ORD-CANCELLED-104', status: 'CANCELLED' };
+
 test('Customer Order History displays detailed product information and related order information', async ({ page }) => {
+  let addedLine;
   await page.addInitScript(profile => {
     localStorage.setItem('beautyshop_admin_token', 'test-token');
     localStorage.setItem('beautyshop_admin_user', JSON.stringify(profile));
@@ -92,15 +96,24 @@ test('Customer Order History displays detailed product information and related o
       data = user;
     } else if (path.endsWith('/orders/my-orders')) {
       data = {
-        content: mockOrders,
-        totalElements: mockOrders.length,
+        content: [...mockOrders, deliveredOrder, unavailableOrder],
+        totalElements: 4,
         totalPages: 1,
         page: 0
       };
     } else if (path.endsWith('/orders/101')) {
       data = mockOrders[0];
+    } else if (path.endsWith('/orders/103')) {
+      data = deliveredOrder;
+    } else if (path.endsWith('/products/12')) {
+      data = { id: 12, status: 'ACTIVE', variants: [{ id: 44, isActive: true, sku: 'LRP-ANTHELIOS-50ML', stockQuantity: 1 }] };
+    } else if (path.endsWith('/products/15')) {
+      data = { id: 15, status: 'ACTIVE', variants: [{ id: 48, isActive: true, sku: 'SERUM-B5-30ML', stockQuantity: 0 }] };
     } else if (path.endsWith('/orders/101/returns')) {
       data = [];
+    } else if (path.endsWith('/cart/add')) {
+      addedLine = route.request().postDataJSON();
+      data = { id: 1, totalPrice: 400000, items: [{ id: 1, variantId: 44, quantity: 1, price: 400000, sku: 'LRP-ANTHELIOS-50ML', available: true }] };
     } else if (path.endsWith('/my-service-orders')) {
       data = { content: [], totalElements: 0, totalPages: 1 };
     } else if (path.endsWith('/users/order-statistics')) {
@@ -124,13 +137,22 @@ test('Customer Order History displays detailed product information and related o
 
   // Verify first order details
   await expect(page.getByText('ORD-20261109-001')).toBeVisible();
-  await expect(page.getByText('Kem Chống Nắng La Roche-Posay Anthelios XL')).toBeVisible();
-  await expect(page.getByText('Chai 50ml', { exact: true })).toBeVisible();
-  await expect(page.getByText('LRP-ANTHELIOS-50ML')).toBeVisible();
+  const shipped = page.getByRole('article').filter({ hasText: mockOrders[0].orderNumber });
+  const delivered = page.getByRole('article').filter({ hasText: deliveredOrder.orderNumber });
+  const unavailable = page.getByRole('article').filter({ hasText: unavailableOrder.orderNumber });
+  const pending = page.getByRole('article').filter({ hasText: mockOrders[1].orderNumber });
+  await expect(shipped.getByText('Kem Chống Nắng La Roche-Posay Anthelios XL')).toBeVisible();
+  await expect(shipped.getByText('Chai 50ml', { exact: true })).toBeVisible();
+  await expect(shipped.getByText('LRP-ANTHELIOS-50ML')).toBeVisible();
+  await expect(delivered.getByRole('button', { name: 'Mua lại', exact: true })).toBeVisible();
+  for (const card of [shipped, pending, unavailable]) {
+    await expect(card.getByRole('button', { name: 'Mua lại', exact: true })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: 'Chi tiết đơn hàng' })).toBeVisible();
+  }
 
   // Verify shipping and carrier info
-  await expect(page.getByText('Giao Hàng Tiết Kiệm')).toBeVisible();
-  await expect(page.getByText('GHTK123456789VN')).toBeVisible();
+  await expect(shipped.getByText('Giao Hàng Tiết Kiệm')).toBeVisible();
+  await expect(shipped.getByText('GHTK123456789VN')).toBeVisible();
   await expect(page.getByText('123 Đường Nguyễn Huệ').first()).toBeVisible();
 
   // Verify order detail modal
@@ -139,6 +161,7 @@ test('Customer Order History displays detailed product information and related o
   await firstDetailBtn.click();
 
   const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('button', { name: 'Mua lại theo giá hiện tại' })).toHaveCount(0);
   await expect(dialog).toBeInViewport({ ratio: 0.95 });
   await expect(page.locator('#customer-app > .modal-backdrop')).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Đóng cửa sổ' })).toBeInViewport();
@@ -156,6 +179,16 @@ test('Customer Order History displays detailed product information and related o
   // Close modal with Escape
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
+  await delivered.getByRole('button', { name: 'Chi tiết đơn hàng' }).click();
+  await expect(dialog.getByRole('button', { name: 'Mua lại theo giá hiện tại' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+
+  await delivered.getByRole('button', { name: 'Mua lại', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Đóng giỏ hàng', exact: true })).toBeVisible();
+  expect(addedLine).toMatchObject({ variantId: 44, quantity: 1 });
+  await page.getByRole('button', { name: 'Đóng giỏ hàng', exact: true }).click();
+  await expect(page.getByText(/Số lượng đã thêm theo tồn kho:.*\(1\/2\)/)).toBeVisible();
 
   // Test filter tab: "Chờ xác nhận"
   await page.getByRole('button', { name: 'Chờ xác nhận' }).click();

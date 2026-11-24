@@ -28,6 +28,7 @@ import {
   Star
 } from 'lucide-react';
 import { apiClient } from '../../../shared/api/client';
+import { ENDPOINTS } from '../../../shared/api/endpoints';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { Modal } from '../../../shared/ui/Modal';
 import { getGuestSessionId, useCustomerCart } from '../../stores/customerCartStore';
@@ -44,7 +45,82 @@ import {
 } from '../../../shared/utils/formatters';
 import { ServiceBookingOrders } from '../../../features/spa/ServiceBookingOrders';
 import { PRODUCT_PLACEHOLDER, resolveProductImage } from '../product/ProductCard';
-import { orderBenefitDestination } from '../../../features/spa/benefitModel';
+
+const reorderStatuses = new Set(['DELIVERED', 'COMPLETED', 'CANCELLED', 'RETURN_TO_SENDER', 'RETURNED']);
+
+function reorderItems(order) {
+  return order && getOrderType(order) === 'PRODUCT' && reorderStatuses.has(order.status)
+    ? order.items || []
+    : [];
+}
+
+function useReorderProducts(orders, refreshKey) {
+  const [products, setProducts] = useState({});
+  const productIds = [...new Set(orders.flatMap(order =>
+    reorderItems(order).filter(item => item.variantId && item.productId).map(item => item.productId)
+  ))].sort().join(',');
+
+  useEffect(() => {
+    if (!productIds) return;
+    const controller = new AbortController();
+    setProducts({});
+    Promise.allSettled(productIds.split(',').map(async id => {
+      const product = unwrap(await apiClient.get(ENDPOINTS.CATALOG.PUBLIC_PRODUCT_DETAIL(id), {
+        signal: controller.signal
+      }));
+      return [id, product];
+    })).then(results => {
+      if (!controller.signal.aborted) {
+        setProducts(Object.fromEntries(results.filter(result => result.status === 'fulfilled').map(result => result.value)));
+      }
+    });
+    return () => controller.abort();
+  }, [productIds, refreshKey]);
+
+  return products;
+}
+
+function availableReorderVariant(product, variantId) {
+  if (!variantId || !product || (product.status && product.status !== 'ACTIVE')) return undefined;
+  return product.variants?.find(variant =>
+    String(variant.id) === String(variantId) && variant.isActive === true &&
+    !variant.isDeleted && Boolean(variant.sku?.trim()) && variant.stockQuantity > 0
+  );
+}
+
+function canReorder(order, products) {
+  return reorderItems(order).some(item => availableReorderVariant(products[item.productId], item.variantId));
+}
+
+function canPayOrder(order) {
+  return order.paymentMethod === 'BANK' && order.paymentStatus === 'PENDING' &&
+    !reorderStatuses.has(order.status) &&
+    (!order.paymentDeadline || Date.parse(order.paymentDeadline) > Date.now());
+}
+
+async function reorderProducts(order, products, addItem) {
+  let added = 0;
+  const skipped = [];
+  const reduced = [];
+  for (const item of reorderItems(order)) {
+    const name = [item.productName || 'Sản phẩm', item.variantName].filter(Boolean).join(' · ');
+    const product = products[item.productId];
+    const variant = availableReorderVariant(product, item.variantId);
+    const requested = item.quantity || 1;
+    const quantity = variant ? Math.min(requested, variant.stockQuantity) : 0;
+    if (!quantity || !await addItem(product, variant, quantity)) {
+      skipped.push(name);
+      continue;
+    }
+    added++;
+    if (quantity < requested) reduced.push(`${name} (${quantity}/${requested})`);
+  }
+  return [
+    added ? `Đã thêm ${added} mặt hàng vào giỏ theo giá hiện tại.` : 'Chưa thêm được mặt hàng nào vào giỏ.',
+    reduced.length ? `Số lượng đã thêm theo tồn kho: ${reduced.join(', ')}.` : '',
+    skipped.length ? `Chưa thêm được: ${skipped.join(', ')}.` : ''
+  ].filter(Boolean).join(' ');
+}
 
 export const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value || 0));
 
@@ -136,7 +212,7 @@ const SERVICE_FILTER_TABS = [
 ];
 
 export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
-  const { fetchCart, setCartOpen } = useCustomerCart();
+  const { addItem } = useCustomerCart();
   const [page, setPage] = useState(0);
   const [data, setData] = useState({ content: [] });
   const [selected, setSelected] = useState(initialOrderId || null);
@@ -147,7 +223,10 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
   const [serviceSubFilter, setServiceSubFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [reorderingId, setReorderingId] = useState(null);
+  const [reorderMessage, setReorderMessage] = useState('');
+  const [spaTickets, setSpaTickets] = useState([]);
   const loadRequest = useRef(null);
+  const reorderLock = useRef(false);
 
   const load = useCallback(async () => {
     loadRequest.current?.abort();
@@ -197,33 +276,32 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
 
   const productOrders = useMemo(() => allOrders.filter(o => getOrderType(o) === 'PRODUCT'), [allOrders]);
   const serviceOrders = useMemo(() => allOrders.filter(o => getOrderType(o) !== 'PRODUCT'), [allOrders]);
+  const reorderCatalog = useReorderProducts(scopeTab === 'PRODUCTS' ? productOrders : [], data);
+  const hasPaidPackage = serviceOrders.some(order =>
+    order.servicePackageId != null && order.status !== 'CANCELLED' && order.paymentStatus === 'PAID'
+  );
 
-  // Quick reorder handler directly from order card
+  useEffect(() => {
+    if (scopeTab !== 'SERVICES' || !hasPaidPackage) return;
+    const controller = new AbortController();
+    setSpaTickets([]);
+    apiClient.get(ENDPOINTS.SPA.MY_TICKETS, { signal: controller.signal })
+      .then(response => {
+        if (!controller.signal.aborted) setSpaTickets(listRows(response));
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [scopeTab, hasPaidPackage, data]);
+
   const handleQuickReorder = async (order) => {
-    if (!order.items || order.items.length === 0) return;
+    if (reorderLock.current || !canReorder(order, reorderCatalog)) return;
+    reorderLock.current = true;
     setReorderingId(order.id);
+    setReorderMessage('');
     try {
-      let added = 0;
-      for (const item of order.items) {
-        if (!item.variantId) continue;
-        try {
-          await apiClient.post('/api/v1/cart/add', {
-            variantId: item.variantId,
-            quantity: item.quantity || 1,
-            sessionId: getGuestSessionId()
-          });
-          added++;
-        } catch (err) {
-          console.warn(`Could not add item ${item.productName}:`, err);
-        }
-      }
-      if (added > 0) {
-        await fetchCart();
-        setCartOpen(true);
-      }
-    } catch (err) {
-      console.error('Reorder error:', err);
+      setReorderMessage(await reorderProducts(order, reorderCatalog, addItem));
     } finally {
+      reorderLock.current = false;
       setReorderingId(null);
     }
   };
@@ -324,6 +402,7 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
           <span>{error}</span>
         </div>
       )}
+      {scopeTab === 'PRODUCTS' && reorderMessage && <p role="status">{reorderMessage}</p>}
 
       {/* Main Scope Switcher Tabs */}
       <div style={{ display: 'flex', gap: 8, borderBottom: '2px solid #E5E7EB', paddingBottom: 0 }}>
@@ -783,18 +862,18 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button
+                    {canReorder(order, reorderCatalog) && <button
                       type="button"
-                      disabled={reorderingId === order.id}
+                      disabled={reorderingId != null}
                       className="btn-luxury-outline"
                       style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                       onClick={() => handleQuickReorder(order)}
                     >
                       <RotateCcw size={13} className={reorderingId === order.id ? 'animate-spin' : ''} />
                       Mua lại
-                    </button>
+                    </button>}
 
-                    {order.paymentMethod === 'BANK' && order.paymentStatus === 'PENDING' && order.status !== 'CANCELLED' && (!order.paymentDeadline || Date.parse(order.paymentDeadline) > Date.now()) && (
+                    {canPayOrder(order) && (
                       <button
                         type="button"
                         className="btn-luxury-primary"
@@ -838,6 +917,11 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
             <>
               {filteredServiceOrders.map(order => {
                 const isPackage = order.servicePackageId != null;
+                const isCourse = order.spaBenefitType === 'TREATMENT_COURSE';
+                const ticket = isPackage && order.status !== 'CANCELLED' && order.paymentStatus === 'PAID'
+                  ? spaTickets.find(item => item.orderId != null && String(item.orderId) === String(order.id) &&
+                    (!isCourse || item.treatmentCourseId != null))
+                  : null;
                 const statusStyle = getStatusBadgeStyle(order.status);
                 const paymentStyle = getPaymentBadgeStyle(order.paymentStatus);
 
@@ -1026,18 +1110,20 @@ export function OrderWorkspace({ onNavigate, initialOrderId, onOrderChanged }) {
                       </div>
 
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {isPackage && (
+                        {ticket && (
                           <button
                             type="button"
                             className="btn-luxury-primary"
                             style={{ padding: '6px 14px', fontSize: 12, fontWeight: 600 }}
-                            onClick={() => onNavigate(orderBenefitDestination(order))}
+                            onClick={() => onNavigate(isCourse
+                              ? `treatments?tab=courses&course=${ticket.treatmentCourseId}`
+                              : 'profile?tab=tickets')}
                           >
-                            {order.spaBenefitType === 'TREATMENT_COURSE' ? 'Xem tiến trình lộ trình' : 'Mở ví vé liệu trình'}
+                            {isCourse ? 'Xem tiến trình lộ trình' : 'Mở ví vé liệu trình'}
                           </button>
                         )}
 
-                        {order.paymentMethod === 'BANK' && order.paymentStatus === 'PENDING' && order.status !== 'CANCELLED' && (!order.paymentDeadline || Date.parse(order.paymentDeadline) > Date.now()) && (
+                        {canPayOrder(order) && (
                           <button
                             type="button"
                             className="btn-luxury-primary"
@@ -1106,8 +1192,10 @@ function SparklesIcon() {
 
 export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onChanged, onNavigate }) {
   const { isAuthenticated } = useAuth();
-  const { fetchCart, setCartOpen } = useCustomerCart();
+  const { addItem } = useCustomerCart();
   const [order, setOrder] = useState(initialOrder);
+  const reorderCatalog = useReorderProducts(order ? [order] : [], order);
+  const [reorderMessage, setReorderMessage] = useState('');
   const [returns, setReturns] = useState([]);
   const [sessionOwned, setSessionOwned] = useState(!initialOrder);
   const [quantities, setQuantities] = useState({});
@@ -1168,32 +1256,16 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
   };
 
   const reorder = async () => {
-    const failed = [];
-    let added = 0;
-    for (const item of order.items || []) {
-      if (!item.variantId) {
-        failed.push(item.productName);
-        continue;
-      }
-      try {
-        await apiClient.post('/api/v1/cart/add', {
-          variantId: item.variantId,
-          quantity: item.quantity,
-          sessionId: getGuestSessionId()
-        });
-        added++;
-      } catch (e) {
-        failed.push(`${item.productName}: ${e.message}`);
-      }
+    if (operationLock.current || !canReorder(order, reorderCatalog)) return;
+    operationLock.current = true;
+    setBusy(true);
+    setReorderMessage('');
+    try {
+      setReorderMessage(await reorderProducts(order, reorderCatalog, addItem));
+    } finally {
+      operationLock.current = false;
+      setBusy(false);
     }
-    if (added) {
-      await fetchCart();
-      setCartOpen(true);
-    }
-    if (failed.length) {
-      throw new Error(`Đã thêm ${added} mặt hàng. Không thể thêm: ${failed.join('; ')}. Giá và tồn kho áp dụng tại thời điểm mua lại.`);
-    }
-    setError('Đã thêm các mặt hàng vào giỏ với giá hiện tại.');
   };
 
   const reserved = itemId =>
@@ -1221,6 +1293,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
             <span>{error}</span>
           </div>
         )}
+        {reorderMessage && <p role="status">{reorderMessage}</p>}
 
         <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
           {order && (
@@ -1723,7 +1796,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                   Đơn hàng đang được chuẩn bị đóng gói. Nếu cần thay đổi hoặc hủy, vui lòng liên hệ hotline CSKH.
                 </span>
               )}
-              {order.paymentMethod === 'BANK' && order.paymentStatus === 'PENDING' && order.status !== 'CANCELLED' && (!order.paymentDeadline || Date.parse(order.paymentDeadline) > Date.now()) && (
+              {canPayOrder(order) && (
                 <button
                   type="button"
                   className="btn-luxury-primary"
@@ -1736,12 +1809,12 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                   Tiếp tục thanh toán
                 </button>
               )}
-              {order.items?.length > 0 && !order.servicePackageId && !order.appointmentId && (
+              {canReorder(order, reorderCatalog) && (
                 <button
                   type="button"
                   disabled={busy}
                   className="btn-luxury-outline"
-                  onClick={() => run(reorder)}
+                  onClick={reorder}
                 >
                   Mua lại theo giá hiện tại
                 </button>

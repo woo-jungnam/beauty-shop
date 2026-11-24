@@ -179,10 +179,17 @@ export const HomePage = ({ onNavigate }) => {
     return filteredFlashProducts.slice(start, start + FLASH_PAGE_SIZE);
   }, [filteredFlashProducts, currentFlashTab]);
 
-  const marqueeBrands = useMemo(() => {
-    if (!brands || brands.length === 0) return [];
-    const repeats = brands.length < 8 ? 4 : 2;
-    return Array.from({ length: repeats }, () => brands).flat();
+  const marqueeRows = useMemo(() => {
+    if (!brands.length) return [];
+    const split = Math.ceil(brands.length / 2);
+    return [brands.slice(0, split), brands.slice(split)].map((row) => {
+      const source = row.length ? row : brands;
+      const cycleSize = source.length * Math.ceil(9 / source.length);
+      return Array.from({ length: cycleSize * 2 }, (_, index) => ({
+        brand: source[index % source.length],
+        isRepeat: index < cycleSize || index >= cycleSize + row.length,
+      }));
+    });
   }, [brands]);
 
   useEffect(() => {
@@ -837,26 +844,36 @@ export const HomePage = ({ onNavigate }) => {
 
         <div className="brands-marquee-wrapper">
           {loading ? (
-            <div className="brands-marquee-track">
-              {Array.from({ length: 10 }, (_, n) => (
-                <div key={n} className="skeleton-shimmer home-brand-skeleton brand-logo-tile" />
-              ))}
-            </div>
+            [0, 1].map(row => (
+              <div key={row} className="brands-marquee-track" aria-hidden="true">
+                {Array.from({ length: 5 }, (_, n) => (
+                  <div key={n} className="skeleton-shimmer home-brand-skeleton brand-logo-tile" />
+                ))}
+              </div>
+            ))
           ) : (
-            <div className="brands-marquee-track brands-grid-12">
-              {marqueeBrands.map((brand, idx) => (
-                <button
-                  type="button"
-                  key={`${brand.id}-${idx}`}
-                  className={`brand-logo-tile${idx >= brands.length ? ' is-repeat' : ''}`}
-                  onClick={() => onNavigate(`products?brandId=${brand.id}&brandName=${encodeURIComponent(brand.name)}`)}
-                  title={brand.name}
-                  aria-label={brand.name}
-                >
-                  <BrandCardLogo brand={brand} logoUrl={getBrandImage(brand)} />
-                </button>
-              ))}
-            </div>
+            marqueeRows.map((row, rowIndex) => (
+              <div
+                key={rowIndex}
+                className="brands-marquee-track brands-grid-12"
+                style={{ '--brand-marquee-duration': `${76 * row.length / marqueeRows[0].length}s` }}
+              >
+                {row.map(({ brand, isRepeat }, idx) => (
+                  <button
+                    type="button"
+                    key={`${brand.id}-${idx}`}
+                    className={`brand-logo-tile${isRepeat ? ' is-repeat' : ''}`}
+                    onClick={() => onNavigate(`products?brandId=${brand.id}&brandName=${encodeURIComponent(brand.name)}`)}
+                    title={brand.name}
+                    aria-label={brand.name}
+                    aria-hidden={isRepeat || undefined}
+                    tabIndex={isRepeat ? -1 : undefined}
+                  >
+                    <BrandCardLogo brand={brand} logoUrl={getBrandImage(brand)} />
+                  </button>
+                ))}
+              </div>
+            ))
           )}
         </div>
 

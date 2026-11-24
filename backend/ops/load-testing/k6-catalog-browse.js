@@ -1,61 +1,91 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import exec from 'k6/execution';
+import { check } from 'k6';
 import { Rate } from 'k6/metrics';
 
-// Custom metrics
-const errorRate = new Rate('error_rate');
+const baseUrl = __ENV.BASE_URL || 'http://127.0.0.1:8080/api/v1';
+const rates = (__ENV.CATALOG_RATES || '10,25,50,100').split(',').map(Number);
+const seconds = Number(__ENV.CATALOG_STAGE_SECONDS || 60);
+const errors = new Rate('error_rate');
+const keywords = ['kem', 'serum', 'son', 'duong', 'toner'];
 
-// Test configuration: Simulating ramp-up traffic to measure cache efficiency and read throughput
-export const options = {
-    stages: [
-        { duration: '30s', target: 20 },  // Ramp up to 20 virtual users
-        { duration: '1m', target: 50 },   // Increase to 50 virtual users
-        { duration: '1m', target: 100 },  // Peak load at 100 concurrent users
-        { duration: '30s', target: 0 },   // Ramp down
-    ],
-    thresholds: {
-        http_req_duration: ['p(95)<300', 'p(99)<500'], // 95% of requests should be below 300ms
-        error_rate: ['rate<0.01'],                      // Less than 1% errors
-    },
-};
+if (![...rates, seconds].every((n) => Number.isSafeInteger(n) && n > 0)) {
+    throw new Error('Catalog rates and stage duration must be positive integers');
+}
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080/api/v1';
+const warmupSeconds = 10;
+const drainSeconds = 6;
+const scenarios = {};
+const thresholds = {};
+function addStage(name, rate, duration, startTime) {
+    scenarios[name] = {
+        executor: 'constant-arrival-rate',
+        rate,
+        timeUnit: '1s',
+        duration: duration + 's',
+        startTime: startTime + 's',
+        gracefulStop: '5s',
+        preAllocatedVUs: Math.max(5, Math.ceil(rate / 2)),
+        maxVUs: Math.max(10, rate * 2),
+    };
+}
 
-export default function () {
-    // 1. Get products list (paginated, cached in Redis)
-    const listRes = http.get(`${BASE_URL}/products?page=0&size=10&sort=createdAt,desc`);
-    const listSuccess = check(listRes, {
-        'products list status is 200': (r) => r.status === 200,
-        'has products content': (r) => {
-            try {
-                const body = JSON.parse(r.body);
-                return body.data && body.data.content && Array.isArray(body.data.content);
-            } catch (e) {
-                return false;
-            }
-        },
+addStage('warmup', Math.min(5, rates[0]), warmupSeconds, 0);
+for (const [index, rate] of rates.entries()) {
+    const name = 'catalog_' + (index + 1);
+    addStage(name, rate, seconds, warmupSeconds + drainSeconds + index * (seconds + drainSeconds));
+    thresholds['http_req_duration{scenario:' + name + '}'] = ['p(95)<300', 'p(99)<500'];
+    thresholds['error_rate{scenario:' + name + '}'] = ['rate<0.01'];
+    thresholds['dropped_iterations{scenario:' + name + '}'] = ['count==0'];
+}
+
+export const options = { scenarios, thresholds, maxRedirects: 0 };
+
+function responseData(response) {
+    try {
+        return response.json('data');
+    } catch {
+        return null;
+    }
+}
+
+export function setup() {
+    const list = http.get(baseUrl + '/products?page=0&size=30&sort=createdAt,desc');
+    const products = responseData(list)?.content;
+    if (list.status !== 200 || !Array.isArray(products) || !products.some((product) => product.id != null)) {
+        throw new Error('Populate the catalog and verify BASE_URL before starting the benchmark');
+    }
+    return products.filter((product) => product.id != null).map((product) => product.id);
+}
+
+export default function (productIds) {
+    const iteration = exec.scenario.iterationInTest;
+    // One request per iteration, split 50% list, 30% search and 20% detail.
+    const bucket = iteration % 10;
+    let endpoint;
+    let path;
+    if (bucket < 5) {
+        endpoint = 'list';
+        path = '/products?page=0&size=10&sort=createdAt,desc';
+    } else if (bucket < 8) {
+        endpoint = 'search';
+        const keyword = keywords[(Math.floor(iteration / 10) * 3 + bucket - 5) % keywords.length];
+        path = '/products/search?keyword=' + encodeURIComponent(keyword) + '&page=0&size=10';
+    } else {
+        endpoint = 'detail';
+        const detailIndex = Math.floor(iteration / 10) * 2 + bucket - 8;
+        path = '/products/' + productIds[detailIndex % productIds.length];
+    }
+
+    const response = http.get(baseUrl + path, {
+        tags: { name: 'catalog_' + endpoint, endpoint },
+        timeout: '5s',
     });
-    errorRate.add(!listSuccess);
-
-    sleep(1);
-
-    // 2. Search products
-    const searchKeywords = ['kem', 'serum', 'son', 'duong', 'toner'];
-    const keyword = searchKeywords[Math.floor(Math.random() * searchKeywords.length)];
-    const searchRes = http.get(`${BASE_URL}/products/search?keyword=${keyword}&page=0&size=10`);
-    const searchSuccess = check(searchRes, {
-        'search status is 200': (r) => r.status === 200,
+    const data = responseData(response);
+    const success = check(response, {
+        'catalog response has expected data': (r) => r.status === 200 &&
+            (endpoint === 'detail' ? data != null && String(data.id) === path.split('/').pop() :
+                Array.isArray(data?.content)),
     });
-    errorRate.add(!searchSuccess);
-
-    sleep(1);
-
-    // 3. View detail of product with id 1
-    const detailRes = http.get(`${BASE_URL}/products/1`);
-    const detailSuccess = check(detailRes, {
-        'product detail status is 200 or 404': (r) => r.status === 200 || r.status === 404,
-    });
-    errorRate.add(!detailSuccess);
-
-    sleep(1);
+    errors.add(!success, { endpoint });
 }

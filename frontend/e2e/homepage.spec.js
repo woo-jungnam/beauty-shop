@@ -206,6 +206,7 @@ test.describe('1. Trang Chủ (HomePage)', () => {
   test('1.12 Brand partners section hiển thị', async ({ page }) => {
     await page.route('**/api/v1/brands*', route => route.fulfill({ json: { data: { content: [
       { id: 42, name: 'Thương hiệu kiểm thử', logoUrl: '/brand-home-test.svg' },
+      { id: 43, name: 'Thương hiệu hàng hai', logoUrl: '/brand-home-test.svg' },
     ] } } }));
     await page.route('**/brand-home-test.svg', route => route.fulfill({
       contentType: 'image/svg+xml',
@@ -214,15 +215,30 @@ test.describe('1. Trang Chủ (HomePage)', () => {
     await page.goto(BASE);
     const brandSection = page.locator('#brand-partners');
     await brandSection.scrollIntoViewIfNeeded();
+    const rows = brandSection.locator('.brands-marquee-track');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(1).getByRole('button', { name: 'Thương hiệu hàng hai' })).toBeVisible();
+    await expect(rows.first()).toHaveCSS('animation-direction', 'reverse');
+    await expect(rows.last()).toHaveCSS('animation-direction', 'reverse');
     const brand = brandSection.getByRole('button', { name: 'Thương hiệu kiểm thử' }).first();
     await expect(brand.getByRole('img')).toBeVisible();
     await brandSection.locator('.brands-marquee-wrapper').hover();
     await brand.hover();
     await expect(brand).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(brandSection.locator('.brands-marquee-track')).toHaveCSS('animation-play-state', 'paused');
+    await expect(rows.first()).toHaveCSS('animation-play-state', 'paused');
+    await expect(rows.last()).toHaveCSS('animation-play-state', 'paused');
+
+    const offsetInTiles = await rows.evaluateAll(([firstRow, secondRow]) => {
+      const [firstTile, nextTile] = firstRow.children;
+      const pitch = nextTile.getBoundingClientRect().left - firstTile.getBoundingClientRect().left;
+      const offset = secondRow.firstElementChild.getBoundingClientRect().left - firstTile.getBoundingClientRect().left;
+      return Math.abs((offset / pitch) % 1);
+    });
+    expect(offsetInTiles).toBeCloseTo(0.5, 2);
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await expect(brandSection.locator('.brands-marquee-track')).toHaveCSS('animation-name', 'none');
+    await expect(rows.first()).toHaveCSS('animation-name', 'none');
+    await expect(rows.last()).toHaveCSS('animation-name', 'none');
     await expect(brandSection.getByRole('button', { name: 'Thương hiệu kiểm thử' })).toHaveCount(1);
     await brand.press('Enter');
     await expect(page).toHaveURL(/#\/products\?brandId=42/);

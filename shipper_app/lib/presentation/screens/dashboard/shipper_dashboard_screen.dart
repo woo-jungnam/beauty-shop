@@ -24,9 +24,16 @@ class ShipperDashboardScreen extends StatefulWidget {
 
 class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     with WidgetsBindingObserver {
-  static final _mapsDirections = Uri.tryParse(
-    const String.fromEnvironment('MAPS_DIRECTIONS_URL'),
-  );
+  static final Uri _mapsDirections = _resolveMapsDirections();
+
+  static Uri _resolveMapsDirections() {
+    const configuredUrl = String.fromEnvironment('MAPS_DIRECTIONS_URL');
+    final uri = Uri.tryParse(configuredUrl.trim());
+    if (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty) {
+      return uri;
+    }
+    return Uri.https('www.google.com', '/maps/dir/');
+  }
 
   Timer? _pollTimer;
   int _tab = 0;
@@ -93,7 +100,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
   }
 
   Future<void> _openDirections(String address) async {
-    final url = _mapsDirections!.replace(
+    final url = _mapsDirections.replace(
       queryParameters: {
         'api': '1',
         'destination': address,
@@ -619,9 +626,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                             ),
                           ),
                           if (order.isShipped &&
-                              order.shippingAddress.isNotEmpty &&
-                              _mapsDirections?.scheme == 'https' &&
-                              _mapsDirections!.hasAuthority)
+                              order.shippingAddress.isNotEmpty)
                             TextButton.icon(
                               onPressed: () =>
                                   _openDirections(order.shippingAddress),
