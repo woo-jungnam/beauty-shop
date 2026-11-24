@@ -22,48 +22,77 @@ const Status = ({ appointment }) => <span className={`reception-status ${SPA_STA
   {appointment.status === 'CONFIRMED' ? appointment.checkedInAt ? 'Đã check-in' : 'Chưa check-in' : SPA_STATUS[appointment.status]?.label || 'Chưa xác định'}
 </span>;
 
-const AssignDialog = ({ appointment, checkIn, onClose, onAssign }) => {
+const hasFacility = item => Boolean(item.facilityId || item.resources?.length);
+const needsAssignment = appointment => appointment.items?.some(item => !item.staffId || !hasFacility(item));
+
+const AssignDialog = ({ appointment, checkIn, fillMissing, facilities, onClose, onAssign }) => {
+  const items = appointment.items || [];
+  const completeAssignment = checkIn || fillMissing;
+  const staffItems = useMemo(() => (appointment.items || []).filter(item => !completeAssignment || !item.staffId), [appointment, completeAssignment]);
+  const roomItems = completeAssignment ? items.filter(item => !hasFacility(item)) : [];
   const [choices, setChoices] = useState({});
-  const [assignments, setAssignments] = useState(() => Object.fromEntries((appointment.items || []).map(item => [item.id, String(item.staffId || '')])));
+  const [assignments, setAssignments] = useState(() => Object.fromEntries(staffItems.map(item => [item.id, String(item.staffId || '')])));
+  const [rooms, setRooms] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
-    Promise.allSettled((appointment.items || []).map(item => apiClient.get(ENDPOINTS.SPA.PUBLIC_SERVICE_STAFF(item.serviceId), { signal: controller.signal })))
+    Promise.allSettled(staffItems.map(item => apiClient.get(ENDPOINTS.SPA.PUBLIC_SERVICE_STAFF(item.serviceId), { signal: controller.signal })))
       .then(results => {
         if (controller.signal.aborted) return;
         const options = {};
-        results.forEach((result, index) => { if (result.status === 'fulfilled') options[appointment.items[index].id] = asList(result.value); });
+        results.forEach((result, index) => { if (result.status === 'fulfilled') options[staffItems[index].id] = asList(result.value); });
         setChoices(options);
         if (results.some(result => result.status === 'rejected')) setError('Chưa tải được KTV phù hợp cho một số dịch vụ. Vui lòng mở lại cửa sổ để thử lại.');
       });
     return () => controller.abort();
-  }, [appointment]);
+  }, [staffItems]);
+  const facilityAssignments = Object.fromEntries(Object.entries(rooms).filter(([, value]) => value).map(([key, value]) => [key, Number(value)]));
+  const hasRoomSelection = Object.keys(facilityAssignments).length > 0;
+  const canSubmit = staffItems.every(item => choices[item.id] && assignments[item.id])
+    && (!fillMissing || staffItems.length > 0 || hasRoomSelection);
   const submit = async event => {
     event.preventDefault();
-    if (submitting.current) return;
+    if (submitting.current || !canSubmit) return;
     submitting.current = true; setBusy(true); setError('');
     try {
-      await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), { status: 'CONFIRMED', staffAssignments: Object.fromEntries(Object.entries(assignments).map(([key, value]) => [key, Number(value)])) });
+      const shouldSave = appointment.status === 'PENDING' || staffItems.length > 0 || hasRoomSelection;
+      if (shouldSave) {
+        await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), {
+          status: 'CONFIRMED',
+          ...(staffItems.length > 0 && { staffAssignments: Object.fromEntries(Object.entries(assignments).map(([key, value]) => [key, Number(value)])) }),
+          ...(hasRoomSelection && { facilityAssignments }),
+          ...(completeAssignment && { notes: 'Lễ tân điều phối phòng hoặc kỹ thuật viên tại quầy.' }),
+        });
+      }
       if (checkIn) {
         try { await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(appointment.id)); }
-        catch (err) { onAssign('Đã chỉ định KTV và xác nhận lịch. ' + spaErrorMessage(err, 'Chưa check-in được khách. Vui lòng kiểm tra lịch và thử lại.'), 'warning'); onClose(); return; }
+        catch (err) {
+          const message = spaErrorMessage(err, 'Chưa check-in được khách. Vui lòng kiểm tra lịch và thử lại.');
+          if (!shouldSave) { setError(message); return; }
+          onAssign('Đã lưu phân công. ' + message, 'warning'); onClose(); return;
+        }
       }
-      onAssign(checkIn ? 'Đã chỉ định KTV và check-in khách.' : (appointment.status === 'CONFIRMED' ? 'Đã cập nhật kỹ thuật viên.' : 'Đã chỉ định KTV và xác nhận lịch.')); onClose();
-    } catch (err) { setError(spaErrorMessage(err, 'Chưa chỉ định KTV được. Vui lòng kiểm tra lịch làm việc của KTV.')); }
+      onAssign(checkIn ? 'Đã check-in khách tại quầy.' : fillMissing ? 'Đã lưu phân công tại quầy.' : (appointment.status === 'CONFIRMED' ? 'Đã cập nhật kỹ thuật viên.' : 'Đã chỉ định KTV và xác nhận lịch.')); onClose();
+    } catch (err) { setError(spaErrorMessage(err, 'Chưa lưu được phân công. Vui lòng kiểm tra phòng và lịch làm việc của KTV.')); }
     finally { submitting.current = false; setBusy(false); }
   };
-  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Chỉ định KTV & check-in' : (appointment.status === 'CONFIRMED' ? 'Đổi chuyên viên' : 'Chỉ định KTV nhanh')} className="reception-dialog">
+  return <Modal isOpen onClose={() => { if (!busy) onClose(); }} title={checkIn ? 'Xếp phòng, KTV & check-in' : fillMissing ? 'Bổ sung phòng / KTV' : (appointment.status === 'CONFIRMED' ? 'Đổi chuyên viên' : 'Chỉ định KTV nhanh')} className="reception-dialog">
     <form className="reception-form" onSubmit={submit}>
       <p><strong>{appointment.customerName}</strong> · {appointmentCode(appointment)}<br /><small className="reception-muted">{formatDate(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</small></p>
       {error && <div role="alert" className="reception-notice error">{error}</div>}
-      {(appointment.items || []).map(item => <Select key={item.id} label={item.serviceName} required disabled={busy} value={assignments[item.id] || ''}
+      {staffItems.map(item => <Select key={item.id} label={item.serviceName} required disabled={busy} value={assignments[item.id] || ''}
         onChange={event => setAssignments(previous => ({ ...previous, [item.id]: event.target.value }))} options={[
           { value: '', label: choices[item.id] ? 'Chọn KTV đủ chuyên môn' : 'Đang tải KTV…' }, ...(choices[item.id] || []).map(staff => ({ value: String(staff.id), label: `${staff.fullName}${staff.specialty ? ' · ' + staff.specialty : ''}` })),
         ]} />)}
-      <p className="reception-muted">Hệ thống kiểm tra ca làm việc và lịch trùng khi xác nhận chỉ định KTV.</p>
-      <Button type="submit" loading={busy} disabled={(appointment.items || []).some(item => !choices[item.id] || !assignments[item.id])}>{checkIn ? 'Xác nhận & check-in' : (appointment.status === 'CONFIRMED' ? 'Lưu thay đổi kỹ thuật viên' : 'Xác nhận chỉ định KTV')}</Button>
+      {roomItems.map(item => <Select key={item.id} label={`Phòng / giường · ${item.serviceName}`} disabled={busy} value={rooms[item.id] || ''}
+        onChange={event => setRooms(previous => ({ ...previous, [item.id]: event.target.value }))} options={[
+          { value: '', label: 'Chưa chọn phòng / giường' },
+          ...facilities.filter(room => room.active !== false).map(room => ({ value: String(room.id), label: room.name })),
+        ]} />)}
+      <p className="reception-muted">Hệ thống kiểm tra sức chứa phòng, ca làm việc và lịch trùng khi lưu phân công.</p>
+      <Button type="submit" loading={busy} disabled={!canSubmit}>{checkIn ? 'Xác nhận & check-in' : fillMissing ? 'Lưu phân công' : (appointment.status === 'CONFIRMED' ? 'Lưu thay đổi kỹ thuật viên' : 'Xác nhận chỉ định KTV')}</Button>
     </form>
   </Modal>;
 };
@@ -223,7 +252,7 @@ export const SpaReceptionPage = () => {
     finally { actionLock.current = false; setBusy(''); }
   };
   const checkIn = appointment => {
-    if (appointment.status === 'PENDING' && (appointment.items || []).some(item => !item.staffId)) { setAssign({ appointment, checkIn: true }); return; }
+    if (needsAssignment(appointment)) { setAssign({ appointment, checkIn: true }); return; }
     run(`check-${appointment.id}`, async () => {
       if (appointment.status === 'PENDING') await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(appointment.id), {
         status: 'CONFIRMED', staffAssignments: Object.fromEntries((appointment.items || []).map(item => [item.id, item.staffId])),
@@ -324,6 +353,7 @@ export const SpaReceptionPage = () => {
     {appointment.status === 'PENDING' && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Chỉ định KTV</Button>}
     {appointment.status === 'CONFIRMED' && !appointment.checkedInAt && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, checkIn: false })}>Đổi KTV</Button>}
     {appointment.status === 'CONFIRMED' && appointment.checkedInAt && <>
+      {needsAssignment(appointment) && <Button size="sm" variant="outline" disabled={Boolean(busy)} onClick={() => setAssign({ appointment, fillMissing: true })}>Bổ sung phòng / KTV</Button>}
       <Button size="sm" disabled={Boolean(busy) || !canCheckInToday(appointment, now) || localInstant(appointment.appointmentDate, appointment.startTime) - 3600000 > now.getTime()} loading={busy === `start-${appointment.id}`}
         onClick={() => {
           const isPast = localInstant(appointment.appointmentDate, appointment.endTime || appointment.startTime) < now.getTime();
@@ -347,7 +377,13 @@ export const SpaReceptionPage = () => {
   const columns = [
     { key: 'customer', header: 'Khách hàng', render: appointment => <div className="reception-table-customer"><strong>{appointment.customerName || 'Khách hàng'}</strong><small>{appointment.customerPhone || 'Chưa có SĐT'} · {appointmentCode(appointment)}</small></div> },
     { key: 'time', header: 'Lịch hẹn', render: appointment => <><strong>{appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</strong><small className="reception-block reception-muted">{formatDate(appointment.appointmentDate)}</small></> },
-    { key: 'services', header: 'Dịch vụ / KTV', render: appointment => (appointment.items || []).map(item => <div key={item.id}>{item.serviceName}<small className="reception-block reception-muted">{item.staffName || 'Chưa chỉ định KTV'}{item.ticketId ? ' · Vé liệu trình' : ''}</small></div>) },
+    { key: 'services', header: 'Dịch vụ / KTV / Phòng', render: appointment => (appointment.items || []).map(item => (
+      <div key={item.id}>
+        {item.serviceName}
+        <small className="reception-block reception-muted">{item.staffId ? item.staffName : 'Chưa chỉ định KTV'}{item.ticketId ? ' · Vé liệu trình' : ''}</small>
+        {item.resources?.length > 0 && <small className="reception-block reception-muted">{item.resources.map(resource => resource.name).join(' · ')}</small>}
+      </div>
+    )) },
     { key: 'status', header: 'Trạng thái', render: appointment => <Status appointment={appointment} /> },
     { key: 'actions', header: 'Thao tác', render: actions },
   ];
@@ -626,7 +662,7 @@ export const SpaReceptionPage = () => {
       <footer className="reception-footer"><Sparkles size={14} /> BeautyShop Atelier Spa <span>Chăm sóc tận tâm, vận hành rõ ràng.</span></footer>
     </main>
     {walkIn && <WalkInDrawer key={walkIn.facilityId || 'walkin'} services={data.services} facilities={data.facilities} facilityId={walkIn.facilityId} onClose={() => setWalkIn(null)} onBooked={afterAction} />}
-    {assign && <AssignDialog {...assign} onClose={() => setAssign(null)} onAssign={afterAction} />}
+    {assign && <AssignDialog {...assign} facilities={data.facilities} onClose={() => setAssign(null)} onAssign={afterAction} />}
     {checkout && <Modal isOpen onClose={() => setCheckout(null)} title="Thu ngân tại quầy" maxWidth="660px" className="reception-dialog"><SpaVisitCheckout key={checkout.id} appointment={checkout} onUpdated={data.refresh} /></Modal>}
     {edit && <Modal isOpen onClose={() => { if (!busy) setEdit(null); }} title={edit.type === 'reschedule' ? 'Đổi lịch hẹn' : 'Ghi nhận khách vắng mặt'} className="reception-dialog"><form className="reception-form" onSubmit={submitEdit}><p><strong>{edit.appointment.customerName}</strong> · {appointmentCode(edit.appointment)}</p>{editError && <div role="alert" className="reception-notice error">{editError}</div>}{edit.type === 'reschedule' && <>
       <div className="reception-reschedule-summary">

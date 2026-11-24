@@ -1,0 +1,33 @@
+.customer-appointment-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 12px 20px;
+  margin: 0;
+}
+
+.customer-appointment-fields dt,
+.customer-appointment-services span {
+  color: #596475;
+  font-size: 13px;
+}
+
+.customer-appointment-fields dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.customer-appointment-location {
+  grid-column: 1 / -1;
+}
+
+.customer-appointment-services {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.customer-appointment-services span {
+  display: block;
+  margin-top: 3px;
+}

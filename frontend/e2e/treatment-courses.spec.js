@@ -246,8 +246,24 @@ test('STAFF can open the assigned operational course and perform intake', async 
 
 test('ADMIN creates and publishes a new template version without editing the sold version', async ({ page }) => {
   const { state, pageErrors } = await fixture(page, 'ADMIN');
+  Object.assign(state.course, { customerName: 'Nguyễn Minh An', customerPhone: '0901234567' });
   await page.goto('/#/admin/treatments');
+  const record = page.locator('[data-treatment-course-id="41"]');
+  await expect(record).toContainText('Nguyễn Minh An');
+  await expect(record).toContainText('0901234567');
+  await expect(record.getByRole('progressbar')).toBeVisible();
+  await record.getByText('Lịch trình từng buổi').click();
+  await expect(record.getByText('Buổi 1', { exact: true })).toBeVisible();
+  const desktopViewport = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(record).toBeVisible();
+  expect(await record.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.setViewportSize(desktopViewport);
+  await expect(page.getByRole('button', { name: 'Tạo mẫu lộ trình' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Mẫu & phiên bản', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tạo mẫu lộ trình' })).toBeVisible();
+  await page.locator('[data-treatment-template-id="11"]').getByText('Dịch vụ và lịch trình').click();
+  await expect(page.locator('[data-treatment-template-id="11"]').getByText('Buổi 1', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Tạo phiên bản mới', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Tạo phiên bản mới', exact: true }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible();

@@ -413,11 +413,12 @@ public class AppointmentServiceImpl implements AppointmentService {
         treatments.lockAppointmentCourse(appointment);
         AppointmentStatus previous = appointment.getStatus(), next = request.getStatus();
         boolean assignments = request.getStaffAssignments() != null && !request.getStaffAssignments().isEmpty();
+        boolean roomAssignments = request.getFacilityAssignments() != null && !request.getFacilityAssignments().isEmpty();
         if (!canManageAppointments() && !(access.hasRole("SPA_THERAPIST") && access.isAssignedTechnician(appointment)
-                && !assignments && request.getNotes() == null && (next == AppointmentStatus.IN_PROGRESS || next == AppointmentStatus.COMPLETED)))
+                && !assignments && !roomAssignments && request.getNotes() == null && (next == AppointmentStatus.IN_PROGRESS || next == AppointmentStatus.COMPLETED)))
             throw new AccessDeniedException("Appointment action is outside your role");
         if (next == null) throw new BusinessException("Trạng thái lịch hẹn là bắt buộc");
-        if (previous == next && !assignments && (request.getNotes() == null || request.getNotes().isBlank())) return response(appointment);
+        if (previous == next && !assignments && !roomAssignments && (request.getNotes() == null || request.getNotes().isBlank())) return response(appointment);
         boolean valid = previous == next && (previous == AppointmentStatus.PENDING || previous == AppointmentStatus.CONFIRMED || previous == AppointmentStatus.IN_PROGRESS);
         valid |= switch (previous) {
             case PENDING -> next == AppointmentStatus.CONFIRMED || next == AppointmentStatus.CANCELLED;
@@ -426,6 +427,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             default -> false;
         };
         if (!valid) throw new BusinessException("Chuyển trạng thái lịch hẹn không hợp lệ");
+        if (roomAssignments && next != AppointmentStatus.CONFIRMED)
+            throw new BusinessException("Vui lòng xếp phòng trước khi bắt đầu dịch vụ");
         boolean isReassignDuringInProgress = previous == AppointmentStatus.IN_PROGRESS && next == AppointmentStatus.IN_PROGRESS && assignments;
         if (assignments && next != AppointmentStatus.CONFIRMED && !isReassignDuringInProgress) 
             throw new BusinessException("Vui lòng phân công chuyên viên trước khi bắt đầu dịch vụ");
@@ -444,7 +447,11 @@ public class AppointmentServiceImpl implements AppointmentService {
             } else if (previous != AppointmentStatus.IN_PROGRESS) {
                 validateAndAssignStaff(appointment, request.getStaffAssignments());
             }
-            facilities.assign(appointment.getItems(), appointment.getAppointmentDate(), appointment.getId());
+            if (roomAssignments) {
+                facilities.assign(appointment.getItems(), appointment.getAppointmentDate(), appointment.getId(), request.getFacilityAssignments());
+            } else {
+                facilities.assign(appointment.getItems(), appointment.getAppointmentDate(), appointment.getId());
+            }
             if (isAppointmentPast(appointment) && next == AppointmentStatus.IN_PROGRESS) {
                 if (appointment.getCheckedInAt() == null) {
                     throw new BusinessException("Lịch hẹn đã quá giờ kết thúc và khách chưa check-in. Vui lòng chuyển sang Vắng mặt hoặc Hủy.");
@@ -506,7 +513,9 @@ public class AppointmentServiceImpl implements AppointmentService {
             }
         }
         appointmentRepository.save(appointment);
-        appendHistory(appointment, null, isReassignDuringInProgress ? "REASSIGN_STAFF" : (assignments ? "ASSIGN_STAFF" : "CHANGE_STATUS"), previous.name(), next.name(), request.getNotes());
+        String action = roomAssignments ? (assignments ? "ASSIGN_STAFF_AND_FACILITY" : "ASSIGN_FACILITY")
+                : isReassignDuringInProgress ? "REASSIGN_STAFF" : (assignments ? "ASSIGN_STAFF" : "CHANGE_STATUS");
+        appendHistory(appointment, null, action, previous.name(), next.name(), request.getNotes());
         return response(appointment);
     }
 

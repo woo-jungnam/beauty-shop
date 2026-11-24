@@ -981,6 +981,7 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
         <TreatmentAppointmentDialog
           key={selectedAppointment}
           appointmentId={selectedAppointment}
+          portalTarget={document.getElementById('customer-app')}
           role="customer"
           onClose={() => setSelectedAppointment(null)}
           onSaved={loadData}

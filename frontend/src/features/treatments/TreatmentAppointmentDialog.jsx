@@ -5,10 +5,11 @@ import { apiClient } from '../../shared/api/client';
 import { dateLabel, errorMessage, money, rows, statusLabel, treatmentApi, unwrap } from './treatmentApi';
 import { AppointmentMaterials } from './AppointmentMaterials';
 import { AppointmentFinance } from './AppointmentFinance';
+import { CustomerAppointmentSummary } from './CustomerAppointmentSummary';
 import { SpaVisitCheckout } from '../../shared/ui/SpaVisitCheckout';
 import { useAuth } from '../../app/providers/AuthProvider';
 
-export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSaved }) => {
+export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSaved, portalTarget }) => {
   const { user, isAdmin, isSpaReception, isSpaTherapist } = useAuth();
   const [appointment, setAppointment] = useState(null);
   const [preparation, setPreparation] = useState([]);
@@ -79,11 +80,14 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
     finally { lock.current = false; setBusy(''); }
   };
   const updateStatus = (status, extra = {}) => apiClient.put(`/api/v1/appointments/admin/${appointmentId}/status`, { status, ...(reception ? { notes: notes.trim() || undefined } : {}), ...extra });
-  return <Modal isOpen title={`Lịch hẹn #${appointmentId} · Chuẩn bị & thực hiện`} onClose={() => { if (!busy) onClose(); }} maxWidth="900px" className="treatment-dialog"><div className="treatment-form">
+  return <Modal isOpen portalTarget={portalTarget} title={`Lịch hẹn #${appointmentId} · Chuẩn bị & thực hiện`} onClose={() => { if (!busy) onClose(); }} maxWidth="900px" className="treatment-dialog"><div className="treatment-form">
     {error && <div role="alert" className="treatment-notice error">{error}</div>}
     <div className="treatment-actions"><Button variant="outline" onClick={load} disabled={Boolean(busy) || loading}>Tải lại lịch hẹn</Button></div>
     {loading && !appointment && <p role="status">Đang tải lịch hẹn…</p>}
-    {appointment && <><div className="treatment-card-heading"><strong>{dateLabel(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</strong><span className="treatment-badge">{statusLabel(appointment.status)}</span></div>
+    {appointment && <>
+      {operator
+        ? <div className="treatment-card-heading"><strong>{dateLabel(appointment.appointmentDate)} · {appointment.startTime?.slice(0, 5)}–{appointment.endTime?.slice(0, 5)}</strong><span className="treatment-badge">{statusLabel(appointment.status)}</span></div>
+        : <CustomerAppointmentSummary appointment={appointment} user={user} />}
       {appointment.items?.some(item => item.treatmentSessionItemId != null) && (
         <div className="treatment-notice info" style={{ marginBottom: 12 }}>
           <span>Buổi chăm sóc này thuộc <strong>Lộ trình điều trị chuyên sâu</strong>. Nếu hồ sơ mới mua, Bác sĩ cần hoàn tất tiếp nhận lâm sàng (Intake) trước khi ca có thể bắt đầu.</span>

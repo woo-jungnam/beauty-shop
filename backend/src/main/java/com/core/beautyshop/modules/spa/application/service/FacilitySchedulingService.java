@@ -40,12 +40,24 @@ public class FacilitySchedulingService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void assign(List<AppointmentItem> items, LocalDate date, Long excludedAppointmentId) {
-        assignInternal(items, date, excludedAppointmentId, false);
+        assignInternal(items, date, excludedAppointmentId, false, Set.of());
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void assign(List<AppointmentItem> items, LocalDate date, Long excludedAppointmentId, Map<Long, Long> requested) {
+        for (var entry : requested.entrySet()) {
+            AppointmentItem item = items.stream()
+                    .filter(candidate -> Objects.equals(candidate.getId(), entry.getKey()) && !released(candidate))
+                    .findFirst().orElseThrow(() -> new BusinessException("Dịch vụ cần xếp phòng không hợp lệ"));
+            if (entry.getValue() == null) throw new BusinessException("Vui lòng chọn phòng hợp lệ");
+            item.setFacility(findFacility(entry.getValue()));
+        }
+        assignInternal(items, date, excludedAppointmentId, false, requested.keySet());
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void validateOrReassignForReschedule(List<AppointmentItem> items, LocalDate date, Long excludedAppointmentId) {
-        assignInternal(items, date, excludedAppointmentId, true);
+        assignInternal(items, date, excludedAppointmentId, true, Set.of());
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -79,7 +91,7 @@ public class FacilitySchedulingService {
         }
     }
 
-    private void assignInternal(List<AppointmentItem> items, LocalDate date, Long excludedAppointmentId, boolean rescheduling) {
+    private void assignInternal(List<AppointmentItem> items, LocalDate date, Long excludedAppointmentId, boolean rescheduling, Set<Long> manualItems) {
         boolean constrained = items.stream().anyMatch(item -> !released(item)
                 && (item.getFacility() != null || (item.getResourceRequirements() != null && !item.getResourceRequirements().isEmpty())));
         if (!constrained) return;
@@ -100,7 +112,7 @@ public class FacilitySchedulingService {
             Map<String, Integer> demand = demand(item);
             if (demand.isEmpty()) continue;
             boolean forceManual = !rescheduling && item.getFacility() != null
-                    && (item.getFacilityAllocations() == null || item.getFacilityAllocations().isEmpty());
+                    && (manualItems.contains(item.getId()) || item.getFacilityAllocations() == null || item.getFacilityAllocations().isEmpty());
             List<Long> preferred = new ArrayList<>();
             if (item.getFacility() != null) preferred.add(item.getFacility().getId());
             if (item.getFacilityAllocations() != null) item.getFacilityAllocations().forEach(a -> preferred.add(a.getFacility().getId()));

@@ -1,0 +1,75 @@
+.operational-treatment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.operational-treatment-list .operational-treatment-record {
+  padding: 16px 20px;
+  overflow-wrap: anywhere;
+}
+
+.operational-treatment-record h2 {
+  margin: 0;
+}
+
+.operational-treatment-record small {
+  display: block;
+  color: var(--tc-muted);
+  margin-top: 3px;
+}
+
+.operational-treatment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px 20px;
+}
+
+.operational-treatment-row progress {
+  display: block;
+  width: min(100%, 140px);
+  height: 8px;
+  margin-top: 6px;
+  accent-color: var(--tc-accent);
+}
+
+.operational-treatment-record > details {
+  margin-top: 12px;
+  border-top: 1px solid #ececf1;
+  padding-top: 8px;
+}
+
+.operational-treatment-record summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.operational-treatment-schedule {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.operational-treatment-schedule li {
+  display: grid;
+  grid-template-columns: minmax(85px, 1fr) minmax(0, 3fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #ececf1;
+}
+
+@media (max-width: 1100px) {
+  .operational-treatment-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operational-treatment-row button {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .operational-treatment-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

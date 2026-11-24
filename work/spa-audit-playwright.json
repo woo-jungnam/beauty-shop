@@ -1,0 +1,4092 @@
+﻿{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "D:\\khoaluantotnghiep\\frontend\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "e2e/spa-reception.spec.js",
+      "e2e/spa-payment.spec.js",
+      "e2e/spa-lifecycle-complete.spec.js",
+      "e2e/spa-catalog.spec.js",
+      "e2e/spa-booking-design.spec.js",
+      "e2e/service-packages.spec.js",
+      "e2e/service-booking-orders.spec.js",
+      "e2e/treatment-courses.spec.js",
+      "e2e/profile-tab-runtime.spec.js",
+      "--retries=0",
+      "--workers=4",
+      "--reporter=json"
+    ],
+    "configFile": "D:\\khoaluantotnghiep\\frontend\\playwright.config.js",
+    "rootDir": "D:/khoaluantotnghiep/frontend/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 4
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "D:/khoaluantotnghiep/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 4
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "D:/khoaluantotnghiep/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:5173",
+      "reuseExistingServer": true,
+      "timeout": 30000
+    }
+  },
+  "suites": [
+    {
+      "title": "profile-tab-runtime.spec.js",
+      "file": "profile-tab-runtime.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "profile shows loyalty-eligible spending from the statistics API",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 8940,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.pf-hero-spending-amount')\nExpected pattern: \u001b[32m/65\\.000/\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('.pf-hero-spending-amount') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.pf-hero-spending-amount')\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.pf-hero-spending-amount')\nExpected pattern: \u001b[32m/65\\.000/\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('.pf-hero-spending-amount') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.pf-hero-spending-amount')\u001b[22m\n\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js:39:58",
+                    "location": {
+                      "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js",
+                      "column": 58,
+                      "line": 39
+                    },
+                    "snippet": "  37 |   await setup(page);\n  38 |   await page.goto('/#/profile');\n> 39 |   await expect(page.locator('.pf-hero-spending-amount')).toHaveText(/65\\.000/);\n     |                                                          ^\n  40 |   const spending = page.locator('.pf-stat-box').filter({ hasText: 'Chi tiêu tính điểm' });\n  41 |   await expect(spending.locator('.pf-stat-val')).toHaveText(/65\\.000/);\n  42 | });"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js",
+                        "column": 58,
+                        "line": 39
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.pf-hero-spending-amount')\nExpected pattern: \u001b[32m/65\\.000/\u001b[39m\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('.pf-hero-spending-amount') with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.pf-hero-spending-amount')\u001b[22m\n\n\n  37 |   await setup(page);\n  38 |   await page.goto('/#/profile');\n> 39 |   await expect(page.locator('.pf-hero-spending-amount')).toHaveText(/65\\.000/);\n     |                                                          ^\n  40 |   const spending = page.locator('.pf-stat-box').filter({ hasText: 'Chi tiêu tính điểm' });\n  41 |   await expect(spending.locator('.pf-stat-val')).toHaveText(/65\\.000/);\n  42 | });\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js:39:58"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:38.357Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-profil-9b54e-ing-from-the-statistics-API-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-profil-9b54e-ing-from-the-statistics-API-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-profil-9b54e-ing-from-the-statistics-API-chromium\\error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js",
+                    "column": 58,
+                    "line": 39
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "1ee2f13ced592caaa4da-ccc438e70263f4567b7f",
+          "file": "profile-tab-runtime.spec.js",
+          "line": 36,
+          "column": 1
+        },
+        {
+          "title": "profile shows the signed-in username and email",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8676,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:52.452Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1ee2f13ced592caaa4da-cfaec22687c0a3ec6f6c",
+          "file": "profile-tab-runtime.spec.js",
+          "line": 44,
+          "column": 1
+        },
+        {
+          "title": "every profile tab renders without uncaught errors when switching back and forth",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 32283,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js",
+                        "column": 73,
+                        "line": 58
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('navigation', { name: 'Menu tài khoản', exact: true }).getByRole('button', { name: 'Tổng quan' })\u001b[22m\n\n\n  56 |   const tabs = ['Tổng quan', 'Lịch sử giao dịch', 'Lịch hẹn Spa', 'Ví vé Spa', 'Hồ sơ da', 'Sổ địa chỉ', 'Yêu thích', 'Thông báo & Ưu đãi', 'Thông tin & Bảo mật'];\n  57 |   for (const title of [...tabs, ...tabs.toReversed()]) {\n> 58 |     await navigation.getByRole('button', { name: title, exact: false }).click();\n     |                                                                         ^\n  59 |     await expect(page.locator('#profile-workspace-title')).toHaveText(title);\n  60 |     await expect(page.getByRole('heading', { name: 'Không gian cá nhân', exact: true })).toBeVisible();\n  61 |     expect(errors, `Runtime errors on ${title}`).toEqual([]);\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js:58:73"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:02.219Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-every--a4d06-en-switching-back-and-forth-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-every--a4d06-en-switching-back-and-forth-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-every--a4d06-en-switching-back-and-forth-chromium\\error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "1ee2f13ced592caaa4da-cbe2bea598c33909ebc8",
+          "file": "profile-tab-runtime.spec.js",
+          "line": 52,
+          "column": 1
+        },
+        {
+          "title": "order history and order detail both render useCallback after profile navigation",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 7,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 30573,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js",
+                        "column": 130,
+                        "line": 68
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('navigation', { name: 'Menu tài khoản', exact: true }).getByRole('button', { name: 'Lịch sử giao dịch' })\u001b[22m\n\n\n  66 |   const errors = await setup(page);\n  67 |   await page.goto('/#/profile');\n> 68 |   await page.getByRole('navigation', { name: 'Menu tài khoản', exact: true }).getByRole('button', { name: 'Lịch sử giao dịch' }).click();\n     |                                                                                                                                  ^\n  69 |   await expect(page.locator('#profile-workspace-title')).toHaveText('Lịch sử giao dịch');\n  70 |   await page.getByRole('button', { name: 'Chi tiết đơn hàng', exact: true }).click();\n  71 |   await expect(page.getByRole('dialog')).toContainText(order.orderNumber);\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js:68:130"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:41.155Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-order--598c3-ck-after-profile-navigation-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-order--598c3-ck-after-profile-navigation-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-order--598c3-ck-after-profile-navigation-chromium\\error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "1ee2f13ced592caaa4da-46b6e557e51f33b7aef1",
+          "file": "profile-tab-runtime.spec.js",
+          "line": 65,
+          "column": 1
+        },
+        {
+          "title": "appointment detail fits the 1280px viewport from the Spa tab",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 8,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5385,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:17.210Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1ee2f13ced592caaa4da-a3ff34b8ad10f6b590a9",
+          "file": "profile-tab-runtime.spec.js",
+          "line": 81,
+          "column": 3
+        },
+        {
+          "title": "appointment detail fits the 390px viewport from the Spa tab",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 8,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4465,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:23.031Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1ee2f13ced592caaa4da-ec5e277505e1f2853281",
+          "file": "profile-tab-runtime.spec.js",
+          "line": 81,
+          "column": 3
+        },
+        {
+          "title": "summary order detail and appointment dialog preserve the profile after closing",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 8,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 31170,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js",
+                        "column": 77,
+                        "line": 109
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Xem chi tiết đơn', exact: true })\u001b[22m\n\n\n  107 |   const errors = await setup(page);\n  108 |   await page.goto('/#/profile');\n> 109 |   await page.getByRole('button', { name: 'Xem chi tiết đơn', exact: true }).click();\n      |                                                                             ^\n  110 |   await expect(page.getByRole('dialog')).toContainText(order.orderNumber);\n  111 |   await page.keyboard.press('Escape');\n  112 |   await expect(page.getByRole('dialog')).toHaveCount(0);\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\profile-tab-runtime.spec.js:109:77"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:27.518Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-summar-c3e3f-e-the-profile-after-closing-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-summar-c3e3f-e-the-profile-after-closing-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\profile-tab-runtime-summar-c3e3f-e-the-profile-after-closing-chromium\\error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "1ee2f13ced592caaa4da-1173a2eec5749697c9b1",
+          "file": "profile-tab-runtime.spec.js",
+          "line": 106,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "service-booking-orders.spec.js",
+      "file": "service-booking-orders.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "CUSTOMER sees a service booking before invoicing and its invoice afterwards",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 11951,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:38.302Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9499beea9edaee0654a5-5d8a9e5b6d7faeeb6d04",
+          "file": "service-booking-orders.spec.js",
+          "line": 4,
+          "column": 3
+        },
+        {
+          "title": "ADMIN sees service invoices in order management",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 4317,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:50.579Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "9499beea9edaee0654a5-bf1532356c4db6c383f2",
+          "file": "service-booking-orders.spec.js",
+          "line": 4,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "title": "service-packages.spec.js",
+      "file": "service-packages.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "package catalog paginates the filtered results from the first page",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 2,
+                  "status": "failed",
+                  "duration": 9413,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByRole('heading', { name: /^Gói Spa \\d{2}$/ })\nExpected: \u001b[32m3\u001b[39m\nReceived: \u001b[31m0\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" getByRole('heading', { name: /^Gói Spa \\d{2}$/ }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /^Gói Spa \\d{2}$/ })\u001b[22m\n\u001b[2m    11 × locator resolved to 0 elements\u001b[22m\n\u001b[2m       - unexpected value \"0\"\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByRole('heading', { name: /^Gói Spa \\d{2}$/ })\nExpected: \u001b[32m3\u001b[39m\nReceived: \u001b[31m0\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" getByRole('heading', { name: /^Gói Spa \\d{2}$/ }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /^Gói Spa \\d{2}$/ })\u001b[22m\n\u001b[2m    11 × locator resolved to 0 elements\u001b[22m\n\u001b[2m       - unexpected value \"0\"\u001b[22m\n\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js:41:23",
+                    "location": {
+                      "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js",
+                      "column": 23,
+                      "line": 41
+                    },
+                    "snippet": "  39 |   const search = page.getByRole('textbox', { name: 'Tìm kiếm gói dịch vụ' });\n  40 |\n> 41 |   await expect(cards).toHaveCount(3);\n     |                       ^\n  42 |   await expect(previous).toBeDisabled();\n  43 |   await next.click();\n  44 |   await expect(cards).toHaveCount(3);"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js",
+                        "column": 23,
+                        "line": 41
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveCount\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  getByRole('heading', { name: /^Gói Spa \\d{2}$/ })\nExpected: \u001b[32m3\u001b[39m\nReceived: \u001b[31m0\u001b[39m\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveCount\" getByRole('heading', { name: /^Gói Spa \\d{2}$/ }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /^Gói Spa \\d{2}$/ })\u001b[22m\n\u001b[2m    11 × locator resolved to 0 elements\u001b[22m\n\u001b[2m       - unexpected value \"0\"\u001b[22m\n\n\n  39 |   const search = page.getByRole('textbox', { name: 'Tìm kiếm gói dịch vụ' });\n  40 |\n> 41 |   await expect(cards).toHaveCount(3);\n     |                       ^\n  42 |   await expect(previous).toBeDisabled();\n  43 |   await next.click();\n  44 |   await expect(cards).toHaveCount(3);\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js:41:23"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:38.379Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-package-c-56583-results-from-the-first-page-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-package-c-56583-results-from-the-first-page-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-package-c-56583-results-from-the-first-page-chromium\\error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js",
+                    "column": 23,
+                    "line": 41
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-8a155f935cbd95b8960f",
+          "file": "service-packages.spec.js",
+          "line": 21,
+          "column": 1
+        },
+        {
+          "title": "ordinary package purchase confirms rights and preserves idempotency on retry",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 5,
+                  "parallelIndex": 2,
+                  "status": "failed",
+                  "duration": 9889,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true })\u001b[22m\n",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true })\u001b[22m\n\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js:73:77",
+                    "location": {
+                      "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js",
+                      "column": 77,
+                      "line": 73
+                    },
+                    "snippet": "  71 |   });\n  72 |   await page.goto('/#/service-packages');\n> 73 |   await expect(page.getByRole('heading', { name: pack.name, exact: true })).toBeVisible();\n     |                                                                             ^\n  74 |   await page.getByRole('button', { name: 'Xem điều kiện & mua gói' }).click();\n  75 |   await expect(page.getByRole('button', { name: 'Tạo đơn & thanh toán' })).toBeDisabled();\n  76 |   await page.getByRole('checkbox', { name: 'Tôi xác nhận giá, quyền lợi, hạn dùng và điều kiện trên.' }).check();"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js",
+                        "column": 77,
+                        "line": 73
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true }) with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'Gói chăm sóc 3 lượt', exact: true })\u001b[22m\n\n\n  71 |   });\n  72 |   await page.goto('/#/service-packages');\n> 73 |   await expect(page.getByRole('heading', { name: pack.name, exact: true })).toBeVisible();\n     |                                                                             ^\n  74 |   await page.getByRole('button', { name: 'Xem điều kiện & mua gói' }).click();\n  75 |   await expect(page.getByRole('button', { name: 'Tạo đơn & thanh toán' })).toBeDisabled();\n  76 |   await page.getByRole('checkbox', { name: 'Tôi xác nhận giá, quyền lợi, hạn dùng và điều kiện trên.' }).check();\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js:73:77"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:52.131Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-ordinary--32f4c-serves-idempotency-on-retry-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-ordinary--32f4c-serves-idempotency-on-retry-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-ordinary--32f4c-serves-idempotency-on-retry-chromium\\error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js",
+                    "column": 77,
+                    "line": 73
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-9fe2008ae92062798c32",
+          "file": "service-packages.spec.js",
+          "line": 63,
+          "column": 1
+        },
+        {
+          "title": "paid SERVICE_PACKAGE opens the matching benefit area",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 15190,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:08.982Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-dcba9d986aaa7556adae",
+          "file": "service-packages.spec.js",
+          "line": 85,
+          "column": 3
+        },
+        {
+          "title": "paid TREATMENT_COURSE opens the matching benefit area",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 10973,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:26.543Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-5523c24ee55e3dc2ca65",
+          "file": "service-packages.spec.js",
+          "line": 85,
+          "column": 3
+        },
+        {
+          "title": "wallet shows service balances, reservation and distinct forfeiture history",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 7286,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:37.542Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-893a2fa7f7259e3ec1cf",
+          "file": "service-packages.spec.js",
+          "line": 94,
+          "column": 1
+        },
+        {
+          "title": "revoked ticket keeps audit balance and disables ordinary booking",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 8347,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:44.856Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-977b1426beeab39f55b9",
+          "file": "service-packages.spec.js",
+          "line": 104,
+          "column": 1
+        },
+        {
+          "title": "administrator confirms quoted package settlement with receipt and reason",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 2,
+                  "status": "timedOut",
+                  "duration": 36950,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js",
+                        "column": 71,
+                        "line": 124
+                      },
+                      "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Vé dịch vụ & Gói khách hàng/ })\u001b[22m\n\n\n  122 |   },{...customer,roles:['ROLE_ADMIN']});\n  123 |   await page.goto('/#/admin/spa');\n> 124 |   await page.getByRole('button',{name:/Vé dịch vụ & Gói khách hàng/}).click();\n      |                                                                       ^\n  125 |   await page.getByRole('button',{name:'Quyết toán',exact:true}).click();\n  126 |   const dialog=page.getByRole('dialog');\n  127 |   await expect(dialog.getByText(/Số phải hoàn/)).toContainText('600.000');\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\service-packages.spec.js:124:71"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:53.289Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-administr-38e8f-ent-with-receipt-and-reason-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-administr-38e8f-ent-with-receipt-and-reason-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\service-packages-administr-38e8f-ent-with-receipt-and-reason-chromium\\error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-210161c042537c2b8f9f",
+          "file": "service-packages.spec.js",
+          "line": 114,
+          "column": 1
+        },
+        {
+          "title": "administrator chooses invoice service for a partial refund",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 6547,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:37.426Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e98cddb02be4620e6e8d-107d667222e54c4dc017",
+          "file": "service-packages.spec.js",
+          "line": 136,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "spa-booking-design.spec.js",
+      "file": "spa-booking-design.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "A chosen service, time and notes create a booking with the existing API contract",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 15988,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:38.418Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-90966e182e98c197192f",
+          "file": "spa-booking-design.spec.js",
+          "line": 179,
+          "column": 1
+        },
+        {
+          "title": "Changing a date clears the previous slot while availability is loading",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 10236,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:54.893Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-4c16f019c965fd662c52",
+          "file": "spa-booking-design.spec.js",
+          "line": 239,
+          "column": 1
+        },
+        {
+          "title": "Choosing a specialist reloads their slots and a prepaid ticket updates the summary",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 8627,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:05.161Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-aa465c6a86122f556f1e",
+          "file": "spa-booking-design.spec.js",
+          "line": 272,
+          "column": 1
+        },
+        {
+          "title": "Availability errors offer retry and remain distinct from an empty schedule",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 12610,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:13.812Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-c627930394c94c046312",
+          "file": "spa-booking-design.spec.js",
+          "line": 300,
+          "column": 1
+        },
+        {
+          "title": "A booking conflict shows its error and requires choosing a slot again",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 13112,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:26.447Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-2848e6b211735e84ba79",
+          "file": "spa-booking-design.spec.js",
+          "line": 319,
+          "column": 1
+        },
+        {
+          "title": "A guest resumes the confirmation step after logging in",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 13976,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:39.580Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-c95c5ece08415451cd6e",
+          "file": "spa-booking-design.spec.js",
+          "line": 344,
+          "column": 1
+        },
+        {
+          "title": "The mobile action guides missing contact information and submits the booking",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 7914,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:53.573Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-e218377e4c0d45968cd5",
+          "file": "spa-booking-design.spec.js",
+          "line": 368,
+          "column": 1
+        },
+        {
+          "title": "The Spa design and selections fit 320px screens",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 4939,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:01.503Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-f0eac3f296245c5b0b32",
+          "file": "spa-booking-design.spec.js",
+          "line": 394,
+          "column": 3
+        },
+        {
+          "title": "The Spa design and selections fit 390px screens",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 3903,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:06.465Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-b252aa83a075f564e417",
+          "file": "spa-booking-design.spec.js",
+          "line": 394,
+          "column": 3
+        },
+        {
+          "title": "The Spa design and selections fit 768px screens",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 4924,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:10.384Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-5182c66b03dd04e9f1c6",
+          "file": "spa-booking-design.spec.js",
+          "line": 394,
+          "column": 3
+        },
+        {
+          "title": "The Spa design and selections fit 1440px screens",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 3,
+                  "status": "passed",
+                  "duration": 3626,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:15.326Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "0fe5d09ab12f22da24c6-ae5172bd2e23df844638",
+          "file": "spa-booking-design.spec.js",
+          "line": 394,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "title": "spa-catalog.spec.js",
+      "file": "spa-catalog.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "catalog groups all paginated services and counts active staff independently of certification",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 11535,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:34:54.966Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-93b0e3df243c7d6c7d87",
+          "file": "spa-catalog.spec.js",
+          "line": 139,
+          "column": 1
+        },
+        {
+          "title": "editing service preserves a zero preparation time and thumbnail through existing backend payload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 7055,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:06.529Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-810dee9d07227af5681e",
+          "file": "spa-catalog.spec.js",
+          "line": 155,
+          "column": 1
+        },
+        {
+          "title": "service creation retains its saved ID when resource save fails and retries without a duplicate service",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 15927,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:13.617Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-addb2d94e5b5ebf63b4c",
+          "file": "spa-catalog.spec.js",
+          "line": 170,
+          "column": 1
+        },
+        {
+          "title": "service duration and resource validation prevent invalid backend submissions",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 9748,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:29.578Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-0c252c53bd54ed531542",
+          "file": "spa-catalog.spec.js",
+          "line": 201,
+          "column": 1
+        },
+        {
+          "title": "catalog and service resource editor fit a narrow mobile viewport",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 19296,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:39.350Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-084dab3212fba0466c5b",
+          "file": "spa-catalog.spec.js",
+          "line": 218,
+          "column": 1
+        },
+        {
+          "title": "package builder sums service quantities, compares discount and creates an unlimited package",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "timedOut",
+                  "duration": 36579,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\spa-catalog.spec.js",
+                        "column": 53,
+                        "line": 254
+                      },
+                      "message": "Error: locator.fill: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: 'Tạo gói liệu trình' }).getByLabel('Đường dẫn ảnh đại diện')\u001b[22m\n\n\n  252 |   await dialog.getByLabel('Không giới hạn thời hạn').check();\n  253 |   await expect(dialog.getByLabel('Hiệu lực (ngày)')).toBeDisabled();\n> 254 |   await dialog.getByLabel('Đường dẫn ảnh đại diện').fill('/images/spa-catalog-fixture.svg');\n      |                                                     ^\n  255 |   await dialog.getByRole('button', { name: 'Tạo gói liệu trình', exact: true }).click();\n  256 |   await expect(dialog).toHaveCount(0);\n  257 |   const created = calls.find(call => call.method === 'POST' && call.path.endsWith('/spa/packages'));\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\spa-catalog.spec.js:254:53"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:35:58.667Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\spa-catalog-package-builde-cd8ca-reates-an-unlimited-package-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\spa-catalog-package-builde-cd8ca-reates-an-unlimited-package-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\spa-catalog-package-builde-cd8ca-reates-an-unlimited-package-chromium\\error-context.md"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-4b365bc3aa3f286d8777",
+          "file": "spa-catalog.spec.js",
+          "line": 237,
+          "column": 1
+        },
+        {
+          "title": "package validation blocks fractional sessions and explains prices above the service total",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 10,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 10467,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:42.189Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-7cbc9ecd5c7adc7f7074",
+          "file": "spa-catalog.spec.js",
+          "line": 270,
+          "column": 1
+        },
+        {
+          "title": "an uncertain package creation cannot be resubmitted before checking the refreshed catalog",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 10,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 9480,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:53.511Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-4de89a1dcba8edc539f9",
+          "file": "spa-catalog.spec.js",
+          "line": 290,
+          "column": 1
+        },
+        {
+          "title": "skill matrix updates certification independently of permission and ignores inactive staff in eligibility",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 10,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 6567,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 0\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,9 +1,10 @@\u001b[39m\n\u001b[2m  Array [\u001b[22m\n\u001b[2m    Object {\u001b[22m\n\u001b[2m      \"body\": Object {\u001b[22m\n\u001b[2m        \"certified\": true,\u001b[22m\n\u001b[31m+       \"certifiedUntil\": null,\u001b[39m\n\u001b[2m        \"serviceId\": 901,\u001b[22m\n\u001b[2m      },\u001b[22m\n\u001b[2m      \"method\": \"PUT\",\u001b[22m\n\u001b[2m      \"path\": \"/api/v1/admin/staff/1/skills\",\u001b[22m\n\u001b[2m    },\u001b[22m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 0\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,9 +1,10 @@\u001b[39m\n\u001b[2m  Array [\u001b[22m\n\u001b[2m    Object {\u001b[22m\n\u001b[2m      \"body\": Object {\u001b[22m\n\u001b[2m        \"certified\": true,\u001b[22m\n\u001b[31m+       \"certifiedUntil\": null,\u001b[39m\n\u001b[2m        \"serviceId\": 901,\u001b[22m\n\u001b[2m      },\u001b[22m\n\u001b[2m      \"method\": \"PUT\",\u001b[22m\n\u001b[2m      \"path\": \"/api/v1/admin/staff/1/skills\",\u001b[22m\n\u001b[2m    },\u001b[22m\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\spa-catalog.spec.js:319:71",
+                    "location": {
+                      "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\spa-catalog.spec.js",
+                      "column": 71,
+                      "line": 319
+                    },
+                    "snippet": "  317 |   await dialog.getByRole('button', { name: 'Lưu 1 thay đổi', exact: true }).click();\n  318 |   await expect(dialog).toHaveCount(0);\n> 319 |   expect(calls.filter(call => call.path.endsWith('/staff/1/skills'))).toEqual([{ method: 'PUT', path: '/api/v1/admin/staff/1/skills', body: { serviceId: 901, certified: true } }]);\n      |                                                                       ^\n  320 |   expect(calls.filter(call => call.method === 'DELETE')).toHaveLength(0);\n  321 |   await expect(serviceCard(page, 901)).toContainText(/2\\s*KTV/i);\n  322 | });"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\spa-catalog.spec.js",
+                        "column": 71,
+                        "line": 319
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 0\u001b[39m\n\u001b[31m+ Received  + 1\u001b[39m\n\n\u001b[33m@@ -1,9 +1,10 @@\u001b[39m\n\u001b[2m  Array [\u001b[22m\n\u001b[2m    Object {\u001b[22m\n\u001b[2m      \"body\": Object {\u001b[22m\n\u001b[2m        \"certified\": true,\u001b[22m\n\u001b[31m+       \"certifiedUntil\": null,\u001b[39m\n\u001b[2m        \"serviceId\": 901,\u001b[22m\n\u001b[2m      },\u001b[22m\n\u001b[2m      \"method\": \"PUT\",\u001b[22m\n\u001b[2m      \"path\": \"/api/v1/admin/staff/1/skills\",\u001b[22m\n\u001b[2m    },\u001b[22m\n\n  317 |   await dialog.getByRole('button', { name: 'Lưu 1 thay đổi', exact: true }).click();\n  318 |   await expect(dialog).toHaveCount(0);\n> 319 |   expect(calls.filter(call => call.path.endsWith('/staff/1/skills'))).toEqual([{ method: 'PUT', path: '/api/v1/admin/staff/1/skills', body: { serviceId: 901, certified: true } }]);\n      |                                                                       ^\n  320 |   expect(calls.filter(call => call.method === 'DELETE')).toHaveLength(0);\n  321 |   await expect(serviceCard(page, 901)).toContainText(/2\\s*KTV/i);\n  322 | });\n    at D:\\khoaluantotnghiep\\frontend\\e2e\\spa-catalog.spec.js:319:71"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:03.010Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\spa-catalog-skill-matrix-u-84d22-active-staff-in-eligibility-chromium\\test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\spa-catalog-skill-matrix-u-84d22-active-staff-in-eligibility-chromium\\video.webm"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "D:\\khoaluantotnghiep\\frontend\\test-results\\spa-catalog-skill-matrix-u-84d22-active-staff-in-eligibility-chromium\\error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "D:\\khoaluantotnghiep\\frontend\\e2e\\spa-catalog.spec.js",
+                    "column": 71,
+                    "line": 319
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-7f2511ba536d0bec5f5e",
+          "file": "spa-catalog.spec.js",
+          "line": 308,
+          "column": 1
+        },
+        {
+          "title": "skill matrix retains successful grants when another technician cannot be removed",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 12841,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:16.239Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-9fa16049dd56b4445110",
+          "file": "spa-catalog.spec.js",
+          "line": 324,
+          "column": 1
+        },
+        {
+          "title": "catalog combines group, status and search filters",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 9303,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:31.884Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-be129b32463d36362337",
+          "file": "spa-catalog.spec.js",
+          "line": 342,
+          "column": 1
+        },
+        {
+          "title": "an unavailable skill API keeps an explicit unknown state rather than a false zero count",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 10859,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:41.217Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-a57643979678f0ce501b",
+          "file": "spa-catalog.spec.js",
+          "line": 353,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: five catalog 403 responses show one actionable banner without false zero or empty data",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 6093,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:52.100Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-824f71bb6b70bd84e3a7",
+          "file": "spa-catalog.spec.js",
+          "line": 360,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: packages remain available when services return 403 and tab counts stay independent",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 5841,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:58.220Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-2e193fceef8a2386c9a7",
+          "file": "spa-catalog.spec.js",
+          "line": 379,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: a staff 403 preserves ready services without inventing eligibility",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 3806,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:04.087Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-4b7a381d9b88a184cdfa",
+          "file": "spa-catalog.spec.js",
+          "line": 402,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: deduplication retains distinct source errors alongside the 403 banner",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 4333,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:07.926Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-40c38d52083057491537",
+          "file": "spa-catalog.spec.js",
+          "line": 414,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: failed refresh hides stale catalog data and retry restores current results",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 5954,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:12.281Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-17984fa24bb23696867d",
+          "file": "spa-catalog.spec.js",
+          "line": 427,
+          "column": 1
+        },
+        {
+          "title": "deletion requires confirmation and retains the service when backend obligations reject deletion",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 6345,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:18.256Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-eb3d5912ae849698f45a",
+          "file": "spa-catalog.spec.js",
+          "line": 456,
+          "column": 1
+        },
+        {
+          "title": "an existing service cannot erase resource requirements after a failed GET",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 6786,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:24.628Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-00ff1da82c6e9e0bfe00",
+          "file": "spa-catalog.spec.js",
+          "line": 468,
+          "column": 3
+        },
+        {
+          "title": "an existing service cannot erase resource requirements after a malformed successful GET",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 5423,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:31.447Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-3bef6dcc4323baf8d017",
+          "file": "spa-catalog.spec.js",
+          "line": 468,
+          "column": 3
+        },
+        {
+          "title": "a delayed safety policy from a closed service cannot overwrite the next service policy",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 8548,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:36.899Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-aa9cb2a2c54148f13341",
+          "file": "spa-catalog.spec.js",
+          "line": 486,
+          "column": 1
+        },
+        {
+          "title": "a failed safety policy read blocks writes until reopening successfully loads the current policy",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 8693,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:45.468Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "33ebd216fc26240626c9-b0f54479e924fec1ed65",
+          "file": "spa-catalog.spec.js",
+          "line": 510,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "spa-lifecycle-complete.spec.js",
+      "file": "spa-lifecycle-complete.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "E2E Lifecycle: Dịch Vụ Đơn Lẻ & Gói Dịch Vụ Dài Hạn (User ↔ Staff / Admin)",
+          "file": "spa-lifecycle-complete.spec.js",
+          "line": 202,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-SINGLE-01: Khách hàng đặt lịch hẹn dịch vụ đơn lẻ trực tuyến & xem thông tin cọc",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 4149,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:18.999Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-499685d7c078a1bf7321",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 208,
+              "column": 3
+            },
+            {
+              "title": "TC-SINGLE-02: Khách hàng đổi lịch hẹn (Reschedule) sang khung giờ mới thành công",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2205,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:23.168Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-2daf64398a8c86912310",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 215,
+              "column": 3
+            },
+            {
+              "title": "TC-SINGLE-03: Xử lý ngoại lệ đổi lịch khi khung giờ KTV đã kín (Slot Conflict)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 2526,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:25.390Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-6547d2196a7b067fdbba",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 243,
+              "column": 3
+            },
+            {
+              "title": "TC-SINGLE-04: Khách hàng hủy lịch hẹn trước hạn & chính sách hoàn cọc",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3364,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:27.939Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-fd344e1333bd94a36d0b",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 258,
+              "column": 3
+            },
+            {
+              "title": "TC-SINGLE-05 & TC-SINGLE-06: Sổ cọc lễ tân - Thu cọc bổ sung tại quầy khi khách chuyển thiếu",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3218,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:31.330Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-95becdc90b9217440fb0",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 279,
+              "column": 3
+            },
+            {
+              "title": "TC-SINGLE-07: Lễ tân tiếp đón & Check-in gán phòng/giường thực tế cho KTV",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3074,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:34.564Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-928a54c266bb19c16cb5",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 317,
+              "column": 3
+            },
+            {
+              "title": "TC-SINGLE-08: Lễ tân xuất hóa đơn buổi hẹn dịch vụ đơn lẻ & cấn trừ cọc đã thu",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3924,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:37.657Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-587d38e3f80d0c2c30d0",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 346,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-01: Khách hàng mua Gói Dịch Vụ Dài Hạn (5 buổi) & Cấp vé E-Ticket",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 7394,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:41.597Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-b137f0acbd5127d3ba28",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 377,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-02: Khách hàng vào Ví vé Spa và bấm đặt lịch hẹn sử dụng vé E-Ticket",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 8860,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:49.007Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-5cc39f57832685e75bde",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 412,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-03: Khóa đặt buổi kế tiếp khi vi phạm giãn cách ngày tối thiểu (Min Gap Days)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 4955,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:36:57.886Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-a82bff671314adb5ceea",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 425,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-04: Khách hàng vắng mặt buổi hẹn dùng vé - Ghi nhận mất lượt (Forfeiture)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 5230,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:02.856Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-ad208028c77958aaae7b",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 454,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-05: Khách hàng gửi yêu cầu xin gia hạn hạn dùng gói dịch vụ (Request Extension)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 3527,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:08.101Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-c2bc31574a15e193045b",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 479,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-06: Admin duyệt gia hạn hạn sử dụng gói dịch vụ dài hạn",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 4604,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:11.645Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-1cc846f5995247d09cb5",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 500,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-07: Quyết toán và hoàn tiền khi khách ngừng sử dụng gói (Package Settlement)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 6627,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:16.281Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-1df483f1b094243dc413",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 506,
+              "column": 3
+            },
+            {
+              "title": "TC-PACK-08: Lễ tân xuất hóa đơn hoàn tất buổi hẹn bằng khấu trừ vé E-Ticket (0đ phát sinh)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 5673,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:22.936Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-2216a60c8979fed78f19",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 536,
+              "column": 3
+            },
+            {
+              "title": "TC-EDGE-REVOKED: Vé đã thu hồi vô hiệu hóa thao tác đặt lịch và hiển thị cảnh báo",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 5122,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:28.634Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-5d34e1d1cbf9cbb28038",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 563,
+              "column": 3
+            },
+            {
+              "title": "TC-STAFF-REASSIGN: Lễ tân điều phối đổi Kỹ thuật viên khi nhân sự bận đột xuất",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 5897,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:33.783Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-cd1c8b70e996ce0a96b8",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 582,
+              "column": 3
+            },
+            {
+              "title": "TC-LATE-GRACE-01: Khách hàng gọi điện báo kẹt xe - Lễ tân gia hạn giữ chỗ 15 phút (Grace Period Extension)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 8177,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:39.705Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-a18ff6f5884af6790381",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 609,
+              "column": 3
+            },
+            {
+              "title": "TC-LATE-GRACE-02: Chặn lạm dụng gia hạn giữ chỗ - Chỉ cho phép gia hạn tối đa 1 lần",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 4987,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:47.927Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-92aba66e30cf886498cc",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 646,
+              "column": 3
+            },
+            {
+              "title": "TC-SERVICE-SUB-01: Bác sĩ / KTV soi da phát hiện mụn viêm - Đổi dịch vụ chỉ định từ Aqua Peel sang Điện di phục hồi B5",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 7532,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-24T10:37:52.934Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9aa472c229c7587fee2-54fe918b698487b86dc0",
+              "file": "spa-lifecycle-complete.spec.js",
+              "line": 674,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "spa-payment.spec.js",
+      "file": "spa-payment.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "Spa BANK waits for payment; partial transfers update QR; PAID hides QR",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 17123,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:36:44.593Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e64ee5b501a021d2af52-38b9913b8985f39c36a2",
+          "file": "spa-payment.spec.js",
+          "line": 48,
+          "column": 1
+        },
+        {
+          "title": "Existing Spa invoice reopens without recreating; cash collects outstanding balance only",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 6197,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:01.756Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e64ee5b501a021d2af52-952b46e9aeecd475b15f",
+          "file": "spa-payment.spec.js",
+          "line": 63,
+          "column": 1
+        },
+        {
+          "title": "Customer view only sees invoice if generated, cannot create invoice or collect cash",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 6275,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:07.985Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e64ee5b501a021d2af52-0c572832797e3239c1db",
+          "file": "spa-payment.spec.js",
+          "line": 75,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "spa-reception.spec.js",
+      "file": "spa-reception.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "beauty-report: search four appointment aliases across all API pages without changing display codes",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6524,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:04.276Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-40b52f1e8473c7d3a324",
+          "file": "spa-reception.spec.js",
+          "line": 110,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: facility failure retains appointments and disables stale room assignment",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7176,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:13.778Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-39ce2a8dc7fc50dd96b1",
+          "file": "spa-reception.spec.js",
+          "line": 128,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: initial facility failure still loads every appointment page",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8823,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:20.990Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-9248b794ebf55febe2b8",
+          "file": "spa-reception.spec.js",
+          "line": 143,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: appointment failure has retry instead of successful empty queue",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7804,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:29.842Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-d3286ac79fdd00d265fa",
+          "file": "spa-reception.spec.js",
+          "line": 154,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: failed appointment refresh keeps old rows with warning and unknown rooms",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8573,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:37.673Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-88c17135b8cf60c55913",
+          "file": "spa-reception.spec.js",
+          "line": 169,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: block failure locks only the unverified room",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4959,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:46.293Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-0a374f222c020c2b199e",
+          "file": "spa-reception.spec.js",
+          "line": 181,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: SpaPage counter stays unknown until success; loading and error never show empty",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6094,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:51.802Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-c6d41e1a02878a4efec7",
+          "file": "spa-reception.spec.js",
+          "line": 191,
+          "column": 1
+        },
+        {
+          "title": "beauty-report: SpaPage ignores stale filter and page responses",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5379,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:57.961Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-60f343b63d1d11a70974",
+          "file": "spa-reception.spec.js",
+          "line": 217,
+          "column": 1
+        },
+        {
+          "title": "all pages load; facility strip respects occupancy and cleaning independently of queue filters",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5543,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:03.372Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-d3708541da3e400df39a",
+          "file": "spa-reception.spec.js",
+          "line": 249,
+          "column": 1
+        },
+        {
+          "title": "list renders table headings; search and date/status filters combine",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4524,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:08.955Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-73f13584393654dc2855",
+          "file": "spa-reception.spec.js",
+          "line": 266,
+          "column": 1
+        },
+        {
+          "title": "walk-in creates CRM profile once, binds correct customer and facility, then confirms and checks in",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7100,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:13.508Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-708115c3113c11af45ad",
+          "file": "spa-reception.spec.js",
+          "line": 278,
+          "column": 1
+        },
+        {
+          "title": "returning customer lookup normalizes +84 and binds ticket to exact CRM owner",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5642,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:20.631Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-aea05aee43d9fc0ed916",
+          "file": "spa-reception.spec.js",
+          "line": 296,
+          "column": 1
+        },
+        {
+          "title": "failed check-in after successful booking reports partial success and cannot duplicate booking",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7214,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:26.290Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-9731b9bd09860e4f10ec",
+          "file": "spa-reception.spec.js",
+          "line": 311,
+          "column": 1
+        },
+        {
+          "title": "unverified block data never advertises a facility as free",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7104,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:33.523Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-61d6aaff737b3a195267",
+          "file": "spa-reception.spec.js",
+          "line": 324,
+          "column": 1
+        },
+        {
+          "title": "mobile board and drawer fit viewport, trap focus and restore body scroll",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5566,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:40.645Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-28ec116db2d2cc4a68f6",
+          "file": "spa-reception.spec.js",
+          "line": 330,
+          "column": 1
+        },
+        {
+          "title": "check-in with unassigned staff opens qualified assignment and completes both API steps",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6624,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:46.236Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-b103ec1471ed051617e6",
+          "file": "spa-reception.spec.js",
+          "line": 347,
+          "column": 1
+        },
+        {
+          "title": "reception fills a missing room after check-in without changing the assigned technician",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4715,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:52.873Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-50e8614e5efb9f63d503",
+          "file": "spa-reception.spec.js",
+          "line": 357,
+          "column": 1
+        },
+        {
+          "title": "booking conflicts retain created CRM profile for retry without creating another customer",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4566,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:57.611Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-4f2f10f116287c5ab3f9",
+          "file": "spa-reception.spec.js",
+          "line": 372,
+          "column": 1
+        },
+        {
+          "title": "uncertain server error after booking forces queue verification instead of duplicate submit",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4012,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:39:02.192Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-a4f1916fa41afbf1c6af",
+          "file": "spa-reception.spec.js",
+          "line": 385,
+          "column": 1
+        },
+        {
+          "title": "start requires check-in; incomplete executions require explicit confirmation before completion",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 11,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6406,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:39:06.218Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "cdf3ea8a221c53bf7281-db1f75f7c90c688f3539",
+          "file": "spa-reception.spec.js",
+          "line": 396,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "treatment-courses.spec.js",
+      "file": "treatment-courses.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "USER submits an ordinary package extension for admin review",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 8652,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:14.345Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-1e5090247d38e3e6c5a2",
+          "file": "treatment-courses.spec.js",
+          "line": 12,
+          "column": 1
+        },
+        {
+          "title": "ADMIN editing an unlimited template preserves null validity",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 8369,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:23.034Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-e5e0d5f03d8a0c4bfd71",
+          "file": "treatment-courses.spec.js",
+          "line": 32,
+          "column": 1
+        },
+        {
+          "title": "USER buys a published treatment and retries the same purchase idempotency key",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 11802,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:31.421Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-d87e73e3b1445bf390b3",
+          "file": "treatment-courses.spec.js",
+          "line": 87,
+          "column": 1
+        },
+        {
+          "title": "Customer views use store media and show the recorded session and notification states",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 15608,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:43.247Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-45d044addc24892882af",
+          "file": "treatment-courses.spec.js",
+          "line": 104,
+          "column": 1
+        },
+        {
+          "title": "Customer treatment tabs paginate their lists and restart filtered results on page one",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 8225,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:37:58.881Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-5e209c2d83f560249c7f",
+          "file": "treatment-courses.spec.js",
+          "line": 141,
+          "column": 1
+        },
+        {
+          "title": "USER books a session using its purchased ticket and treatment item",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 5389,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:07.128Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-b98a6f060414f64e39e5",
+          "file": "treatment-courses.spec.js",
+          "line": 184,
+          "column": 1
+        },
+        {
+          "title": "USER sees paid long-term packages and treatment courses together after reconciliation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 7488,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:12.541Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-cce95a97bcb2ab784091",
+          "file": "treatment-courses.spec.js",
+          "line": 197,
+          "column": 1
+        },
+        {
+          "title": "STAFF can open the assigned operational course and perform intake",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 5354,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:20.052Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-1717bd998941c4750b3b",
+          "file": "treatment-courses.spec.js",
+          "line": 233,
+          "column": 1
+        },
+        {
+          "title": "ADMIN creates and publishes a new template version without editing the sold version",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 7627,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:25.425Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-53208544e9d0a3704f6d",
+          "file": "treatment-courses.spec.js",
+          "line": 247,
+          "column": 1
+        },
+        {
+          "title": "ADMIN approves cancellation then confirms a real refund reference separately",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 6756,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:33.085Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-461fc09f213cdf7d9836",
+          "file": "treatment-courses.spec.js",
+          "line": 279,
+          "column": 1
+        },
+        {
+          "title": "ADMIN confirms a negative revision refund without cancelling the active course",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 6433,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:39.865Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-18386445dd42d1ff115c",
+          "file": "treatment-courses.spec.js",
+          "line": 298,
+          "column": 1
+        },
+        {
+          "title": "STAFF stops an interrupted treatment item only with an explicit reason",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 7672,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:46.317Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-312cdbf45d67204f4feb",
+          "file": "treatment-courses.spec.js",
+          "line": 315,
+          "column": 1
+        },
+        {
+          "title": "SPA reception coordinates appointments and receipts without fetching treatment clinical forms",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 9,
+                  "parallelIndex": 2,
+                  "status": "passed",
+                  "duration": 3649,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-24T10:38:54.006Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "906a1d9aff74265b073b-2a8138bb2d1837f74fa5",
+          "file": "treatment-courses.spec.js",
+          "line": 337,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-24T10:34:34.286Z",
+    "duration": 279068.133,
+    "expected": 97,
+    "skipped": 0,
+    "unexpected": 9,
+    "flaky": 0
+  }
+}

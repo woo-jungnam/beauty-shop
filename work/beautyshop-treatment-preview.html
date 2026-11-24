@@ -1,0 +1,80 @@
+<div id="beautyshop-treatment-preview" lang="vi">
+  <header><small>BeautyShop / Vận hành Spa</small><h2>Liệu trình chuyên sâu</h2></header>
+  <div class="treatment-preview-tabs" role="group" aria-label="Màn hình quản lý">
+    <button type="button" aria-pressed="true" aria-controls="preview-courses">Hồ sơ điều trị</button>
+    <button type="button" aria-pressed="false" aria-controls="preview-templates">Mẫu & phiên bản</button>
+    <button type="button" aria-pressed="false" aria-controls="preview-report">Báo cáo</button>
+  </div>
+  <section id="preview-courses" aria-label="Hồ sơ điều trị">
+    <details open>
+      <summary><span><strong>Nguyễn Minh An</strong><small>HS #003 · Phục hồi hàng rào da</small></span><span><span class="pill">Chờ tiếp nhận</span><small>0/4 buổi</small></span></summary>
+      <div class="preview-detail">
+        <div class="preview-fields">
+          <div><small>Liên hệ</small>090 ••• ••28</div>
+          <div><small>Đơn hàng</small>ĐH #125</div>
+          <div><small>Hạn sử dụng</small>21/02/2027</div>
+          <div><small>Lịch tiếp theo</small>Chưa đặt</div>
+        </div>
+        <div class="preview-session"><small>Buổi đầu tiên</small><strong>Làm sạch Aqua Peel & cấp ẩm</strong></div>
+        <div class="preview-next"><small>Bước tiếp theo</small>Tiếp nhận hồ sơ</div>
+      </div>
+    </details>
+  </section>
+  <section id="preview-templates" aria-label="Mẫu và phiên bản" hidden>
+    <details>
+      <summary><span><strong>Phục hồi hàng rào da</strong><small>4 buổi · 90 ngày · v1</small></span><span><span class="pill">Đang bán</span><small>1.700.000 ₫</small></span></summary>
+      <div class="preview-detail">
+        <ol>
+          <li>Làm sạch Aqua Peel & cấp ẩm</li>
+          <li>Điện di Vitamin C · sau ít nhất 7 ngày</li>
+          <li>Làm sạch & làm dịu · sau ít nhất 10 ngày</li>
+          <li>Chăm sóc phục hồi · sau ít nhất 14 ngày</li>
+        </ol>
+        <details><summary>Điều khoản sử dụng</summary><p>Hoàn thành 4 buổi trong thời hạn 90 ngày.</p></details>
+      </div>
+    </details>
+  </section>
+  <section id="preview-report" aria-label="Báo cáo" hidden>
+    <h3>Hồ sơ cần xử lý</h3>
+    <div class="preview-fields preview-metrics"><div><small>Chờ tiếp nhận</small><strong>3</strong></div><div><small>Buổi đến hạn</small><strong>0</strong></div><div><small>Chưa đặt buổi tiếp</small><strong>0</strong></div></div>
+    <details><summary>Tài chính liệu trình</summary><div class="preview-detail preview-fields"><div><small>Đã thu</small>5.100.000 ₫</div><div><small>Đã hoàn</small>0 ₫</div><div><small>Quyền lợi chưa sử dụng</small>5.100.000 ₫</div></div></details>
+  </section>
+</div>
+<style>
+  #beautyshop-treatment-preview { color-scheme: light dark; --base: light-dark(#f7f5fb, #211b2c); --surface: light-dark(#fff, #2d2539); --ink: light-dark(#281f39, #f3edf9); --sub: light-dark(#655c75, #c4b8d1); --line: light-dark(#e7e0ef, #493e58); --tint: light-dark(#eee7fa, #42335a); --brand: light-dark(#643ab2, #d6bcff); font: 14px/1.45 system-ui, sans-serif; color: var(--ink); background: var(--base); border: 1px solid var(--line); border-radius: 16px; padding: clamp(12px, 4vw, 30px); }
+  #beautyshop-treatment-preview h2, #beautyshop-treatment-preview h3 { margin: 0; color: var(--ink); }
+  #beautyshop-treatment-preview h2 { font-size: 24px; margin-top: 4px; }
+  #beautyshop-treatment-preview h3 { font-size: 16px; margin-bottom: 12px; }
+  #beautyshop-treatment-preview small { display: block; font-size: 12px; color: var(--sub); }
+  #beautyshop-treatment-preview .treatment-preview-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0; }
+  #beautyshop-treatment-preview button { border: 0; border-radius: 8px; background: transparent; color: var(--sub); font: inherit; padding: 8px 10px; min-height: 44px; cursor: pointer; }
+  #beautyshop-treatment-preview button[aria-pressed=true] { background: var(--tint); color: var(--brand); font-weight: 600; }
+  #beautyshop-treatment-preview details { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  #beautyshop-treatment-preview summary { padding: 12px; cursor: pointer; }
+  #beautyshop-treatment-preview summary > span { display: inline-block; vertical-align: middle; margin: 3px 10px 3px 0; }
+  #beautyshop-treatment-preview .pill { display: inline-block; border-radius: 20px; padding: 3px 8px; background: var(--tint); color: var(--brand); font-size: 12px; }
+  #beautyshop-treatment-preview .preview-detail { border-top: 1px solid var(--line); padding: 12px; }
+  #beautyshop-treatment-preview .preview-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 12px; }
+  #beautyshop-treatment-preview .preview-session { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+  #beautyshop-treatment-preview .preview-next { color: var(--brand); font-weight: 600; margin-top: 12px; }
+  #beautyshop-treatment-preview .preview-metrics { margin-bottom: 12px; }
+  #beautyshop-treatment-preview .preview-metrics > div { padding: 12px; border-radius: 10px; background: var(--surface); }
+  #beautyshop-treatment-preview .preview-metrics strong { font-size: 24px; }
+  #beautyshop-treatment-preview ol { margin: 0 0 12px; padding-left: 22px; }
+  #beautyshop-treatment-preview li { margin-bottom: 4px; }
+  #beautyshop-treatment-preview details p { padding: 0 12px 12px; }
+</style>
+<script>
+  {
+    const preview = document.getElementById('beautyshop-treatment-preview');
+    const tabs = [...preview.querySelectorAll('button[aria-controls]')];
+    for (const tab of tabs) {
+      tab.addEventListener('click', () => {
+        for (const option of tabs) {
+          option.setAttribute('aria-pressed', String(option === tab));
+          document.getElementById(option.getAttribute('aria-controls')).hidden = option !== tab;
+        }
+      });
+    }
+  }
+</script>

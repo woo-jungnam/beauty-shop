@@ -21,6 +21,10 @@ public class UpdateAppointmentStatusRequest {
     @Schema(description = "Map appointmentItemId→Staff.id (không phải User.id), tối đa 50 mục. Chỉ khi status đích CONFIRMED, kể cả cùng CONFIRMED; therapist không được gửi", example = "{\"101\":1,\"102\":2}")
     private Map<Long, Long> staffAssignments;
 
+    @Size(max = 50)
+    @Schema(description = "Map appointmentItemId → Facility.id khi xác nhận hoặc bổ sung phòng cho lịch đã xác nhận")
+    private Map<Long, Long> facilityAssignments;
+
     @NotNull(message = "Trạng thái lịch hẹn không được để trống")
     @Schema(description = "Trạng thái đích tuân transition. IN_PROGRESS cần check-in/đến giờ; COMPLETED cần mọi item PERFORMED/SKIPPED; NO_SHOW chưa check-in và quá grace", example = "CONFIRMED")
     private AppointmentStatus status;

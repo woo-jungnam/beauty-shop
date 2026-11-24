@@ -105,6 +105,27 @@ class FacilitySchedulingIntegrationTest {
             assertEquals(2, item.getFacilityAllocations().size()); assertEquals(2, item.getResourceRequirements().size()); return null; });
     }
 
+    @Test void receptionistCanSelectAnExactRoomAndCannotOverbookIt() {
+        Fixture fixture = fixture(1);
+        var alternative = administration.save(null, new AdminFacilityService.FacilityCommand("Alternative bed", null, fixture.bedType(), 1, true));
+        facilityIds.add(alternative.id());
+        long first = book(fixture, fixture.staffA(), LocalTime.of(10, 0), LocalTime.of(11, 0));
+        long second = book(fixture, fixture.staffB(), LocalTime.of(10, 0), LocalTime.of(11, 0));
+
+        assertThrows(BusinessException.class, () -> assignRoom(first, fixture.date(), alternative.id()));
+        tx(() -> { appointments.findById(second).orElseThrow().setStatus(AppointmentStatus.CANCELLED); return null; });
+        assertEquals(alternative.id(), assignRoom(first, fixture.date(), alternative.id()));
+    }
+
+    private Long assignRoom(long appointmentId, LocalDate date, long roomId) {
+        return tx(() -> {
+            var appointment = appointments.findById(appointmentId).orElseThrow();
+            var item = appointment.getItems().getFirst();
+            scheduling.assign(appointment.getItems(), date, appointmentId, Map.of(item.getId(), roomId));
+            return item.getFacilityAllocations().getFirst().getFacility().getId();
+        });
+    }
+
     @Test void skippedItemReleasesCapacityWhileAppointmentRemainsInProgress() {
         Fixture fixture = fixture(1);
         long id = book(fixture, fixture.staffA(), LocalTime.of(10, 0), LocalTime.of(11, 0));

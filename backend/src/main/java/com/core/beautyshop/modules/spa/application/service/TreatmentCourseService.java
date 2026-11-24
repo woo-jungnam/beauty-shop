@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.spa.application.service;
 
 import com.core.beautyshop.modules.identity.api.IdentityFacade;
+import com.core.beautyshop.modules.identity.api.dto.UserSummaryDto;
 import com.core.beautyshop.modules.order.api.OrderFacade;
 import com.core.beautyshop.modules.order.api.dto.CreateSpaPackageOrderCommand;
 import com.core.beautyshop.modules.order.api.dto.SpaPackageOrderResult;
@@ -184,14 +185,23 @@ public class TreatmentCourseService {
 
     public List<CourseView> operationalCourses() {
         requireOperator();
-        return list(Course.class, "select c from TreatmentCourse c order by c.id desc").stream()
-                .filter(c -> access.canManageReception() || (access.permission("SPA_EXECUTION") && isAssigned(c)))
-                .map(c -> courseView(c, access.hasRole("ADMIN") || (access.permission("SPA_EXECUTION") && isAssigned(c)))).toList();
+        boolean reception = access.canManageReception();
+        boolean admin = access.hasRole("ADMIN");
+        boolean execution = access.permission("SPA_EXECUTION");
+        var visible = list(Course.class, "select c from TreatmentCourse c order by c.id desc").stream()
+                .filter(c -> reception || (execution && isAssigned(c))).toList();
+        var profiles = identity.findUserSummaries(visible.stream().map(Course::getUserId).distinct().toList());
+        return visible.stream().map(c -> courseView(c, admin || (execution && isAssigned(c)),
+                profiles.get(c.getUserId()), reception || admin)).toList();
     }
 
     public CourseView course(Long id) {
         Course c = get(Course.class, id); requireView(c);
-        return courseView(c, access.hasRole("ADMIN") || (access.permission("SPA_EXECUTION") && isAssigned(c)));
+        boolean admin = access.hasRole("ADMIN");
+        boolean clinical = admin || (access.permission("SPA_EXECUTION") && isAssigned(c));
+        boolean canSeeContact = admin || access.canManageReception();
+        var profile = clinical || canSeeContact ? identity.findUserSummaryById(c.getUserId()).orElse(null) : null;
+        return courseView(c, clinical, profile, canSeeContact);
     }
 
     public CourseView assign(Long id, AssignCommand command) {
@@ -621,6 +631,10 @@ public class TreatmentCourseService {
     }
 
     private CourseView courseView(Course c, boolean clinical) {
+        return courseView(c, clinical, null, false);
+    }
+
+    private CourseView courseView(Course c, boolean clinical, UserSummaryDto profile, boolean canSeeContact) {
         Plan p = read(c.getPlanJson()); boolean owner = Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserIdOptional().orElse(null));
         List<SessionView> sessionViews = sessions(c).stream().map(s -> sessionView(c, s, clinical)).toList();
         int completed = (int) sessionViews.stream().filter(s -> "COMPLETED".equals(s.status())).count();
@@ -641,7 +655,8 @@ public class TreatmentCourseService {
         } else if (clinical && !Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(state)) {
             actions.add("REQUEST_INCIDENT");
         }
-        return new CourseView(c.getId(), c.getUserId(), c.getTemplateId(), c.getVersionId(), p.name(), state, c.getPlanRevision(), c.getOrderId(), c.getTicketId(), c.getAssignedStaffId(), c.getExpiryDate(), clinical ? c.getIntakeNotes() : null, clinical || owner ? c.getSummary() : null, c.getPaidAmount(), completed, sessionViews.size(), sessionViews.isEmpty() ? 0 : completed * 100 / sessionViews.size(), sessionViews, clinical || owner ? changeViews : List.of(), clinical || owner ? requestViews : List.of(), audits, actions, p, p);
+        return new CourseView(c.getId(), c.getUserId(), c.getTemplateId(), c.getVersionId(), p.name(), state, c.getPlanRevision(), c.getOrderId(), c.getTicketId(), c.getAssignedStaffId(), c.getExpiryDate(), clinical ? c.getIntakeNotes() : null, clinical || owner ? c.getSummary() : null, c.getPaidAmount(), completed, sessionViews.size(), sessionViews.isEmpty() ? 0 : completed * 100 / sessionViews.size(), sessionViews, clinical || owner ? changeViews : List.of(), clinical || owner ? requestViews : List.of(), audits, actions, p, p,
+                profile == null ? null : profile.getFullName(), canSeeContact && profile != null ? profile.getPhone() : null);
     }
 
     private SessionView sessionView(Course c, Session s, boolean clinical) {

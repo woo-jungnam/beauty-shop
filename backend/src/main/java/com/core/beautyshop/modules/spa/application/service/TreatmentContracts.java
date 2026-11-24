@@ -97,7 +97,8 @@ public final class TreatmentContracts {
                              String intakeNotes, String summary, BigDecimal paidAmount, int completedSessions,
                              int totalSessions, int progressPercent, List<SessionView> sessions,
                              List<ChangeView> changes, List<RequestView> requests, List<AuditView> audit,
-                             List<String> allowedActions, Plan plan, Plan currentPlan) {}
+                             List<String> allowedActions, Plan plan, Plan currentPlan,
+                             String customerName, String customerPhone) {}
     public record Report(long totalCourses, long pendingIntake, long activeCourses, long pausedCourses,
                          long completedCourses, long expiredCourses, long sessionsDue, long customersWithoutNextBooking,
                          BigDecimal collectedAmount, BigDecimal refundedAmount, BigDecimal unusedEntitlementAmount,

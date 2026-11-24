@@ -76,6 +76,26 @@ test('order history and order detail both render useCallback after profile navig
   expect(errors).toEqual([]);
 });
 
+for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 700 }]) {
+  test(`appointment detail fits the ${viewport.width}px viewport from the Spa tab`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const errors = await setup(page);
+    await page.goto('/#/profile?tab=appointments');
+    const trigger = page.getByRole('button', { name: 'Chi tiết, phiếu chuẩn bị & hướng dẫn' });
+    await trigger.click();
+
+    const dialog = page.getByRole('dialog', { name: /Lịch hẹn #71/ });
+    await expect(dialog).toContainText('Đã xác nhận');
+    await expect(dialog).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('.modal-backdrop.is-open')).toHaveJSProperty('offsetHeight', viewport.height);
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    expect(errors).toEqual([]);
+  });
+}
+
 test('summary order detail and appointment dialog preserve the profile after closing', async ({ page }) => {
   const errors = await setup(page);
   await page.goto('/#/profile');

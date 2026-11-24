@@ -16,7 +16,7 @@ async function setup(page, options = {}) {
   }, profile);
   const calls = [];
   let appointments = [appointment(1, 'PENDING', { startTime: '11:00', endTime: '12:00', items: [item(1, { startTime: '11:00', endTime: '12:00', resources: [{ facilityId: 1, name: 'Giường 1', quantity: 1 }] })] }),
-    appointment(2, 'CONFIRMED', { items: [item(2, { staffId: 11, staffName: 'Mai Anh' })] }),
+    appointment(2, 'CONFIRMED', { ...(options.alreadyCheckedIn && { checkedInAt: '2026-10-13T03:00:00Z' }), items: [item(2, { staffId: 11, staffName: 'Mai Anh' })] }),
     appointment(3, 'IN_PROGRESS', { checkedInAt: '2026-10-13T03:00:00Z', items: [item(3, { executionStatus: 'IN_PROGRESS', resources: [{ facilityId: 2, name: 'Giường 2', quantity: 1 }] })] }),
     appointment(4, 'COMPLETED', { orderId: 401, items: [item(4, { executionStatus: 'PERFORMED', ticketId: 88, ticketUsageState: 'REDEEMED' })] }), appointment(5, 'CANCELLED')];
   await page.route('**/api/v1/**', async route => {
@@ -46,7 +46,10 @@ async function setup(page, options = {}) {
       appointments.push(data);
     } else if (path.endsWith('/status')) {
       const id = Number(path.split('/').at(-2)); const body = request.postDataJSON(); calls.push({ path, body });
-      appointments = appointments.map(row => row.id === id ? { ...row, status: body.status, items: row.items.map(service => ({ ...service, staffId: body.staffAssignments?.[service.id] || service.staffId })) } : row);
+      appointments = appointments.map(row => row.id === id ? { ...row, status: body.status, items: row.items.map(service => ({
+        ...service, staffId: body.staffAssignments?.[service.id] || service.staffId,
+        facilityId: body.facilityAssignments?.[service.id] || service.facilityId,
+      })) } : row);
       data = appointments.find(row => row.id === id);
     } else if (path.endsWith('/check-in')) {
       calls.push({ path });
@@ -351,6 +354,21 @@ test('check-in with unassigned staff opens qualified assignment and completes bo
   expect(calls.some(call => call.path.endsWith('/1/check-in'))).toBe(true);
 });
 
+test('reception fills a missing room after check-in without changing the assigned technician', async ({ page }) => {
+  const calls = await setup(page, { alreadyCheckedIn: true });
+  const card = page.locator('[data-appointment-id="2"]');
+  await card.getByRole('button', { name: 'Bổ sung phòng / KTV' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByLabel('Chăm sóc da chuyên sâu', { exact: true })).toHaveCount(0);
+  await dialog.getByLabel('Phòng / giường · Chăm sóc da chuyên sâu').selectOption('1');
+  await dialog.getByRole('button', { name: 'Lưu phân công' }).click();
+  await expect(card.getByRole('button', { name: 'Bổ sung phòng / KTV' })).toHaveCount(0);
+  const assignment = calls.find(call => call.path.endsWith('/2/status')).body;
+  expect(assignment.facilityAssignments).toEqual({ 2: 1 });
+  expect(assignment.staffAssignments).toBeUndefined();
+  expect(calls.some(call => call.path.endsWith('/2/check-in'))).toBe(false);
+});
+
 test('booking conflicts retain created CRM profile for retry without creating another customer', async ({ page }) => {
   const calls = await setup(page, { bookingFail: true });
   await page.getByRole('button', { name: 'Đón khách vãng lai' }).click();
@@ -380,6 +398,8 @@ test('start requires check-in; incomplete executions require explicit confirmati
   const card = page.locator('[data-appointment-id="2"]');
   await expect(card.getByRole('button', { name: 'Bắt đầu ca' })).toHaveCount(0);
   await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  await page.getByLabel('Phòng / giường · Chăm sóc da chuyên sâu').selectOption('1');
+  await page.getByRole('button', { name: 'Xác nhận & check-in' }).click();
   await card.getByRole('button', { name: 'Bắt đầu ca' }).click();
   await card.getByRole('button', { name: 'Hoàn tất & thu ngân' }).click();
   const execution = page.getByRole('dialog', { name: /Lịch hẹn #2/ });
@@ -390,5 +410,6 @@ test('start requires check-in; incomplete executions require explicit confirmati
   await page.reload();
   await card.getByRole('button', { name: 'Hoàn tất & thu ngân' }).click();
   await expect(page.getByRole('dialog', { name: 'Thu ngân tại quầy' })).toBeVisible();
-  expect(calls.filter(call => call.path.endsWith('/2/status')).map(call => call.body.status)).toEqual(['IN_PROGRESS', 'COMPLETED']);
+  expect(calls.find(call => call.path.endsWith('/2/status')).body.facilityAssignments).toEqual({ 2: 1 });
+  expect(calls.filter(call => call.path.endsWith('/2/status')).map(call => call.body.status)).toEqual(['CONFIRMED', 'IN_PROGRESS', 'COMPLETED']);
 });

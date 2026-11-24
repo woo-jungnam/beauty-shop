@@ -8,6 +8,7 @@ import { listRows } from './AccountTools';
 import { getVietnamDateString } from '../../../shared/utils/formatters';
 
 export function AppointmentTools({ appointment, onSaved, autoOpen = false }) {
+  const portalTarget = document.getElementById('customer-app');
   const [opened, setOpened] = useState(autoOpen);
   const [reschedule, setReschedule] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -22,14 +23,14 @@ export function AppointmentTools({ appointment, onSaved, autoOpen = false }) {
       {appointment.status === 'COMPLETED' && (
         <button className="btn-luxury-outline" onClick={() => setReviewOpen(true)}>Đánh giá buổi Spa</button>
       )}
-      {opened && <TreatmentAppointmentDialog appointmentId={appointment.id} role="customer" onClose={() => setOpened(false)} onSaved={onSaved} />}
-      {reschedule && <RescheduleDialog appointment={appointment} onClose={() => setReschedule(false)} onSaved={onSaved} />}
-      {reviewOpen && <AppointmentReviewDialog appointment={appointment} onClose={() => setReviewOpen(false)} onSaved={onSaved} />}
+      {opened && <TreatmentAppointmentDialog appointmentId={appointment.id} role="customer" portalTarget={portalTarget} onClose={() => setOpened(false)} onSaved={onSaved} />}
+      {reschedule && <RescheduleDialog portalTarget={portalTarget} appointment={appointment} onClose={() => setReschedule(false)} onSaved={onSaved} />}
+      {reviewOpen && <AppointmentReviewDialog portalTarget={portalTarget} appointment={appointment} onClose={() => setReviewOpen(false)} onSaved={onSaved} />}
     </>
   );
 }
 
-export function AppointmentReviewDialog({ appointment, onClose, onSaved }) {
+export function AppointmentReviewDialog({ appointment, onClose, onSaved, portalTarget }) {
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState('');
   const [existingReview, setExistingReview] = useState(null);
@@ -71,7 +72,7 @@ export function AppointmentReviewDialog({ appointment, onClose, onSaved }) {
   };
 
   return (
-    <Modal isOpen title={`Đánh giá buổi hẹn #${appointment.id}`} onClose={() => { if (!busy) onClose(); }}>
+    <Modal isOpen portalTarget={portalTarget} title={`Đánh giá buổi hẹn #${appointment.id}`} onClose={() => { if (!busy) onClose(); }}>
       {checking ? (
         <p role="status">Đang kiểm tra trạng thái đánh giá…</p>
       ) : existingReview || done ? (
@@ -122,7 +123,7 @@ export function AppointmentReviewDialog({ appointment, onClose, onSaved }) {
   );
 }
 
-export function RescheduleDialog({ appointment, onClose, onSaved }) {
+export function RescheduleDialog({ appointment, onClose, onSaved, portalTarget }) {
   const [date, setDate] = useState(appointment.appointmentDate || '');
   const [slot, setSlot] = useState('');
   const [slots, setSlots] = useState([]);
@@ -130,5 +131,5 @@ export function RescheduleDialog({ appointment, onClose, onSaved }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => { let current = true; setSlot(''); setSlots([]); setError(''); apiClient.get(`/api/v1/appointments/${appointment.id}/available-slots`, { params: { date } }).then(result => { if (current) setSlots(listRows(result)); }).catch(e => { if (current) setError(e.message); }); return () => { current = false; }; }, [date, appointment.id]);
-  return <Modal isOpen title="Đổi lịch hẹn (giờ Việt Nam)" onClose={() => { if (!busy) onClose(); }}><form className="account-form" onSubmit={async event => { event.preventDefault(); setBusy(true); setError(''); try { await apiClient.put(`/api/v1/appointments/${appointment.id}/reschedule`, { appointmentDate: date, startTime: slot, notes }); await onSaved(); onClose(); } catch (e) { setError(e.message); } finally { setBusy(false); } }}>{error && <p role="alert">{error}</p>}<label>Ngày hẹn mới<input required type="date" min={getVietnamDateString()} value={date} onChange={event => setDate(event.target.value)} /></label><label>Giờ còn trống<select required value={slot} onChange={event => setSlot(event.target.value)}><option value="">Chọn giờ</option>{slots.map(value => <option key={value} value={value}>{value.slice(0, 5)}</option>)}</select></label>{!slots.length && <p>Chưa có giờ khả dụng cho ngày đã chọn. Vui lòng chọn ngày khác.</p>}<label>Lý do đổi lịch<textarea required maxLength={500} value={notes} onChange={event => setNotes(event.target.value)} /></label><button disabled={busy || !slot} className="btn-luxury-primary">Xác nhận đổi lịch</button></form></Modal>;
+  return <Modal isOpen portalTarget={portalTarget} title="Đổi lịch hẹn (giờ Việt Nam)" onClose={() => { if (!busy) onClose(); }}><form className="account-form" onSubmit={async event => { event.preventDefault(); setBusy(true); setError(''); try { await apiClient.put(`/api/v1/appointments/${appointment.id}/reschedule`, { appointmentDate: date, startTime: slot, notes }); await onSaved(); onClose(); } catch (e) { setError(e.message); } finally { setBusy(false); } }}>{error && <p role="alert">{error}</p>}<label>Ngày hẹn mới<input required type="date" min={getVietnamDateString()} value={date} onChange={event => setDate(event.target.value)} /></label><label>Giờ còn trống<select required value={slot} onChange={event => setSlot(event.target.value)}><option value="">Chọn giờ</option>{slots.map(value => <option key={value} value={value}>{value.slice(0, 5)}</option>)}</select></label>{!slots.length && <p>Chưa có giờ khả dụng cho ngày đã chọn. Vui lòng chọn ngày khác.</p>}<label>Lý do đổi lịch<textarea required maxLength={500} value={notes} onChange={event => setNotes(event.target.value)} /></label><button disabled={busy || !slot} className="btn-luxury-primary">Xác nhận đổi lịch</button></form></Modal>;
 }
