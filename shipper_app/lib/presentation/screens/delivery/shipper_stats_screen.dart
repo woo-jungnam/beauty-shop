@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../providers/shipper_provider.dart';
 import 'delivery_dates.dart';
 
@@ -48,8 +49,15 @@ class _ShipperStatsScreenState extends State<ShipperStatsScreen> {
         onRefresh: _refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           children: [
+            Text(
+              'Thống kê giao hàng',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
             DeliveryDates(
               range: _range,
               onChange: (range) {
@@ -57,10 +65,11 @@ class _ShipperStatsScreenState extends State<ShipperStatsScreen> {
                 _refresh();
               },
             ),
+            const SizedBox(height: 12),
             if (snapshot.connectionState != ConnectionState.done)
               const Center(child: CircularProgressIndicator())
             else if (snapshot.hasError) ...[
-              Text(snapshot.error.toString()),
+              const Text('Không tải được thống kê giao hàng.'),
               TextButton(onPressed: _refresh, child: const Text('Thử lại')),
             ] else
               ..._report(snapshot.requireData),
@@ -76,67 +85,102 @@ class _ShipperStatsScreenState extends State<ShipperStatsScreen> {
       symbol: '₫',
       decimalDigits: 0,
     );
+    final earnings = data['estimatedEarnings'];
     return [
       Card(
+        color: AppColors.primaryDark,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Thu nhập ước tính trong kỳ',
+                style: TextStyle(color: AppColors.primarySurface),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                earnings == null ? 'Chưa cấu hình' : currency.format(earnings),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "${data['deliveredOrders']} / ${data['totalOrders']} đơn đã giao trong kỳ",
+                style: const TextStyle(color: AppColors.primarySurface),
+              ),
+            ],
+          ),
+        ),
+      ),
+      Card(
         child: Column(
           children: [
-            ListTile(
-              title: const Text('Đã giao hôm nay'),
-              trailing: Text('${data['todayOrders']}'),
-            ),
-            ListTile(
-              title: const Text('Đã giao tuần này'),
-              trailing: Text('${data['weekOrders']}'),
-            ),
-            ListTile(
-              title: const Text('Đã giao tháng này'),
-              trailing: Text('${data['monthOrders']}'),
-            ),
+            for (final (icon, label, key) in const [
+              (
+                Icons.payments_outlined,
+                'COD tài xế đã thu',
+                'totalCodCollected',
+              ),
+              (
+                Icons.receipt_long_outlined,
+                'Giá trị đơn đã giao',
+                'totalRevenue',
+              ),
+              (
+                Icons.local_shipping_outlined,
+                'Phí giao hàng trên đơn đã giao',
+                'totalDeliveryFees',
+              ),
+            ])
+              ListTile(
+                leading: Icon(icon, color: AppColors.primary),
+                title: Text(label),
+                subtitle: Text(
+                  currency.format(data[key]),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
           ],
         ),
       ),
       Card(
         child: Column(
           children: [
-            ListTile(
-              title: const Text('Tổng số đơn trong kỳ'),
-              trailing: Text('${data['totalOrders']}'),
-            ),
-            ListTile(
-              title: const Text('Số đơn đã giao trong kỳ'),
-              trailing: Text('${data['deliveredOrders']}'),
-            ),
-            ListTile(
-              title: const Text('COD tài xế đã thu'),
-              subtitle: Text(currency.format(data['totalCodCollected'])),
-            ),
-            ListTile(
-              title: const Text('Giá trị đơn đã giao'),
-              subtitle: Text(currency.format(data['totalRevenue'])),
-            ),
-            ListTile(
-              title: const Text('Phí giao hàng trên đơn đã giao'),
-              subtitle: Text(currency.format(data['totalDeliveryFees'])),
-            ),
-            ListTile(
-              title: const Text('Thu nhập ước tính trong kỳ'),
-              subtitle: Text(
-                data['estimatedEarnings'] == null
-                    ? 'Chưa cấu hình'
-                    : currency.format(data['estimatedEarnings']),
+            for (final (label, key) in const [
+              ('Đã giao hôm nay', 'todayOrders'),
+              ('Đã giao tuần này', 'weekOrders'),
+              ('Đã giao tháng này', 'monthOrders'),
+            ])
+              ListTile(
+                title: Text(label),
+                trailing: Text(
+                  '${data[key]}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
           ],
         ),
       ),
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'Đơn đã giao theo ngày',
-          style: Theme.of(context).textTheme.titleMedium,
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Đơn đã giao theo ngày',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              _chart(Map<String, num>.from(data['ordersByDay'] as Map)),
+            ],
+          ),
         ),
       ),
-      _chart(Map<String, num>.from(data['ordersByDay'] as Map)),
     ];
   }
 
@@ -156,6 +200,7 @@ class _ShipperStatsScreenState extends State<ShipperStatsScreen> {
             width: max(constraints.maxWidth, entries.length * 48 + 36),
             child: BarChart(
               BarChartData(
+                borderData: FlBorderData(show: false),
                 maxY: max(1, maxCount).toDouble(),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(),

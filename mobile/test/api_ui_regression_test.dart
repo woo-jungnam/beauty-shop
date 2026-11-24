@@ -12,6 +12,7 @@ import 'package:beautyshop_mobile/core/constants/api_constants.dart';
 import 'package:beautyshop_mobile/core/storage/storage_service.dart';
 import 'package:beautyshop_mobile/core/utils/formatters.dart';
 import 'package:beautyshop_mobile/data/models/product_model.dart';
+import 'package:beautyshop_mobile/data/models/auth_models.dart';
 import 'package:beautyshop_mobile/providers/cart_provider.dart';
 import 'package:beautyshop_mobile/providers/product_provider.dart';
 import 'package:beautyshop_mobile/providers/auth_provider.dart';
@@ -71,6 +72,20 @@ class StubApiClient implements ApiClient {
 }
 
 Map<String, dynamic> success(dynamic data) => {'status': 200, 'data': data};
+
+class ProfileTestAuth extends AuthProvider {
+  @override
+  User get currentUser => User(
+    id: 1,
+    username: 'member',
+    fullName: 'Khách thử nghiệm',
+    membershipTier: 'PLATINUM',
+    roles: ['ROLE_USER'],
+  );
+
+  @override
+  bool get isAuthenticated => true;
+}
 Map<String, dynamic> page(List<Map<String, dynamic>> products) =>
     success({'content': products});
 Map<String, dynamic> product(int id, String name) => {
@@ -618,6 +633,46 @@ void main() {
     );
     expect(find.text('150 Đ'), findsNothing);
     expect(find.text('Hạng Thành Viên'), findsNothing);
+  });
+
+  testWidgets('Membership card fits a narrow screen with large spending', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final api = StubApiClient((path, query, body) {
+      expect(path, '/api/v1/users/order-statistics');
+      return success({'loyaltyEligibleSpent': 999999999999});
+    });
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthProvider>(create: (_) => ProfileTestAuth()),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ],
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.3)),
+            child: child!,
+          ),
+          home: ProfileScreen(apiClient: api),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final label in [
+      'Hạng Thành Viên',
+      'Chi Tiêu Tính Điểm',
+      'Xem thẻ',
+      AppFormatters.formatCurrency(999999999999),
+    ]) {
+      final text = find.text(label);
+      expect(text, findsOneWidget);
+      expect(tester.getRect(text).right, lessThanOrEqualTo(320));
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Cart with a zero-price admin deal can proceed to checkout', (

@@ -78,6 +78,24 @@ class ProductChunk(BaseModel):
         return self.chunkType
 
 
+class CatalogVariant(BaseModel):
+    id: int
+    name: str
+    sku: str = ""
+    volume: str = ""
+    color: str = ""
+    price: float
+    original_price: float | None = None
+    currency: str = "VND"
+    in_stock: bool
+    attributes: list[str] = Field(default_factory=list)
+
+
+class CatalogDetails(BaseModel):
+    specifications: list[str] = Field(default_factory=list)
+    variants: list[CatalogVariant] = Field(default_factory=list)
+
+
 class ProductBase(BaseModel):
     id: str
     name: str
@@ -90,6 +108,7 @@ class ProductBase(BaseModel):
     skinType: list[str] = Field(default_factory=list, alias="skin_type")
     concerns: list[str] = Field(default_factory=list)
     usage: str
+    catalog_details: CatalogDetails = Field(default_factory=CatalogDetails)
     rating: float = 5.0
     totalReviews: int = Field(default=0, alias="total_reviews")
     totalSold: int = Field(default=0, alias="total_sold")

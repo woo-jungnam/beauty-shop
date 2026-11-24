@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 90,
                       height: 90,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: AppColors.primarySurface,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -95,14 +95,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Icon(
                         Icons.local_shipping_rounded,
                         size: 48,
-                        color: Colors.white,
+                        color: AppColors.primaryDark,
                       ),
                     ),
                     const SizedBox(height: 20),
 
                     // Title & Subtitle
                     const Text(
-                      'BeautyShop Shipper',
+                      'BeautyShip',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 26,
@@ -113,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Cổng ứng dụng dành riêng cho tài xế giao hàng',
+                      'Quản lý đơn giao của bạn',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,

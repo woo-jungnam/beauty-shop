@@ -417,6 +417,14 @@ class EmbeddingService:
                         raise ValueError("Invalid embedding batch size or vector dimension")
                     self._cache.update(zip(batch, vectors))
                     self.is_fallback_active = False
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 429:
+                        logger.warning("Index embedding rate-limited; using cached vectors and lexical search for this sync.")
+                        self.saveCacheToDisk()
+                        return [self._cache.get(text) or self._cache.get(
+                            hashlib.sha256(text.encode("utf-8")).hexdigest(), []
+                        ) for text in cleaned_texts]
+                    logger.warning("Embedding batch failed (%s); retrying individual texts.", type(exc).__name__)
                 except Exception as exc:
                     logger.warning("Embedding batch failed (%s); retrying individual texts.", type(exc).__name__)
 

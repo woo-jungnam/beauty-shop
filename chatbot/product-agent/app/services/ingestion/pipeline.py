@@ -6,7 +6,8 @@ from app.core.logging import LatencyTracker, getLogger
 from app.models.database import initDb
 from app.repositories.product_repository import ProductRepository
 from app.repositories.vector_repository import vectorRepository
-from app.schemas.product import ChunkMetadata, ChunkType, ProductChunk, ProductCreate
+from app.schemas.product import CatalogDetails, ChunkMetadata, ChunkType, ProductChunk, ProductCreate
+from app.services.catalog_details import catalog_evidence
 from app.services.ingestion.cleaning import TextCleaner
 from app.services.retrieval.search import bm25Service, embeddingService
 
@@ -62,11 +63,15 @@ class ProductChunker:
                 f"Mô tả chi tiết: {TextCleaner.clean(descRaw)}"
             )
         else:
+            evidence = catalog_evidence(CatalogDetails.model_validate(product.get("catalog_details") or {}),
+                                        include_availability=False)
             descText = (
                 f"Sản phẩm: {name} của thương hiệu {brand}. Danh mục: {category}. "
                 f"Phù hợp loại da: {', '.join(skinType)}. Vấn đề da: {', '.join(concerns)}. "
                 f"Mô tả chi tiết: {TextCleaner.clean(descRaw)}"
             )
+            if evidence:
+                descText += f". Thông tin sản phẩm và các biến thể: {evidence}"
         chunks.append(
             ProductChunk(
                 chunk_id=f"{productId}_desc",
@@ -188,6 +193,7 @@ class IndexingService:
                     skin_type=p.get("skin_type", p.get("skinType", [])),
                     concerns=p.get("concerns", []),
                     usage=TextCleaner.clean(str(p.get("usage", ""))),
+                    catalog_details=p.get("catalog_details") or {},
                     rating=float(p.get("rating", 5.0)),
                     total_reviews=int(p.get("total_reviews", p.get("totalReviews", 0))),
                     total_sold=int(p.get("total_sold", p.get("totalSold", 0))),

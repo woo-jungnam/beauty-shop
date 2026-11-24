@@ -90,7 +90,7 @@ class DatabaseExtractor:
 
     _get_connection = getConnection
 
-    def extractProducts(self, limit: Optional[int] = None) -> List[dict[str, Any]]:
+    def extractProducts(self, limit: Optional[int] = None, *, include_unavailable: bool = False) -> List[dict[str, Any]]:
         cutoff = sale_cutoff()
         conn = self.getConnection()
         query = """
@@ -99,9 +99,11 @@ class DatabaseExtractor:
                 p.name, 
                 COALESCE(b.name, 'Khác') as brand,
                 COALESCE(cat.category_name, 'Khác') as category,
-                CAST(prices.price AS DOUBLE) as price,
+                CAST(COALESCE(prices.price, prices.catalog_price, 0) AS DOUBLE) as price,
                 p.status,
                 p.skin_type,
+                p.origin_country, p.volume, p.target_gender, p.product_type, p.key_actives_summary,
+                usage_detail.when_to_use, usage_detail.frequency, usage_detail.instructions, usage_detail.warnings,
                 p.is_featured, p.has_fragrance, p.has_alcohol,
                 COALESCE(p.ingredients, '') as ingredients,
                 COALESCE(p.how_to_use, '') as how_to_use,
@@ -114,17 +116,20 @@ class DatabaseExtractor:
                  WHERE pi.product_id = p.id AND pi.is_deleted = 0
                  ORDER BY pi.is_primary DESC, pi.display_order ASC, pi.id ASC
                  LIMIT 1)) as image_url,
-                prices.total_stock as stock
+                COALESCE(prices.total_stock, 0) as stock
             FROM products p
-            JOIN (
-                SELECT pv.product_id, MIN(COALESCE(pv.discount_price, pv.price)) AS price,
+            LEFT JOIN (
+                SELECT pv.product_id,
+                       MIN(CASE WHEN safe_stock.available > 0 THEN COALESCE(pv.discount_price, pv.price) END) AS price,
+                       MIN(COALESCE(pv.discount_price, pv.price)) AS catalog_price,
                        SUM(safe_stock.available) AS total_stock
                 FROM product_variants pv
-                JOIN (""" + AVAILABLE_STOCK_SQL + """) safe_stock ON safe_stock.product_variant_id = pv.id
+                LEFT JOIN (""" + AVAILABLE_STOCK_SQL + """) safe_stock ON safe_stock.product_variant_id = pv.id
                 WHERE pv.is_deleted = 0 AND pv.is_active = 1
                 GROUP BY pv.product_id
             ) prices ON p.id = prices.product_id
             LEFT JOIN brands b ON p.brand_id = b.id
+            LEFT JOIN product_usage_details usage_detail ON usage_detail.product_id = p.id
             LEFT JOIN (
                 SELECT pc.product_id, GROUP_CONCAT(DISTINCT c.name ORDER BY c.name SEPARATOR ' | ') as category_name
                 FROM product_categories pc
@@ -133,8 +138,10 @@ class DatabaseExtractor:
                 GROUP BY pc.product_id
             ) cat ON p.id = cat.product_id
             WHERE p.is_deleted = 0 AND p.status = 'ACTIVE'
-            ORDER BY p.id ASC
         """
+        if not include_unavailable:
+            query += " AND prices.total_stock > 0"
+        query += " ORDER BY p.id ASC"
         if limit is not None and limit > 0:
             query += f" LIMIT {int(limit)}"
 
@@ -143,6 +150,34 @@ class DatabaseExtractor:
                 cur.execute("START TRANSACTION READ ONLY")
                 cur.execute(query, (cutoff,))
                 rows = cur.fetchall()
+                variants = self.readCatalogVariants(cur, [r["id"] for r in rows], cutoff)
+                cur.execute("""
+                    SELECT v.product_id, v.product_variant_id, d.attribute_name, d.unit,
+                           v.value_string, v.value_text, v.value_number, v.value_boolean
+                    FROM product_attribute_values v
+                    JOIN product_attribute_definitions d ON d.id = v.attribute_definition_id
+                    WHERE v.is_deleted = 0 AND d.is_deleted = 0 AND d.is_visible = 1
+                    ORDER BY d.display_order, d.id, v.id
+                """)
+                attributes = defaultdict(list)
+                for row in cur.fetchall():
+                    value = row["value_string"] or row["value_text"]
+                    if not value and row["value_number"] is not None:
+                        value = f"{row['value_number']:g} {row['unit'] or ''}".strip()
+                    if not value and row["value_boolean"] is not None:
+                        value = "Có" if row["value_boolean"] else "Không"
+                    if value:
+                        attributes[(row["product_id"], row["product_variant_id"])].append(
+                            f"{row['attribute_name']}: {value}"
+                        )
+                cur.execute("""
+                    SELECT m.product_id, t.name FROM product_tag_mapping m
+                    JOIN product_tags t ON t.id = m.tag_id
+                    WHERE t.is_deleted = 0 ORDER BY t.name
+                """)
+                tags = defaultdict(list)
+                for row in cur.fetchall():
+                    tags[row["product_id"]].append(row["name"])
                 cur.execute("SELECT pi.product_id, i.name, i.inci_name, i.functions, i.benefits FROM product_ingredients pi JOIN ingredients i ON i.id=pi.ingredient_id WHERE i.is_deleted=0")
                 ingredientRows = cur.fetchall()
                 cur.execute("SELECT c.product_id, s.code, c.score, c.is_recommended, c.contraindication_reason FROM product_skin_compatibility c JOIN skin_types s ON s.id=c.skin_type_id")
@@ -215,6 +250,36 @@ class DatabaseExtractor:
 
             rawIngredients = r["ingredients"] or ""
             ingList = [i.strip() for i in rawIngredients.replace(";", ",").split(",") if i.strip()] if isinstance(rawIngredients, str) else []
+            ingList = list(dict.fromkeys(ingList + ingredientMap[r["id"]]))
+            productVariants = variants[r["id"]]
+            for variant in productVariants:
+                variant["attributes"].extend(attributes[(r["id"], variant["id"])])
+            specs = [
+                f"{label}: {r[key]}" for key, label in (
+                    ("origin_country", "Xuất xứ"), ("target_gender", "Đối tượng"),
+                    ("product_type", "Loại sản phẩm"), ("key_actives_summary", "Hoạt chất chính"),
+                ) if r.get(key)
+            ]
+            if r.get("volume") and not any(variant["volume"] for variant in productVariants):
+                specs.append(f"Dung tích: {r['volume']}")
+            for key, label in (("has_fragrance", "Hương liệu"), ("has_alcohol", "Cồn")):
+                if r.get(key) is not None:
+                    specs.append(f"{label}: {'Có' if r[key] else 'Không'}")
+            if tags[r["id"]]:
+                specs.append(f"Nhãn: {', '.join(tags[r['id']])}")
+            specs.extend(attributes[(r["id"], None)])
+
+            usage = [str(r["how_to_use"] or "").strip()]
+            for key, label in (
+                ("when_to_use", "Thời điểm"), ("frequency", "Tần suất"),
+                ("instructions", "Hướng dẫn"), ("warnings", "Lưu ý"),
+            ):
+                value = r.get(key)
+                if value and key != "frequency":
+                    value = json.loads(value) if isinstance(value, str) else value
+                    value = "; ".join(str(item) for item in value) if isinstance(value, list) else str(value or "")
+                if value:
+                    usage.append(f"{label}: {value}")
 
             formattedProducts.append({
                 "id": f"mysql_{r['id']}",
@@ -240,7 +305,8 @@ class DatabaseExtractor:
                                 for item in compatibility if item['is_recommended']},
                 "concerns": detectedConcerns,
                 "concern_scores": {item['code'].lower(): float(item['score']) for item in concernMap[r['id']]},
-                "usage": str(r["how_to_use"] or "").strip(),
+                "usage": " | ".join(filter(None, usage)),
+                "catalog_details": {"specifications": specs, "variants": productVariants},
                 "reviews": [],
                 "target_type": "PRODUCT",
                 "duration_minutes": 0,
@@ -250,6 +316,64 @@ class DatabaseExtractor:
         return formattedProducts
 
     extract_products = extractProducts
+
+    @staticmethod
+    def readCatalogVariants(cur, product_ids, cutoff):
+        variants = defaultdict(list)
+        if not product_ids:
+            return variants
+        placeholders = ", ".join(["%s"] * len(product_ids))
+        cur.execute("""
+            SELECT pv.id, pv.product_id, pv.variant_name, pv.sku, pv.volume,
+                   pv.volume_value, pv.volume_unit, pv.color, pv.currency,
+                   COALESCE(pv.discount_price, pv.price) AS price,
+                   pv.original_price, COALESCE(safe_stock.available, 0) AS stock,
+                   pv.weight, pv.weight_unit, pv.length, pv.width, pv.height, pv.dimension_unit,
+                   pv.expiry_months, pv.expiry_after_opening_months, pv.storage_condition,
+                   pv.manufacturer_name, pv.manufacturing_country
+            FROM product_variants pv
+            JOIN products p ON p.id = pv.product_id AND p.is_deleted = 0 AND p.status = 'ACTIVE'
+            LEFT JOIN (""" + AVAILABLE_STOCK_SQL + """) safe_stock ON safe_stock.product_variant_id = pv.id
+            WHERE pv.is_deleted = 0 AND pv.is_active = 1
+              AND pv.product_id IN (""" + placeholders + """)
+            ORDER BY pv.product_id, price, pv.id
+        """, (cutoff, *product_ids))
+        for row in cur.fetchall():
+            volume = str(row["volume"] or "").strip()
+            if not volume and row["volume_value"] is not None and row["volume_unit"]:
+                volume = f"{row['volume_value'].normalize():f} {row['volume_unit']}"
+            specs = [
+                f"{label}: {row[key]}" for key, label in (
+                    ("storage_condition", "Bảo quản"), ("manufacturer_name", "Nhà sản xuất"),
+                    ("manufacturing_country", "Nơi sản xuất"),
+                ) if row[key]
+            ]
+            for key, label, unit in (
+                ("weight", "Khối lượng", row["weight_unit"]),
+                ("length", "Chiều dài", row["dimension_unit"]),
+                ("width", "Chiều rộng", row["dimension_unit"]),
+                ("height", "Chiều cao", row["dimension_unit"]),
+                ("expiry_months", "Hạn sử dụng", "tháng"),
+                ("expiry_after_opening_months", "Hạn sau khi mở nắp", "tháng"),
+            ):
+                if row[key] is not None:
+                    specs.append(f"{label}: {row[key]} {unit or ''}".strip())
+            variants[row["product_id"]].append({
+                "id": row["id"], "name": row["variant_name"], "sku": row["sku"] or "",
+                "volume": volume, "color": row["color"] or "",
+                "price": float(row["price"]), "currency": row["currency"] or "VND",
+                "original_price": float(row["original_price"]) if row["original_price"] is not None else None,
+                "in_stock": row["stock"] > 0, "attributes": specs,
+            })
+        return variants
+
+    def getCatalogVariants(self, product_ids):
+        conn = self.getConnection()
+        try:
+            with conn.cursor() as cur:
+                return self.readCatalogVariants(cur, sorted(product_ids), sale_cutoff())
+        finally:
+            conn.close()
 
     def getAvailableProductPrices(self, product_ids):
         ids = sorted({int(value) for value in product_ids if str(value).isdigit() and int(value) > 0})
@@ -365,7 +489,7 @@ class DatabaseExtractor:
 
     async def syncMysqlToRag(self, limit: Optional[int] = None) -> dict[str, Any]:
         from app.services.ingestion.pipeline import indexing_service
-        allData = self.extractAll(limit=limit)
+        allData = self.extractProducts(limit=limit, include_unavailable=True) + self.extractServices(limit=limit)
         return await indexing_service.index_products(allData)
 
     sync_mysql_to_rag = syncMysqlToRag

@@ -124,12 +124,67 @@ class _DeliveryConfirmationScreenState
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Xác nhận giao hàng (PoD)',
+          'Xác nhận giao hàng',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
         elevation: 0,
+      ),
+      bottomNavigationBar: ColoredBox(
+        color: AppColors.card,
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Center(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed:
+                      _isSubmitting ||
+                          (_requiresCodConfirmation && !_codConfirmed)
+                      ? null
+                      : _submitConfirmation,
+                  icon: _isSubmitting
+                      ? const SizedBox.shrink()
+                      : const Icon(Icons.verified, color: Colors.white),
+                  label: _isSubmitting
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Flexible(child: Text('Đang tải ảnh lên…')),
+                          ],
+                        )
+                      : const Text(
+                          'Xác nhận giao thành công',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -492,52 +547,6 @@ class _DeliveryConfirmationScreenState
                   ),
                 const SizedBox(height: 16),
 
-                // Submit Button
-                SizedBox(
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        _isSubmitting ||
-                            (_requiresCodConfirmation && !_codConfirmed)
-                        ? null
-                        : _submitConfirmation,
-                    icon: _isSubmitting
-                        ? const SizedBox.shrink()
-                        : const Icon(Icons.verified, color: Colors.white),
-                    label: _isSubmitting
-                        ? const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Flexible(
-                                child: Text('ĐANG TẢI LÊN BẰNG CHỨNG...'),
-                              ),
-                            ],
-                          )
-                        : const Text(
-                            'XÁC NHẬN GIAO THÀNH CÔNG',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 12),
               ],
             ),

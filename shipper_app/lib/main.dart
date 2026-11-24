@@ -28,21 +28,43 @@ class ShipperApp extends StatelessWidget {
             key: ValueKey(auth.isAuthenticated),
             create: (_) => ShipperProvider(),
             child: MaterialApp(
-              title: 'BeautyShop Shipper',
+              title: 'BeautyShip',
               debugShowCheckedModeBanner: false,
               theme: ThemeData(
                 useMaterial3: true,
                 colorScheme: ColorScheme.fromSeed(
                   seedColor: AppColors.primary,
                   primary: AppColors.primary,
+                  surface: AppColors.card,
+                  onSurface: AppColors.textMain,
+                  secondaryContainer: AppColors.primarySurface,
+                  onSecondaryContainer: AppColors.primaryDark,
                 ),
                 textTheme: GoogleFonts.interTextTheme(
                   Theme.of(context).textTheme,
                 ),
                 scaffoldBackgroundColor: AppColors.background,
+                cardTheme: CardThemeData(
+                  color: AppColors.card,
+                  elevation: 0,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                ),
+                navigationBarTheme: const NavigationBarThemeData(
+                  backgroundColor: AppColors.card,
+                  indicatorColor: AppColors.primarySurface,
+                  surfaceTintColor: Colors.transparent,
+                ),
+                snackBarTheme: const SnackBarThemeData(
+                  behavior: SnackBarBehavior.floating,
+                ),
                 appBarTheme: const AppBarTheme(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.background,
+                  foregroundColor: AppColors.textMain,
+                  surfaceTintColor: Colors.transparent,
                   elevation: 0,
                 ),
               ),

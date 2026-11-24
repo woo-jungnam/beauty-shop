@@ -209,7 +209,8 @@ def extracted(rows, mappings=None, skins=None, concerns=None):
     tree = ast.parse((ROOT/'app/services/ingestion/extractor.py').read_text(encoding='utf-8'))
     nodes = [n for n in tree.body if isinstance(n,ast.ClassDef) or isinstance(n,ast.Assign)
              and any(isinstance(t,ast.Name) and t.id in ('CATEGORY_MAP','CONCERN_KEYWORDS') for t in n.targets)]
-    context = {'json':json,'defaultdict':defaultdict}
+    context = {'json':json,'defaultdict':defaultdict, 'sale_cutoff': lambda: None,
+               'AVAILABLE_STOCK_SQL': 'SELECT product_variant_id, available FROM fixture_stock'}
     exec(compile(ast.Module(body=nodes,type_ignores=[]),'extractor.py','exec',flags=__future__.annotations.compiler_flag),context)
     current = {'sql':''}
     class Cursor:
@@ -217,6 +218,10 @@ def extracted(rows, mappings=None, skins=None, concerns=None):
         def __exit__(self,*args): pass
         def execute(self,sql,params=None): current['sql']=sql
         def fetchall(self):
+            if any(table in current['sql'] for table in (
+                'FROM product_variants pv\n            JOIN products p',
+                'FROM product_attribute_values', 'FROM product_tag_mapping',
+            )): return []
             if 'FROM product_ingredients' in current['sql']: return mappings or []
             if 'FROM product_skin_compatibility' in current['sql']: return skins or []
             if 'FROM product_skin_concerns' in current['sql']: return concerns or []

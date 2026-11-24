@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
@@ -57,6 +58,7 @@ class ProductModel(Base):
     ingredients = Column(Text, default="")
     benefits = Column(Text, default="")
     usage = Column(Text, default="")
+    catalog_details = Column(JSON, default=dict)
     rating = Column(Float, default=5.0)
 
     totalReviews = Column("total_reviews", Integer, default=0)
@@ -154,6 +156,8 @@ def initDb() -> None:
                         conn.exec_driver_sql("ALTER TABLE products ADD COLUMN target_type VARCHAR(32) DEFAULT 'PRODUCT'")
                     if "duration_minutes" not in existingCols:
                         conn.exec_driver_sql("ALTER TABLE products ADD COLUMN duration_minutes INTEGER DEFAULT 0")
+                    if "catalog_details" not in existingCols:
+                        conn.exec_driver_sql("ALTER TABLE products ADD COLUMN catalog_details JSON")
                 conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS idx_instock_rating_reviews ON products (in_stock, rating, total_reviews)")
                 conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS idx_cat_instock_rating ON products (category, in_stock, rating)")
     except Exception:

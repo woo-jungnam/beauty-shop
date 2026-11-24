@@ -15,8 +15,9 @@ async function setup(page, options = {}) {
     localStorage.setItem('beautyshop_admin_user', JSON.stringify(user));
   }, profile);
   const calls = [];
+  let checkInFailures = options.failFirstCheckIn ? 1 : 0;
   let appointments = [appointment(1, 'PENDING', { startTime: '11:00', endTime: '12:00', items: [item(1, { startTime: '11:00', endTime: '12:00', resources: [{ facilityId: 1, name: 'Giường 1', quantity: 1 }] })] }),
-    appointment(2, 'CONFIRMED', { ...(options.alreadyCheckedIn && { checkedInAt: '2026-10-13T03:00:00Z' }), items: [item(2, { staffId: 11, staffName: 'Mai Anh' })] }),
+    appointment(2, 'CONFIRMED', { ...(options.alreadyCheckedIn && { checkedInAt: '2026-10-13T03:00:00Z' }), items: [item(2, options.unassignedConfirmed ? {} : { staffId: 11, staffName: 'Mai Anh' })] }),
     appointment(3, 'IN_PROGRESS', { checkedInAt: '2026-10-13T03:00:00Z', items: [item(3, { executionStatus: 'IN_PROGRESS', resources: [{ facilityId: 2, name: 'Giường 2', quantity: 1 }] })] }),
     appointment(4, 'COMPLETED', { orderId: 401, items: [item(4, { executionStatus: 'PERFORMED', ticketId: 88, ticketUsageState: 'REDEEMED' })] }), appointment(5, 'CANCELLED')];
   await page.route('**/api/v1/**', async route => {
@@ -53,6 +54,10 @@ async function setup(page, options = {}) {
       data = appointments.find(row => row.id === id);
     } else if (path.endsWith('/check-in')) {
       calls.push({ path });
+      if (checkInFailures > 0) {
+        checkInFailures -= 1;
+        return route.fulfill({ status: 409, json: { message: 'Check-in unavailable' } });
+      }
       if (options.checkInFail) return route.fulfill({ status: 409, json: { message: 'Check-in unavailable' } });
       const id = Number(path.split('/').at(-2)); appointments = appointments.map(row => row.id === id ? { ...row, checkedInAt: '2026-10-13T03:15:00Z' } : row); data = appointments.find(row => row.id === id);
     } else if (path === '/api/v1/appointments/2') data = appointments.find(row => row.id === 2);
@@ -367,6 +372,36 @@ test('reception fills a missing room after check-in without changing the assigne
   expect(assignment.facilityAssignments).toEqual({ 2: 1 });
   expect(assignment.staffAssignments).toBeUndefined();
   expect(calls.some(call => call.path.endsWith('/2/check-in'))).toBe(false);
+});
+
+test('confirmed appointment can fill both assignments before check-in', async ({ page }) => {
+  const calls = await setup(page, { unassignedConfirmed: true });
+  const card = page.locator('[data-appointment-id="2"]');
+  await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  const dialog = page.getByRole('dialog');
+  const submit = dialog.getByRole('button', { name: 'Xác nhận & check-in' });
+  await expect(submit).toBeDisabled();
+  await dialog.getByLabel('Chăm sóc da chuyên sâu', { exact: true }).selectOption('12');
+  await dialog.getByLabel('Phòng / giường · Chăm sóc da chuyên sâu').selectOption('1');
+  await submit.click();
+  await expect(card.getByRole('button', { name: 'Bắt đầu ca' })).toBeVisible();
+  const writes = calls.filter(call => /\/2\/(status|check-in)$/.test(call.path));
+  expect(writes.map(call => call.path.split('/').at(-1))).toEqual(['status', 'check-in']);
+  expect(writes[0].body).toMatchObject({ status: 'CONFIRMED', staffAssignments: { 2: 12 }, facilityAssignments: { 2: 1 } });
+});
+
+test('failed check-in preserves assignment and retry does not save it again', async ({ page }) => {
+  const calls = await setup(page, { failFirstCheckIn: true });
+  const card = page.locator('[data-appointment-id="2"]');
+  await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  await page.getByLabel('Phòng / giường · Chăm sóc da chuyên sâu').selectOption('1');
+  await page.getByRole('button', { name: 'Xác nhận & check-in' }).click();
+  await expect(page.getByText(/Đã lưu phân công/)).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Bắt đầu ca' })).toHaveCount(0);
+  await card.getByRole('button', { name: 'Check-in ngay' }).click();
+  await expect(card.getByRole('button', { name: 'Bắt đầu ca' })).toBeVisible();
+  expect(calls.filter(call => call.path.endsWith('/2/status'))).toHaveLength(1);
+  expect(calls.filter(call => call.path.endsWith('/2/check-in'))).toHaveLength(2);
 });
 
 test('booking conflicts retain created CRM profile for retry without creating another customer', async ({ page }) => {

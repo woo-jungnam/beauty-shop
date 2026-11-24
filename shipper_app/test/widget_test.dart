@@ -122,11 +122,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    final confirmation = find.text('Xác nhận giao thành công');
+    final confirmationPosition = tester.getCenter(confirmation);
     await tester.drag(
       find.byType(SingleChildScrollView).last,
       const Offset(0, -550),
     );
     await tester.pumpAndSettle();
+    expect(tester.getCenter(confirmation), confirmationPosition);
     expect(tester.takeException(), isNull);
     Navigator.of(context).pop();
     await tester.pumpAndSettle();
@@ -152,7 +155,14 @@ void main() {
 
     await tester.tap(find.text('Thống kê'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('COD tài xế đã thu'), 120);
+    await tester.scrollUntilVisible(
+      find.text('COD tài xế đã thu'),
+      120,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
     expect(tester.takeException(), isNull);
 
     tester.view.physicalSize = const Size(1024, 600);
@@ -168,7 +178,7 @@ void main() {
     await StorageService.init();
 
     await tester.pumpWidget(const ShipperApp());
-    expect(find.text('BeautyShop Shipper'), findsOneWidget);
+    expect(find.text('BeautyShip'), findsOneWidget);
     expect(find.text('Đăng nhập tài xế'), findsOneWidget);
   });
 }

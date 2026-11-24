@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../providers/shipper_provider.dart';
 import '../delivery/delivery_dates.dart';
 
@@ -70,28 +71,44 @@ class _NotificationScreenState extends State<NotificationScreen> {
             onRefresh: () => _load(0),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               children: [
                 if (snapshot.connectionState != ConnectionState.done)
                   const Center(child: CircularProgressIndicator())
                 else if (snapshot.hasError) ...[
-                  Text(snapshot.error.toString()),
+                  const Text('Không tải được thông báo.'),
                   TextButton(
                     onPressed: () => _load(_page),
                     child: const Text('Thử lại'),
                   ),
                 ] else ...[
                   if (rows.isEmpty)
-                    const Center(child: Text('Chưa có thông báo')),
+                    const Card(
+                      child: ListTile(
+                        leading: Icon(Icons.notifications_none),
+                        title: Text('Chưa có thông báo'),
+                      ),
+                    ),
                   for (final row in rows)
                     Card(
+                      color: row['readAt'] == null
+                          ? AppColors.primarySurface
+                          : AppColors.card,
                       child: ListTile(
-                        leading: Icon(
-                          row['readAt'] == null
-                              ? Icons.notifications_active
-                              : Icons.notifications_none,
+                        leading: Icon(switch (row['type']) {
+                          'SHIPPER_ASSIGNMENT' => Icons.local_shipping_outlined,
+                          'SHIPPER_RETURN_REQUEST' =>
+                            Icons.assignment_return_outlined,
+                          _ => Icons.notifications_outlined,
+                        }, color: AppColors.primary),
+                        title: Text(
+                          row['title'] as String,
+                          style: TextStyle(
+                            fontWeight: row['readAt'] == null
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                          ),
                         ),
-                        title: Text(row['title'] as String),
                         subtitle: Text(
                           [
                             row['body'] as String,
@@ -106,6 +123,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
+                              )
+                            : row['readAt'] == null
+                            ? const Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: AppColors.primary,
+                                semanticLabel: 'Chưa đọc',
                               )
                             : null,
                         onTap: row['readAt'] == null

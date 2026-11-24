@@ -19,7 +19,9 @@ import '../../../data/models/treatment_model.dart';
 import '../treatments/treatment_hub_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key, this.apiClient});
+
+  final ApiClient? apiClient;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -49,7 +51,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _fetchOrderStatistics(int userId) async {
     final request = ++_statsRequest;
     try {
-      final response = await ApiClient().get<dynamic>('/api/v1/users/order-statistics');
+      final response = await (widget.apiClient ?? ApiClient())
+          .get<dynamic>('/api/v1/users/order-statistics');
       if (mounted &&
           request == _statsRequest &&
           _statsUserId == userId &&
@@ -184,41 +187,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _buildProfileStat(
-                                'Hạng Thành Viên',
-                                _formatTierName(user?.membershipTier),
-                                Icons.workspace_premium,
-                              ),
-                              Container(
-                                width: 1,
-                                height: 30,
-                                color: Colors.white24,
-                              ),
-                              _buildProfileStat(
-                                'Chi Tiêu Tính Điểm',
-                                _orderStatistics?['loyaltyEligibleSpent'] is num
-                                    ? AppFormatters.formatCurrency((_orderStatistics!['loyaltyEligibleSpent'] as num).toDouble())
-                                    : '--',
-                                Icons.account_balance_wallet_outlined,
-                              ),
-                              Container(
-                                width: 1,
-                                height: 30,
-                                color: Colors.white24,
-                              ),
-                              InkWell(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SpaTicketsScreen(),
-                                  ),
-                                ),
+                              Expanded(
                                 child: _buildProfileStat(
-                                  'Ví Thẻ Spa',
-                                  'Xem thẻ',
-                                  Icons.card_giftcard,
+                                  'Hạng Thành Viên',
+                                  _formatTierName(user?.membershipTier),
+                                  Icons.workspace_premium,
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 30,
+                                color: Colors.white24,
+                              ),
+                              Expanded(
+                                child: _buildProfileStat(
+                                  'Chi Tiêu Tính Điểm',
+                                  _orderStatistics?['loyaltyEligibleSpent'] is num
+                                      ? AppFormatters.formatCurrency(
+                                          (_orderStatistics!['loyaltyEligibleSpent'] as num).toDouble(),
+                                        )
+                                      : '--',
+                                  Icons.account_balance_wallet_outlined,
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 30,
+                                color: Colors.white24,
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const SpaTicketsScreen(),
+                                    ),
+                                  ),
+                                  child: _buildProfileStat(
+                                    'Ví Thẻ Spa',
+                                    'Xem thẻ',
+                                    Icons.card_giftcard,
+                                  ),
                                 ),
                               ),
                             ],
@@ -256,29 +266,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Đơn Hàng Của Tôi',
-                            style: AppTypography.titleMedium,
-                          ),
-                          InkWell(
-                            onTap: () => _openOrderHistory(
-                              const OrderHistoryScreen(),
+                          Expanded(
+                            child: Text(
+                              'Đơn Hàng Của Tôi',
+                              style: AppTypography.titleMedium,
                             ),
-                            child: const Row(
-                              children: [
-                                Text(
-                                  'Xem lịch sử',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: InkWell(
+                              onTap: () => _openOrderHistory(
+                                const OrderHistoryScreen(),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      'Xem lịch sử',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    size: 16,
                                     color: AppColors.textMuted,
                                   ),
-                                ),
-                                Icon(
-                                  Icons.chevron_right,
-                                  size: 16,
-                                  color: AppColors.textMuted,
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -288,7 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: AppColors.borderSubtle,
                       ),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildOrderStatusItem(
                             Icons.payment,
@@ -527,28 +545,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileStat(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: AppColors.gold, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.gold, size: 14),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 10.5),
-        ),
-      ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70, fontSize: 10.5),
+          ),
+        ],
+      ),
     );
   }
 
@@ -557,23 +576,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String label, {
     VoidCallback? onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 24),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w500,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Column(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 24),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

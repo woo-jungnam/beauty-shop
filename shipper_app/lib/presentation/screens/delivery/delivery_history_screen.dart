@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../data/models/shipper_order_model.dart';
 import '../../../providers/shipper_provider.dart';
 import 'delivery_dates.dart';
@@ -88,8 +89,15 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
       onRefresh: () => _load(reset: true),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         children: [
+          Text(
+            'Lịch sử giao hàng',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
           DeliveryDates(
             range: _range,
             onChange: (range) {
@@ -110,7 +118,10 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
           ),
           for (final group in groups.entries) ...[
             ListTile(
-              title: Text(group.key),
+              title: Text(
+                group.key,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               trailing: Text(
                 '${group.value.length} mục${!_last && group.key == groups.keys.last ? ' đã tải' : ''}',
               ),
@@ -118,7 +129,10 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
             for (final order in group.value)
               Card(
                 child: ListTile(
-                  title: Text('#${order.orderNumber}'),
+                  title: Text(
+                    '#${order.orderNumber}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -131,17 +145,39 @@ class _DeliveryHistoryScreenState extends State<DeliveryHistoryScreen> {
                         Text(
                           'COD chờ bàn giao: ${currency.format(order.codCollected - order.codRemitted)}',
                         ),
-                      Text(switch (order.status) {
-                        'DELIVERED' => 'Đã giao',
-                        'SHIPPED' => 'Đang giao',
-                        'DELIVERY_FAILED' => 'Giao thất bại',
-                        'CANCELLED' => 'Đã hủy',
-                        'RETURNING_TO_SENDER' => 'Đang hoàn về kho',
-                        'RETURN_TO_SENDER' => 'Đã hoàn về kho',
-                        'RETURNED' => 'Đã trả hàng',
-                        'REFUNDED' => 'Đã hoàn tiền',
-                        _ => order.status,
-                      }),
+                      const SizedBox(height: 6),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: order.isDelivered
+                              ? AppColors.successLight
+                              : AppColors.primarySurface,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          child: Text(
+                            switch (order.status) {
+                              'DELIVERED' => 'Đã giao',
+                              'SHIPPED' => 'Đang giao',
+                              'DELIVERY_FAILED' => 'Giao thất bại',
+                              'CANCELLED' => 'Đã hủy',
+                              'RETURNING_TO_SENDER' => 'Đang hoàn về kho',
+                              'RETURN_TO_SENDER' => 'Đã hoàn về kho',
+                              'RETURNED' => 'Đã trả hàng',
+                              'REFUNDED' => 'Đã hoàn tiền',
+                              _ => order.status,
+                            },
+                            style: TextStyle(
+                              color: order.isDelivered
+                                  ? AppColors.success
+                                  : AppColors.primaryDark,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

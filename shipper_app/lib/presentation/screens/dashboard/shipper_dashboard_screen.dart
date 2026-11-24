@@ -257,15 +257,13 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
         elevation: 0,
         title: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'BeautyShop Shipper',
+              'BeautyShip',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
@@ -274,10 +272,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
               'Tài xế: ${auth.currentFullName ?? auth.currentUsername ?? "Bưu tá"}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.85),
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           ],
         ),
@@ -368,22 +363,34 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
       onRefresh: shipper.fetchOrders,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         itemCount: shipper.orders.length + 2,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final filter in filters.entries)
-                    ChoiceChip(
-                      label: Text(filter.value),
-                      selected: shipper.currentFilter == filter.key,
-                      onSelected: (_) => shipper.setFilter(filter.key),
+                  Text(
+                    'Danh sách đơn',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final filter in filters.entries)
+                        ChoiceChip(
+                          label: Text(filter.value),
+                          selected: shipper.currentFilter == filter.key,
+                          onSelected: (_) => shipper.setFilter(filter.key),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             );
@@ -447,7 +454,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
@@ -460,7 +467,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header: Order ID & Status Badge
+          // Order ID and delivery status
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -468,7 +475,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                   ? AppColors.successLight
                   : AppColors.primarySurface,
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(13),
+                top: Radius.circular(17),
               ),
             ),
             child: Wrap(
@@ -510,20 +517,23 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: order.isDelivered
-                        ? AppColors.success
-                        : AppColors.warning,
+                    color: switch (order.status) {
+                      'DELIVERED' => AppColors.success,
+                      'DELIVERY_FAILED' => AppColors.danger,
+                      'RETURNING_TO_SENDER' => AppColors.warning,
+                      _ => AppColors.primary,
+                    },
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     switch (order.status) {
-                      'DELIVERED' => 'ĐÃ GIAO THÀNH CÔNG',
+                      'DELIVERED' => 'Đã giao',
                       'SHIPPED' =>
                         order.deliveryStartedAt == null
-                            ? 'CẦN GIAO HÀNG'
-                            : 'ĐANG GIAO',
-                      'DELIVERY_FAILED' => 'GIAO THẤT BẠI',
-                      'RETURNING_TO_SENDER' => 'CẦN HOÀN KHO',
+                            ? 'Cần giao'
+                            : 'Đang giao',
+                      'DELIVERY_FAILED' => 'Giao thất bại',
+                      'RETURNING_TO_SENDER' => 'Cần hoàn kho',
                       _ => order.status,
                     },
                     style: const TextStyle(
@@ -670,7 +680,8 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
 
                 // COD / Payment Info Box
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: order.isCod
                         ? AppColors.warningLight

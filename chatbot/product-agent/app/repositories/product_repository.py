@@ -51,6 +51,7 @@ class ProductRepository:
             skinType=model.skin_type,
             concerns=model.concerns,
             usage=model.usage,
+            catalog_details=getattr(model, "catalog_details", None) or {},
             rating=model.rating,
             totalReviews=getattr(model, "totalReviews", 0) or getattr(model, "total_reviews", 0) or 0,
             totalSold=getattr(model, "totalSold", 0) or getattr(model, "total_sold", 0) or 0,
@@ -85,6 +86,7 @@ class ProductRepository:
             model.skinType = data.skinType
             model.concerns = data.concerns
             model.reviews = data.reviews
+            model.catalog_details = data.catalog_details.model_dump()
 
             session.add(model)
             session.commit()
@@ -140,6 +142,7 @@ class ProductRepository:
             model.skinType = data.skinType
             model.concerns = data.concerns
             model.reviews = data.reviews
+            model.catalog_details = data.catalog_details.model_dump()
 
             session.commit()
             session.refresh(model)

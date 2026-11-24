@@ -9,7 +9,7 @@ from app.schemas.chat import ChatAction, ChatRequest, ChatResponse, ProductCard,
 from app.schemas.query import Intent, PrimaryIntent, UnderstandingResult
 from app.schemas.retrieval import RerankedCandidate, ScoredCandidate
 from app.services.agent.dialogue import conversationManager
-from app.services.agent.generation import generationService
+from app.services.agent.generation import SIZE_PATTERN, generationService
 from app.services.agent.router import fastPathParser, queryRouter
 from app.services.ingestion.cleaning import TextCleaner, remove_emojis
 from app.services.ingestion.extractor import dbExtractor
@@ -21,11 +21,35 @@ from app.services.retrieval.search import retrievalService
 logger = getLogger("agentOrchestrator")
 
 _ORDER_PROOF = re.compile(r"(?<!\w)#?ORD-[\w-]+|(?<!\d)(?:\+84|0)\d{9}(?!\d)", re.IGNORECASE)
+_VARIANT_LOOKUP = re.compile(
+    r'(?P<name>.+?)\s+(?:(?:có\s+)?dung tích\s+(?:nào|gì|bao nhiêu)(?:\s+vậy)?'
+    r'|(?:giá bao nhiêu|bao nhiêu tiền)(?:\s+và\s+(?:còn|có) hàng không)?'
+    r'|(?:còn|có) hàng không)\s*[?!.]*',
+    re.IGNORECASE,
+)
 
 
 def catalog_identity(text: str) -> str:
     cleaned = re.sub(r"(\d)\s+(ml|g)\b", r"\1\2", TextCleaner.normalize(text))
     return " ".join(re.findall(r"[^\W_]+\+?", cleaned))
+
+
+def variant_lookup_id(message: str, repository) -> str | None:
+    match = _VARIANT_LOOKUP.fullmatch(message.strip())
+    if not match:
+        return None
+    raw_name = match["name"].strip('"“” ')
+    if "dung tích" not in match[0][match.end("name"):].lower() and not SIZE_PATTERN.search(raw_name):
+        return None
+    name = catalog_identity(raw_name)
+    base_name = catalog_identity(SIZE_PATTERN.sub("", raw_name))
+    if len(base_name.split()) < 3:
+        return None
+    identities = [(product_id, catalog_identity(title)) for product_id, title in repository.listIdentities()
+                  if product_id.startswith("mysql_")]
+    exact = [product_id for product_id, title in identities if title == name]
+    matches = exact or [product_id for product_id, title in identities if f" {base_name} " in f" {title} "]
+    return matches[0] if len(matches) == 1 else None
 
 
 def is_quoted_discovery(message: str, understanding: UnderstandingResult) -> bool:
@@ -300,6 +324,14 @@ class AgentOrchestrator:
         fastResult = rawFastResult if rawFastResult is not None and is_order_intent(rawFastResult) else (
             rawFastResult if safeMessage == request.message else fastPathParser.tryParse(safeMessage, ctx)
         )
+        lookup_id = None
+        if fastResult is None and safeMessage == request.message:
+            try:
+                lookup_id = await run_in_threadpool(variant_lookup_id, safeMessage, retrievalService.productRepo)
+            except Exception:
+                logger.exception("Could not resolve variant lookup")
+            if lookup_id:
+                fastResult = UnderstandingResult(intent=Intent.PRODUCT_DETAIL, raw_query=safeMessage)
 
         if fastResult is not None:
             with tracker.measure("fast_path_understanding"):
@@ -395,7 +427,9 @@ class AgentOrchestrator:
 
         with tracker.measure("catalog_identity"):
             try:
-                explicitIds = await run_in_threadpool(explicit_catalog_ids, safeMessage, retrievalService.productRepo)
+                explicitIds = [lookup_id] if lookup_id else await run_in_threadpool(
+                    explicit_catalog_ids, safeMessage, retrievalService.productRepo
+                )
             except Exception:
                 logger.exception("Could not resolve catalog identity")
                 explicitIds = [] if re.search(r'["“][^"”]+["”]', safeMessage) else None
