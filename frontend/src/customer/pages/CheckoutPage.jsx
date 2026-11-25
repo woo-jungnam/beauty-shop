@@ -472,7 +472,7 @@ export const CheckoutPage = ({ onNavigate }) => {
                       <strong style={{ fontSize: '13px', color: 'var(--c-primary)' }}>
                         Chuyển khoản bằng mã QR
                       </strong>
-                      <span className="badge-dermatology safe" style={{ fontSize: '10px' }}>KHUYÊN DÙNG</span>
+
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--c-text-muted)', marginTop: '2px' }}>
                       Sau khi đặt hàng, mở ứng dụng ngân hàng để quét mã và chuyển khoản.

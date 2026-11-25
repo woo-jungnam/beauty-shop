@@ -109,10 +109,6 @@ export default function CheckoutAddressFields({ city, district, ward, onChange }
         style={{ marginTop: '8px', color: 'var(--c-primary)', textDecoration: 'underline', fontSize: '12px' }}>
         {manual ? 'Chọn từ danh mục' : 'Nhập địa chỉ thủ công'}
       </button>
-      <a href="https://www.tinhthanhpho.com/api-docs" target="_blank" rel="noreferrer"
-        style={{ marginInlineStart: '12px', fontSize: '12px', textDecoration: 'underline' }}>
-        Dữ liệu tỉnh thành
-      </a>
     </div>
   );
 }

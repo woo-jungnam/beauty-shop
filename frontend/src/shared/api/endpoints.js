@@ -81,6 +81,7 @@ export const ENDPOINTS = {
   },
 
   VOUCHERS: {
+    AVAILABLE: '/api/v1/promotions/available',
     VALIDATE: '/api/v1/promotions/validate',
     LIST: '/api/v1/admin/vouchers',
     DETAIL: (id) => `/api/v1/admin/vouchers/${id}`,

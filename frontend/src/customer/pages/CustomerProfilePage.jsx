@@ -17,10 +17,13 @@ import { TreatmentAppointmentDialog } from '../../features/treatments/TreatmentA
 import { TicketDetails } from '../../features/spa/TicketDetails';
 import { ticketDestination } from '../../features/spa/benefitModel';
 import {
-  buildGoogleCalendarUrl, formatCurrency, getOrderStatusBadge,
+  buildGoogleCalendarUrl, formatCurrency, getOrderStatusBadge, getOrderTypeBadge,
   getPaymentStatusBadge, getTicketStatusText, resolveMediaUrl,
 } from '../../shared/utils/formatters';
-import { availableTicket, knownCount, pageWindow, upcomingAppointments } from '../utils/profileModel';
+import {
+  classifyOverviewAppointments, formatVoucherCardInfo,
+  knownCount, pageWindow, summarizeTickets, upcomingAppointments,
+} from '../utils/profileModel';
 import '../styles/customer-profile-beautyshop.css';
 
 const APT_PAGE_SIZE = 5;
@@ -42,8 +45,8 @@ const TITLES = Object.fromEntries(TABS.map(([id, title]) => [id, title]));
 const normalizeTab = tab => Object.hasOwn(TITLES, tab) ? tab : 'overview';
 const tierNames = { MEMBER: 'Hạng Thành Viên', SILVER: 'Hạng Bạc', GOLD: 'Hạng Vàng', PLATINUM: 'Hạng Bạch Kim' };
 const nextTiers = { MEMBER: [1000, 'Hạng Bạc'], SILVER: [5000, 'Hạng Vàng'], GOLD: [10000, 'Hạng Bạch Kim'] };
-const resourceNames = { profile: 'Hồ sơ thành viên', orders: 'Đơn mua sắm', appointments: 'Lịch hẹn Spa', tickets: 'Ví vé Spa', statistics: 'Thống kê giao dịch' };
-const blankData = () => ({ profile: null, orders: null, appointments: null, tickets: null, statistics: null });
+const resourceNames = { profile: 'Hồ sơ thành viên', orders: 'Đơn mua sắm', appointments: 'Lịch hẹn Spa', tickets: 'Ví vé Spa', vouchers: 'Ưu đãi khả dụng', statistics: 'Thống kê giao dịch' };
+const blankData = () => ({ profile: null, orders: null, appointments: null, tickets: null, vouchers: null, statistics: null });
 
 const dateLabel = value => {
   if (!value || !Number.isFinite(Date.parse(value))) return 'Chưa có ngày';
@@ -97,9 +100,12 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
   const [actionError, setActionError] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [copiedVoucher, setCopiedVoucher] = useState('');
+  const [voucherCopyError, setVoucherCopyError] = useState('');
   const [now, setNow] = useState(Date.now);
   const request = useRef(null);
   const actionLock = useRef(false);
+  const copyTimer = useRef(null);
   const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const requestedAppointment = params.get('appointment');
 
@@ -117,7 +123,8 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
       }],
       ['tickets', ENDPOINTS.SPA.MY_TICKETS, listData],
       ['appointments', ENDPOINTS.SPA.MY_APPOINTMENTS, listData],
-      ['orders', `${ENDPOINTS.ORDERS.MY_ORDERS}?type=PRODUCT&size=1&sort=createdAt,desc`, response => {
+      ['vouchers', ENDPOINTS.VOUCHERS.AVAILABLE, listData],
+      ['orders', `${ENDPOINTS.ORDERS.MY_ORDERS}?size=1&sort=createdAt,desc`, response => {
         const page = unwrap(response);
         if (!Array.isArray(page?.content) || knownCount(page.totalElements) == null) throw new Error('Chưa đọc được lịch sử đơn mua sắm.');
         return page;
@@ -149,8 +156,23 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(copyTimer.current);
+    };
   }, []);
+
+  const copyVoucherCode = async code => {
+    setVoucherCopyError('');
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedVoucher(code);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopiedVoucher(''), 3000);
+    } catch {
+      setVoucherCopyError(`Không thể sao chép tự động. Bạn hãy chép mã ${code} thủ công.`);
+    }
+  };
 
   useEffect(() => {
     if (!requestedAppointment || !data.appointments) return;
@@ -208,10 +230,13 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
   const nextTier = nextTiers[tier];
   const appointments = data.appointments || [];
   const upcoming = upcomingAppointments(appointments, now);
-  const nextAppointment = upcoming[0];
+  const appointmentOverview = classifyOverviewAppointments(appointments, now);
+  const nextAppointment = appointmentOverview.primaryAppointment;
   const tickets = data.tickets || [];
-  const activeTickets = tickets.filter(ticket => availableTicket(ticket, now));
-  const firstTicket = activeTickets[0];
+  const ticketSummary = summarizeTickets(tickets, now);
+  const activeTickets = ticketSummary.activeTickets;
+  const firstTicket = ticketSummary.firstTicket;
+  const vouchers = data.vouchers || [];
   const latestOrder = data.orders?.content?.[0];
   const orderCount = knownCount(data.orders?.totalElements) ?? knownCount(data.statistics?.totalOrders) ?? 0;
   const aptWindow = pageWindow(appointments, aptPage, APT_PAGE_SIZE);
@@ -512,19 +537,25 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                                 <div className="pf-order-meta">
                                   <div className="pf-order-top-row">
                                     <span className="pf-order-code">
-                                      Đơn hàng: {latestOrder.orderNumber || `#${latestOrder.id}`}
+                                      Đơn hàng: {latestOrder.orderNumber || `#${latestOrder.id}`} · {getOrderTypeBadge(latestOrder).text}
                                     </span>
                                     <span style={{ fontSize: '12px', color: 'var(--pf-text-dim)' }}>
                                       {dateLabel(latestOrder.createdAt)}
                                     </span>
                                   </div>
                                   <div className="pf-order-name">
-                                    {latestOrder.items?.[0]?.productName || 'Sản phẩm mỹ phẩm BeautyShop'}
+                                    {latestOrder.items?.[0]?.productName || latestOrder.packageName || 'Đơn hàng BeautyShop'}
+                                    {(latestOrder.items?.length || 0) > 1 && ` (+${latestOrder.items.length - 1} món)`}
                                   </div>
                                   <div className="pf-order-bot-row">
-                                    <span className="pf-order-price">
-                                      {latestOrder.totalAmount != null ? formatCurrency(latestOrder.totalAmount) : '0đ'}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                      <span className="pf-order-price">
+                                        {latestOrder.totalAmount != null ? formatCurrency(latestOrder.totalAmount) : '0đ'}
+                                      </span>
+                                      <span style={{ fontSize: '12px', color: 'var(--pf-text-dim)' }}>
+                                        · {getPaymentStatusBadge(latestOrder.paymentStatus).text}
+                                      </span>
+                                    </div>
                                     <button
                                       type="button"
                                       className="pf-order-link"
@@ -545,7 +576,11 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                         </div>
                         <footer className="pf-bento-footer">
                           <span style={{ fontSize: '13px', color: 'var(--pf-text-dim)' }}>
-                            {latestOrder?.carrierName ? `Vận chuyển: ${latestOrder.carrierName}` : 'Đồng bộ tự động từ kho vận'}
+                            {['RETURN_TO_SENDER', 'RETURNING_TO_SENDER', 'DELIVERY_FAILED', 'RETURNED'].includes(latestOrder?.status)
+                              ? 'Đơn đang xử lý hoàn hàng / hoàn tiền theo trạng thái thực tế'
+                              : latestOrder?.carrierName
+                                ? `Vận chuyển: ${latestOrder.carrierName}`
+                                : 'Đồng bộ trực tiếp từ hệ thống đơn hàng'}
                           </span>
                           <button
                             type="button"
@@ -565,51 +600,54 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                             <Percent size={18} />
                             <span>Ưu đãi của bạn</span>
                           </h3>
-                          <span className="pf-tier-tag pf-tier-tag-pink">5 MÃ KHẢ DỤNG</span>
+                          <span className="pf-tier-tag pf-tier-tag-pink">
+                            {data.vouchers == null ? 'ĐANG TẢI' : `${vouchers.length} MÃ KHẢ DỤNG`}
+                          </span>
                         </header>
                         <div className="pf-bento-body">
-                          <div className="pf-voucher-item">
-                            <div className="pf-voucher-meta">
-                              <span className="pf-voucher-badge">BS-VIP300K</span>
-                              <div className="pf-voucher-desc">Giảm 300.000đ khi đặt lịch Spa từ 1.500.000đ</div>
-                              <div className="pf-voucher-date">HSD: 30/11/2026 • Áp dụng toàn hệ thống BeautyShop</div>
-                            </div>
-                            <button
-                              type="button"
-                              className="pf-btn-primary"
-                              style={{ padding: '6px 14px', fontSize: '12px' }}
-                              onClick={() => alert('Đã lưu mã giảm giá vào ví thanh toán!')}
-                            >
-                              Dùng Ngay
-                            </button>
-                          </div>
-
-                          <div className="pf-voucher-item">
-                            <div className="pf-voucher-meta">
-                              <span className="pf-voucher-badge">BS-FREESHIP</span>
-                              <div className="pf-voucher-desc">Miễn phí giao hàng hỏa tốc nội thành</div>
-                              <div className="pf-voucher-date">HSD: 31/12/2026 • Áp dụng mọi đơn mỹ phẩm BeautyShop</div>
-                            </div>
-                            <button
-                              type="button"
-                              className="pf-btn-primary"
-                              style={{ padding: '6px 14px', fontSize: '12px' }}
-                              onClick={() => alert('Mã Freeship đã sẵn sàng!')}
-                            >
-                              Dùng Ngay
-                            </button>
-                          </div>
+                          <CardBody data={data.vouchers} error={errors.vouchers}>
+                            {voucherCopyError && <StateNotice error>{voucherCopyError}</StateNotice>}
+                            {vouchers.length > 0 ? (
+                              vouchers.slice(0, 2).map(voucher => {
+                                const info = formatVoucherCardInfo(voucher);
+                                const copied = copiedVoucher === voucher.code;
+                                return (
+                                  <div key={voucher.id || voucher.code} className="pf-voucher-item">
+                                    <div className="pf-voucher-meta">
+                                      <span className="pf-voucher-badge">{voucher.code}</span>
+                                      <div className="pf-voucher-desc">{info.discountLabel} · {info.conditionLabel}</div>
+                                      <div className="pf-voucher-date">{info.expiryLabel}</div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className={copied ? 'pf-btn-outline' : 'pf-btn-primary'}
+                                      style={{ padding: '6px 14px', fontSize: '12px' }}
+                                      onClick={() => copyVoucherCode(voucher.code)}
+                                    >
+                                      {copied ? 'Đã sao chép' : 'Sao chép mã'}
+                                    </button>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <StateNotice>
+                                Hiện chưa có mã giảm giá khả dụng dành cho tài khoản của bạn.
+                              </StateNotice>
+                            )}
+                          </CardBody>
                         </div>
                         <footer className="pf-bento-footer">
                           <span style={{ fontSize: '12.5px', color: 'var(--pf-text-dim)' }}>
-                            Tự động áp dụng mã tốt nhất khi thanh toán
+                            {vouchers.length > 2
+                              ? `Còn ${vouchers.length - 2} mã khác trong mục Thông báo & Ưu đãi`
+                              : 'Nhập mã tại bước thanh toán để kiểm tra điều kiện áp dụng'}
                           </span>
                           <button
                             type="button"
                             className="pf-order-link"
                             onClick={() => navigateTab('notifications')}
                           >
-                            Xem tất cả ưu đãi
+                            Xem tất cả ưu đãi ({vouchers.length})
                           </button>
                         </footer>
                       </article>
@@ -621,9 +659,9 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                             <Ticket size={18} />
                             <span>Gói cam kết & Liệu trình Spa</span>
                           </h3>
-                          {firstTicket && (
+                          {activeTickets.length > 0 && (
                             <span className="pf-pill-pink">
-                              {firstTicket.remainingSessions} LƯỢT KHẢ DỤNG
+                              {ticketSummary.totalRemainingSessions} LƯỢT KHẢ DỤNG
                             </span>
                           )}
                         </header>
@@ -657,6 +695,11 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                                     </span>
                                   </div>
                                 </div>
+                                {activeTickets.length > 1 && (
+                                  <div style={{ fontSize: '12px', color: 'var(--pf-text-dim)' }}>
+                                    Còn thêm {activeTickets.length - 1} vé khả dụng khác trong Ví vé Spa.
+                                  </div>
+                                )}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
                                   <span style={{ color: 'var(--pf-text-muted)' }}>
                                     {firstTicket.benefitType === 'TREATMENT_COURSE' ? 'Lộ trình phục hồi da chuyên sâu' : 'Gói dịch vụ cao cấp'}
@@ -673,14 +716,16 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                               </div>
                             ) : (
                               <StateNotice>
-                                Bạn chưa có vé Spa khả dụng. Hãy mua gói để hưởng giá ưu đãi và cam kết kết quả.
+                                Bạn chưa có vé Spa khả dụng. Hãy mua gói để hưởng giá ưu đãi và theo dõi từng buổi.
                               </StateNotice>
                             )}
                           </CardBody>
                         </div>
                         <footer className="pf-bento-footer">
                           <span style={{ fontSize: '12.5px', color: 'var(--pf-text-dim)' }}>
-                            Cam kết hoàn tiền 100% nếu không cải thiện liệu trình
+                            {ticketSummary.hasTreatmentCourse
+                              ? 'Cam kết hoàn tiền 100% nếu không cải thiện liệu trình'
+                              : 'Theo dõi số lượt còn lại và lịch sử sử dụng từng vé Spa'}
                           </span>
                           <button
                             type="button"
@@ -693,16 +738,18 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                         </footer>
                       </article>
 
-                      {/* CARD 4: LỊCH HẸN SẮP TỚI & SẢN PHẨM YÊU THÍCH */}
+                      {/* CARD 4: LỊCH HẸN SẮP TỚI & ĐANG MỞ */}
                       <article className="pf-bento-card">
                         <header className="pf-bento-header">
                           <h3 className="pf-bento-title">
                             <Calendar size={18} />
-                            <span>Lịch hẹn sắp tới</span>
+                            <span>{appointmentOverview.isStaleActive ? 'Lịch hẹn đang mở' : 'Lịch hẹn sắp tới'}</span>
                           </h3>
                           {nextAppointment && (
                             <span className="pf-status-badge-green">
-                              {appointmentLabel(nextAppointment)}
+                              {appointmentOverview.isStaleActive
+                                ? `${appointmentLabel(nextAppointment)} · Quá ngày hẹn`
+                                : appointmentLabel(nextAppointment)}
                             </span>
                           )}
                         </header>
@@ -726,6 +773,11 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                                     </li>
                                   ))}
                                 </ul>
+                                {appointmentOverview.isStaleActive && (
+                                  <div style={{ fontSize: '12px', color: 'var(--pf-text-muted)', marginTop: '4px' }}>
+                                    Lịch hẹn ngày {dateLabel(nextAppointment.appointmentDate)} đã check-in nhưng chưa hoàn tất trên hệ thống.
+                                  </div>
+                                )}
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
                                   <button
                                     type="button"
@@ -786,6 +838,7 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                         <span className="pf-stat-val">
                           {data.statistics?.loyaltyEligibleSpent != null ? formatCurrency(data.statistics.loyaltyEligibleSpent) : '—'}
                         </span>
+                        <span className="pf-stat-note">Không tính phí vận chuyển và đơn hủy/hoàn</span>
                       </div>
                     </div>
                   </>
