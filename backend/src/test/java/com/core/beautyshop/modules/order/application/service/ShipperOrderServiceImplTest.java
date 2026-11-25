@@ -112,6 +112,21 @@ class ShipperOrderServiceImplTest {
     }
 
     @Test
+    void testGetShipperOrdersWithKeywordQueriesTrimmedLowercasePattern() {
+        PageRequest pageable = PageRequest.of(1, 10);
+        when(orderRepository.findShipperDeliveriesByKeyword(
+                eq(50L), isNull(), eq("%ord-test%"), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(testOrder), pageable, 11));
+
+        Page<ShipperOrderView> result = shipperOrderService.getShipperOrders(50L, null, "  ORD-TEST  ", pageable);
+
+        assertNotNull(result);
+        assertEquals(11, result.getTotalElements());
+        assertEquals(2, result.getTotalPages());
+        assertEquals("ORD-TEST-100", result.getContent().get(0).getOrderNumber());
+    }
+
+    @Test
     void otherShipperCannotUpdateAssignedOrder() {
         when(orderRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(testOrder));
 

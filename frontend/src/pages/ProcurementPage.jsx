@@ -1,7 +1,8 @@
 import { ProcurementOperationsPanel } from '../features/commerce/AdminCommercePanels';
+import { ProcurementHistoryPanel } from '../features/procurement/ProcurementHistoryPanel';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { businessToday, downloadTemplate, matchVariants, orderPayload, validDate, validateImportFile, validateItem } from '../features/procurement/procurementImport';
-import { Check, Eye, PackageCheck, Plus, RefreshCw, X, Building2, ClipboardList } from 'lucide-react';
+import { Check, Eye, Filter, History, PackageCheck, Plus, RefreshCw, Search, X, Building2, ClipboardList } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
 import { Button } from '../shared/ui/Button';
@@ -47,6 +48,12 @@ export const ProcurementPage = () => {
   const [orderPage, setOrderPage] = useState(0);
   const [orderPages, setOrderPages] = useState(1);
   const [orderCount, setOrderCount] = useState(0);
+  const [poKeywordInput, setPoKeywordInput] = useState('');
+  const [poKeyword, setPoKeyword] = useState('');
+  const [poStatus, setPoStatus] = useState('');
+  const [poSupplierId, setPoSupplierId] = useState('');
+  const [poWarehouseId, setPoWarehouseId] = useState('');
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -228,9 +235,20 @@ export const ProcurementPage = () => {
     setLoading(true);
     setLoadError('');
     try {
+      const orderParams = new URLSearchParams({
+        page: String(orderPage),
+        size: '20',
+      });
+      orderParams.append('sort', 'createdAt,desc');
+      orderParams.append('sort', 'id,desc');
+      if (poKeyword.trim()) orderParams.append('keyword', poKeyword.trim());
+      if (poStatus) orderParams.append('status', poStatus);
+      if (poSupplierId) orderParams.append('supplierId', poSupplierId);
+      if (poWarehouseId) orderParams.append('warehouseId', poWarehouseId);
+
       const [supplierResult, orderResult, warehouseResult] = await Promise.allSettled([
         apiClient.get(`${ENDPOINTS.PROCUREMENT.SUPPLIERS}?size=100`),
-        apiClient.get(`${ENDPOINTS.PROCUREMENT.ORDERS}?page=${orderPage}&size=20&sort=createdAt,desc&sort=id,desc`),
+        apiClient.get(`${ENDPOINTS.PROCUREMENT.ORDERS}?${orderParams.toString()}`),
         apiClient.get(ENDPOINTS.INVENTORY.WAREHOUSES),
       ]);
       const failures = [];
@@ -259,7 +277,7 @@ export const ProcurementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderPage]);
+  }, [orderPage, poKeyword, poStatus, poSupplierId, poWarehouseId]);
   useEffect(() => { const fetchPage = async () => { await load(); }; fetchPage(); }, [load]);
 
   useEffect(() => {
@@ -361,6 +379,7 @@ export const ProcurementPage = () => {
       const orderNum = resData?.orderNumber ? ` (${resData.orderNumber})` : '';
       setSuccessNotice(`Tạo phiếu mua hàng${orderNum} thành công.`);
       setOrderOpen(false); setOrderForm({ supplierId: '', warehouseId: '', expectedDate: '', note: '', items: [blankItem()] });
+      setHistoryRefresh((v) => v + 1);
       if (orderPage === 0) load(); else setOrderPage(0);
     } catch (err) {
       setImportError(`${err.message || 'Lỗi tạo phiếu mua hàng'}.${!err.status || err.status >= 500 ? ' Kết quả lưu chưa rõ. Kiểm tra danh sách phiếu trước khi thử lại để tránh tạo trùng.' : ''}`);
@@ -376,6 +395,7 @@ export const ProcurementPage = () => {
     if (!window.confirm(prompt)) return;
     try {
       await apiClient.put(endpoint);
+      setHistoryRefresh((v) => v + 1);
       load();
     } catch (err) {
       alert(err.message || 'Lỗi xử lý phiếu mua hàng');
@@ -394,7 +414,9 @@ export const ProcurementPage = () => {
   const orderColumns = [
     { header: 'Mã phiếu mua', accessor: (row) => <strong>{row.orderNumber}</strong> }, { header: 'Nhà cung cấp', accessor: 'supplierName' },
     { header: 'Kho nhận hàng', accessor: (row) => warehouses.find((w) => w.id === row.warehouseId)?.name || `Kho #${row.warehouseId}` },
-    { header: 'Ngày dự kiến nhận', accessor: (row) => formatDate(row.expectedDate) }, { header: 'Tổng tiền hàng', accessor: (row) => formatCurrency(row.totalAmount), align: 'right' },
+    { header: 'Ngày dự kiến nhận', accessor: (row) => formatDate(row.expectedDate) },
+    { header: 'SL nhận / đặt', align: 'right', accessor: (row) => <span><strong>{row.receivedQuantity ?? 0}</strong> / {row.totalQuantity ?? 0}</span> },
+    { header: 'Tổng tiền hàng', accessor: (row) => formatCurrency(row.totalAmount), align: 'right' },
     {
       header: 'Trạng thái',
       accessor: (row) => {
@@ -452,6 +474,12 @@ export const ProcurementPage = () => {
           description: 'Phiếu đặt hàng nhập, duyệt đơn và nhập kho'
         },
         {
+          id: 'history',
+          label: 'Lịch sử nhập hàng',
+          icon: History,
+          description: 'Nhật ký các đợt nhập kho, trả hàng & thanh toán NCC'
+        },
+        {
           id: 'suppliers',
           label: 'Nhà cung cấp',
           count: suppliers.length,
@@ -461,19 +489,156 @@ export const ProcurementPage = () => {
       ]}
       actions={
         <>
-          <Button variant="outline" icon={RefreshCw} onClick={load} loading={loading}>
+          <Button
+            variant="outline"
+            icon={RefreshCw}
+            onClick={() => {
+              load();
+              setHistoryRefresh((v) => v + 1);
+            }}
+            loading={loading}
+          >
             Làm mới
           </Button>
-          <Button icon={Plus} onClick={() => { if (tab === 'orders') { setSuccessNotice(''); setOrderOpen(true); } else { handleOpenCreateSupplier(); } }}>
-            {tab === 'orders' ? 'Tạo đơn nhập' : 'Thêm nhà cung cấp'}
+          <Button icon={Plus} onClick={() => { if (tab === 'suppliers') { handleOpenCreateSupplier(); } else { setSuccessNotice(''); setOrderOpen(true); } }}>
+            {tab === 'suppliers' ? 'Thêm nhà cung cấp' : 'Tạo đơn nhập'}
           </Button>
         </>
       }
+      showQuickPills
     />
     {successNotice && <AlertBanner type="success" title="Thành công" message={successNotice} action={<Button size="sm" variant="outline" onClick={() => setSuccessNotice('')}>Đóng</Button>} />}
     {loadError && <AlertBanner type="danger" title="Không thể tải đầy đủ dữ liệu" message={loadError} action={<Button size="sm" variant="outline" onClick={load}>Thử lại</Button>} />}
-    <ProcurementOperationsPanel orders={orders} onChanged={load} />
-    <div className="card"><DataTable columns={tab === 'orders' ? orderColumns : supplierColumns} data={tab === 'orders' ? orders : suppliers} loading={loading} page={tab === 'orders' ? orderPage : 0} totalPages={tab === 'orders' ? orderPages : 1} totalElements={tab === 'orders' ? orderCount : suppliers.length} onPageChange={tab === 'orders' ? setOrderPage : undefined} /></div>
+    {tab !== 'suppliers' && (
+      <ProcurementOperationsPanel
+        orders={orders}
+        onChanged={() => {
+          load();
+          setHistoryRefresh((v) => v + 1);
+        }}
+      />
+    )}
+    {tab === 'history' ? (
+      <ProcurementHistoryPanel
+        suppliers={suppliers}
+        warehouses={warehouses}
+        refreshRevision={historyRefresh}
+        onOpenPoDetail={openDetail}
+      />
+    ) : tab === 'orders' ? (
+      <>
+        <div className="card" style={{ padding: '16px', marginBottom: '16px' }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setPoKeyword(poKeywordInput);
+              setOrderPage(0);
+            }}
+            className="admin-order-filters"
+          >
+            <Input
+              label="Tìm phiếu mua hàng"
+              placeholder="Mã PO, tên / mã nhà cung cấp, ghi chú..."
+              value={poKeywordInput}
+              onChange={(e) => setPoKeywordInput(e.target.value)}
+              icon={Search}
+              className="form-group-compact"
+            />
+            <Select
+              label="Trạng thái PO"
+              value={poStatus}
+              onChange={(e) => {
+                setPoStatus(e.target.value);
+                setOrderPage(0);
+              }}
+              className="form-group-compact"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="DRAFT">Bản nháp (DRAFT)</option>
+              <option value="APPROVED">Đã duyệt (APPROVED)</option>
+              <option value="PARTIALLY_RECEIVED">Nhập một phần</option>
+              <option value="RECEIVED">Đã nhận đủ</option>
+              <option value="CANCELLED">Đã hủy</option>
+            </Select>
+            <Select
+              label="Nhà cung cấp"
+              value={poSupplierId}
+              onChange={(e) => {
+                setPoSupplierId(e.target.value);
+                setOrderPage(0);
+              }}
+              className="form-group-compact"
+            >
+              <option value="">Tất cả nhà cung cấp</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} - {s.name}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="Kho nhận hàng"
+              value={poWarehouseId}
+              onChange={(e) => {
+                setPoWarehouseId(e.target.value);
+                setOrderPage(0);
+              }}
+              className="form-group-compact"
+            >
+              <option value="">Tất cả kho</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </Select>
+            <Button type="submit" variant="primary" icon={Filter}>
+              Lọc PO
+            </Button>
+            {(poKeywordInput || poKeyword || poStatus || poSupplierId || poWarehouseId) && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPoKeywordInput('');
+                  setPoKeyword('');
+                  setPoStatus('');
+                  setPoSupplierId('');
+                  setPoWarehouseId('');
+                  setOrderPage(0);
+                }}
+              >
+                Đặt lại
+              </Button>
+            )}
+          </form>
+        </div>
+        <div className="card">
+          <DataTable
+            columns={orderColumns}
+            data={orders}
+            loading={loading}
+            emptyMessage="Không có phiếu mua hàng nào phù hợp."
+            page={orderPage}
+            totalPages={orderPages}
+            totalElements={orderCount}
+            onPageChange={setOrderPage}
+          />
+        </div>
+      </>
+    ) : (
+      <div className="card">
+        <DataTable
+          columns={supplierColumns}
+          data={suppliers}
+          loading={loading}
+          emptyMessage="Chưa có nhà cung cấp nào."
+          page={0}
+          totalPages={1}
+          totalElements={suppliers.length}
+        />
+      </div>
+    )}
     <Modal isOpen={supplierOpen} onClose={() => setSupplierOpen(false)} title={editingSupplier ? "Cập nhật nhà cung cấp" : "Thêm nhà cung cấp"}><form onSubmit={saveSupplier}><div className="grid-2"><Input label="Mã *" required value={supplierForm.code} onChange={(e)=>setSupplierForm({...supplierForm,code:e.target.value})}/><Input label="Tên *" required value={supplierForm.name} onChange={(e)=>setSupplierForm({...supplierForm,name:e.target.value})}/><Input label="Người liên hệ" value={supplierForm.contactName} onChange={(e)=>setSupplierForm({...supplierForm,contactName:e.target.value})}/><Input label="Số điện thoại" value={supplierForm.phone} onChange={(e)=>setSupplierForm({...supplierForm,phone:e.target.value})}/><Input label="Email" type="email" value={supplierForm.email} onChange={(e)=>setSupplierForm({...supplierForm,email:e.target.value})}/><Input label="Mã số thuế" value={supplierForm.taxCode} onChange={(e)=>setSupplierForm({...supplierForm,taxCode:e.target.value})}/></div><Input label="Địa chỉ" value={supplierForm.address} onChange={(e)=>setSupplierForm({...supplierForm,address:e.target.value})}/><div style={{display:'flex',justifyContent:'flex-end',marginTop:16}}><Button type="submit">Lưu nhà cung cấp</Button></div></form></Modal>
     <Modal isOpen={detailId !== null} onClose={() => setDetailId(null)} title={`Chi tiết phiếu mua ${detail?.orderNumber || `#${detailId}`}`} maxWidth="1100px" footer={<Button variant="outline" onClick={() => setDetailId(null)}>Đóng</Button>}>
       {detailLoading && <p role="status">Đang tải chi tiết phiếu mua…</p>}

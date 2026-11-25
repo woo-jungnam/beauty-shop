@@ -38,9 +38,10 @@ export const ADMIN_SECTIONS = [
         description: "Theo dõi & xử lý đơn hàng",
         icon: ShoppingBag,
         role: "ROLE_STAFF",
-        keywords: "order đơn hàng giao vận bán hàng",
+        keywords: "order đơn hàng giao vận bán hàng đối soát cod bàn giao",
         subItems: [
           { id: "PENDING", label: "Chờ xác nhận" },
+          { id: "RECONCILIATION", label: "Đối soát COD" },
         ],
       },
       {
@@ -62,9 +63,10 @@ export const ADMIN_SECTIONS = [
         description: "Nhà cung cấp & phiếu nhập kho",
         icon: ClipboardList,
         role: "ROLE_STAFF",
-        keywords: "supplier procurement nhà cung cấp nhập hàng mua hàng po",
+        keywords: "supplier procurement nhà cung cấp nhập hàng mua hàng po lịch sử phiếu nhập chứng từ",
         subItems: [
           { id: "orders", label: "Đơn mua hàng (PO)" },
+          { id: "history", label: "Lịch sử nhập hàng" },
           { id: "suppliers", label: "Nhà cung cấp" },
         ],
       },

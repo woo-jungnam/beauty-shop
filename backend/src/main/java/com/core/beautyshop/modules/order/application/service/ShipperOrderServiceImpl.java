@@ -30,6 +30,7 @@ import java.time.ZoneId;
 import java.time.DayOfWeek;
 import java.time.temporal.TemporalAdjusters;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,20 @@ public class ShipperOrderServiceImpl implements ShipperOrderService {
     @Override
     @Transactional(readOnly = true)
     public Page<ShipperOrderView> getShipperOrders(Long shipperId, OrderStatus status, Pageable pageable) {
-        Page<Order> orders = orderRepository.findShipperDeliveries(shipperId, status, pageable);
+        return getShipperOrders(shipperId, status, null, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ShipperOrderView> getShipperOrders(Long shipperId, OrderStatus status, String keyword, Pageable pageable) {
+        String trimmed = keyword == null ? "" : keyword.trim();
+        Page<Order> orders = trimmed.isEmpty()
+                ? orderRepository.findShipperDeliveries(shipperId, status, pageable)
+                : orderRepository.findShipperDeliveriesByKeyword(
+                        shipperId,
+                        status,
+                        "%" + trimmed.toLowerCase(Locale.ROOT) + "%",
+                        pageable);
         var variants = orderMapper.loadItemVariants(orders.stream());
         return orders.map(order -> toShipperView(order, variants));
     }

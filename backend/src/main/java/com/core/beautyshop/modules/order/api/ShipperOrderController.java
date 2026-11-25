@@ -49,10 +49,11 @@ public class ShipperOrderController {
     @GetMapping("/orders")
     public ResponseEntity<ApiResponse<PageResponse<ShipperOrderView>>> getDeliveries(
             @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         Long targetShipperId = SecurityUtils.getCurrentUserId();
-        Page<ShipperOrderView> page = shipperOrderService.getShipperOrders(targetShipperId, status, pageable);
+        Page<ShipperOrderView> page = shipperOrderService.getShipperOrders(targetShipperId, status, keyword, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(page)));
     }
 

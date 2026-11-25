@@ -330,15 +330,22 @@ public class OrderServiceImpl implements OrderService {
             predicates.add(cb.isFalse(root.get("isDeleted")));
             if (filter != null) {
                 if (filter.keyword() != null && !filter.keyword().isBlank()) {
-                    String pattern = "%" + filter.keyword().trim().toLowerCase(Locale.ROOT) + "%";
-                    predicates.add(cb.or(cb.like(cb.lower(root.get("orderNumber")), pattern),
-                            cb.like(cb.lower(root.get("customerName")), pattern),
-                            cb.like(cb.lower(root.get("customerPhone")), pattern)));
+                    predicates.add(OrderReconciliationPredicates.keywordMatches(root, cb, filter.keyword()));
                 }
                 if (filter.status() != null) predicates.add(cb.equal(root.get("status"), filter.status()));
                 if (filter.paymentStatus() != null) predicates.add(cb.equal(root.get("paymentStatus"), filter.paymentStatus()));
                 if (filter.from() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), filter.from()));
                 if (filter.to() != null) predicates.add(cb.lessThan(root.get("createdAt"), filter.to()));
+                if (filter.shipperId() != null) {
+                    predicates.add(cb.equal(root.get("shipperId"), filter.shipperId()));
+                } else if (Boolean.TRUE.equals(filter.carrierOnly())) {
+                    predicates.add(cb.isNull(root.get("shipperId")));
+                } else if (Boolean.FALSE.equals(filter.carrierOnly())) {
+                    predicates.add(cb.isNotNull(root.get("shipperId")));
+                }
+                if (filter.codReconciliation() != null && !filter.codReconciliation().isBlank()) {
+                    predicates.add(OrderReconciliationPredicates.codReconciliationMatches(root, cb, filter.codReconciliation()));
+                }
                 if (filter.orderType() != null && !filter.orderType().isBlank()) {
                     String type = filter.orderType().trim().toUpperCase(Locale.ROOT);
                     if ("PRODUCT".equals(type)) {
@@ -354,26 +361,7 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
             if (filter != null && Boolean.TRUE.equals(filter.pendingReturn())) {
-                jakarta.persistence.criteria.Subquery<Long> activeReturnSubquery = query.subquery(Long.class);
-                jakarta.persistence.criteria.Root<com.core.beautyshop.modules.order.domain.ProductReturn> returnRoot =
-                        activeReturnSubquery.from(com.core.beautyshop.modules.order.domain.ProductReturn.class);
-                activeReturnSubquery.select(returnRoot.get("id")).where(
-                        cb.equal(returnRoot.get("orderId"), root.get("id")),
-                        returnRoot.get("status").in("REQUESTED", "APPROVED", "RECEIVED")
-                );
-                jakarta.persistence.criteria.Predicate hasActiveProductReturn = cb.exists(activeReturnSubquery);
-                jakarta.persistence.criteria.Predicate refundPending = cb.equal(root.get("paymentStatus"), PaymentStatus.REFUND_PENDING);
-                jakarta.persistence.criteria.Predicate wholeOrderNeedsRefund = cb.and(
-                        root.get("paymentStatus").in(PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED),
-                        root.get("status").in(
-                                OrderStatus.DELIVERY_FAILED,
-                                OrderStatus.RETURNING_TO_SENDER,
-                                OrderStatus.RETURN_TO_SENDER,
-                                OrderStatus.RETURNED,
-                                OrderStatus.CANCELLED
-                        )
-                );
-                predicates.add(cb.or(hasActiveProductReturn, refundPending, wholeOrderNeedsRefund));
+                predicates.add(OrderReconciliationPredicates.attentionNeeded(root, query, cb));
             }
             return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };

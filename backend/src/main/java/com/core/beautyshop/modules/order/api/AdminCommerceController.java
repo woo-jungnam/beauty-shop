@@ -46,4 +46,12 @@ public class AdminCommerceController {
 
     @Operation(summary = "Đối soát tiền thu hộ COD từ đơn vị vận chuyển (Admin)", description = "Ghi nhận khoản tiền COD do hãng vận chuyển đối soát và chuyển về tài khoản")
     @PostMapping("/orders/{id}/cod-settlement") @PreAuthorize("hasRole('ADMIN')") public ApiResponse<?> settle(@PathVariable Long id,@RequestBody OrderCodSettlementService.Settlement c){cod.confirm(id,c);return ApiResponse.success("Carrier remittance recorded");}
+
+    @Operation(summary = "Đối soát và xác nhận bàn giao tiền COD hàng loạt (Admin)", description = "Xác nhận bàn giao hết số dư COD chờ đối soát cho nhiều đơn hàng trong cùng một phiếu chứng từ")
+    @PostMapping("/orders/cod-settlement/batch")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<OrderCodSettlementService.BatchSettlementResult> settleBatch(
+            @RequestBody OrderCodSettlementService.BatchSettlement command) {
+        return ApiResponse.success(cod.confirmBatch(command));
+    }
 }

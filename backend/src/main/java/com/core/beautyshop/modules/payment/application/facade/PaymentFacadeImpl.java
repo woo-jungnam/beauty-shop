@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.payment.application.facade;
 
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.BankReceipt;
+import com.core.beautyshop.modules.payment.api.dto.CodSettlementTransactionDto;
 import com.core.beautyshop.modules.payment.api.dto.PaymentInstruction;
 import com.core.beautyshop.modules.payment.api.dto.PaymentOrderDto;
 import com.core.beautyshop.modules.payment.application.strategy.PaymentStrategy;
@@ -11,8 +12,12 @@ import com.core.beautyshop.modules.payment.domain.PaymentTransactionRepository;
 import com.core.beautyshop.modules.payment.domain.enums.TransactionStatus;
 import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import com.core.beautyshop.shared.exception.BusinessException;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +25,11 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -167,5 +176,36 @@ public class PaymentFacadeImpl implements PaymentFacade {
     public PaymentInstruction processPayment(PaymentMethod method, PaymentOrderDto orderDto) {
         PaymentStrategy strategy = paymentStrategyFactory.getStrategy(method);
         return strategy.processPayment(orderDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CodSettlementTransactionDto> searchCodSettlements(String keyword, Instant from, Instant to, Pageable pageable) {
+        Specification<PaymentTransaction> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("gateway"), "COD"));
+            predicates.add(cb.like(root.get("referenceCode"), "COD-SETTLED-%"));
+            predicates.add(cb.equal(root.get("status"), TransactionStatus.SUCCESS));
+            if (from != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));
+            if (to != null) predicates.add(cb.lessThan(root.get("createdAt"), to));
+            if (keyword != null && !keyword.isBlank()) {
+                String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("orderNumber")), pattern),
+                        cb.like(cb.lower(root.get("referenceCode")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("content"), "")), pattern)
+                ));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        return transactions.findAll(spec, pageable)
+                .map(tx -> new CodSettlementTransactionDto(
+                        tx.getId(),
+                        tx.getOrderNumber(),
+                        tx.getReferenceCode(),
+                        tx.getAmount(),
+                        tx.getContent(),
+                        tx.getCreatedAt()
+                ));
     }
 }

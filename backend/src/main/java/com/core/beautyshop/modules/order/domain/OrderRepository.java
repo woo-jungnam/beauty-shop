@@ -2,6 +2,7 @@ package com.core.beautyshop.modules.order.domain;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +38,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     @EntityGraph(attributePaths = {"items"})
     Optional<Order> findByOrderNumber(String orderNumber);
+
+    List<Order> findByOrderNumberInAndIsDeletedFalse(Collection<String> orderNumbers);
 
     @EntityGraph(attributePaths = {"items"})
     @Query("select o from Order o where o.orderNumber = :orderNumber and (o.customerPhone = :phone or replace(o.customerPhone, '+84', '0') = replace(:phone, '+84', '0')) and o.isDeleted = false")
@@ -83,6 +86,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     @Query("select o from Order o where o.isDeleted = false and o.shipperId = :shipperId and (:status is null or o.status = :status) and o.status in (com.core.beautyshop.modules.order.domain.enums.OrderStatus.SHIPPED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERY_FAILED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.RETURNING_TO_SENDER) order by o.createdAt desc, o.id desc")
     Page<Order> findShipperDeliveries(@Param("shipperId") Long shipperId, @Param("status") OrderStatus status, Pageable pageable);
+
+    @Query("select o from Order o where o.isDeleted = false and o.shipperId = :shipperId and (:status is null or o.status = :status) and o.status in (com.core.beautyshop.modules.order.domain.enums.OrderStatus.SHIPPED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.DELIVERY_FAILED, com.core.beautyshop.modules.order.domain.enums.OrderStatus.RETURNING_TO_SENDER) and (lower(o.orderNumber) like :pattern or lower(o.customerName) like :pattern or lower(o.customerPhone) like :pattern or lower(o.shippingAddress) like :pattern) order by o.createdAt desc, o.id desc")
+    Page<Order> findShipperDeliveriesByKeyword(@Param("shipperId") Long shipperId, @Param("status") OrderStatus status, @Param("pattern") String pattern, Pageable pageable);
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 

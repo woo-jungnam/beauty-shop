@@ -11,6 +11,10 @@ import org.springframework.web.multipart.MultipartFile;
 public interface ShipperOrderService {
     Page<ShipperOrderView> getShipperOrders(Long shipperId, OrderStatus status, Pageable pageable);
 
+    default Page<ShipperOrderView> getShipperOrders(Long shipperId, OrderStatus status, String keyword, Pageable pageable) {
+        return getShipperOrders(shipperId, status, pageable);
+    }
+
     ShipperOrderView getShipperOrderDetail(Long orderId, Long shipperId);
 
     ShipperOrderView startDelivery(Long orderId, Long shipperId);

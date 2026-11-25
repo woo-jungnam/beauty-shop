@@ -1,6 +1,7 @@
 package com.core.beautyshop.modules.procurement.api;
 
 import com.core.beautyshop.modules.catalog.api.dto.ProductVariantSummaryDto;
+import com.core.beautyshop.modules.procurement.application.ProcurementHistoryService;
 import com.core.beautyshop.modules.procurement.application.ProcurementService;
 import com.core.beautyshop.modules.procurement.domain.PurchaseOrder;
 import com.core.beautyshop.shared.dto.*;
@@ -10,9 +11,12 @@ import org.springdoc.core.annotations.ParameterObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 
 @Tag(name = "Nhà cung cấp & Mua hàng (Admin)", description = "ADMIN/STAFF quản lý nhà cung cấp và phiếu DRAFT→APPROVED→RECEIVED; receive nhận toàn bộ số lượng còn lại")
@@ -20,6 +24,7 @@ import java.util.List;
 @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')") @RequiredArgsConstructor
 public class AdminProcurementController {
     private final ProcurementService service;
+    private final ProcurementHistoryService historyService;
 
     @Operation(summary = "Đối chiếu SKU khi lập phiếu mua", description = "Chỉ đọc; 1–500 SKU, tối đa 100 ký tự/mã. Khớp chính xác sau trim, gồm hàng ngưng bán, loại hàng đã xóa. SKU không thấy không có trong kết quả; không tạo phiếu hoặc cộng tồn.")
     @PostMapping("/variants/lookup")
@@ -60,10 +65,20 @@ public class AdminProcurementController {
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "Lấy danh sách phiếu mua hàng (lọc theo trạng thái, phân trang)")
+    @Operation(summary = "Lấy danh sách phiếu mua hàng (lọc nâng cao, phân trang)")
     @GetMapping("/orders")
-    public ApiResponse<PageResponse<ProcurementService.PurchaseOrderView>> orders(@Parameter(description = "Trạng thái DRAFT, APPROVED, RECEIVED hoặc CANCELLED") @RequestParam(required=false) PurchaseOrder.Status status, @ParameterObject Pageable pageable) {
-        return ApiResponse.success(PageResponse.of(service.orders(status, pageable)));
+    public ApiResponse<PageResponse<ProcurementService.PurchaseOrderView>> orders(
+            @Parameter(description = "Tìm kiếm theo mã PO, nhà cung cấp hoặc ghi chú") @RequestParam(required = false) String keyword,
+            @Parameter(description = "Trạng thái DRAFT, APPROVED, PARTIALLY_RECEIVED, RECEIVED hoặc CANCELLED") @RequestParam(required = false) PurchaseOrder.Status status,
+            @RequestParam(required = false) List<PurchaseOrder.Status> statuses,
+            @RequestParam(required = false) Long supplierId,
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
+            @RequestParam(required = false, defaultValue = "false") boolean useReceivedDate,
+            @ParameterObject Pageable pageable) {
+        return ApiResponse.success(PageResponse.of(
+                service.orders(keyword, status, statuses, supplierId, warehouseId, from, to, useReceivedDate, pageable)));
     }
 
     @Operation(summary = "Xem chi tiết phiếu mua hàng theo ID")
@@ -102,5 +117,31 @@ public class AdminProcurementController {
     @PutMapping("/orders/{id}/cancel")
     public ApiResponse<ProcurementService.PurchaseOrderView> cancel(@PathVariable Long id) {
         return ApiResponse.success(service.cancel(id));
+    }
+
+    @Operation(summary = "Lịch sử chứng từ nhập kho, trả hàng và công nợ nhà cung cấp (phân trang)")
+    @GetMapping("/movements")
+    public ApiResponse<PageResponse<ProcurementHistoryService.ProcurementMovementHistoryView>> movements(
+            @RequestParam(required = false) String keyword,
+            @Parameter(description = "RECEIPT, SUPPLIER_RETURN, PAYMENT, SUPPLIER_REFUND") @RequestParam(required = false) String kind,
+            @RequestParam(required = false) Long supplierId,
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) Long purchaseOrderId,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
+            @ParameterObject @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ApiResponse.success(PageResponse.of(
+                historyService.searchMovements(keyword, kind, supplierId, warehouseId, purchaseOrderId, from, to, pageable)));
+    }
+
+    @Operation(summary = "Tổng hợp số liệu lịch sử nhập hàng & công nợ nhà cung cấp")
+    @GetMapping("/history/summary")
+    public ApiResponse<ProcurementHistoryService.ProcurementHistorySummary> historySummary(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long supplierId,
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to) {
+        return ApiResponse.success(historyService.getHistorySummary(keyword, supplierId, warehouseId, from, to));
     }
 }

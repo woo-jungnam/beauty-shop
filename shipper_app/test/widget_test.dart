@@ -41,7 +41,7 @@ class _TestShipper extends ShipperProvider {
 
   @override
   Future<void> fetchOrders({
-    bool loadMore = false,
+    int? page,
     bool background = false,
   }) async {}
 

@@ -7,6 +7,13 @@ import {
   hasOrderReturnOrRefundAttention,
   shouldShowOrderCommerceButton,
 } from '../orderCommerceHelpers.js';
+import {
+  buildCsvContent,
+  computeOrderCollectedCod,
+  computeOrderRemittedCod,
+  computeOrderUnsettledCod,
+  getCodReconciliationBadge,
+} from '../orderReconciliationHelpers.js';
 
 const itemMap = buildOrderItemMap([
   {
@@ -47,6 +54,34 @@ const ordersPageSource = fs.readFileSync(
 assert.equal(ordersPageSource.includes('CommerceOperationsPanel'), false);
 assert.equal(ordersPageSource.includes('PaymentExceptionPanel'), false);
 assert.equal(ordersPageSource.includes('OrderCommerceModal'), true);
+assert.equal(ordersPageSource.includes('OrderReconciliationPanel'), true);
 
-console.log('✓ All order commerce helper & OrdersPage checks passed.');
+// COD reconciliation helpers
+assert.equal(
+  computeOrderUnsettledCod({ paymentMethod: 'COD', status: 'DELIVERED', shipperCodCollected: 350000, shipperCodRemitted: 100000 }),
+  250000
+);
+assert.equal(
+  computeOrderUnsettledCod({ paymentMethod: 'COD', status: 'DELIVERED', totalAmount: 200000, paidAmount: 0 }),
+  200000
+);
+assert.equal(
+  computeOrderCollectedCod({ paymentMethod: 'COD', status: 'DELIVERED', totalAmount: 200000, paidAmount: 0 }),
+  200000
+);
+assert.equal(
+  computeOrderRemittedCod({ paymentMethod: 'COD', status: 'DELIVERED', shipperCodCollected: 350000, shipperCodRemitted: 100000 }),
+  100000
+);
+assert.equal(
+  getCodReconciliationBadge({ paymentMethod: 'COD', status: 'DELIVERED', shipperCodCollected: 350000, shipperCodRemitted: 350000 }).text,
+  'Đã đối soát đủ'
+);
+assert.equal(
+  getCodReconciliationBadge({ paymentMethod: 'COD', status: 'SHIPPED' }).text,
+  'Đang giao COD'
+);
+assert.ok(buildCsvContent(['A', 'B'], [['x,y', 'z']]).includes('"x,y",z'));
+
+console.log('✓ All order commerce helper, reconciliation helper & OrdersPage checks passed.');
 

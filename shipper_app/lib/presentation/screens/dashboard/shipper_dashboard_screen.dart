@@ -26,7 +26,9 @@ class ShipperDashboardScreen extends StatefulWidget {
 class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _listController = ScrollController();
   Timer? _pollTimer;
+  Timer? _searchDebounce;
   int _tab = 0;
   final Set<int> _visitedTabs = {0};
   bool _searchOpen = false;
@@ -79,7 +81,9 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     ShipperSettingsStore.instance.removeListener(_onSettingsChanged);
     WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
+    _searchDebounce?.cancel();
     _searchController.dispose();
+    _listController.dispose();
     super.dispose();
   }
 
@@ -151,6 +155,99 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
         ).showSnackBar(SnackBar(content: Text('$error')));
       }
     }
+  }
+
+  void _onSearchChanged(String val) {
+    setState(() => _searchQuery = val);
+    _searchDebounce?.cancel();
+    final shipper = context.read<ShipperProvider>();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      unawaited(shipper.setSearchKeyword(val));
+    });
+  }
+
+  void _clearSearch({bool close = false}) {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      if (close) _searchOpen = false;
+    });
+    unawaited(context.read<ShipperProvider>().setSearchKeyword(''));
+  }
+
+  Future<void> _changePage(Future<void> Function() action) async {
+    await action();
+    if (!mounted || !_listController.hasClients) return;
+    await _listController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+
+  InputDecoration _selectDecoration({
+    String? labelText,
+    Widget? prefixIcon,
+    EdgeInsetsGeometry? contentPadding,
+  }) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(ShipperLayout.innerRadius),
+      borderSide: const BorderSide(color: AppColors.border),
+    );
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textMuted,
+      ),
+      isDense: true,
+      prefixIcon: prefixIcon,
+      filled: true,
+      fillColor: AppColors.card,
+      contentPadding:
+          contentPadding ??
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(ShipperLayout.innerRadius),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+      ),
+    );
+  }
+
+  List<int?> _buildPaginationPages(int currentPage, int totalPages) {
+    if (totalPages <= 5) {
+      return List<int?>.generate(totalPages, (index) => index);
+    }
+    final pages = <int?>[0];
+    var start = (currentPage - 1).clamp(1, totalPages - 2);
+    var end = (currentPage + 1).clamp(1, totalPages - 2);
+    if (currentPage <= 2) {
+      start = 1;
+      end = 3;
+    } else if (currentPage >= totalPages - 3) {
+      start = totalPages - 4;
+      end = totalPages - 2;
+    }
+    if (start > 2) {
+      pages.add(null);
+    } else if (start == 2) {
+      pages.add(1);
+    }
+    for (var i = start; i <= end; i++) {
+      pages.add(i);
+    }
+    if (end < totalPages - 3) {
+      pages.add(null);
+    } else if (end == totalPages - 3) {
+      pages.add(totalPages - 2);
+    }
+    pages.add(totalPages - 1);
+    return pages;
   }
 
   List<ShipperOrderModel> _filterOrdersByQuery(List<ShipperOrderModel> orders) {
@@ -347,6 +444,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     return RefreshIndicator(
       onRefresh: shipper.fetchOrders,
       child: ListView.builder(
+        controller: _listController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: ShipperLayout.pagePadding,
         itemCount: visibleOrders.length + 2,
@@ -382,6 +480,10 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
       (sum, o) =>
           sum + (o.codCollected > o.codRemitted ? o.codCollected - o.codRemitted : 0),
     );
+    final displayCount =
+        (shipper.totalElements > 0 && visibleCount == shipper.orders.length)
+            ? shipper.totalElements
+            : visibleCount;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -410,7 +512,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    '$visibleCount đơn',
+                    '$displayCount đơn',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -426,13 +528,11 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                   color: _searchOpen ? AppColors.primary : AppColors.textMuted,
                 ),
                 onPressed: () {
-                  setState(() {
-                    _searchOpen = !_searchOpen;
-                    if (!_searchOpen) {
-                      _searchController.clear();
-                      _searchQuery = '';
-                    }
-                  });
+                  if (_searchOpen) {
+                    _clearSearch(close: true);
+                  } else {
+                    setState(() => _searchOpen = true);
+                  }
                 },
               ),
             ],
@@ -457,7 +557,11 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
             const SizedBox(height: 8),
             TextField(
               controller: _searchController,
-              onChanged: (val) => setState(() => _searchQuery = val),
+              onChanged: _onSearchChanged,
+              onSubmitted: (val) {
+                _searchDebounce?.cancel();
+                unawaited(shipper.setSearchKeyword(val));
+              },
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: 'Tìm mã đơn, tên khách, SĐT, địa chỉ…',
@@ -471,10 +575,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                     ? IconButton(
                         tooltip: 'Xóa tìm kiếm',
                         icon: const Icon(Icons.close_rounded, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
+                        onPressed: () => _clearSearch(),
                       )
                     : null,
                 filled: true,
@@ -498,36 +599,59 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
               ),
             ),
           ],
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              for (final entry in filters.entries)
-                ChoiceChip(
-                  label: Text(entry.value),
-                  selected: shipper.currentFilter == entry.key,
-                  selectedColor: AppColors.primarySurface,
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: shipper.currentFilter == entry.key
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    color: shipper.currentFilter == entry.key
-                        ? AppColors.primaryDark
-                        : AppColors.textMain,
-                  ),
-                  side: BorderSide(
-                    color: shipper.currentFilter == entry.key
-                        ? AppColors.primary
-                        : AppColors.border,
-                  ),
-                  showCheckmark: false,
-                  onSelected: (_) => shipper.setFilter(entry.key),
+          const SizedBox(height: 10),
+          KeyedSubtree(
+            key: const ValueKey('shipper-status-filter'),
+            child: DropdownButtonFormField<String>(
+              key: ValueKey('status-${shipper.currentFilter}'),
+              initialValue: filters.containsKey(shipper.currentFilter)
+                  ? shipper.currentFilter
+                  : 'ALL',
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded),
+              decoration: _selectDecoration(
+                labelText: 'Lọc theo trạng thái',
+                prefixIcon: const Icon(
+                  Icons.filter_list_rounded,
+                  size: 18,
+                  color: AppColors.primary,
                 ),
-            ],
+              ),
+              items: [
+                for (final entry in filters.entries)
+                  DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: entry.key == 'ALL'
+                                ? AppColors.primary
+                                : ShipperStatusStyle.of(entry.key).foreground,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              onChanged: shipper.isLoading
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+                      unawaited(_changePage(() => shipper.setFilter(value)));
+                    },
+            ),
           ),
         ],
       ),
@@ -563,22 +687,10 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
               ),
               const SizedBox(height: 10),
               FilledButton(
-                onPressed: () =>
-                    shipper.fetchOrders(loadMore: shipper.hasMore),
+                onPressed: () => shipper.fetchOrders(),
                 child: const Text('Thử lại'),
               ),
             ],
-          ),
-        ),
-      );
-    }
-    if (shipper.hasMore) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Center(
-          child: OutlinedButton(
-            onPressed: () => shipper.fetchOrders(loadMore: true),
-            child: const Text('Tải thêm đơn hàng'),
           ),
         ),
       );
@@ -605,12 +717,218 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
                   color: AppColors.textMuted,
                 ),
               ),
+              if (shipper.hasPreviousPage) ...[
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () => _changePage(() => shipper.goToPage(0)),
+                  child: const Text('Quay lại trang đầu'),
+                ),
+              ],
             ],
           ),
         ),
       );
     }
-    return const SizedBox.shrink();
+
+    final totalCount =
+        shipper.totalElements > 0 ? shipper.totalElements : visibleOrders.length;
+    final effectiveTotalPages = shipper.totalPages > 0
+        ? shipper.totalPages
+        : ((totalCount + shipper.pageSize - 1) ~/ shipper.pageSize);
+    final showPagination =
+        effectiveTotalPages > 1 ||
+        shipper.hasPreviousPage ||
+        shipper.hasNextPage ||
+        shipper.totalElements > 0;
+    if (!showPagination) {
+      return const SizedBox.shrink();
+    }
+
+    final displayTotalPages = effectiveTotalPages < 1 ? 1 : effectiveTotalPages;
+    final currentPageDisplay = (shipper.currentPage + 1).clamp(
+      1,
+      displayTotalPages,
+    );
+    final startItem = (shipper.currentPage * shipper.pageSize) + 1;
+    final rawEnd = startItem + visibleOrders.length - 1;
+    final endItem = rawEnd > totalCount ? totalCount : rawEnd;
+    final pageItems = _buildPaginationPages(
+      currentPageDisplay - 1,
+      displayTotalPages,
+    );
+
+    return Card(
+      key: const ValueKey('shipper-pagination-card'),
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                Text(
+                  'Trang $currentPageDisplay/$displayTotalPages • $startItem–$endItem / $totalCount đơn',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                SizedBox(
+                  width: 148,
+                  child: KeyedSubtree(
+                    key: const ValueKey('shipper-page-size-select'),
+                    child: DropdownButtonFormField<int>(
+                      key: ValueKey('page-size-${shipper.pageSize}'),
+                      initialValue: ShipperProvider.pageSizeOptions.contains(
+                            shipper.pageSize,
+                          )
+                          ? shipper.pageSize
+                          : ShipperProvider.defaultPageSize,
+                      isExpanded: true,
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
+                      decoration: _selectDecoration(
+                        labelText: 'Số đơn/trang',
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMain,
+                      ),
+                      items: [
+                        for (final size in ShipperProvider.pageSizeOptions)
+                          DropdownMenuItem<int>(
+                            value: size,
+                            child: Text(
+                              '$size / trang',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: shipper.isLoading
+                          ? null
+                          : (size) {
+                              if (size == null) return;
+                              unawaited(
+                                _changePage(() => shipper.setPageSize(size)),
+                              );
+                            },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (displayTotalPages > 1 ||
+                shipper.hasPreviousPage ||
+                shipper.hasNextPage) ...[
+              const SizedBox(height: 10),
+              Center(
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    OutlinedButton.icon(
+                      key: const ValueKey('shipper-page-prev'),
+                      onPressed: (!shipper.isLoading && shipper.hasPreviousPage)
+                          ? () => _changePage(shipper.previousPage)
+                          : null,
+                      icon: const Icon(Icons.chevron_left_rounded, size: 18),
+                      label: const Text('Trước'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textMain,
+                        side: const BorderSide(color: AppColors.border),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(0, 36),
+                      ),
+                    ),
+                    for (final pageIndex in pageItems)
+                      if (pageIndex == null)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            '…',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        )
+                      else if (pageIndex == shipper.currentPage)
+                        FilledButton(
+                          key: ValueKey('shipper-page-btn-${pageIndex + 1}'),
+                          onPressed: () {},
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            minimumSize: const Size(36, 36),
+                          ),
+                          child: Text('${pageIndex + 1}'),
+                        )
+                      else
+                        OutlinedButton(
+                          key: ValueKey('shipper-page-btn-${pageIndex + 1}'),
+                          onPressed: shipper.isLoading
+                              ? null
+                              : () => _changePage(
+                                  () => shipper.goToPage(pageIndex),
+                                ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textMain,
+                            side: const BorderSide(color: AppColors.border),
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            minimumSize: const Size(36, 36),
+                          ),
+                          child: Text('${pageIndex + 1}'),
+                        ),
+                    OutlinedButton.icon(
+                      key: const ValueKey('shipper-page-next'),
+                      onPressed: (!shipper.isLoading && shipper.hasNextPage)
+                          ? () => _changePage(shipper.nextPage)
+                          : null,
+                      iconAlignment: IconAlignment.end,
+                      icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                      label: const Text('Sau'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textMain,
+                        side: const BorderSide(color: AppColors.border),
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(0, 36),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildOrderCard(ShipperOrderModel order, bool providerBusy) {

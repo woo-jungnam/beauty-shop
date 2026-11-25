@@ -26,10 +26,15 @@ class ShipperProvider extends ChangeNotifier {
     _unreadCount = 0;
     _polling = null;
     _isLoading = false;
+    _isBackgroundLoading = false;
     _errorMessage = null;
     _currentFilter = 'ALL';
+    _searchKeyword = '';
     _ordersError = null;
-    _nextPage = 0;
+    _currentPage = 0;
+    _totalPages = 0;
+    _totalElements = 0;
+    _pageSize = defaultPageSize;
     _hasMore = false;
     _userProfile = null;
     _workProfile = null;
@@ -255,83 +260,153 @@ class ShipperProvider extends ChangeNotifier {
     return response.data!;
   }
 
+  static const int defaultPageSize = 10;
+  static const List<int> pageSizeOptions = [10, 20, 50];
+
   List<ShipperOrderModel> _orders = [];
   bool _isLoading = false;
+  bool _isBackgroundLoading = false;
   bool _hasMore = false;
-  int _nextPage = 0;
+  int _currentPage = 0;
+  int _totalPages = 0;
+  int _totalElements = 0;
+  int _pageSize = defaultPageSize;
   int _ordersRequest = 0;
   String? _ordersError;
   String? _errorMessage;
   String _currentFilter = 'ALL';
+  String _searchKeyword = '';
 
   List<ShipperOrderModel> get orders => _orders;
   bool get isLoading => _isLoading;
   bool get hasMore => _hasMore;
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
+  int get totalElements => _totalElements;
+  int get pageSize => _pageSize;
+  bool get hasPreviousPage => currentPage > 0;
+  bool get hasNextPage =>
+      totalPages > 0 ? (currentPage + 1 < totalPages) : hasMore;
   String? get ordersError => _ordersError;
   String? get errorMessage => _errorMessage;
   String get currentFilter => _currentFilter;
+  String get searchKeyword => _searchKeyword;
 
   Future<void> setFilter(String filter) async {
     if (_currentFilter == filter) return;
     _currentFilter = filter;
-    await fetchOrders();
+    _currentPage = 0;
+    notifyListeners();
+    await fetchOrders(page: 0);
+  }
+
+  Future<void> setPageSize(int size) async {
+    if (!pageSizeOptions.contains(size) || _pageSize == size) return;
+    _pageSize = size;
+    _currentPage = 0;
+    notifyListeners();
+    await fetchOrders(page: 0);
+  }
+
+  Future<void> setSearchKeyword(String keyword) async {
+    final normalized = keyword.trim();
+    if (_searchKeyword == normalized) return;
+    _searchKeyword = normalized;
+    _currentPage = 0;
+    notifyListeners();
+    await fetchOrders(page: 0);
+  }
+
+  Future<void> goToPage(int page) async {
+    if (page < 0) return;
+    if (totalPages > 0 && page >= totalPages) return;
+    if (page == currentPage && ordersError == null) return;
+    await fetchOrders(page: page);
+  }
+
+  Future<void> nextPage() async {
+    if (!hasNextPage) return;
+    await goToPage(currentPage + 1);
+  }
+
+  Future<void> previousPage() async {
+    if (!hasPreviousPage) return;
+    await goToPage(currentPage - 1);
   }
 
   Future<void> fetchOrders({
-    bool loadMore = false,
+    int? page,
     bool background = false,
   }) async {
-    if (background && _isLoading) return;
-    if (loadMore && (_isLoading || !_hasMore)) return;
+    if (background && (_isLoading || _isBackgroundLoading)) return;
     final session = _session;
     final request = ++_ordersRequest;
-    final page = loadMore ? _nextPage : 0;
-    final pages = background && _nextPage > 0 ? _nextPage : 1;
-    if (!loadMore && !background) {
+    var targetPage = (page ?? _currentPage) < 0 ? 0 : (page ?? _currentPage);
+    if (background) {
+      _isBackgroundLoading = true;
+    } else {
       _orders = [];
-      _nextPage = 0;
-      _hasMore = false;
+      _currentPage = targetPage;
+      _isLoading = true;
+      _ordersError = null;
+      notifyListeners();
     }
-    _isLoading = true;
-    _ordersError = null;
-    notifyListeners();
 
     try {
       final filter = _currentFilter;
-      final rows = <ShipperOrderModel>[];
-      var hasMore = false;
-      var nextPage = page;
-      for (var offset = 0; offset < pages; offset++) {
+      final keyword = _searchKeyword;
+      for (var attempt = 0; attempt < 2; attempt++) {
         final data = await _fetchData(ApiConstants.shipperOrders, {
-          'page': nextPage,
-          'size': 20,
+          'page': targetPage,
+          'size': _pageSize,
           if (filter != 'ALL') 'status': filter,
+          if (keyword.isNotEmpty) 'keyword': keyword,
         });
         if (session != _session || request != _ordersRequest) return;
-        rows.addAll(
-          (data['content'] as List).cast<Map<String, dynamic>>().map(
-            ShipperOrderModel.fromJson,
-          ),
-        );
-        nextPage++;
-        hasMore = data['last'] == false;
-        if (!hasMore) break;
+        final rawList = data['content'] as List? ?? const [];
+        final rows = rawList
+            .cast<Map<String, dynamic>>()
+            .map(ShipperOrderModel.fromJson)
+            .toList();
+        final parsedPage = (data['page'] as num?)?.toInt() ?? targetPage;
+        final parsedTotalElements =
+            (data['totalElements'] as num?)?.toInt() ?? rows.length;
+        final parsedSize = (data['size'] as num?)?.toInt() ?? _pageSize;
+        final parsedTotalPages = (data['totalPages'] as num?)?.toInt() ??
+            (parsedTotalElements == 0
+                ? 0
+                : ((parsedTotalElements + parsedSize - 1) ~/ parsedSize));
+        if (rows.isEmpty &&
+            parsedTotalPages > 0 &&
+            targetPage >= parsedTotalPages &&
+            attempt == 0) {
+          targetPage = parsedTotalPages - 1;
+          continue;
+        }
+        final isLast = data['last'] is bool
+            ? data['last'] as bool
+            : (parsedTotalPages == 0 || parsedPage + 1 >= parsedTotalPages);
+        _orders = rows;
+        _currentPage = parsedPage;
+        _totalElements = parsedTotalElements;
+        _totalPages = parsedTotalPages;
+        _hasMore = !isLast;
+        _ordersError = null;
+        break;
       }
-      _orders = {
-        if (loadMore)
-          for (final order in _orders) order.id: order,
-        for (final order in rows) order.id: order,
-      }.values.toList();
-      _nextPage = nextPage;
-      _hasMore = hasMore;
     } catch (e) {
       if (!background && session == _session && request == _ordersRequest) {
         _ordersError = e.toString();
       }
     } finally {
-      if (session == _session && request == _ordersRequest) {
-        _isLoading = false;
-        notifyListeners();
+      if (session == _session) {
+        if (background) {
+          _isBackgroundLoading = false;
+          if (!_isLoading && request == _ordersRequest) notifyListeners();
+        } else if (request == _ordersRequest) {
+          _isLoading = false;
+          notifyListeners();
+        }
       }
     }
   }

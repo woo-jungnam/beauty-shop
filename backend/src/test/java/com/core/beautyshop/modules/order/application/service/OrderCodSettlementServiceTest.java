@@ -48,4 +48,46 @@ class OrderCodSettlementServiceTest {
         assertEquals(BigDecimal.ZERO, order.unsettledCod());
         verifyNoInteractions(facade, events);
     }
+
+    @Test
+    void batchSettlementSettlesSortedDistinctOrdersAndRejectsAlreadySettledOrder() {
+        var orders = mock(OrderRepository.class);
+        var payments = mock(PaymentFacade.class);
+        var facade = mock(OrderFacade.class);
+        var events = mock(ApplicationEventPublisher.class);
+        var service = new OrderCodSettlementService(orders, payments, facade, events);
+
+        var order1 = Order.builder().orderNumber("ORD-10").status(OrderStatus.DELIVERED)
+                .paymentMethod(PaymentMethod.COD).totalAmount(BigDecimal.valueOf(250000))
+                .shipperCodCollected(BigDecimal.valueOf(250000)).shipperCodRemitted(BigDecimal.ZERO).build();
+        order1.setId(10L);
+        var order2 = Order.builder().orderNumber("ORD-20").status(OrderStatus.DELIVERED)
+                .paymentMethod(PaymentMethod.COD).totalAmount(BigDecimal.valueOf(150000))
+                .paidAmount(BigDecimal.ZERO).build();
+        order2.setId(20L);
+
+        when(orders.findByIdForUpdate(10L)).thenReturn(Optional.of(order1));
+        when(orders.findByIdForUpdate(20L)).thenReturn(Optional.of(order2));
+        when(payments.recordCarrierRemittance("ORD-10", BigDecimal.valueOf(250000), "COD-SETTLED-BATCH01-10", "Đối soát cuối ngày", 9L))
+                .thenReturn(true);
+        when(payments.recordCarrierRemittance("ORD-20", BigDecimal.valueOf(150000), "COD-SETTLED-BATCH01-20", "Đối soát cuối ngày", 9L))
+                .thenReturn(true);
+
+        try (var auth = mockStatic(SecurityUtils.class)) {
+            auth.when(SecurityUtils::getCurrentUserId).thenReturn(9L);
+            var result = service.confirmBatch(new OrderCodSettlementService.BatchSettlement(
+                    java.util.List.of(20L, 10L, 20L),
+                    "BATCH01",
+                    "Đối soát cuối ngày"
+            ));
+            assertEquals(2, result.settledCount());
+            assertEquals(BigDecimal.valueOf(400000), result.totalSettledAmount());
+            assertEquals(BigDecimal.valueOf(250000), order1.getShipperCodRemitted());
+            verify(facade).markOrderAsPaid("ORD-20", BigDecimal.valueOf(150000), "COD-SETTLED-BATCH01-20");
+
+            assertThrows(BusinessException.class, () -> service.confirmBatch(
+                    new OrderCodSettlementService.BatchSettlement(java.util.List.of(10L), "BATCH02", "Trùng")
+            ));
+        }
+    }
 }

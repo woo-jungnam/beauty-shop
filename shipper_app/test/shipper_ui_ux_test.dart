@@ -107,7 +107,7 @@ class _FakeShipperProvider extends ShipperProvider {
 
   @override
   Future<void> fetchOrders({
-    bool loadMore = false,
+    int? page,
     bool background = false,
   }) async {}
 
@@ -721,5 +721,247 @@ void main() {
       }
     },
   );
+
+  testWidgets(
+    'Dashboard uses select status filter and full pagination cleanly across mobile viewports',
+    (tester) async {
+      await _initTestStorage();
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final shipper = _PaginatedShipperProvider();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AuthProvider>(create: (_) => _FakeAuth()),
+            ChangeNotifierProvider<ShipperProvider>.value(value: shipper),
+          ],
+          child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(1.5)),
+              child: child!,
+            ),
+            home: const ShipperDashboardScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Home header uses select dropdown instead of ChoiceChips
+      expect(find.byKey(const ValueKey('shipper-status-filter')), findsOneWidget);
+      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.text('25 đơn'), findsOneWidget);
+      expect(find.text('#ORD-PAGE-01'), findsOneWidget);
+      expect(find.text('#ORD-PAGE-11'), findsNothing);
+
+      // Select status filter: DELIVERED ('Đã giao')
+      await tester.tap(find.byKey(const ValueKey('shipper-status-filter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đã giao').last);
+      await tester.pumpAndSettle();
+
+      expect(shipper.currentFilter, 'DELIVERED');
+      expect(shipper.currentPage, 0);
+      expect(find.text('8 đơn'), findsOneWidget);
+      expect(find.text('#ORD-PAGE-02'), findsOneWidget);
+      expect(find.text('#ORD-PAGE-01'), findsNothing);
+
+      // Reset status filter back to ALL ('Tất cả')
+      await tester.tap(find.byKey(const ValueKey('shipper-status-filter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tất cả').last);
+      await tester.pumpAndSettle();
+      expect(shipper.currentFilter, 'ALL');
+      expect(find.text('25 đơn'), findsOneWidget);
+
+      // Scroll to pagination controls and verify Page 1 -> Page 2 -> Page 3 -> Page 2
+      final scrollable = find.byWidgetPredicate(
+        (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+      );
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('shipper-pagination-card')),
+        400,
+        scrollable: scrollable,
+        maxScrolls: 100,
+      );
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      expect(find.text('Trang 1/3 • 1–10 / 25 đơn'), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const ValueKey('shipper-page-btn-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('shipper-page-btn-2')));
+      await tester.pumpAndSettle();
+      expect(shipper.currentPage, 1);
+      expect(find.text('#ORD-PAGE-11'), findsOneWidget);
+      expect(find.text('#ORD-PAGE-01'), findsNothing);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('shipper-page-next')),
+        220,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('shipper-page-next')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('shipper-page-next')));
+      await tester.pumpAndSettle();
+      expect(shipper.currentPage, 2);
+      expect(find.text('#ORD-PAGE-21'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('shipper-page-prev')),
+        220,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Trang 3/3 • 21–25 / 25 đơn'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const ValueKey('shipper-page-prev')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('shipper-page-prev')));
+      await tester.pumpAndSettle();
+      expect(shipper.currentPage, 1);
+
+      // Change page size from 10 to 20 via select dropdown
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('shipper-page-size-select')),
+        220,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('shipper-page-size-select')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('shipper-page-size-select')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('20 / trang').last);
+      await tester.pumpAndSettle();
+
+      expect(shipper.pageSize, 20);
+      expect(shipper.currentPage, 0);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('shipper-pagination-card')),
+        400,
+        scrollable: scrollable,
+        maxScrolls: 100,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Trang 1/2 • 1–20 / 25 đơn'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
+
+class _PaginatedShipperProvider extends ShipperProvider {
+  _PaginatedShipperProvider() {
+    _recompute(page: 0);
+  }
+
+  final List<ShipperOrderModel> _all = List.generate(25, (index) {
+    final number = index + 1;
+    final code = number.toString().padLeft(2, '0');
+    final status = switch (index % 3) {
+      0 => 'SHIPPED',
+      1 => 'DELIVERED',
+      _ => 'DELIVERY_FAILED',
+    };
+    return ShipperOrderModel.fromJson({
+      'id': number,
+      'orderNumber': 'ORD-PAGE-$code',
+      'customerName': 'Khách hàng $code',
+      'customerPhone': '09000000$code',
+      'shippingAddress': '$code Nguyễn Trãi, Quận 1',
+      'totalAmount': 250000,
+      'codAmount': status == 'SHIPPED' ? 250000 : 0,
+      'paymentMethod': status == 'SHIPPED' ? 'COD' : 'BANK_TRANSFER',
+      'paymentStatus': status == 'DELIVERED' ? 'PAID' : 'PENDING',
+      'status': status,
+    });
+  });
+
+  List<ShipperOrderModel> _pageOrders = [];
+  int _page = 0;
+  int _total = 0;
+  int _pages = 0;
+  int _size = ShipperProvider.defaultPageSize;
+  String _filter = 'ALL';
+  String _keyword = '';
+
+  @override
+  List<ShipperOrderModel> get orders => _pageOrders;
+
+  @override
+  int get currentPage => _page;
+
+  @override
+  int get totalElements => _total;
+
+  @override
+  int get totalPages => _pages;
+
+  @override
+  int get pageSize => _size;
+
+  @override
+  String get currentFilter => _filter;
+
+  @override
+  String get searchKeyword => _keyword;
+
+  @override
+  bool get hasMore => _pages > 0 && _page + 1 < _pages;
+
+  void _recompute({required int page}) {
+    final q = _keyword.toLowerCase();
+    final filtered = _all.where((o) {
+      final matchesStatus = _filter == 'ALL' || o.status == _filter;
+      final matchesQuery =
+          q.isEmpty ||
+          o.orderNumber.toLowerCase().contains(q) ||
+          o.customerName.toLowerCase().contains(q) ||
+          o.customerPhone.contains(q);
+      return matchesStatus && matchesQuery;
+    }).toList();
+    _total = filtered.length;
+    _pages = _total == 0 ? 0 : ((_total + _size - 1) ~/ _size);
+    _page = _pages == 0 ? 0 : page.clamp(0, _pages - 1);
+    final start = _page * _size;
+    final end = (start + _size).clamp(0, filtered.length);
+    _pageOrders = start >= filtered.length ? [] : filtered.sublist(start, end);
+  }
+
+  @override
+  Future<void> setFilter(String filter) async {
+    _filter = filter;
+    _recompute(page: 0);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setPageSize(int size) async {
+    _size = size;
+    _recompute(page: 0);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setSearchKeyword(String keyword) async {
+    _keyword = keyword.trim();
+    _recompute(page: 0);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> fetchOrders({int? page, bool background = false}) async {
+    _recompute(page: page ?? _page);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> refreshUnreadCount() async {}
 }
 

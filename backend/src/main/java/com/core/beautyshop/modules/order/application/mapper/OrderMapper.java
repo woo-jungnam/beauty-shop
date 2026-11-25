@@ -73,6 +73,7 @@ public class OrderMapper {
                 .deliveryStartedAt(order.getDeliveryStartedAt())
                 .shipperCodCollected(order.getShipperCodCollected())
                 .shipperCodRemitted(order.getShipperCodRemitted())
+                .unsettledCod(order.unsettledCod())
                 .shipperName(order.getShipperName())
                 .shipperPhone(order.getShipperPhone())
                 .deliveredNotes(order.getDeliveredNotes())

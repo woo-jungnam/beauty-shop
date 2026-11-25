@@ -1,9 +1,15 @@
 import { DeliveryProofDetails } from '../features/commerce/DeliveryProofDetails';
 import { OrderCommerceModal } from '../features/commerce/OrderCommerceModal';
+import { OrderReconciliationPanel } from '../features/commerce/OrderReconciliationPanel';
 import {
   hasOrderReturnOrRefundAttention,
   shouldShowOrderCommerceButton,
 } from '../features/commerce/orderCommerceHelpers';
+import {
+  computeOrderCollectedCod,
+  computeOrderRemittedCod,
+  computeOrderUnsettledCod,
+} from '../features/commerce/orderReconciliationHelpers';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
@@ -11,6 +17,7 @@ import {
   Eye,
   Edit,
   DollarSign,
+  Banknote,
   RefreshCw,
   CheckCircle2,
   Package,
@@ -109,8 +116,13 @@ export const OrdersPage = () => {
 
   const [keyword, setKeyword] = useState('');
   const getInitialType = () => {
-    const match = window.location.hash.match(/[?&]type=([^&]+)/);
-    return match ? match[1].toUpperCase() : 'ALL';
+    const [, query] = (window.location.hash || '').split('?');
+    const params = new URLSearchParams(query || '');
+    const typeParam = params.get('type');
+    if (typeParam) return typeParam.toUpperCase();
+    const tabParam = params.get('tab');
+    if (tabParam && tabParam.toUpperCase() === 'RECONCILIATION') return 'RECONCILIATION';
+    return 'ALL';
   };
   const [orderTypeTab, setOrderTypeTabState] = useState(getInitialType);
 
@@ -120,18 +132,28 @@ export const OrdersPage = () => {
     const hash = window.location.hash || '#/admin/orders';
     const [path, query] = hash.split('?');
     const params = new URLSearchParams(query || '');
-    if (nextType && nextType !== 'ALL') {
-      params.set('type', nextType);
-    } else {
+    if (nextType === 'RECONCILIATION') {
       params.delete('type');
+      params.set('tab', 'RECONCILIATION');
+    } else {
+      if ((params.get('tab') || '').toUpperCase() === 'RECONCILIATION') {
+        params.delete('tab');
+      }
+      if (nextType && nextType !== 'ALL') {
+        params.set('type', nextType);
+      } else {
+        params.delete('type');
+      }
     }
     const qs = params.toString();
     window.location.hash = qs ? `${path}?${qs}` : path;
   }, []);
 
   const getInitialStatus = () => {
-    const match = window.location.hash.match(/[?&]tab=([^&]+)/);
-    return match ? match[1] : '';
+    const [, query] = (window.location.hash || '').split('?');
+    const params = new URLSearchParams(query || '');
+    const tabParam = params.get('tab') || '';
+    return tabParam.toUpperCase() === 'RECONCILIATION' ? '' : tabParam;
   };
   const [status, setStatusState] = useState(getInitialStatus);
 
@@ -143,18 +165,16 @@ export const OrdersPage = () => {
 
   useEffect(() => {
     const handleHashSync = () => {
-      const match = window.location.hash.match(/[?&]tab=([^&]+)/);
-      if (match && match[1]) {
-        setStatusState(match[1]);
-      } else if (!window.location.hash.includes('tab=')) {
+      const [, query] = (window.location.hash || '').split('?');
+      const params = new URLSearchParams(query || '');
+      const tabParam = params.get('tab') || '';
+      const typeParam = params.get('type') || '';
+      if (tabParam.toUpperCase() === 'RECONCILIATION') {
+        setOrderTypeTabState('RECONCILIATION');
         setStatusState('');
-      }
-
-      const typeMatch = window.location.hash.match(/[?&]type=([^&]+)/);
-      if (typeMatch && typeMatch[1]) {
-        setOrderTypeTabState(typeMatch[1].toUpperCase());
-      } else if (!window.location.hash.includes('type=')) {
-        setOrderTypeTabState('ALL');
+      } else {
+        setStatusState(tabParam);
+        setOrderTypeTabState(typeParam ? typeParam.toUpperCase() : 'ALL');
       }
     };
     window.addEventListener('hashchange', handleHashSync);
@@ -164,6 +184,7 @@ export const OrdersPage = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [pendingReturnOnly, setPendingReturnOnly] = useState(false);
+  const [reconciliationRefresh, setReconciliationRefresh] = useState(0);
 
   const [commerceOrder, setCommerceOrder] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -230,6 +251,7 @@ export const OrdersPage = () => {
   };
 
   const fetchOrders = async (pageNum = 0) => {
+    if (orderTypeTab === 'RECONCILIATION') return;
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -523,7 +545,17 @@ export const OrdersPage = () => {
       header: 'Thanh toán',
       accessor: (row) => {
         const badge = getPaymentStatusBadge(row.paymentStatus);
-        return <Badge variant={badge.variant}>{badge.text}</Badge>;
+        const unsettledCod = computeOrderUnsettledCod(row);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+            <Badge variant={badge.variant}>{badge.text}</Badge>
+            {row.paymentMethod === 'COD' && unsettledCod > 0 && (
+              <Badge variant="warning">
+                Chờ nộp COD: {formatCurrency(unsettledCod)}
+              </Badge>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -678,13 +710,23 @@ export const OrdersPage = () => {
             description: 'Lịch hẹn và dịch vụ chăm sóc tại Spa',
             count: orderTypeTab === 'SPA_VISIT' ? totalElements : null,
           },
+          {
+            id: 'RECONCILIATION',
+            label: 'Đối soát COD',
+            icon: Banknote,
+            description: 'Công nợ thu hộ COD theo tài xế & lịch sử bàn giao',
+          },
         ]}
         actions={
           <div className="page-header" style={{ margin: 0, padding: 0, border: 'none' }}>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchOrders(page)}
+              onClick={() =>
+                orderTypeTab === 'RECONCILIATION'
+                  ? setReconciliationRefresh((prev) => prev + 1)
+                  : fetchOrders(page)
+              }
               loading={loading}
               icon={RefreshCw}
             >
@@ -856,6 +898,7 @@ export const OrdersPage = () => {
         </div>
       </div>
 
+      {orderTypeTab !== 'RECONCILIATION' && (
       <div
         className="card"
         style={{ padding: '16px', marginBottom: '20px' }}
@@ -949,14 +992,18 @@ export const OrdersPage = () => {
           )}
         </form>
       </div>
+      )}
 
       {/* Tabs chuyển đổi phân loại đơn hàng */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            className={`btn ${orderTypeTab === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setOrderTypeTab('ALL')}
+            className={`btn ${orderTypeTab === 'ALL' && !pendingReturnOnly ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => {
+              setPendingReturnOnly(false);
+              setOrderTypeTab('ALL');
+            }}
             style={{ fontSize: '13px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <ShoppingBag size={14} />
@@ -991,28 +1038,64 @@ export const OrdersPage = () => {
           </button>
           <button
             type="button"
-            className={`btn ${pendingReturnOnly ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setPendingReturnOnly((prev) => !prev)}
+            className={`btn ${orderTypeTab === 'RECONCILIATION' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => {
+              setPendingReturnOnly(false);
+              setOrderTypeTab('RECONCILIATION');
+            }}
+            style={{ fontSize: '13px', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Banknote size={14} />
+            <span>Đối soát COD</span>
+          </button>
+          <button
+            type="button"
+            className={`btn ${pendingReturnOnly && orderTypeTab !== 'RECONCILIATION' ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => {
+              if (orderTypeTab === 'RECONCILIATION') {
+                setOrderTypeTab('ALL');
+                setPendingReturnOnly(true);
+              } else {
+                setPendingReturnOnly((prev) => !prev);
+              }
+            }}
             style={{
               fontSize: '13px',
               padding: '6px 14px',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              ...(pendingReturnOnly ? { background: '#D97706', borderColor: '#D97706', color: '#FFFFFF' } : {}),
+              ...(pendingReturnOnly && orderTypeTab !== 'RECONCILIATION'
+                ? { background: '#D97706', borderColor: '#D97706', color: '#FFFFFF' }
+                : {}),
             }}
           >
             <RotateCcw size={14} />
             <span>Cần xử lý hoàn hàng / tiền</span>
           </button>
         </div>
-        <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-          Hiển thị: <strong>{totalElements.toLocaleString('vi-VN')}</strong> đơn hàng
-        </div>
+        {orderTypeTab !== 'RECONCILIATION' && (
+          <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+            Hiển thị: <strong>{totalElements.toLocaleString('vi-VN')}</strong> đơn hàng
+          </div>
+        )}
       </div>
 
       {/* Khu vực hiển thị bảng theo phân loại đơn hàng */}
-      {orderTypeTab === 'SPA_VISIT' ? (
+      {orderTypeTab === 'RECONCILIATION' ? (
+        <OrderReconciliationPanel
+          isAdmin={isAdmin}
+          refreshRevision={reconciliationRefresh}
+          onOpenOrderDetail={(target) => handleOpenDetail(target)}
+          onOpenProof={(target) => setProofOrder(target)}
+          onOpenCommerce={(target) => setCommerceOrder(target)}
+          onOpenAttentionTab={() => {
+            setOrderTypeTab('ALL');
+            setPendingReturnOnly(true);
+          }}
+          onSettled={() => fetchOrders(page)}
+        />
+      ) : orderTypeTab === 'SPA_VISIT' ? (
         <div className="card" style={{ padding: '16px' }}>
           <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '12px', color: 'var(--text-main)' }}>
             Hóa đơn dịch vụ đơn đã lập & quyết toán
@@ -1368,6 +1451,21 @@ export const OrdersPage = () => {
                         )}
                       </>
                     )}
+                    {isProductOrder && selectedOrder.paymentMethod === 'COD' &&
+                      (computeOrderCollectedCod(selectedOrder) > 0 || computeOrderUnsettledCod(selectedOrder) > 0) &&
+                      renderRow(
+                        'Đối soát COD:',
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                          <span>Đã thu: <strong>{formatCurrency(computeOrderCollectedCod(selectedOrder))}</strong></span>
+                          <span>Đã nộp: <strong style={{ color: '#059669' }}>{formatCurrency(computeOrderRemittedCod(selectedOrder))}</strong></span>
+                          <span>
+                            Chờ nộp:{' '}
+                            <strong style={{ color: computeOrderUnsettledCod(selectedOrder) > 0 ? '#B45309' : '#059669' }}>
+                              {formatCurrency(computeOrderUnsettledCod(selectedOrder))}
+                            </strong>
+                          </span>
+                        </div>
+                      )}
                     {isSpaPackageOrder && selectedOrder.servicePackageId && (
                       renderRow('Mã gói liệu trình:', `#${selectedOrder.servicePackageId}`)
                     )}
@@ -1960,6 +2058,7 @@ export const OrdersPage = () => {
         onClose={() => setCommerceOrder(null)}
         onChanged={() => {
           fetchOrders(page);
+          setReconciliationRefresh((prev) => prev + 1);
           if (detailModalOpen && commerceOrder && selectedOrder?.id === commerceOrder.id) {
             handleOpenDetail(commerceOrder);
           }

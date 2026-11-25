@@ -92,6 +92,8 @@ public class OrderResponse {
     private java.time.Instant deliveryStartedAt;
     private BigDecimal shipperCodCollected;
     private BigDecimal shipperCodRemitted;
+    @Schema(description = "Số tiền COD còn chờ đối soát / bàn giao")
+    private BigDecimal unsettledCod;
     @Schema(description = "Tên tài xế giao hàng")
     private String shipperName;
     @Schema(description = "SĐT tài xế giao hàng")

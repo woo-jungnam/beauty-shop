@@ -9,8 +9,11 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.time.BusinessTime;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,8 +95,56 @@ public class ProcurementService {
 
     @Transactional(readOnly = true)
     public Page<PurchaseOrderView> orders(PurchaseOrder.Status status, Pageable pageable) {
-        if (status == null) return orders.findAll(pageable).map(this::orderView);
-        return orders.findAll((root, query, cb) -> cb.equal(root.get("status"), status), pageable).map(this::orderView);
+        return orders(null, status, null, null, null, null, null, false, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PurchaseOrderView> orders(
+            String keyword,
+            PurchaseOrder.Status status,
+            List<PurchaseOrder.Status> statuses,
+            Long supplierId,
+            Long warehouseId,
+            Instant from,
+            Instant to,
+            boolean useReceivedDate,
+            Pageable pageable) {
+        Specification<PurchaseOrder> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            } else if (statuses != null && !statuses.isEmpty()) {
+                predicates.add(root.get("status").in(statuses));
+            }
+            if (supplierId != null) {
+                predicates.add(cb.equal(root.get("supplier").get("id"), supplierId));
+            }
+            if (warehouseId != null) {
+                predicates.add(cb.equal(root.get("warehouseId"), warehouseId));
+            }
+            var dateExpr = useReceivedDate
+                    ? cb.coalesce(root.<Instant>get("receivedAt"), root.<Instant>get("createdAt"))
+                    : root.<Instant>get("createdAt");
+            if (from != null) {
+                predicates.add(cb.greaterThanOrEqualTo(dateExpr, from));
+            }
+            if (to != null) {
+                predicates.add(cb.lessThan(dateExpr, to));
+            }
+            if (keyword != null && !keyword.isBlank()) {
+                String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+                var supplierJoin = root.join("supplier", JoinType.LEFT);
+                predicates.add(cb.or(
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("orderNumber"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("note"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(supplierJoin.<String>get("name"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(supplierJoin.<String>get("code"), "")), pattern)
+                ));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+        return orders.findAll(spec, pageable).map(this::orderView);
     }
 
     @Transactional(readOnly = true)
@@ -204,14 +255,45 @@ public class ProcurementService {
     private SupplierView supplierView(Supplier s) { return new SupplierView(s.getId(), s.getCode(), s.getName(), s.getContactName(), s.getEmail(), s.getPhone(), s.getAddress(), s.getTaxCode(), s.getActive()); }
     private PurchaseOrderView orderView(PurchaseOrder o) { return orderView(o, Map.of()); }
     private PurchaseOrderView orderView(PurchaseOrder o, Map<Long, ProductVariantSummaryDto> variants) {
-        var items = o.getItems().stream().map(i -> {
+        int totalQty = 0;
+        int receivedQty = 0;
+        BigDecimal netReceivedAmount = BigDecimal.ZERO;
+        List<PurchaseOrderItem> rawItems = o.getItems() == null ? List.of() : o.getItems();
+        List<ItemView> items = new ArrayList<>(rawItems.size());
+        for (PurchaseOrderItem i : rawItems) {
+            int qty = i.getQuantity() == null ? 0 : i.getQuantity();
+            int rec = i.getReceivedQuantity() == null ? 0 : i.getReceivedQuantity();
+            int ret = i.getReturnedQuantity() == null ? 0 : i.getReturnedQuantity();
+            int net = Math.max(0, rec - ret);
+            totalQty += qty;
+            receivedQty += rec;
+            if (i.getUnitCost() != null && net > 0) {
+                netReceivedAmount = netReceivedAmount.add(i.getUnitCost().multiply(BigDecimal.valueOf(net)));
+            }
             var variant = variants.get(i.getProductVariantId());
-            return new ItemView(i.getId(), i.getProductVariantId(), i.getQuantity(), i.getReceivedQuantity(),
+            items.add(new ItemView(i.getId(), i.getProductVariantId(), qty, rec, ret,
                     i.getUnitCost(), i.getBatchCode(), i.getExpirationDate(),
                     variant == null ? null : variant.getProductName(), variant == null ? null : variant.getVariantName(),
-                    variant == null ? null : variant.getSku());
-        }).toList();
-        return new PurchaseOrderView(o.getId(), o.getOrderNumber(), o.getSupplier().getId(), o.getSupplier().getName(), o.getWarehouseId(), o.getStatus(), o.getExpectedDate(), o.getTotalAmount(), o.getNote(), o.getApprovedAt(), o.getReceivedAt(), o.getCreatedAt(), items);
+                    variant == null ? null : variant.getSku()));
+        }
+        return new PurchaseOrderView(
+                o.getId(),
+                o.getOrderNumber(),
+                o.getSupplier().getId(),
+                o.getSupplier().getName(),
+                o.getWarehouseId(),
+                o.getStatus(),
+                o.getExpectedDate(),
+                o.getTotalAmount(),
+                o.getPaidAmount() == null ? BigDecimal.ZERO : o.getPaidAmount(),
+                netReceivedAmount,
+                totalQty,
+                receivedQty,
+                o.getNote(),
+                o.getApprovedAt(),
+                o.getReceivedAt(),
+                o.getCreatedAt(),
+                items);
     }
 
     @Schema(description = "Tạo/thay thông tin nhà cung cấp; code/name kiểm bắt buộc tại service; trường tùy chọn thiếu được thay null/mặc định")
@@ -239,12 +321,31 @@ public class ProcurementService {
     @Schema(description = "Dòng phiếu mua; receive hiện nhận toàn bộ phần còn lại")
     public record ItemView(Long id, Long variantId, Integer quantity,
             @Schema(description = "Số đã nhập; sau receive bằng quantity") Integer receivedQuantity,
+            Integer returnedQuantity,
             BigDecimal unitCost, String batchCode, LocalDate expirationDate,
             @Schema(description = "Tên sản phẩm hiện tại; chỉ bổ sung khi xem chi tiết, có thể null nếu đã xóa") String productName,
-            String variantName, String sku) { }
-    @Schema(description = "Phiếu mua DRAFT/APPROVED/RECEIVED/CANCELLED; các Instant là UTC")
+            String variantName, String sku) {
+        public ItemView(Long id, Long variantId, Integer quantity, Integer receivedQuantity,
+                        BigDecimal unitCost, String batchCode, LocalDate expirationDate,
+                        String productName, String variantName, String sku) {
+            this(id, variantId, quantity, receivedQuantity, 0, unitCost, batchCode, expirationDate,
+                    productName, variantName, sku);
+        }
+    }
+    @Schema(description = "Phiếu mua DRAFT/APPROVED/PARTIALLY_RECEIVED/RECEIVED/CANCELLED; các Instant là UTC")
     public record PurchaseOrderView(Long id, String orderNumber, Long supplierId, String supplierName, Long warehouseId,
             PurchaseOrder.Status status, LocalDate expectedDate,
             @Schema(description = "Tổng giá vốn=sum(quantity×unitCost), VND") BigDecimal totalAmount,
-            String note, Instant approvedAt, Instant receivedAt, Instant createdAt, List<ItemView> items) { }
+            BigDecimal paidAmount,
+            BigDecimal receivedAmount,
+            Integer totalQuantity,
+            Integer receivedQuantity,
+            String note, Instant approvedAt, Instant receivedAt, Instant createdAt, List<ItemView> items) {
+        public PurchaseOrderView(Long id, String orderNumber, Long supplierId, String supplierName, Long warehouseId,
+                                 PurchaseOrder.Status status, LocalDate expectedDate, BigDecimal totalAmount,
+                                 String note, Instant approvedAt, Instant receivedAt, Instant createdAt, List<ItemView> items) {
+            this(id, orderNumber, supplierId, supplierName, warehouseId, status, expectedDate, totalAmount,
+                    BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, note, approvedAt, receivedAt, createdAt, items);
+        }
+    }
 }
