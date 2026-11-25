@@ -5,6 +5,7 @@ import {
   getOrderStatusBadge,
   getPaymentStatusBadge,
   getPaymentMethodLabel,
+  getReturnMethodLabel,
   getReturnStatusBadge,
   getOutreachStatusBadge,
 } from '../formatters.js';
@@ -49,8 +50,12 @@ assert.equal(getPaymentMethodLabel('TICKET'), 'Khấu trừ vé liệu trình');
 // Test 5: Return and Outreach status badges
 assert.equal(getReturnStatusBadge('REQUESTED').text, 'Chờ xét duyệt');
 assert.equal(getReturnStatusBadge('APPROVED').text, 'Đã chấp thuận');
+assert.equal(getReturnStatusBadge('PICKUP_ASSIGNED').text, 'Đã điều phối thu hồi');
+assert.equal(getReturnStatusBadge('PICKED_UP').text, 'Shipper đã lấy hàng');
 assert.equal(getReturnStatusBadge('RECEIVED').text, 'Đã nhận hàng trả');
 assert.equal(getReturnStatusBadge('REFUNDED').text, 'Đã hoàn tiền');
+assert.equal(getReturnMethodLabel('SHIPPER_PICKUP'), 'Shipper đến lấy tận nơi');
+assert.equal(getReturnMethodLabel('SELF_SHIP'), 'Khách tự gửi về cửa hàng');
 
 assert.equal(getOutreachStatusBadge('OPEN').text, 'Chưa liên hệ');
 assert.equal(getOutreachStatusBadge('CONTACTED').text, 'Đã liên hệ');

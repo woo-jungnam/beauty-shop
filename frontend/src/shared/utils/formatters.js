@@ -76,6 +76,10 @@ export const getOrderStatusBadge = (status) => {
       return { variant: 'warning', text: 'Yêu cầu đổi trả' };
     case 'APPROVED':
       return { variant: 'info', text: 'Đã duyệt đổi trả' };
+    case 'PICKUP_ASSIGNED':
+      return { variant: 'info', text: 'Đã điều phối thu hồi' };
+    case 'PICKED_UP':
+      return { variant: 'info', text: 'Shipper đã lấy hàng' };
     case 'RECEIVED':
       return { variant: 'info', text: 'Đã nhận hàng trả' };
     case 'REJECTED':
@@ -254,6 +258,10 @@ export const getReturnStatusBadge = (status) => {
       return { variant: 'warning', text: 'Chờ xét duyệt' };
     case 'APPROVED':
       return { variant: 'info', text: 'Đã chấp thuận' };
+    case 'PICKUP_ASSIGNED':
+      return { variant: 'info', text: 'Đã điều phối thu hồi' };
+    case 'PICKED_UP':
+      return { variant: 'info', text: 'Shipper đã lấy hàng' };
     case 'RECEIVED':
       return { variant: 'info', text: 'Đã nhận hàng trả' };
     case 'REFUNDED':
@@ -262,6 +270,16 @@ export const getReturnStatusBadge = (status) => {
       return { variant: 'danger', text: 'Từ chối' };
     default:
       return { variant: 'default', text: status || 'Chưa xác định' };
+  }
+};
+
+export const getReturnMethodLabel = (method) => {
+  switch (method) {
+    case 'SHIPPER_PICKUP':
+      return 'Shipper đến lấy tận nơi';
+    case 'SELF_SHIP':
+    default:
+      return 'Khách tự gửi về cửa hàng';
   }
 };
 

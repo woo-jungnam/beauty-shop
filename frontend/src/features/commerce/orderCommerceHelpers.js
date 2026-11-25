@@ -56,8 +56,23 @@ export const hasOrderReturnOrRefundAttention = (order) => {
 
 export const shouldShowOrderCommerceButton = (order) => {
   if (!order) return false;
-  if (getOrderType(order) === 'PRODUCT') return true;
   if (Number(order.returnRequestCount || 0) > 0) return true;
-  return hasOrderReturnOrRefundAttention(order);
+  if (hasOrderReturnOrRefundAttention(order)) return true;
+  if (
+    Number(order.refundedAmount || 0) > 0 ||
+    ['REFUNDED', 'PARTIALLY_REFUNDED'].includes(order.paymentStatus)
+  ) {
+    return true;
+  }
+  if (getOrderType(order) === 'PRODUCT') {
+    if (order.status === 'DELIVERED') return true;
+    if (
+      ['RETURNED', 'RETURN_TO_SENDER', 'RETURNING_TO_SENDER', 'DELIVERY_FAILED'].includes(order.status) &&
+      (Number(order.paidAmount || 0) > 0 || order.paymentMethod === 'COD')
+    ) {
+      return true;
+    }
+  }
+  return false;
 };
 

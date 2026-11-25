@@ -1374,40 +1374,22 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border-radius: 20px;
-  padding: 6px 9px;
-  font-size: 8px;
-  font-weight: 500;
+  border-radius: 0;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
-  background: #f3f0f6;
-  color: #9b8da8;
+  background: transparent;
+  color: #111827;
 }
 
 .atelier-dashboard .atelier-status i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
+  display: none;
 }
 
-.atelier-dashboard .atelier-status--amber {
-  background: #faf4e5;
-  color: #b49a65;
-}
-
-.atelier-dashboard .atelier-status--teal {
-  background: #edf6ef;
-  color: #84a78f;
-}
-
-.atelier-dashboard .atelier-status--violet {
-  background: #f1eafb;
-  color: #ad91d0;
-}
-
-.atelier-dashboard .atelier-status--rose {
-  background: #fbecf1;
-  color: #c091a6;
+.atelier-dashboard :is(.atelier-status--amber, .atelier-status--teal, .atelier-status--violet, .atelier-status--rose, .atelier-status--neutral) {
+  background: transparent;
+  color: #111827;
 }
 
 .atelier-dashboard .atelier-dashboard-footnote {
@@ -2335,27 +2317,11 @@ pale colors are reserved for decoration. */
 }
 
 .atelier-dashboard .atelier-status {
-  font-size: 11px;
+  font-size: 12px;
 }
 
-.atelier-dashboard .atelier-status--amber {
-  color: #8a6426;
-}
-
-.atelier-dashboard .atelier-status--teal {
-  color: #3a7654;
-}
-
-.atelier-dashboard .atelier-status--violet {
-  color: #7551a0;
-}
-
-.atelier-dashboard .atelier-status--rose {
-  color: #ab4567;
-}
-
-.atelier-dashboard .atelier-status--neutral {
-  color: #776781;
+.atelier-dashboard :is(.atelier-status--amber, .atelier-status--teal, .atelier-status--violet, .atelier-status--rose, .atelier-status--neutral) {
+  color: #111827;
 }
 
 .atelier-dashboard .atelier-date-field input {

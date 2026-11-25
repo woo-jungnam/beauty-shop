@@ -15,6 +15,7 @@ import '../delivery/delivery_history_screen.dart';
 import '../delivery/shipper_order_detail_screen.dart';
 import '../delivery/shipper_stats_screen.dart';
 import '../notification/notification_screen.dart';
+import '../returns/shipper_return_tab.dart';
 
 class ShipperDashboardScreen extends StatefulWidget {
   const ShipperDashboardScreen({super.key});
@@ -46,6 +47,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
       (_) {
         unawaited(shipper.refreshUnreadCount());
         if (_tab == 0) unawaited(shipper.fetchOrders(background: true));
+        if (_tab == 1) unawaited(shipper.fetchReturnPickups(background: true));
       },
     );
   }
@@ -71,7 +73,9 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     ShipperSettingsStore.instance.addListener(_onSettingsChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<ShipperProvider>().fetchOrders();
+      final shipper = context.read<ShipperProvider>();
+      shipper.fetchOrders();
+      unawaited(shipper.fetchReturnPickups(background: true));
       _startPolling();
     });
   }
@@ -302,14 +306,19 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
               await Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const NotificationScreen()),
               );
-              if (mounted) await shipper.fetchOrders();
+              if (mounted) {
+                await shipper.fetchOrders();
+                await shipper.fetchReturnPickups(background: true);
+              }
             },
           ),
-          if (_tab == 0)
+          if (_tab == 0 || _tab == 1)
             IconButton(
               icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Làm mới danh sách',
-              onPressed: () => shipper.fetchOrders(),
+              onPressed: () => _tab == 0
+                  ? shipper.fetchOrders()
+                  : shipper.fetchReturnPickups(),
             ),
           PopupMenuButton<String>(
             tooltip: 'Menu tài khoản',
@@ -317,8 +326,8 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
             onSelected: (value) {
               if (value == 'account') {
                 setState(() {
-                  _tab = 3;
-                  _visitedTabs.add(3);
+                  _tab = 4;
+                  _visitedTabs.add(4);
                 });
               } else if (value == 'logout') {
                 _handleLogout();
@@ -395,15 +404,28 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
             _visitedTabs.add(index);
           });
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.local_shipping_outlined),
             selectedIcon: Icon(Icons.local_shipping),
             label: 'Đơn giao',
           ),
-          NavigationDestination(icon: Icon(Icons.history), label: 'Lịch sử'),
-          NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Thống kê'),
           NavigationDestination(
+            icon: Badge.count(
+              count: shipper.activeReturnPickupCount,
+              isLabelVisible: shipper.activeReturnPickupCount > 0,
+              child: const Icon(Icons.assignment_return_outlined),
+            ),
+            selectedIcon: Badge.count(
+              count: shipper.activeReturnPickupCount,
+              isLabelVisible: shipper.activeReturnPickupCount > 0,
+              child: const Icon(Icons.assignment_return),
+            ),
+            label: 'Thu hồi hoàn',
+          ),
+          const NavigationDestination(icon: Icon(Icons.history), label: 'Lịch sử'),
+          const NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Thống kê'),
+          const NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Tài khoản',
@@ -416,12 +438,15 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
           children: [
             _buildDashboard(shipper),
             _visitedTabs.contains(1)
-                ? const DeliveryHistoryScreen()
+                ? const ShipperReturnTab()
                 : const SizedBox.shrink(),
             _visitedTabs.contains(2)
-                ? const ShipperStatsScreen()
+                ? const DeliveryHistoryScreen()
                 : const SizedBox.shrink(),
             _visitedTabs.contains(3)
+                ? const ShipperStatsScreen()
+                : const SizedBox.shrink(),
+            _visitedTabs.contains(4)
                 ? const ShipperAccountScreen()
                 : const SizedBox.shrink(),
           ],

@@ -93,7 +93,7 @@ final class OrderReconciliationPredicates {
         Root<ProductReturn> returnRoot = activeReturnSubquery.from(ProductReturn.class);
         activeReturnSubquery.select(returnRoot.get("id")).where(
                 cb.equal(returnRoot.get("orderId"), root.get("id")),
-                returnRoot.get("status").in("REQUESTED", "APPROVED", "RECEIVED")
+                returnRoot.get("status").in("REQUESTED", "APPROVED", "PICKUP_ASSIGNED", "PICKED_UP", "RECEIVED")
         );
         Predicate hasActiveProductReturn = cb.exists(activeReturnSubquery);
         Predicate refundPending = cb.equal(root.get("paymentStatus"), PaymentStatus.REFUND_PENDING);

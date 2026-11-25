@@ -474,6 +474,25 @@ export const OrdersPage = () => {
     });
   };
 
+  const handleReallocateBatches = (order) => {
+    askConfirm({
+      title: 'Tái phân bổ lô hàng khả dụng',
+      message: `Tìm và giữ chỗ lại lô hàng đạt chuẩn còn hạn cho đơn ${order.orderNumber || order.orderCode || '#' + order.id}?`,
+      detail: 'Dùng khi lô hàng đang giữ chỗ bị thu hồi hoặc cần đổi sang lô khả dụng khác trước khi xuất kho.',
+      isPermanent: false,
+      confirmText: 'Thực hiện đổi lô',
+      onConfirm: async () => {
+        await apiClient.post(ENDPOINTS.ORDERS.COMMERCE_REALLOCATE(order.id), {});
+        if (selectedOrder && selectedOrder.id === order.id) {
+          const detailRes = await apiClient.get(ENDPOINTS.ORDERS.ADMIN_DETAIL(order.id));
+          const fresh = detailRes?.data || detailRes;
+          if (fresh?.id) setSelectedOrder({ ...fresh, items: Array.isArray(fresh.items) ? fresh.items : [] });
+        }
+        fetchOrders(page);
+      },
+    });
+  };
+
   const columns = [
     {
       header: 'Mã đơn / ID',
@@ -500,17 +519,7 @@ export const OrdersPage = () => {
           label = 'Đơn dịch vụ đơn';
         }
         return (
-          <Badge
-            variant={typeBadge.variant}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '3px 8px',
-              fontWeight: 600,
-              fontSize: '11.5px',
-            }}
-          >
+          <Badge variant={typeBadge.variant}>
             <IconComponent size={12} />
             <span>{label}</span>
           </Badge>
@@ -533,7 +542,7 @@ export const OrdersPage = () => {
         <div>
           <div style={{ fontWeight: 700 }}>{formatCurrency(row.totalAmount)}</div>
           {row.discountAmount > 0 && (
-            <div style={{ fontSize: '11px', color: 'var(--color-success-700)' }}>
+            <div style={{ fontSize: '11px', color: '#111827' }}>
               Giảm: {formatCurrency(row.discountAmount)}
             </div>
           )}
@@ -1516,9 +1525,23 @@ export const OrdersPage = () => {
                     <ShoppingBag size={14} style={{ color: 'var(--color-primary-600, #4F46E5)' }} />
                     <span>Danh sách sản phẩm / dịch vụ</span>
                   </div>
-                  <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-                    {orderItems.length + spaVisitItems.length || (hasAnyItems ? 1 : 0)} mục
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {isProductOrder && ['PENDING', 'CONFIRMED', 'PROCESSING'].includes(selectedOrder.status) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="no-print"
+                        onClick={() => handleReallocateBatches(selectedOrder)}
+                        style={{ fontSize: '11.5px', padding: '3px 10px', height: '26px' }}
+                        title="Tái phân bổ sang lô hàng khả dụng khác trước khi xuất kho"
+                      >
+                        Đổi lô khả dụng
+                      </Button>
+                    )}
+                    <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                      {orderItems.length + spaVisitItems.length || (hasAnyItems ? 1 : 0)} mục
+                    </span>
+                  </div>
                 </div>
                 <div className="table-wrapper" style={{ margin: 0, overflowX: 'auto' }}>
                   <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>

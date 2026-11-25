@@ -1,14 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Banknote,
   Camera,
   CheckCircle2,
   Download,
+  ExternalLink,
   Eye,
   FileCheck2,
   Filter,
   History,
+  PackageCheck,
   RefreshCw,
   RotateCcw,
   Search,
@@ -22,6 +24,9 @@ import {
   formatDateTime,
   getOrderStatusBadge,
   getPaymentStatusBadge,
+  getReturnMethodLabel,
+  getReturnStatusBadge,
+  resolveMediaUrl,
 } from '../../shared/utils/formatters';
 import { AlertBanner } from '../../shared/ui/AlertBanner';
 import { Badge } from '../../shared/ui/Badge';
@@ -37,6 +42,7 @@ import {
   computeOrderUnsettledCod,
   createBatchSettlementRef,
   getCodReconciliationBadge,
+  resolveChannelDrilldown,
 } from './orderReconciliationHelpers';
 
 const unwrap = (response) =>
@@ -64,10 +70,11 @@ export function OrderReconciliationPanel({
   onOpenAttentionTab,
   onSettled,
 }) {
-  const [subTab, setSubTab] = useState('orders'); // 'orders' | 'settlements'
+  const [subTab, setSubTab] = useState('orders'); // 'orders' | 'settlements' | 'returns'
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [codState, setCodState] = useState('PENDING'); // 'PENDING' | 'SETTLED' | 'IN_TRANSIT' | 'ALL'
+  const [returnStatusFilter, setReturnStatusFilter] = useState('ALL');
   const [channelFilter, setChannelFilter] = useState('ALL'); // 'ALL' | 'CARRIER' | 'SHIPPER:<id>'
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -87,6 +94,12 @@ export function OrderReconciliationPanel({
   const [settlementTotalElements, setSettlementTotalElements] = useState(0);
   const [settlementLoading, setSettlementLoading] = useState(false);
 
+  const [returns, setReturns] = useState([]);
+  const [returnsPage, setReturnsPage] = useState(0);
+  const [returnsTotalPages, setReturnsTotalPages] = useState(1);
+  const [returnsTotalElements, setReturnsTotalElements] = useState(0);
+  const [returnsLoading, setReturnsLoading] = useState(false);
+
   const [selectedOrderMap, setSelectedOrderMap] = useState({});
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [batchRef, setBatchRef] = useState('');
@@ -94,6 +107,7 @@ export function OrderReconciliationPanel({
   const [batchBusy, setBatchBusy] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const listSectionRef = useRef(null);
 
   const appendDateParams = useCallback(
     (params) => {
@@ -183,6 +197,37 @@ export function OrderReconciliationPanel({
     [keyword, appendDateParams]
   );
 
+  const loadReturns = useCallback(
+    async (targetPage = 0) => {
+      setReturnsLoading(true);
+      setErrorMsg('');
+      try {
+        const params = new URLSearchParams();
+        params.append('page', String(targetPage));
+        params.append('size', '15');
+        params.append('sort', 'id,desc');
+        params.append('returnMethod', 'SHIPPER_PICKUP');
+        if (returnStatusFilter && returnStatusFilter !== 'ALL') {
+          params.append('status', returnStatusFilter);
+        }
+        if (channelFilter.startsWith('SHIPPER:')) {
+          params.append('pickupShipperId', channelFilter.slice('SHIPPER:'.length));
+        }
+        const res = await apiClient.get(`${ENDPOINTS.ORDERS.COMMERCE_RETURN_LIST}?${params.toString()}`);
+        const pageData = unwrap(res) || {};
+        setReturns(pageData.content || []);
+        setReturnsPage(pageData.page ?? targetPage);
+        setReturnsTotalPages(pageData.totalPages ?? 1);
+        setReturnsTotalElements(pageData.totalElements ?? 0);
+      } catch (err) {
+        setErrorMsg(err.message || 'Không tải được danh sách đối soát thu hồi hàng hoàn.');
+      } finally {
+        setReturnsLoading(false);
+      }
+    },
+    [returnStatusFilter, channelFilter]
+  );
+
   useEffect(() => {
     let active = true;
     Promise.resolve().then(() => {
@@ -199,22 +244,26 @@ export function OrderReconciliationPanel({
       if (!active) return;
       if (subTab === 'orders') {
         loadOrders(0);
-      } else {
+      } else if (subTab === 'settlements') {
         loadSettlements(0);
+      } else {
+        loadReturns(0);
       }
     });
     return () => {
       active = false;
     };
-  }, [subTab, loadOrders, loadSettlements, refreshRevision]);
+  }, [subTab, loadOrders, loadSettlements, loadReturns, refreshRevision]);
 
   const handleRefreshAll = () => {
     setFeedback(null);
     loadSummary();
     if (subTab === 'orders') {
       loadOrders(ordersPage);
-    } else {
+    } else if (subTab === 'settlements') {
       loadSettlements(settlementPage);
+    } else {
+      loadReturns(returnsPage);
     }
   };
 
@@ -226,8 +275,10 @@ export function OrderReconciliationPanel({
       loadSummary();
       if (subTab === 'orders') {
         loadOrders(0);
-      } else {
+      } else if (subTab === 'settlements') {
         loadSettlements(0);
+      } else {
+        loadReturns(0);
       }
     }
   };
@@ -236,6 +287,7 @@ export function OrderReconciliationPanel({
     setKeywordInput('');
     setKeyword('');
     setCodState('PENDING');
+    setReturnStatusFilter('ALL');
     setChannelFilter('ALL');
     setFromDate('');
     setToDate('');
@@ -326,18 +378,35 @@ export function OrderReconciliationPanel({
   };
 
   const handleSelectChannelFromSummary = (channel) => {
-    setSubTab('orders');
-    setCodState('PENDING');
-    if (channel.carrierChannel) {
-      setChannelFilter('CARRIER');
-    } else if (channel.shipperId != null) {
-      setChannelFilter(`SHIPPER:${channel.shipperId}`);
-    } else {
-      setChannelFilter('ALL');
-    }
+    const next = resolveChannelDrilldown(channel);
+    setSubTab(next.subTab);
+    setCodState(next.codState);
+    setChannelFilter(next.channelFilter);
+    setSelectedOrderMap({});
+    setFeedback(null);
+    requestAnimationFrame(() => {
+      listSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   };
 
   const handleExportCurrentCsv = () => {
+    if (subTab === 'returns') {
+      downloadCsv(
+        `doi-soat-thu-hoi-hoan-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Mã YC', 'Mã đơn', 'Khách hàng', 'Tài xế thu hồi', 'Trạng thái', 'Giá trị hoàn', 'Ngày lấy hàng', 'Báo bàn giao kho'],
+        returns.map((row) => [
+          `#${row.id}`,
+          row.orderNumber || `#${row.orderId}`,
+          `${row.customerName || ''} (${row.customerPhone || ''})`.trim(),
+          row.pickupShipperName || 'Chưa phân công',
+          getReturnStatusBadge(row.status).text,
+          row.refundAmount || 0,
+          row.pickedUpAt ? formatDateTime(row.pickedUpAt) : '',
+          row.handoverRequestedAt ? formatDateTime(row.handoverRequestedAt) : '',
+        ])
+      );
+      return;
+    }
     if (subTab === 'orders') {
       downloadCsv(
         `doi-soat-cod-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -385,6 +454,44 @@ export function OrderReconciliationPanel({
     const channels = summary?.byShipper || [];
     return channels.filter((item) => !item.carrierChannel && item.shipperId != null);
   }, [summary?.byShipper]);
+
+  const selectedChannelSummary = useMemo(() => {
+    const channels = summary?.byShipper || [];
+    if (channelFilter === 'ALL') return null;
+    if (channelFilter === 'CARRIER') {
+      const carrierChannels = channels.filter((item) => item.carrierChannel);
+      if (!carrierChannels.length) return null;
+      return carrierChannels.reduce(
+        (acc, item) => ({
+          label: carrierChannels.length === 1 ? item.label : 'Tất cả đơn vị vận chuyển / Tự giao',
+          pendingOrdersCount: acc.pendingOrdersCount + Number(item.pendingOrdersCount || 0),
+          inTransitOrdersCount: acc.inTransitOrdersCount + Number(item.inTransitOrdersCount || 0),
+          settledOrdersCount: acc.settledOrdersCount + Number(item.settledOrdersCount || 0),
+          collectedAmount: acc.collectedAmount + Number(item.collectedAmount || 0),
+          remittedAmount: acc.remittedAmount + Number(item.remittedAmount || 0),
+          pendingAmount: acc.pendingAmount + Number(item.pendingAmount || 0),
+          pendingPickupReturnsCount: acc.pendingPickupReturnsCount + Number(item.pendingPickupReturnsCount || 0),
+          inCustodyReturnsCount: acc.inCustodyReturnsCount + Number(item.inCustodyReturnsCount || 0),
+        }),
+        {
+          label: 'Đơn vị vận chuyển / Tự giao',
+          pendingOrdersCount: 0,
+          inTransitOrdersCount: 0,
+          settledOrdersCount: 0,
+          collectedAmount: 0,
+          remittedAmount: 0,
+          pendingAmount: 0,
+          pendingPickupReturnsCount: 0,
+          inCustodyReturnsCount: 0,
+        }
+      );
+    }
+    if (channelFilter.startsWith('SHIPPER:')) {
+      const targetId = channelFilter.slice('SHIPPER:'.length);
+      return channels.find((item) => !item.carrierChannel && String(item.shipperId) === targetId) || null;
+    }
+    return null;
+  }, [summary?.byShipper, channelFilter]);
 
   const orderColumns = [
     {
@@ -588,6 +695,120 @@ export function OrderReconciliationPanel({
     },
   ];
 
+  const filteredReturns = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+    if (!q) return returns;
+    return returns.filter((row) =>
+      String(row.id || '').includes(q) ||
+      (row.orderNumber || '').toLowerCase().includes(q) ||
+      (row.customerName || '').toLowerCase().includes(q) ||
+      (row.customerPhone || '').toLowerCase().includes(q) ||
+      (row.pickupShipperName || '').toLowerCase().includes(q)
+    );
+  }, [returns, keyword]);
+
+  const returnColumns = [
+    {
+      header: 'Phiếu / Đơn',
+      accessor: (row) => (
+        <div>
+          <div style={{ fontWeight: 700 }}>YC #{row.id} · {row.orderNumber || `Đơn #${row.orderId}`}</div>
+          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+            {getReturnMethodLabel(row.returnMethod)}
+          </div>
+          {row.createdAt && (
+            <div style={{ fontSize: '11px', color: '#64748B' }}>Tạo: {formatDateTime(row.createdAt)}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: 'Khách hàng',
+      accessor: (row) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{row.customerName || 'Khách hàng'}</div>
+          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{row.customerPhone || '—'}</div>
+          {row.pickupAddress && (
+            <div style={{ fontSize: '11px', color: '#64748B', maxWidth: '220px' }}>{row.pickupAddress}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: 'Tài xế thu hồi',
+      accessor: (row) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>
+            {row.pickupShipperName || <span style={{ color: '#94A3B8' }}>Chưa phân công</span>}
+          </div>
+          {row.pickupShipperPhone && (
+            <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{row.pickupShipperPhone}</div>
+          )}
+          {row.pickedUpAt && (
+            <div style={{ fontSize: '11px', color: '#059669' }}>Lấy: {formatDateTime(row.pickedUpAt)}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: 'Trạng thái & Đối soát',
+      accessor: (row) => {
+        const badge = getReturnStatusBadge(row.status);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+            <Badge variant={badge.variant}>{badge.text}</Badge>
+            {row.handoverRequestedAt && row.status === 'PICKED_UP' && (
+              <Badge variant="warning">Đã báo bàn giao kho</Badge>
+            )}
+            {row.pickupFailureReason && (
+              <span style={{ fontSize: '11px', color: '#B91C1C' }}>
+                Lỗi lấy (lần {row.pickupAttemptCount}): {row.pickupFailureReason}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Ảnh lấy hàng',
+      accessor: (row) =>
+        row.pickupProofUrl ? (
+          <a href={resolveMediaUrl(row.pickupProofUrl)} target="_blank" rel="noreferrer" title="Mở ảnh lấy hàng hoàn">
+            <img
+              src={resolveMediaUrl(row.pickupProofUrl)}
+              alt={`Ảnh thu hồi #${row.id}`}
+              style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #CBD5E1' }}
+            />
+          </a>
+        ) : (
+          <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>Chưa có</span>
+        ),
+    },
+    {
+      header: 'Giá trị hoàn',
+      align: 'right',
+      accessor: (row) => <strong style={{ color: '#B45309' }}>{formatCurrency(row.refundAmount)}</strong>,
+    },
+    {
+      header: 'Thao tác',
+      align: 'right',
+      render: (row) => (
+        <Button
+          size="sm"
+          variant={row.status === 'PICKED_UP' || row.status === 'APPROVED' ? 'primary' : 'outline'}
+          icon={PackageCheck}
+          onClick={() => onOpenCommerce?.({ id: row.orderId, orderNumber: row.orderNumber })}
+        >
+          {row.status === 'PICKED_UP'
+            ? 'Kiểm nhận kho'
+            : row.status === 'APPROVED'
+            ? 'Điều phối'
+            : 'Xử lý'}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {feedback && <AlertBanner type={feedback.type} message={feedback.message} />}
@@ -705,6 +926,34 @@ export function OrderReconciliationPanel({
           className="card"
           role="button"
           tabIndex={0}
+          onClick={() => setSubTab('returns')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') setSubTab('returns');
+          }}
+          style={{
+            padding: '14px 16px',
+            cursor: 'pointer',
+            borderColor: subTab === 'returns' ? '#7C3AED' : undefined,
+            background: subTab === 'returns' ? '#F5F3FF' : '#FFFFFF',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#5B21B6' }}>Hàng hoàn Shipper đang giữ</span>
+            <PackageCheck size={18} color="#7C3AED" />
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 800, color: '#6D28D9', marginTop: '6px' }}>
+            {summaryLoading && !summary ? '…' : `${(summary?.inCustodyReturnsCount || 0).toLocaleString('vi-VN')} kiện`}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Giá trị: {formatCurrency(summary?.inCustodyReturnValue || 0)} · Chờ lấy:{' '}
+            {(summary?.pendingPickupReturnsCount || 0).toLocaleString('vi-VN')}
+          </div>
+        </div>
+
+        <div
+          className="card"
+          role="button"
+          tabIndex={0}
           onClick={() => onOpenAttentionTab?.()}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') onOpenAttentionTab?.();
@@ -758,6 +1007,8 @@ export function OrderReconciliationPanel({
                   <th style={{ textAlign: 'right' }}>Đã thu COD</th>
                   <th style={{ textAlign: 'right' }}>Đã bàn giao</th>
                   <th style={{ textAlign: 'right' }}>Còn phải nộp</th>
+                  <th style={{ textAlign: 'right' }}>Thu hồi chờ lấy</th>
+                  <th style={{ textAlign: 'right' }}>Hàng hoàn giữ trả kho</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
@@ -778,16 +1029,39 @@ export function OrderReconciliationPanel({
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>{ch.pendingOrdersCount}</td>
-                      <td style={{ textAlign: 'right' }}>{ch.inTransitOrdersCount}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div>{ch.inTransitOrdersCount}</div>
+                        {Number(ch.inTransitOrdersCount || 0) > 0 && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {formatCurrency(ch.inTransitAmount || 0)}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(ch.collectedAmount)}</td>
-                      <td style={{ textAlign: 'right', color: '#059669', fontWeight: 600 }}>
-                        {formatCurrency(ch.remittedAmount)}
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#111827' }}>
+                        <div>{formatCurrency(ch.remittedAmount)}</div>
+                        <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)' }}>
+                          {Number(ch.settledOrdersCount || 0)} đơn
+                        </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         {Number(ch.pendingAmount) > 0 ? (
-                          <strong style={{ color: '#B45309' }}>{formatCurrency(ch.pendingAmount)}</strong>
+                          <strong style={{ color: '#111827' }}>{formatCurrency(ch.pendingAmount)}</strong>
                         ) : (
-                          <span style={{ color: '#059669', fontWeight: 600 }}>0 ₫</span>
+                          <span style={{ color: '#111827', fontWeight: 600 }}>0 ₫</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>{ch.pendingPickupReturnsCount ?? 0}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {Number(ch.inCustodyReturnsCount || 0) > 0 ? (
+                          <div>
+                            <strong style={{ color: '#111827' }}>{ch.inCustodyReturnsCount} kiện</strong>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                              {formatCurrency(ch.inCustodyReturnAmount || 0)}
+                            </div>
+                          </div>
+                        ) : (
+                          <span style={{ color: '#111827', fontWeight: 600 }}>0</span>
                         )}
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -796,7 +1070,12 @@ export function OrderReconciliationPanel({
                           variant={isActive ? 'primary' : 'outline'}
                           onClick={() => handleSelectChannelFromSummary(ch)}
                         >
-                          {Number(ch.pendingAmount) > 0 ? 'Đối soát kênh này' : 'Xem đơn'}
+                          {Number(ch.pendingAmount) > 0 ||
+                          Number(ch.pendingOrdersCount || 0) > 0 ||
+                          Number(ch.inCustodyReturnsCount || 0) > 0 ||
+                          Number(ch.pendingPickupReturnsCount || 0) > 0
+                            ? 'Đối soát kênh này'
+                            : 'Xem đơn'}
                         </Button>
                       </td>
                     </tr>
@@ -809,7 +1088,7 @@ export function OrderReconciliationPanel({
       )}
 
       {/* Bộ lọc & Chuyển đổi tab Danh sách đối soát / Lịch sử phiếu */}
-      <div className="card" style={{ padding: '16px' }}>
+      <div className="card" ref={listSectionRef} style={{ padding: '16px' }}>
         <div
           style={{
             display: 'flex',
@@ -833,6 +1112,14 @@ export function OrderReconciliationPanel({
             </Button>
             <Button
               size="sm"
+              variant={subTab === 'returns' ? 'primary' : 'outline'}
+              icon={PackageCheck}
+              onClick={() => setSubTab('returns')}
+            >
+              Đối soát thu hồi hoàn ({returnsTotalElements})
+            </Button>
+            <Button
+              size="sm"
               variant={subTab === 'settlements' ? 'primary' : 'outline'}
               icon={History}
               onClick={() => setSubTab('settlements')}
@@ -848,7 +1135,7 @@ export function OrderReconciliationPanel({
               size="sm"
               variant="outline"
               icon={RefreshCw}
-              loading={summaryLoading || ordersLoading || settlementLoading}
+              loading={summaryLoading || ordersLoading || settlementLoading || returnsLoading}
               onClick={handleRefreshAll}
             >
               Làm mới
@@ -907,6 +1194,38 @@ export function OrderReconciliationPanel({
             </>
           )}
 
+          {subTab === 'returns' && (
+            <>
+              <Select
+                label="Trạng thái thu hồi hoàn"
+                value={returnStatusFilter}
+                onChange={(e) => setReturnStatusFilter(e.target.value)}
+                className="form-group-compact"
+              >
+                <option value="ALL">Tất cả phiếu Shipper thu hồi</option>
+                <option value="APPROVED">Đã duyệt · Chờ điều phối</option>
+                <option value="PICKUP_ASSIGNED">Đã điều phối · Chờ lấy</option>
+                <option value="PICKED_UP">Shipper đã lấy · Chờ trả kho</option>
+                <option value="RECEIVED">Kho đã kiểm nhận</option>
+                <option value="REFUNDED">Đã hoàn tiền</option>
+              </Select>
+
+              <Select
+                label="Tài xế thu hồi"
+                value={channelFilter}
+                onChange={(e) => setChannelFilter(e.target.value)}
+                className="form-group-compact"
+              >
+                <option value="ALL">Tất cả tài xế</option>
+                {shipperOptions.map((s) => (
+                  <option key={s.shipperId} value={`SHIPPER:${s.shipperId}`}>
+                    {s.label} {s.phone ? `(${s.phone})` : ''}
+                  </option>
+                ))}
+              </Select>
+            </>
+          )}
+
           <Input
             label="Từ ngày"
             type="date"
@@ -927,12 +1246,85 @@ export function OrderReconciliationPanel({
             Lọc
           </Button>
 
-          {(keywordInput || keyword || codState !== 'PENDING' || channelFilter !== 'ALL' || fromDate || toDate) && (
+          {(keywordInput ||
+            keyword ||
+            codState !== 'PENDING' ||
+            returnStatusFilter !== 'ALL' ||
+            channelFilter !== 'ALL' ||
+            fromDate ||
+            toDate) && (
             <Button type="button" variant="outline" onClick={handleResetFilters}>
               Đặt lại
             </Button>
           )}
         </form>
+
+        {selectedChannelSummary && subTab !== 'settlements' && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '10px',
+              flexWrap: 'wrap',
+              padding: '10px 12px',
+              marginBottom: '14px',
+              borderRadius: '10px',
+              background: '#F9FAFB',
+              border: '1px solid #D1D5DB',
+              color: '#111827',
+              fontSize: '12.5px',
+            }}
+          >
+            <div>
+              Đang lọc theo <strong>{selectedChannelSummary.label}</strong> · Chờ nộp:{' '}
+              <strong>{selectedChannelSummary.pendingOrdersCount}</strong> · Đang giao:{' '}
+              <strong>{selectedChannelSummary.inTransitOrdersCount}</strong> · Đã bàn giao:{' '}
+              <strong>{selectedChannelSummary.settledOrdersCount}</strong> đơn (
+              <strong>{formatCurrency(selectedChannelSummary.remittedAmount)}</strong>)
+              {(selectedChannelSummary.pendingPickupReturnsCount > 0 ||
+                selectedChannelSummary.inCustodyReturnsCount > 0) && (
+                <>
+                  {' '}
+                  · Thu hồi hoàn:{' '}
+                  <strong>
+                    {selectedChannelSummary.pendingPickupReturnsCount + selectedChannelSummary.inCustodyReturnsCount}
+                  </strong>
+                </>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {(subTab !== 'orders' || codState !== 'ALL') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSubTab('orders');
+                    setCodState('ALL');
+                  }}
+                >
+                  Xem tất cả đơn COD
+                </Button>
+              )}
+              {selectedChannelSummary.inTransitOrdersCount > 0 &&
+                (subTab !== 'orders' || codState !== 'IN_TRANSIT') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSubTab('orders');
+                      setCodState('IN_TRANSIT');
+                    }}
+                  >
+                    Đang giao COD ({selectedChannelSummary.inTransitOrdersCount})
+                  </Button>
+                )}
+              <Button size="sm" variant="outline" onClick={() => setChannelFilter('ALL')}>
+                Bỏ lọc kênh
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Thanh đối soát hàng loạt khi có đơn được tick */}
         {subTab === 'orders' && selectedOrdersList.length > 0 && (
@@ -984,6 +1376,17 @@ export function OrderReconciliationPanel({
             totalPages={ordersTotalPages}
             totalElements={ordersTotalElements}
             onPageChange={(p) => loadOrders(p)}
+          />
+        ) : subTab === 'returns' ? (
+          <DataTable
+            columns={returnColumns}
+            data={filteredReturns}
+            loading={returnsLoading}
+            emptyMessage="Chưa có phiếu thu hồi hàng hoàn SHIPPER_PICKUP nào thuộc bộ lọc hiện tại."
+            page={returnsPage}
+            totalPages={returnsTotalPages}
+            totalElements={returnsTotalElements}
+            onPageChange={(p) => loadReturns(p)}
           />
         ) : (
           <DataTable

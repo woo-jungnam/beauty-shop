@@ -40,6 +40,7 @@ import {
   getOrderStatusBadge,
   getPaymentStatusBadge,
   getPaymentMethodLabel,
+  getReturnMethodLabel,
   formatCurrency,
   formatDateTime
 } from '../../../shared/utils/formatters';
@@ -139,6 +140,8 @@ const statuses = {
   RETURN_TO_SENDER: 'Hàng đã hoàn về cửa hàng',
   REQUESTED: 'Chờ xét duyệt',
   APPROVED: 'Đã duyệt',
+  PICKUP_ASSIGNED: 'Đã điều phối thu hồi',
+  PICKED_UP: 'Shipper đã lấy hàng hoàn',
   REJECTED: 'Từ chối',
   RECEIVED: 'Đã nhận hàng trả',
   REFUNDED: 'Đã hoàn tiền',
@@ -168,6 +171,8 @@ const getStatusBadgeStyle = (status) => {
     case 'REQUESTED':
       return { bg: '#FFF7ED', color: '#C2410C', border: '#FFEDD5' };
     case 'APPROVED':
+    case 'PICKUP_ASSIGNED':
+    case 'PICKED_UP':
     case 'RECEIVED':
       return { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
     case 'REFUNDED':
@@ -1208,6 +1213,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
   const operationLock = useRef(false);
   const [evidenceUrls, setEvidenceUrls] = useState([]);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [returnMethod, setReturnMethod] = useState('SHIPPER_PICKUP');
   const [refundMethod, setRefundMethod] = useState('BANK_TRANSFER');
   const [bankBin, setBankBin] = useState(VIETNAM_BANKS[0].bin);
   const [accountNumber, setAccountNumber] = useState('');
@@ -1904,9 +1910,36 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                       Sản phẩm: {(row.lines || []).map(line => `${order.items?.find(item => Number(item.id) === Number(line.orderItemId))?.productName || `Dòng #${line.orderItemId}`} × ${line.quantity}`).join(', ')}
                     </p>
                     <p style={{ margin: '0 0 4px', fontSize: 12, color: '#4B5563' }}>
+                      Hình thức thu hồi: <strong>{getReturnMethodLabel(row.returnMethod)}</strong>
+                    </p>
+                    <p style={{ margin: '0 0 4px', fontSize: 12, color: '#4B5563' }}>
                       Hình thức nhận hoàn: <strong>{row.refundMethod === 'VOUCHER' ? 'Voucher hoàn tiền' : 'Chuyển khoản ngân hàng'}</strong>
                       {row.bankName && row.accountNumber ? ` · ${row.bankName} - ${row.accountNumber} (${row.accountName || ''})` : ''}
                     </p>
+                    {row.pickupShipperName && (
+                      <p style={{ margin: '0 0 4px', fontSize: 12, color: '#1D4ED8' }}>
+                        Tài xế thu hồi: <strong>{row.pickupShipperName}</strong>
+                        {row.pickupShipperPhone ? ` · ${row.pickupShipperPhone}` : ''}
+                        {row.pickedUpAt ? ` (Đã lấy lúc ${formatDateTime(row.pickedUpAt)})` : ''}
+                      </p>
+                    )}
+                    {row.pickupFailureReason && (
+                      <p style={{ margin: '0 0 4px', fontSize: 12, color: '#B91C1C' }}>
+                        Thu hồi chưa thành công (lần {row.pickupAttemptCount}): {row.pickupFailureReason}
+                      </p>
+                    )}
+                    {row.pickupProofUrl && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '6px 0' }}>
+                        <a href={resolveMediaUrl(row.pickupProofUrl)} target="_blank" rel="noreferrer">
+                          <img
+                            src={resolveMediaUrl(row.pickupProofUrl)}
+                            alt="Ảnh tài xế thu hồi hàng hoàn"
+                            style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 6, border: '1px solid #BFDBFE' }}
+                          />
+                        </a>
+                        <span style={{ fontSize: 12, color: '#1E40AF' }}>Ảnh tài xế xác nhận đã lấy hàng hoàn</span>
+                      </div>
+                    )}
                     {row.refundVoucherCode && (
                       <div style={{ margin: '6px 0', padding: '8px 10px', borderRadius: 6, backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 12.5, color: '#065F46' }}>
@@ -1970,6 +2003,7 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                           reason: reason.trim(),
                           lines,
                           evidenceUrls,
+                          returnMethod,
                           refundMethod,
                           bankBin: refundMethod === 'BANK_TRANSFER' ? (bank?.bin || bankBin) : null,
                           bankName: refundMethod === 'BANK_TRANSFER' ? (bank?.shortName || bank?.name || 'Ngân hàng') : null,
@@ -2061,6 +2095,36 @@ export function OrderDetailDialog({ orderId, initialOrder = null, onClose, onCha
                             </div>
                           ))}
                         </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                      <span>Hình thức gửi trả hàng</span>
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="returnPickupMethod"
+                            value="SHIPPER_PICKUP"
+                            checked={returnMethod === 'SHIPPER_PICKUP'}
+                            onChange={() => setReturnMethod('SHIPPER_PICKUP')}
+                          />
+                          <span>Shipper đến lấy tận nơi</span>
+                        </label>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="returnPickupMethod"
+                            value="SELF_SHIP"
+                            checked={returnMethod === 'SELF_SHIP'}
+                            onChange={() => setReturnMethod('SELF_SHIP')}
+                          />
+                          <span>Tự gửi hàng về cửa hàng BeautyShop</span>
+                        </label>
+                      </div>
+                      {returnMethod === 'SHIPPER_PICKUP' && order.shippingAddress && (
+                        <span style={{ fontSize: 12, color: '#1E40AF', backgroundColor: '#EFF6FF', padding: '6px 10px', borderRadius: 6 }}>
+                          Địa chỉ dự kiến thu hồi: <strong>{order.shippingAddress}</strong>
+                        </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>

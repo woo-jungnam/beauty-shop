@@ -80,4 +80,16 @@ class ApiConstants {
   static String shipperReportFailure(int id) => '$shipperOrders/$id/failed';
   static String shipperCompleteDelivery(int id) =>
       '/api/v1/shipper/orders/$id/delivered';
+
+  // Shipper Return Pickups
+  static const String shipperReturns = '/api/v1/shipper/returns';
+  static String shipperReturnDetail(int id) => '/api/v1/shipper/returns/$id';
+  static String shipperStartReturnPickup(int id) =>
+      '/api/v1/shipper/returns/$id/start-pickup';
+  static String shipperCompleteReturnPickup(int id) =>
+      '/api/v1/shipper/returns/$id/pickup';
+  static String shipperFailReturnPickup(int id) =>
+      '/api/v1/shipper/returns/$id/pickup-failed';
+  static String shipperHandoverReturn(int id) =>
+      '/api/v1/shipper/returns/$id/handover';
 }

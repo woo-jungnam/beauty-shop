@@ -253,6 +253,11 @@ void main() {
       await tester.enterText(reasonField, 'Chai còn lại bị móp nhẹ');
 
       final voucherOption = find.text('Nhận Voucher hoàn tiền ngay (dùng 180 ngày)');
+      await tester.scrollUntilVisible(
+        voucherOption,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(voucherOption);
       await tester.pumpAndSettle();
       await tester.tap(voucherOption);
@@ -270,6 +275,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(postedBodies.length, 1);
+      expect(postedBodies.first['returnMethod'], 'SHIPPER_PICKUP');
       expect(postedBodies.first['refundMethod'], 'VOUCHER');
       await tester.scrollUntilVisible(
         find.text('#2 · Chờ xét duyệt'),
@@ -286,6 +292,192 @@ void main() {
         find.text('Tất cả sản phẩm trong đơn hàng này đã được gửi yêu cầu đổi trả.'),
         findsOneWidget,
       );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'OrderDetailScreen displays PICKUP_ASSIGNED, PICKED_UP shipper details, and allows SELF_SHIP returnMethod',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 780));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final postedBodies = <Map<String, dynamic>>[];
+      var returnList = <Map<String, dynamic>>[
+        {
+          'id': 11,
+          'orderId': 73,
+          'status': 'PICKUP_ASSIGNED',
+          'returnMethod': 'SHIPPER_PICKUP',
+          'reason': 'Hộp bị móp',
+          'decisionReason': 'Đã điều shipper thu hồi',
+          'pickupShipperName': 'Lê Văn B',
+          'pickupShipperPhone': '0988111222',
+          'pickupFailureReason': 'Khách hẹn lại ngày mai',
+          'refundAmount': 150000,
+          'lines': [
+            {'orderItemId': 61, 'quantity': 1},
+          ],
+          'evidenceUrls': [],
+          'refundMethod': 'BANK_TRANSFER',
+        },
+        {
+          'id': 12,
+          'orderId': 73,
+          'status': 'PICKED_UP',
+          'returnMethod': 'SHIPPER_PICKUP',
+          'reason': 'Sai phân loại',
+          'decisionReason': 'Đã phân công shipper thu hồi',
+          'pickupShipperName': 'Lê Văn B',
+          'pickupShipperPhone': '0988111222',
+          'handoverRequestedAt': '2026-11-25T11:30:00Z',
+          'refundAmount': 150000,
+          'lines': [
+            {'orderItemId': 61, 'quantity': 1},
+          ],
+          'evidenceUrls': [],
+          'refundMethod': 'VOUCHER',
+        },
+      ];
+
+      final api = _ReturnApiStub(
+        onGet: (path, _) {
+          if (path == '/api/v1/orders/73') {
+            return {
+              'id': 73,
+              'userId': 10,
+              'orderNumber': 'ORD-73',
+              'status': 'DELIVERED',
+              'paymentStatus': 'PAID',
+              'customerName': 'Nguyễn Thanh Nam',
+              'customerPhone': '0902588750',
+              'shippingAddress': '12 Lê Lợi',
+              'totalAmount': 450000,
+              'paidAmount': 450000,
+              'refundedAmount': 0,
+              'items': [
+                {
+                  'id': 61,
+                  'productName': 'Serum Vitamin C',
+                  'variantName': '30ml',
+                  'quantity': 3,
+                  'price': 150000,
+                  'discount': 0,
+                },
+              ],
+              'statusHistories': [
+                {
+                  'status': 'DELIVERED',
+                  'notes': 'Giao thành công',
+                  'createdAt': '2026-11-25T10:00:00Z',
+                },
+              ],
+            };
+          }
+          if (path == '/api/v1/orders/73/returns') {
+            return returnList;
+          }
+          return {};
+        },
+        onPost: (path, data, headers) {
+          if (path == '/api/v1/orders/73/returns') {
+            final map = Map<String, dynamic>.from(data as Map);
+            postedBodies.add(map);
+            returnList = [
+              ...returnList,
+              {
+                'id': 13,
+                'orderId': 73,
+                'status': 'REQUESTED',
+                'returnMethod': map['returnMethod'],
+                'reason': map['reason'],
+                'refundAmount': 150000,
+                'lines': map['lines'],
+                'evidenceUrls': [],
+                'refundMethod': map['refundMethod'],
+              },
+            ];
+            return returnList.last;
+          }
+          return {};
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OrderDetailScreen(orderId: 73, apiClient: api),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('#11 · Đang điều shipper thu hồi'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('#11 · Đang điều shipper thu hồi'), findsOneWidget);
+      expect(find.text('Thu hồi hàng: Shipper đến lấy tại nhà'), findsWidgets);
+      expect(find.text('Shipper thu hồi: Lê Văn B (0988111222)'), findsWidgets);
+      expect(
+        find.text('Lý do thu hồi chưa thành công: Khách hẹn lại ngày mai'),
+        findsOneWidget,
+      );
+
+      await tester.scrollUntilVisible(
+        find.text('#12 · Shipper đã lấy hàng hoàn'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('#12 · Shipper đã lấy hàng hoàn'), findsOneWidget);
+      expect(find.text('Shipper đã báo bàn giao về kho'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Có thể yêu cầu: 1'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final dropdown = find.byType(DropdownButton<int>);
+      await tester.ensureVisible(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('1').last);
+      await tester.pumpAndSettle();
+
+      final reasonField = find.widgetWithText(TextField, 'Lý do đổi trả');
+      await tester.ensureVisible(reasonField);
+      await tester.pumpAndSettle();
+      await tester.enterText(reasonField, 'Khách tự gửi hàng về shop');
+
+      final selfShipOption = find.text('Tự gửi hàng về kho BeautyShop');
+      await tester.scrollUntilVisible(
+        selfShipOption,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(selfShipOption);
+      await tester.pumpAndSettle();
+
+      final voucherOption = find.text('Nhận Voucher hoàn tiền ngay (dùng 180 ngày)');
+      await tester.scrollUntilVisible(
+        voucherOption,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(voucherOption);
+      await tester.pumpAndSettle();
+
+      final submitBtn = find.text('Gửi yêu cầu đổi trả');
+      await tester.scrollUntilVisible(
+        submitBtn,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(submitBtn);
+      await tester.pumpAndSettle();
+
+      expect(postedBodies.length, 1);
+      expect(postedBodies.first['returnMethod'], 'SELF_SHIP');
       expect(tester.takeException(), isNull);
     },
   );

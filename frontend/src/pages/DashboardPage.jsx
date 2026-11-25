@@ -489,6 +489,9 @@ const statusLabels = {
   PROCESSING: ["Đang xử lý", "violet"],
   SHIPPED: ["Đang giao", "violet"],
   DELIVERED: ["Đã giao", "teal"],
+  DELIVERY_FAILED: ["Giao thất bại", "rose"],
+  RETURNING_TO_SENDER: ["Đang hoàn về kho", "amber"],
+  RETURN_TO_SENDER: ["Đã hoàn về kho", "rose"],
   COMPLETED: ["Hoàn tất", "teal"],
   CANCELLED: ["Đã hủy", "rose"],
   RETURNED: ["Đã trả hàng", "rose"],
@@ -613,13 +616,13 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: "12.5px" }}>
                 <div style={{ borderLeft: "3px solid #8B5CF6", paddingLeft: 8 }}>
                   <div style={{ fontWeight: 600, color: "#4B5563" }}>Bán lẻ Mỹ phẩm:</div>
-                  <div>Tiền thu: <strong>{currency(overview?.productRevenue)}</strong> ({number(overview?.productPaidOrders)} đơn thanh toán đủ)</div>
-                  <div>AOV: <strong>{currency(overview?.productAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.productRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.productRefunds)}</strong></div>
+                  <div>Thực thu trong kỳ: <strong>{currency(overview?.productRevenue)}</strong></div>
+                  <div>Đơn TT đủ: <strong>{number(overview?.productPaidOrders)}</strong> · AOV: <strong>{currency(overview?.productAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.productRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.productRefunds)}</strong></div>
                 </div>
                 <div style={{ borderLeft: "3px solid #EC4899", paddingLeft: 8 }}>
                   <div style={{ fontWeight: 600, color: "#4B5563" }}>Dịch vụ & Liệu trình Spa:</div>
-                  <div>Tiền thu: <strong>{currency(overview?.spaRevenue)}</strong> ({number(overview?.spaPaidOrders)} đơn/gói thanh toán đủ)</div>
-                  <div>AOV: <strong>{currency(overview?.spaAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.spaRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.spaRefunds)}</strong></div>
+                  <div>Thực thu trong kỳ: <strong>{currency(overview?.spaRevenue)}</strong></div>
+                  <div>Đơn/gói TT đủ: <strong>{number(overview?.spaPaidOrders)}</strong> · AOV: <strong>{currency(overview?.spaAov)}</strong> · Hoàn: <strong style={{ color: Number(overview?.spaRefunds || 0) > 0 ? "#DC2626" : "#059669" }}>{currency(overview?.spaRefunds)}</strong></div>
                 </div>
               </div>
             </div>
@@ -724,8 +727,7 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
               )}
             </div>
             <p className="atelier-report-note">
-              Xếp hạng theo số lượng bán từ các đơn đã giao, với ngày tạo đơn
-              thuộc kỳ đã chọn. Tồn kho là số dư hiện tại.
+              Xếp hạng theo số lượng bán từ các đơn đã giao, với thời gian giao hàng thành công thuộc kỳ đã chọn. Tồn kho là số dư hiện tại.
             </p>
             {products === null ? (
               <EmptyState
@@ -785,6 +787,7 @@ function ReportDialog({ report, onClose, data, range, points, loading }) {
               {stat("Phút đã đặt", number(spa?.bookedMinutes))}
               {stat("Phút có lịch trực", number(spa?.scheduledMinutes))}
               {stat("Phút thực tế đã phục vụ", number(spa?.servedMinutes))}
+              {spa?.legacyFinalizedMinutes > 0 && stat("Phút hoàn tất kiểu cũ", number(spa?.legacyFinalizedMinutes))}
               {stat("Lịch khách vắng mặt", number(spa?.noShowAppointments))}
               {stat("Phút vượt lịch trực", number(spa?.overCapacityMinutes))}
             </div>
@@ -1196,7 +1199,7 @@ export const DashboardPage = () => {
           value={numberOrNull(overview?.totalOrders)}
           icon={ShoppingBag}
           tone="rose"
-          detail={`${number(overview?.openOrders)} đơn cần xử lý`}
+          detail={`${number(overview?.openOrders)} đơn cần xử lý trong kỳ`}
           loading={loading}
           onClick={() => openReport("ORDERS")}
           index={1}
@@ -1252,12 +1255,14 @@ export const DashboardPage = () => {
               {loading ? "—" : currency(overview?.productRevenue)}
             </span>
             <span style={{ fontSize: "12px", color: "#6B7280" }}>
-              ({number(overview?.productPaidOrders)} đơn đã thanh toán)
+              (thực thu trong kỳ)
             </span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", borderTop: "1px dashed #E5E7EB", paddingTop: "10px", fontSize: "12px" }}>
             <div>
-              <span style={{ color: "#6B7280", display: "block" }}>AOV Mỹ phẩm:</span>
+              <span style={{ color: "#6B7280", display: "block" }}>
+                AOV Mỹ phẩm ({loading ? "—" : number(overview?.productPaidOrders)} đơn TT đủ):
+              </span>
               <strong style={{ color: "#374151" }}>{loading ? "—" : currency(overview?.productAov)}</strong>
             </div>
             <div>
@@ -1294,12 +1299,14 @@ export const DashboardPage = () => {
               {loading ? "—" : currency(overview?.spaRevenue)}
             </span>
             <span style={{ fontSize: "12px", color: "#6B7280" }}>
-              ({number(overview?.spaPaidOrders)} đơn/gói đã thanh toán)
+              (thực thu trong kỳ)
             </span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", borderTop: "1px dashed #E5E7EB", paddingTop: "10px", fontSize: "12px" }}>
             <div>
-              <span style={{ color: "#6B7280", display: "block" }}>AOV Gói & Buổi Spa:</span>
+              <span style={{ color: "#6B7280", display: "block" }}>
+                AOV Gói & Buổi Spa ({loading ? "—" : number(overview?.spaPaidOrders)} đơn/gói TT đủ):
+              </span>
               <strong style={{ color: "#374151" }}>{loading ? "—" : currency(overview?.spaAov)}</strong>
             </div>
             <div>
@@ -1314,8 +1321,10 @@ export const DashboardPage = () => {
 
       <p className="atelier-panel-description">
         Tiền thu tính theo từng giao dịch trong kỳ, gồm trả trước và tiền cọc; chưa trừ hoàn tiền.
-        Khoản chưa nhận diện đơn được tách riêng trong chi tiết dòng tiền.
-        Số đơn và AOV tính theo thời điểm thanh toán đủ.
+        {overview && Number(overview.unclassifiedRevenue ?? (Number(overview.revenue || 0) - Number(overview.productRevenue || 0) - Number(overview.spaRevenue || 0))) !== 0 && (
+          <> Khoản chưa nhận diện theo đơn/cọc: <strong>{currency(overview.unclassifiedRevenue ?? (Number(overview.revenue || 0) - Number(overview.productRevenue || 0) - Number(overview.spaRevenue || 0)))}</strong>.</>
+        )}
+        {" "}Số đơn TT đủ và AOV tính theo tổng giá trị đơn tại thời điểm thanh toán đủ (có thể gồm phần cọc thu từ kỳ trước).
       </p>
       <div className="atelier-main-grid">
         <section
@@ -1530,7 +1539,9 @@ export const DashboardPage = () => {
             <p>
               {loading || !spa
                 ? "Theo dõi lịch hẹn và thời gian phục vụ."
-                : `${number(spa.servedMinutes)} phút thực tế đã phục vụ trong kỳ.`}
+                : spa.legacyFinalizedMinutes > 0
+                  ? `${number(spa.servedMinutes)} phút thực tế đã phục vụ trong kỳ (+ ${number(spa.legacyFinalizedMinutes)} phút hoàn tất kiểu cũ).`
+                  : `${number(spa.servedMinutes)} phút thực tế đã phục vụ trong kỳ.`}
             </p>
           </div>
           <button
@@ -1702,9 +1713,9 @@ export const DashboardPage = () => {
             {
               tone: "amber",
               Icon: Clock3,
-              value: overview?.openOrders,
+              value: overview?.currentOpenOrders ?? overview?.openOrders,
               text: "đơn cần xử lý",
-              detail: "Xác nhận, chuẩn bị và giao hàng",
+              detail: "Xác nhận, giao hàng & xử lý hoàn tồn đọng",
               type: "ORDERS",
             },
             {
@@ -1718,9 +1729,9 @@ export const DashboardPage = () => {
             {
               tone: "violet",
               Icon: Banknote,
-              value: overview?.pendingPaymentOrders,
+              value: overview?.currentPendingPaymentOrders ?? overview?.pendingPaymentOrders,
               text: "đơn chờ thanh toán",
-              detail: "Theo dõi để hoàn tất giao dịch",
+              detail: "Đơn còn hiệu lực chờ thu tiền",
               type: "REVENUE",
             },
           ].map(({ tone, Icon, value, text, detail, type }) => (

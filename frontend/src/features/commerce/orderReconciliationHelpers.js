@@ -58,6 +58,38 @@ export const createBatchSettlementRef = (now = Date.now()) => {
   return `BATCH-${stamp}-${suffix}`;
 };
 
+export const resolveChannelDrilldown = (channel) => {
+  const channelFilter = channel?.carrierChannel
+    ? 'CARRIER'
+    : channel?.shipperId != null
+      ? `SHIPPER:${channel.shipperId}`
+      : 'ALL';
+
+  const pendingAmount = Number(channel?.pendingAmount || 0);
+  const pendingOrders = Number(channel?.pendingOrdersCount || 0);
+  const inTransitOrders = Number(channel?.inTransitOrdersCount || 0);
+  const settledOrders = Number(channel?.settledOrdersCount || 0);
+  const remittedAmount = Number(channel?.remittedAmount || 0);
+  const inCustodyReturns = Number(channel?.inCustodyReturnsCount || 0);
+  const pendingPickupReturns = Number(channel?.pendingPickupReturnsCount || 0);
+
+  if (pendingAmount > 0 || pendingOrders > 0) {
+    return { subTab: 'orders', codState: 'PENDING', channelFilter };
+  }
+  if (
+    (inCustodyReturns > 0 || pendingPickupReturns > 0) &&
+    inTransitOrders === 0 &&
+    settledOrders === 0 &&
+    remittedAmount <= 0
+  ) {
+    return { subTab: 'returns', codState: 'ALL', channelFilter };
+  }
+  if (inTransitOrders > 0 && settledOrders === 0 && remittedAmount <= 0) {
+    return { subTab: 'orders', codState: 'IN_TRANSIT', channelFilter };
+  }
+  return { subTab: 'orders', codState: 'ALL', channelFilter };
+};
+
 export const csvEscape = (value) => {
   const str = value == null ? '' : String(value);
   if (/[",\n\r]/.test(str)) {

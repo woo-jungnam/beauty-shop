@@ -198,10 +198,12 @@
 
 :where(.admin-shell, .admin-auth) .badge {
   gap: 5px;
-  padding: 5px 10px;
-  border-radius: 7px;
-  border-color: transparent;
-  font-size: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #111827;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -209,11 +211,11 @@
   white-space: nowrap;
 }
 
-:where(.admin-shell, .admin-auth) .badge-default { background: #f0eaff; color: #7551a0; border-color: transparent; }
-:where(.admin-shell, .admin-auth) .badge-success { background: #e8f6ee; color: #3a7654; border-color: transparent; }
-:where(.admin-shell, .admin-auth) .badge-warning { background: #fff3db; color: #8a6426; border-color: transparent; }
-:where(.admin-shell, .admin-auth) .badge-danger { background: #fbe8ef; color: #ab4567; border-color: transparent; }
-:where(.admin-shell, .admin-auth) .badge-info { background: #e8f1fc; color: #4c6e9b; border-color: transparent; }
+:where(.admin-shell, .admin-auth) :is(.badge-default, .badge-primary, .badge-success, .badge-warning, .badge-danger, .badge-info, .badge-neutral, .badge-outline) {
+  background: transparent;
+  color: #111827;
+  border-color: transparent;
+}
 
 :where(.admin-shell, .admin-auth) .form-group { gap: 8px; margin-bottom: 18px; min-width: 0; }
 :where(.admin-shell, .admin-auth) .form-group-compact { margin-bottom: 0; }

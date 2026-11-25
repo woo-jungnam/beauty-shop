@@ -38,10 +38,15 @@ public class AdminDashboardService {
         TimeRange range = range(from, to);
         Map<String, Object> order = row("""
                 SELECT COUNT(*) total_orders,
-                       COALESCE(SUM(CASE WHEN payment_status = 'PENDING' THEN 1 ELSE 0 END), 0) pending_payment_orders,
-                       COALESCE(SUM(CASE WHEN status IN ('PENDING','CONFIRMED','PROCESSING') THEN 1 ELSE 0 END), 0) open_orders
+                       COALESCE(SUM(CASE WHEN payment_status = 'PENDING' AND status NOT IN ('CANCELLED','RETURNED','RETURN_TO_SENDER') THEN 1 ELSE 0 END), 0) pending_payment_orders,
+                       COALESCE(SUM(CASE WHEN status IN ('PENDING','CONFIRMED','PROCESSING','DELIVERY_FAILED','RETURNING_TO_SENDER') THEN 1 ELSE 0 END), 0) open_orders
                 FROM orders WHERE is_deleted = false AND created_at >= ? AND created_at < ?
                 """, range.from(), range.to());
+        Map<String, Object> liveOrderBacklog = row("""
+                SELECT COALESCE(SUM(CASE WHEN payment_status = 'PENDING' AND status NOT IN ('CANCELLED','RETURNED','RETURN_TO_SENDER') THEN 1 ELSE 0 END), 0) current_pending_payment_orders,
+                       COALESCE(SUM(CASE WHEN status IN ('PENDING','CONFIRMED','PROCESSING','DELIVERY_FAILED','RETURNING_TO_SENDER') THEN 1 ELSE 0 END), 0) current_open_orders
+                FROM orders WHERE is_deleted = false
+                """);
         Map<String, Object> settled = row("""
                 SELECT COUNT(*) paid_orders, COALESCE(AVG(total_amount), 0) average_order_value,
                        COALESCE(SUM(CASE WHEN service_package_id IS NULL AND appointment_id IS NULL THEN 1 ELSE 0 END), 0) product_paid_orders,
@@ -94,14 +99,20 @@ public class AdminDashboardService {
         BigDecimal cod = decimal(collections.get("cod_amount"));
         BigDecimal cash = decimal(collections.get("cash_amount"));
         BigDecimal manual = decimal(collections.get("manual_amount"));
+        BigDecimal productRevenue = decimal(collections.get("product_revenue"));
+        BigDecimal spaRevenue = decimal(collections.get("spa_revenue"));
+        BigDecimal unclassifiedRevenue = received.subtract(productRevenue).subtract(spaRevenue);
         return new Overview(number(order.get("total_orders")).longValue(), received,
                 number(settled.get("paid_orders")).longValue(), number(order.get("pending_payment_orders")).longValue(),
                 number(order.get("open_orders")).longValue(), decimal(settled.get("average_order_value")),
                 customers, lowStock, inventory, refunds, cod, received.subtract(cod).subtract(cash).subtract(manual), cash, number(collections.get("receipt_count")).longValue(),
-                decimal(collections.get("product_revenue")), decimal(collections.get("spa_revenue")),
+                productRevenue, spaRevenue,
                 number(settled.get("product_paid_orders")).longValue(), number(settled.get("spa_paid_orders")).longValue(),
                 decimal(settled.get("product_aov")), decimal(settled.get("spa_aov")),
-                productRefunds, spaRefunds, manual);
+                productRefunds, spaRefunds, manual,
+                number(liveOrderBacklog.get("current_open_orders")).longValue(),
+                number(liveOrderBacklog.get("current_pending_payment_orders")).longValue(),
+                unclassifiedRevenue);
     }
 
     @Transactional(readOnly = true)
@@ -295,7 +306,25 @@ public class AdminDashboardService {
                            BigDecimal productRevenue, BigDecimal spaRevenue,
                            long productPaidOrders, long spaPaidOrders,
                            BigDecimal productAov, BigDecimal spaAov,
-                           BigDecimal productRefunds, BigDecimal spaRefunds, BigDecimal manualAmount) { }
+                           BigDecimal productRefunds, BigDecimal spaRefunds, BigDecimal manualAmount,
+                           long currentOpenOrders, long currentPendingPaymentOrders, BigDecimal unclassifiedRevenue) {
+        public Overview(long totalOrders, BigDecimal revenue, long paidOrders, long pendingPaymentOrders,
+                        long openOrders, BigDecimal averageOrderValue, long activeCustomers, long lowStockItems, BigDecimal inventoryValue,
+                        BigDecimal refundedAmount, BigDecimal codAmount, BigDecimal bankAmount, BigDecimal cashAmount, long receiptCount,
+                        BigDecimal productRevenue, BigDecimal spaRevenue,
+                        long productPaidOrders, long spaPaidOrders,
+                        BigDecimal productAov, BigDecimal spaAov,
+                        BigDecimal productRefunds, BigDecimal spaRefunds, BigDecimal manualAmount) {
+            this(totalOrders, revenue, paidOrders, pendingPaymentOrders, openOrders, averageOrderValue,
+                    activeCustomers, lowStockItems, inventoryValue, refundedAmount, codAmount, bankAmount,
+                    cashAmount, receiptCount, productRevenue, spaRevenue, productPaidOrders, spaPaidOrders,
+                    productAov, spaAov, productRefunds, spaRefunds, manualAmount,
+                    openOrders, pendingPaymentOrders,
+                    (revenue == null ? BigDecimal.ZERO : revenue)
+                            .subtract(productRevenue == null ? BigDecimal.ZERO : productRevenue)
+                            .subtract(spaRevenue == null ? BigDecimal.ZERO : spaRevenue));
+        }
+    }
     public record RevenuePoint(String period, BigDecimal revenue, long orderCount, BigDecimal refundedAmount,
                                long receiptCount, BigDecimal codAmount, BigDecimal bankAmount, BigDecimal cashAmount,
                                BigDecimal productRevenue, BigDecimal spaRevenue, BigDecimal manualAmount) { }

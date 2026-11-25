@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  Camera,
   CheckCircle2,
   DollarSign,
   ExternalLink,
@@ -8,6 +9,7 @@ import {
   RefreshCw,
   RotateCcw,
   Ticket,
+  Truck,
   XCircle,
 } from 'lucide-react';
 import { apiClient } from '../../shared/api/client';
@@ -20,6 +22,7 @@ import {
   getOrderType,
   getPaymentMethodLabel,
   getPaymentStatusBadge,
+  getReturnMethodLabel,
   getReturnStatusBadge,
   resolveMediaUrl,
 } from '../../shared/utils/formatters';
@@ -29,6 +32,7 @@ import { Badge } from '../../shared/ui/Badge';
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Modal } from '../../shared/ui/Modal';
+import { Select } from '../../shared/ui/Select';
 
 import {
   WHOLE_ORDER_RETURN_STATUSES,
@@ -47,11 +51,16 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
   const [reason, setReason] = useState('');
   const [reference, setReference] = useState('');
   const [replacementOrderId, setReplacementOrderId] = useState('');
+  const [decisionReturnMethod, setDecisionReturnMethod] = useState(ret.returnMethod || 'SELF_SHIP');
+  const [pickupShipperId, setPickupShipperId] = useState(ret.pickupShipperId ? String(ret.pickupShipperId) : '');
+  const [shippers, setShippers] = useState([]);
+  const [shippersLoading, setShippersLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const statusBadge = getReturnStatusBadge(ret.status);
   const isVoucher = ret.refundMethod === 'VOUCHER';
+  const isShipperPickup = ret.returnMethod === 'SHIPPER_PICKUP';
   const vietQrUrl = useMemo(() => {
     if (isVoucher || !ret.bankBin || !ret.accountNumber) return '';
     return buildVietQrUrl({
@@ -63,12 +72,42 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
     });
   }, [isVoucher, ret, orderDetail.orderNumber, orderDetail.id]);
 
+  useEffect(() => {
+    if (mode !== 'assign-pickup') return undefined;
+    let active = true;
+    setShippersLoading(true);
+    apiClient
+      .get(`${ENDPOINTS.USERS.SHIPPERS}?page=0&size=50&sort=id,asc`)
+      .then((res) => {
+        if (!active) return;
+        const pageData = unwrap(res);
+        const list = Array.isArray(pageData?.content) ? pageData.content : [];
+        setShippers(list);
+        if (!pickupShipperId && list.length === 1) {
+          setPickupShipperId(String(list[0].id));
+        }
+      })
+      .catch((err) => {
+        if (active) setError(err.message || 'Không tải được danh sách tài xế.');
+      })
+      .finally(() => {
+        if (active) setShippersLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [mode, pickupShipperId]);
+
   const openMode = (nextMode) => {
     setError('');
     setMode(nextMode);
     if (nextMode === 'approve') {
+      setDecisionReturnMethod(ret.returnMethod || 'SELF_SHIP');
       setReason('Đáp ứng điều kiện đổi trả theo chính sách cửa hàng');
     } else if (nextMode === 'reject') {
+      setReason('');
+    } else if (nextMode === 'assign-pickup') {
+      setPickupShipperId(ret.pickupShipperId ? String(ret.pickupShipperId) : '');
       setReason('');
     } else if (nextMode === 'receive') {
       setReference(createDocumentRef('RCV', orderDetail.id, ret.id));
@@ -92,7 +131,14 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
       let payload = {};
       if (mode === 'approve' || mode === 'reject') {
         endpoint = ENDPOINTS.ORDERS.COMMERCE_RETURN_DECISION(ret.id);
-        payload = { approved: mode === 'approve', reason: reason.trim() };
+        payload = {
+          approved: mode === 'approve',
+          reason: reason.trim(),
+          ...(mode === 'approve' ? { returnMethod: decisionReturnMethod } : {}),
+        };
+      } else if (mode === 'assign-pickup') {
+        endpoint = ENDPOINTS.ORDERS.COMMERCE_RETURN_ASSIGN_PICKUP(ret.id);
+        payload = { shipperId: Number(pickupShipperId), notes: reason.trim() || null };
       } else if (mode === 'receive') {
         endpoint = ENDPOINTS.ORDERS.COMMERCE_RETURN_RECEIVE(ret.id);
         payload = { reference: reference.trim(), reason: reason.trim() };
@@ -132,6 +178,7 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <strong style={{ fontSize: '13.5px' }}>Yêu cầu #{ret.id}</strong>
           <Badge variant={statusBadge.variant}>{statusBadge.text}</Badge>
+          <Badge variant={isShipperPickup ? 'info' : 'neutral'}>{getReturnMethodLabel(ret.returnMethod)}</Badge>
           {ret.createdAt && (
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{formatDateTime(ret.createdAt)}</span>
           )}
@@ -185,6 +232,70 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
         </div>
       </div>
 
+      {(isShipperPickup || ret.pickupShipperName || ret.pickupFailureReason || ret.pickupProofUrl) && (
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 12px', fontSize: '12.5px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+            <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#1E293B' }}>
+              <Truck size={14} />
+              <span>Thông tin thu hồi hàng hoàn</span>
+            </strong>
+            {ret.handoverRequestedAt && ret.status === 'PICKED_UP' && (
+              <Badge variant="warning">Shipper đã báo bàn giao về kho · Chờ kiểm nhận</Badge>
+            )}
+          </div>
+          {ret.pickupShipperName ? (
+            <div style={{ color: '#334155' }}>
+              Tài xế: <strong>{ret.pickupShipperName}</strong>
+              {ret.pickupShipperPhone ? ` (${ret.pickupShipperPhone})` : ''}
+              {ret.pickupAssignedAt ? ` · Giao lúc ${formatDateTime(ret.pickupAssignedAt)}` : ''}
+              {ret.pickupStartedAt ? ` · Bắt đầu lấy ${formatDateTime(ret.pickupStartedAt)}` : ''}
+              {ret.pickedUpAt ? ` · Đã lấy ${formatDateTime(ret.pickedUpAt)}` : ''}
+            </div>
+          ) : (
+            isShipperPickup && ret.status === 'APPROVED' && (
+              <div style={{ color: '#92400E' }}>Chưa phân công tài xế đến lấy hàng hoàn.</div>
+            )
+          )}
+          {ret.pickupFailureReason && (
+            <div style={{ color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '6px 8px' }}>
+              <strong>Thu hồi thất bại (lần {ret.pickupAttemptCount}):</strong> {ret.pickupFailureReason}
+            </div>
+          )}
+          {ret.pickupNotes && (
+            <div style={{ color: '#334155' }}>
+              <strong>Ghi chú lúc lấy hàng:</strong> {ret.pickupNotes}
+            </div>
+          )}
+          {ret.handoverRequestedAt && (
+            <div style={{ color: '#0369A1' }}>
+              <strong>Shipper báo bàn giao kho:</strong> {formatDateTime(ret.handoverRequestedAt)}
+              {ret.handoverNotes ? ` · ${ret.handoverNotes}` : ''}
+            </div>
+          )}
+          {ret.pickupProofUrl && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px', flexWrap: 'wrap' }}>
+              <a href={resolveMediaUrl(ret.pickupProofUrl)} target="_blank" rel="noreferrer" title="Mở ảnh shipper lấy hàng">
+                <img
+                  src={resolveMediaUrl(ret.pickupProofUrl)}
+                  alt="Ảnh xác nhận lấy hàng hoàn"
+                  style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #CBD5E1' }}
+                />
+              </a>
+              <div style={{ fontSize: '12px', color: '#475569' }}>
+                <div style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Camera size={13} /> Ảnh xác nhận tài xế đã nhận hàng hoàn
+                </div>
+                <div>
+                  <a href={resolveMediaUrl(ret.pickupProofUrl)} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
+                    Xem ảnh gốc <ExternalLink size={11} />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {ret.evidenceUrls?.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Ảnh chứng cứ:</span>
@@ -223,7 +334,7 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
       )}
 
       {!mode && (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '4px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '4px', alignItems: 'center' }}>
           {ret.status === 'REQUESTED' && (
             <>
               <Button size="sm" variant="primary" icon={CheckCircle2} onClick={() => openMode('approve')}>
@@ -234,9 +345,33 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
               </Button>
             </>
           )}
-          {ret.status === 'APPROVED' && (
+          {ret.status === 'APPROVED' && isShipperPickup && (
+            <Button size="sm" variant="primary" icon={Truck} onClick={() => openMode('assign-pickup')}>
+              Điều phối shipper thu hồi
+            </Button>
+          )}
+          {ret.status === 'APPROVED' && !isShipperPickup && (
             <Button size="sm" variant="primary" icon={PackageCheck} onClick={() => openMode('receive')}>
               Xác nhận đã nhận hàng trả
+            </Button>
+          )}
+          {ret.status === 'PICKUP_ASSIGNED' && (
+            <>
+              {!ret.pickupStartedAt && (
+                <Button size="sm" variant="outline" icon={Truck} onClick={() => openMode('assign-pickup')}>
+                  Đổi shipper thu hồi
+                </Button>
+              )}
+              <span style={{ fontSize: '12px', color: '#1D4ED8' }}>
+                {ret.pickupStartedAt
+                  ? 'Tài xế đang trên đường đi lấy hàng hoàn từ khách.'
+                  : 'Đang chờ tài xế nhận đơn và chụp ảnh thu hồi trên ứng dụng BeautyShip.'}
+              </span>
+            </>
+          )}
+          {ret.status === 'PICKED_UP' && (
+            <Button size="sm" variant="primary" icon={PackageCheck} onClick={() => openMode('receive')}>
+              Xác nhận kho đã kiểm nhận hàng
             </Button>
           )}
           {ret.status === 'RECEIVED' && (
@@ -261,6 +396,36 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
       {mode && (
         <form onSubmit={handleSubmit} style={{ borderTop: '1px dashed var(--border-subtle)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {error && <AlertBanner type="danger" message={error} />}
+
+          {mode === 'approve' && (
+            <Select
+              label="Hình thức thu hồi hàng hoàn"
+              value={decisionReturnMethod}
+              onChange={(e) => setDecisionReturnMethod(e.target.value)}
+            >
+              <option value="SHIPPER_PICKUP">Shipper đến lấy tận nơi (nội bộ)</option>
+              <option value="SELF_SHIP">Khách tự gửi về cửa hàng BeautyShop</option>
+            </Select>
+          )}
+
+          {mode === 'assign-pickup' && (
+            <Select
+              label="Chọn tài xế thu hồi hàng hoàn *"
+              value={pickupShipperId}
+              onChange={(e) => setPickupShipperId(e.target.value)}
+              disabled={shippersLoading || !shippers.length}
+              required
+            >
+              <option value="" disabled>
+                {shippersLoading ? 'Đang tải danh sách tài xế…' : shippers.length ? 'Chọn tài xế' : 'Không có tài xế khả dụng'}
+              </option>
+              {shippers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.fullName || s.username} · {s.username}{s.phone ? ` · ${s.phone}` : ''}
+                </option>
+              ))}
+            </Select>
+          )}
 
           {(mode === 'receive' || (mode === 'refund' && !isVoucher)) && (
             <Input
@@ -294,19 +459,31 @@ function ReturnRequestCard({ ret, orderDetail, itemMap, isAdmin, onCompleted }) 
           )}
 
           <Input
-            label={mode === 'reject' ? 'Lý do từ chối yêu cầu' : 'Lý do / Ghi chú xác nhận'}
+            label={
+              mode === 'reject'
+                ? 'Lý do từ chối yêu cầu'
+                : mode === 'assign-pickup'
+                ? 'Ghi chú cho tài xế thu hồi (tùy chọn)'
+                : 'Lý do / Ghi chú xác nhận'
+            }
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             maxLength={500}
-            required
+            required={mode !== 'assign-pickup'}
           />
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <Button type="button" size="sm" variant="outline" onClick={() => setMode('')} disabled={busy}>
               Hủy
             </Button>
-            <Button type="submit" size="sm" variant={mode === 'reject' ? 'danger' : 'primary'} loading={busy}>
-              Lưu xác nhận
+            <Button
+              type="submit"
+              size="sm"
+              variant={mode === 'reject' ? 'danger' : 'primary'}
+              loading={busy}
+              disabled={mode === 'assign-pickup' && (shippersLoading || !pickupShipperId)}
+            >
+              {mode === 'assign-pickup' ? 'Phân công thu hồi' : 'Lưu xác nhận'}
             </Button>
           </div>
         </form>

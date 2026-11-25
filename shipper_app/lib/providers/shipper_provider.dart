@@ -6,6 +6,7 @@ import '../core/network/api_client.dart';
 import '../core/storage/storage_service.dart';
 import '../data/models/shipper_account_model.dart';
 import '../data/models/shipper_order_model.dart';
+import '../data/models/shipper_return_model.dart';
 
 class ShipperProvider extends ChangeNotifier {
   int _unreadCount = 0;
@@ -40,6 +41,18 @@ class ShipperProvider extends ChangeNotifier {
     _workProfile = null;
     _isProfileLoading = false;
     _profileError = null;
+    _returns = [];
+    _isReturnsLoading = false;
+    _isReturnsBackgroundLoading = false;
+    _returnsHasMore = false;
+    _returnPage = 0;
+    _returnTotalPages = 0;
+    _returnTotalElements = 0;
+    _returnPageSize = defaultPageSize;
+    _returnsRequest = 0;
+    _returnsError = null;
+    _returnFilter = 'ALL';
+    _returnSearchKeyword = '';
     notifyListeners();
   }
 
@@ -475,5 +488,246 @@ class ShipperProvider extends ChangeNotifier {
       _errorMessage = e.toString();
       return false;
     }
+  }
+
+  List<ShipperReturnModel> _returns = [];
+  bool _isReturnsLoading = false;
+  bool _isReturnsBackgroundLoading = false;
+  bool _returnsHasMore = false;
+  int _returnPage = 0;
+  int _returnTotalPages = 0;
+  int _returnTotalElements = 0;
+  int _returnPageSize = defaultPageSize;
+  int _returnsRequest = 0;
+  String? _returnsError;
+  String _returnFilter = 'ALL';
+  String _returnSearchKeyword = '';
+
+  List<ShipperReturnModel> get returnPickups => _returns;
+  bool get isReturnsLoading => _isReturnsLoading;
+  bool get hasMoreReturns => _returnsHasMore;
+  int get returnCurrentPage => _returnPage;
+  int get returnTotalPages => _returnTotalPages;
+  int get returnTotalElements => _returnTotalElements;
+  int get returnPageSize => _returnPageSize;
+  bool get hasPreviousReturnPage => _returnPage > 0;
+  bool get hasNextReturnPage =>
+      _returnTotalPages > 0 ? (_returnPage + 1 < _returnTotalPages) : _returnsHasMore;
+  String? get returnsError => _returnsError;
+  String get returnFilter => _returnFilter;
+  String get returnSearchKeyword => _returnSearchKeyword;
+  int get activeReturnPickupCount =>
+      _returns.where((r) => r.isPickupAssigned || r.isPickedUp).length;
+
+  Future<void> setReturnFilter(String filter) async {
+    if (_returnFilter == filter) return;
+    _returnFilter = filter;
+    _returnPage = 0;
+    notifyListeners();
+    if (filter == 'RETURNING_TO_SENDER') {
+      return;
+    }
+    await fetchReturnPickups(page: 0);
+  }
+
+  Future<void> setReturnPageSize(int size) async {
+    if (!pageSizeOptions.contains(size) || _returnPageSize == size) return;
+    _returnPageSize = size;
+    _returnPage = 0;
+    notifyListeners();
+    await fetchReturnPickups(page: 0);
+  }
+
+  Future<void> setReturnSearchKeyword(String keyword) async {
+    final normalized = keyword.trim();
+    if (_returnSearchKeyword == normalized) return;
+    _returnSearchKeyword = normalized;
+    _returnPage = 0;
+    notifyListeners();
+    await fetchReturnPickups(page: 0);
+  }
+
+  Future<void> goToReturnPage(int page) async {
+    if (page < 0) return;
+    if (_returnTotalPages > 0 && page >= _returnTotalPages) return;
+    if (page == _returnPage && _returnsError == null) return;
+    await fetchReturnPickups(page: page);
+  }
+
+  Future<void> nextReturnPage() async {
+    if (!hasNextReturnPage) return;
+    await goToReturnPage(_returnPage + 1);
+  }
+
+  Future<void> previousReturnPage() async {
+    if (!hasPreviousReturnPage) return;
+    await goToReturnPage(_returnPage - 1);
+  }
+
+  Future<ShipperReturnModel> fetchReturnDetail(int returnId) async {
+    final data = await _fetchData(ApiConstants.shipperReturnDetail(returnId), {});
+    return ShipperReturnModel.fromJson(data);
+  }
+
+  Future<void> fetchReturnPickups({
+    int? page,
+    bool background = false,
+  }) async {
+    if (background && (_isReturnsLoading || _isReturnsBackgroundLoading)) return;
+    final session = _session;
+    final request = ++_returnsRequest;
+    var targetPage = (page ?? _returnPage) < 0 ? 0 : (page ?? _returnPage);
+    if (background) {
+      _isReturnsBackgroundLoading = true;
+    } else {
+      _returns = [];
+      _returnPage = targetPage;
+      _isReturnsLoading = true;
+      _returnsError = null;
+      notifyListeners();
+    }
+
+    try {
+      final filter = _returnFilter;
+      final keyword = _returnSearchKeyword;
+      final statusParam = (filter == 'ALL' || filter == 'RETURNING_TO_SENDER')
+          ? null
+          : filter;
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final data = await _fetchData(ApiConstants.shipperReturns, {
+          'page': targetPage,
+          'size': _returnPageSize,
+          'status': ?statusParam,
+          if (keyword.isNotEmpty) 'keyword': keyword,
+        });
+        if (session != _session || request != _returnsRequest) return;
+        final rawList = data['content'] as List? ?? const [];
+        final rows = rawList
+            .whereType<Map<String, dynamic>>()
+            .map(ShipperReturnModel.fromJson)
+            .toList();
+        final parsedPage = (data['page'] as num?)?.toInt() ?? targetPage;
+        final parsedTotalElements =
+            (data['totalElements'] as num?)?.toInt() ?? rows.length;
+        final parsedSize = (data['size'] as num?)?.toInt() ?? _returnPageSize;
+        final parsedTotalPages = (data['totalPages'] as num?)?.toInt() ??
+            (parsedTotalElements == 0
+                ? 0
+                : ((parsedTotalElements + parsedSize - 1) ~/ parsedSize));
+        if (rows.isEmpty &&
+            parsedTotalPages > 0 &&
+            targetPage >= parsedTotalPages &&
+            attempt == 0) {
+          targetPage = parsedTotalPages - 1;
+          continue;
+        }
+        final isLast = data['last'] is bool
+            ? data['last'] as bool
+            : (parsedTotalPages == 0 || parsedPage + 1 >= parsedTotalPages);
+        _returns = rows;
+        _returnPage = parsedPage;
+        _returnTotalElements = parsedTotalElements;
+        _returnTotalPages = parsedTotalPages;
+        _returnsHasMore = !isLast;
+        _returnsError = null;
+        break;
+      }
+    } catch (e) {
+      if (!background && session == _session && request == _returnsRequest) {
+        _returnsError = e.toString();
+      }
+    } finally {
+      if (session == _session) {
+        if (background) {
+          _isReturnsBackgroundLoading = false;
+          if (!_isReturnsLoading && request == _returnsRequest) notifyListeners();
+        } else if (request == _returnsRequest) {
+          _isReturnsLoading = false;
+          notifyListeners();
+        }
+      }
+    }
+  }
+
+  Future<void> startReturnPickup(int returnId) async {
+    final session = _session;
+    final response = await ApiClient().patch<Map<String, dynamic>>(
+      ApiConstants.shipperStartReturnPickup(returnId),
+    );
+    if (!response.isSuccess) {
+      throw response.message ?? 'Không thể bắt đầu thu hồi hàng hoàn';
+    }
+    if (session == _session) await fetchReturnPickups();
+  }
+
+  Future<bool> completeReturnPickup({
+    required int returnId,
+    required XFile imageFile,
+    String? notes,
+  }) async {
+    final session = _session;
+    _errorMessage = null;
+
+    try {
+      final map = <String, dynamic>{};
+      if (notes != null && notes.trim().isNotEmpty) {
+        map['notes'] = notes.trim();
+      }
+      if (kIsWeb) {
+        final bytes = await imageFile.readAsBytes();
+        map['proofImage'] = MultipartFile.fromBytes(
+          bytes,
+          filename: imageFile.name,
+        );
+      } else {
+        map['proofImage'] = await MultipartFile.fromFile(
+          imageFile.path,
+          filename: imageFile.name,
+        );
+      }
+
+      final formData = FormData.fromMap(map);
+      final response = await ApiClient().post(
+        ApiConstants.shipperCompleteReturnPickup(returnId),
+        data: formData,
+      );
+
+      if (response.isSuccess) {
+        if (session == _session) await fetchReturnPickups();
+        return true;
+      } else {
+        _errorMessage = response.message ?? 'Xác nhận thu hồi hàng hoàn thất bại';
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  Future<void> reportReturnPickupFailure(int returnId, String reason) async {
+    final session = _session;
+    final response = await ApiClient().post<Map<String, dynamic>>(
+      ApiConstants.shipperFailReturnPickup(returnId),
+      data: {'reason': reason},
+    );
+    if (!response.isSuccess) {
+      throw response.message ?? 'Không thể báo thu hồi thất bại';
+    }
+    if (session == _session) await fetchReturnPickups();
+  }
+
+  Future<void> handoverReturnToWarehouse(int returnId, {String? notes}) async {
+    final session = _session;
+    final response = await ApiClient().post<Map<String, dynamic>>(
+      ApiConstants.shipperHandoverReturn(returnId),
+      data: {
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      },
+    );
+    if (!response.isSuccess) {
+      throw response.message ?? 'Không thể báo bàn giao hàng hoàn về kho';
+    }
+    if (session == _session) await fetchReturnPickups();
   }
 }

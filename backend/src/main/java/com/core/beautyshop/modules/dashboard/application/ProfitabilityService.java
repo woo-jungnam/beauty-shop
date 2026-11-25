@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
 import java.time.*;
 import java.sql.Timestamp;
@@ -14,16 +16,37 @@ import java.util.*;
 public class ProfitabilityService {
  private final JdbcTemplate jdbc;private final OperatingExpenseRepository expenses;
  public record Expense(String reference,String category,String description,BigDecimal amount,Instant incurredAt){}
- public record Report(Instant from,Instant to,BigDecimal deliveredProductNetSales,BigDecimal knownProductCost,Long allocationsMissingCost,Long legacyDeliveriesMissingTime,BigDecimal productGrossProfit,BigDecimal operatingExpenses,BigDecimal supplierPayments,BigDecimal supplierRecoveries,BigDecimal unassignedReceiptRefunds,BigDecimal serviceConsumableCost,String basis){}
+ public record ExpenseCategorySummary(String category,BigDecimal amount,long count){}
+ public record Report(Instant from,Instant to,BigDecimal deliveredProductNetSales,BigDecimal knownProductCost,Long allocationsMissingCost,Long legacyDeliveriesMissingTime,BigDecimal productGrossProfit,BigDecimal operatingExpenses,BigDecimal supplierPayments,BigDecimal supplierRecoveries,BigDecimal unassignedReceiptRefunds,BigDecimal serviceConsumableCost,String basis,List<ExpenseCategorySummary> expenseBreakdown){}
  @Transactional(readOnly=true)public Report report(Instant from,Instant to){
   Instant end=to==null?Instant.now():to,start=from==null?end.minus(Duration.ofDays(30)):from;if(!start.isBefore(end))throw new BusinessException("From must precede to");Timestamp a=Timestamp.from(start),b=Timestamp.from(end);
   BigDecimal net=money("SELECT COALESCE(SUM(GREATEST(o.total_amount-o.shipping_fee-COALESCE((SELECT SUM(r.refund_amount) FROM product_returns r WHERE r.order_id=o.id AND r.status IN ('RECEIVED','REFUNDED')),0),0)),0) FROM orders o WHERE o.is_deleted=false AND o.appointment_id IS NULL AND o.service_package_id IS NULL AND o.status='DELIVERED' AND o.delivered_at>=? AND o.delivered_at<?",a,b);
   BigDecimal cost=money("SELECT COALESCE(SUM((s.quantity-s.returned_quantity)*s.unit_cost_snapshot),0) FROM stock_allocations s JOIN orders o ON o.order_number=s.order_number WHERE o.is_deleted=false AND o.status='DELIVERED' AND o.delivered_at>=? AND o.delivered_at<? AND s.status='DEDUCTED' AND s.unit_cost_snapshot IS NOT NULL",a,b);
   Long missing=jdbc.queryForObject("SELECT COUNT(*) FROM stock_allocations s JOIN orders o ON o.order_number=s.order_number WHERE o.is_deleted=false AND o.status='DELIVERED' AND o.delivered_at>=? AND o.delivered_at<? AND s.quantity>s.returned_quantity AND s.unit_cost_snapshot IS NULL",Long.class,a,b);
   Long legacy=jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE is_deleted=false AND status IN ('DELIVERED','RETURNED') AND appointment_id IS NULL AND service_package_id IS NULL AND delivered_at IS NULL",Long.class);
-  return new Report(start,end,net,cost,missing,legacy,missing==0?net.subtract(cost):null,money("SELECT COALESCE(SUM(amount),0) FROM operating_expenses WHERE is_deleted=false AND incurred_at>=? AND incurred_at<?",a,b),money("SELECT COALESCE(SUM(amount),0) FROM procurement_movements WHERE kind='PAYMENT' AND created_at>=? AND created_at<?",a,b),money("SELECT COALESCE(SUM(amount),0) FROM procurement_movements WHERE kind='SUPPLIER_REFUND' AND created_at>=? AND created_at<?",a,b),money("SELECT COALESCE(SUM(amount),0) FROM payment_resolutions WHERE kind='REFUND' AND created_at>=? AND created_at<?",a,b),money("SELECT COALESCE(SUM(total_cost),0) FROM inventory_consumptions WHERE created_at>=? AND created_at<?",a,b),"Product margin is the current net contribution of the cohort delivered in [from,to); returns are reflected as of now. Shipping and Spa revenue are excluded. Expenses, supplier cash flows and service consumables use their own period timestamps and are separate; they are not a company net-profit calculation. Unknown historical costs are never replaced with current cost.");
+  List<ExpenseCategorySummary> expenseBreakdown=jdbc.queryForList("SELECT category,COALESCE(SUM(amount),0) amount,COUNT(*) total_count FROM operating_expenses WHERE is_deleted=false AND incurred_at>=? AND incurred_at<? GROUP BY category ORDER BY amount DESC,category ASC",a,b)
+   .stream()
+   .map(row->new ExpenseCategorySummary(
+    String.valueOf(row.get("category")),
+    row.get("amount") instanceof BigDecimal bd?bd:row.get("amount") instanceof Number n?BigDecimal.valueOf(n.doubleValue()):BigDecimal.ZERO,
+    row.get("total_count") instanceof Number n?n.longValue():0L))
+   .toList();
+  return new Report(start,end,net,cost,missing,legacy,missing==0?net.subtract(cost):null,money("SELECT COALESCE(SUM(amount),0) FROM operating_expenses WHERE is_deleted=false AND incurred_at>=? AND incurred_at<?",a,b),money("SELECT COALESCE(SUM(amount),0) FROM procurement_movements WHERE kind='PAYMENT' AND created_at>=? AND created_at<?",a,b),money("SELECT COALESCE(SUM(amount),0) FROM procurement_movements WHERE kind='SUPPLIER_REFUND' AND created_at>=? AND created_at<?",a,b),money("SELECT COALESCE(SUM(amount),0) FROM payment_resolutions WHERE kind='REFUND' AND created_at>=? AND created_at<?",a,b),money("SELECT COALESCE(SUM(total_cost),0) FROM inventory_consumptions WHERE created_at>=? AND created_at<?",a,b),"Product margin is the current net contribution of the cohort delivered in [from,to); returns are reflected as of now. Shipping and Spa revenue are excluded. Expenses, supplier cash flows and service consumables use their own period timestamps and are separate; they are not a company net-profit calculation. Unknown historical costs are never replaced with current cost.",expenseBreakdown);
  }
- @Transactional(readOnly=true)public Page<OperatingExpense> list(Pageable p){return expenses.findAll(p);}
+ @Transactional(readOnly=true)public Page<OperatingExpense> list(Pageable p){return list(null,null,null,p);}
+ @Transactional(readOnly=true)public Page<OperatingExpense> list(Instant from,Instant to,String category,Pageable p){
+  if(from!=null&&to!=null&&!from.isBefore(to))throw new BusinessException("From must precede to");
+  String normalizedCategory=(category==null||category.isBlank()||"ALL".equalsIgnoreCase(category.trim()))?null:category.trim().toUpperCase(Locale.ROOT);
+  Specification<OperatingExpense> spec=(root,query,cb)->{
+   List<Predicate> predicates=new ArrayList<>();
+   predicates.add(cb.isFalse(root.get("isDeleted")));
+   if(from!=null)predicates.add(cb.greaterThanOrEqualTo(root.get("incurredAt"),from));
+   if(to!=null)predicates.add(cb.lessThan(root.get("incurredAt"),to));
+   if(normalizedCategory!=null)predicates.add(cb.equal(root.get("category"),normalizedCategory));
+   return cb.and(predicates.toArray(Predicate[]::new));
+  };
+  return expenses.findAll(spec,p);
+ }
  @Transactional public OperatingExpense record(Expense c){
   if(c==null||c.reference()==null||c.reference().isBlank()||c.reference().length()>100||c.category()==null||c.category().isBlank()||c.category().length()>50||c.description()==null||c.description().isBlank()||c.description().length()>500||c.amount()==null||c.amount().signum()<=0||c.amount().stripTrailingZeros().scale()>0||c.incurredAt()==null||c.incurredAt().isAfter(Instant.now().plusSeconds(60)))throw new BusinessException("Expense document, category, description, positive VND amount and incurred time required");
   var prior=expenses.findByReference(c.reference());if(prior.isPresent()){var r=prior.get();if(r.getAmount().compareTo(c.amount())!=0||!r.getCategory().equals(c.category())||!r.getDescription().equals(c.description())||!r.getIncurredAt().equals(c.incurredAt()))throw new BusinessException("Expense reference conflicts");return r;}

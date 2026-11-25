@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/shipper_order_model.dart';
+import '../../data/models/shipper_return_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/shipper_provider.dart';
 import '../storage/shipper_settings_store.dart';
@@ -59,6 +60,9 @@ class ShipperStatusStyle {
   factory ShipperStatusStyle.fromOrder(ShipperOrderModel order) =>
       ShipperStatusStyle.of(order.status, order.deliveryStartedAt);
 
+  factory ShipperStatusStyle.fromReturn(ShipperReturnModel ret) =>
+      ShipperStatusStyle.of(ret.status, ret.pickupStartedAt);
+
   factory ShipperStatusStyle.of(String status, [DateTime? deliveryStartedAt]) {
     return switch (status) {
       'DELIVERED' => const ShipperStatusStyle(
@@ -67,6 +71,34 @@ class ShipperStatusStyle {
         foreground: AppColors.success,
         badgeColor: AppColors.success,
         icon: Icons.check_circle_outline_rounded,
+      ),
+      'PICKUP_ASSIGNED' when deliveryStartedAt != null => const ShipperStatusStyle(
+        label: 'Đang đi thu hồi',
+        background: AppColors.infoLight,
+        foreground: AppColors.info,
+        badgeColor: AppColors.info,
+        icon: Icons.local_shipping_outlined,
+      ),
+      'PICKUP_ASSIGNED' => const ShipperStatusStyle(
+        label: 'Chờ lấy hàng hoàn',
+        background: AppColors.primarySurface,
+        foreground: AppColors.primaryDark,
+        badgeColor: AppColors.primary,
+        icon: Icons.assignment_return_outlined,
+      ),
+      'PICKED_UP' => const ShipperStatusStyle(
+        label: 'Đã lấy · Chờ trả kho',
+        background: AppColors.warningLight,
+        foreground: AppColors.warning,
+        badgeColor: AppColors.warning,
+        icon: Icons.inventory_outlined,
+      ),
+      'RECEIVED' => const ShipperStatusStyle(
+        label: 'Kho đã kiểm nhận',
+        background: AppColors.successLight,
+        foreground: AppColors.success,
+        badgeColor: AppColors.success,
+        icon: Icons.warehouse_outlined,
       ),
       'SHIPPED' when deliveryStartedAt != null => const ShipperStatusStyle(
         label: 'Đang giao',
@@ -251,7 +283,34 @@ Future<void> copyTextWithFeedback(
 Future<String?> showDeliveryFailureDialog(BuildContext context) {
   return showDialog<String>(
     context: context,
-    builder: (_) => const _DeliveryFailureDialog(),
+    builder: (_) => const _DeliveryFailureDialog(
+      title: 'Báo giao thất bại',
+      quickReasons: [
+        'Khách không nghe máy',
+        'Khách hẹn giao lại sau',
+        'Sai hoặc thiếu địa chỉ',
+        'Khách từ chối nhận hàng',
+      ],
+      emptyError: 'Nhập lý do giao thất bại',
+      hintText: 'Nhập lý do không thể giao đơn hàng...',
+    ),
+  );
+}
+
+Future<String?> showReturnPickupFailureDialog(BuildContext context) {
+  return showDialog<String>(
+    context: context,
+    builder: (_) => const _DeliveryFailureDialog(
+      title: 'Báo thu hồi thất bại',
+      quickReasons: [
+        'Khách không nghe máy',
+        'Khách hẹn lấy hàng lại sau',
+        'Hàng không đúng hoặc thiếu sản phẩm',
+        'Khách đổi ý không trả hàng nữa',
+      ],
+      emptyError: 'Nhập lý do thu hồi thất bại',
+      hintText: 'Nhập lý do không thể lấy hàng hoàn...',
+    ),
   );
 }
 
@@ -364,7 +423,17 @@ void showDeliveryProofDialog(BuildContext context, ShipperOrderModel order) {
 }
 
 class _DeliveryFailureDialog extends StatefulWidget {
-  const _DeliveryFailureDialog();
+  const _DeliveryFailureDialog({
+    required this.title,
+    required this.quickReasons,
+    required this.emptyError,
+    required this.hintText,
+  });
+
+  final String title;
+  final List<String> quickReasons;
+  final String emptyError;
+  final String hintText;
 
   @override
   State<_DeliveryFailureDialog> createState() => _DeliveryFailureDialogState();
@@ -373,13 +442,6 @@ class _DeliveryFailureDialog extends StatefulWidget {
 class _DeliveryFailureDialogState extends State<_DeliveryFailureDialog> {
   final _form = GlobalKey<FormState>();
   final _controller = TextEditingController();
-
-  static const _quickReasons = [
-    'Khách không nghe máy',
-    'Khách hẹn giao lại sau',
-    'Sai hoặc thiếu địa chỉ',
-    'Khách từ chối nhận hàng',
-  ];
 
   @override
   void dispose() {
@@ -390,7 +452,7 @@ class _DeliveryFailureDialogState extends State<_DeliveryFailureDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Báo giao thất bại'),
+      title: Text(widget.title),
       content: SingleChildScrollView(
         child: Form(
           key: _form,
@@ -402,7 +464,7 @@ class _DeliveryFailureDialogState extends State<_DeliveryFailureDialog> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  for (final preset in _quickReasons)
+                  for (final preset in widget.quickReasons)
                     ActionChip(
                       label: Text(preset, style: const TextStyle(fontSize: 12)),
                       onPressed: () {
@@ -421,10 +483,10 @@ class _DeliveryFailureDialogState extends State<_DeliveryFailureDialog> {
                 maxLength: 500,
                 maxLines: 3,
                 validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Nhập lý do giao thất bại' : null,
-                decoration: const InputDecoration(
+                    (v == null || v.trim().isEmpty) ? widget.emptyError : null,
+                decoration: InputDecoration(
                   labelText: 'Lý do chi tiết',
-                  hintText: 'Nhập lý do không thể giao đơn hàng...',
+                  hintText: widget.hintText,
                 ),
               ),
             ],

@@ -18,7 +18,11 @@ public class ProfitabilityController {
     @GetMapping("/profitability")public ApiResponse<?> report(@RequestParam(required=false)Instant from,@RequestParam(required=false)Instant to){return ApiResponse.success(service.report(from,to));}
 
     @Operation(summary = "Danh sách chi phí vận hành (Admin)", description = "Tra cứu và phân trang các khoản chi phí mặt bằng, điện nước, nhân sự, tiếp thị")
-    @GetMapping("/expenses")public ApiResponse<?> list(@org.springframework.data.web.PageableDefault(size=20,sort="id",direction=Sort.Direction.DESC)Pageable p){return ApiResponse.success(PageResponse.of(service.list(p)));}
+    @GetMapping("/expenses")public ApiResponse<?> list(
+            @RequestParam(required=false)Instant from,
+            @RequestParam(required=false)Instant to,
+            @RequestParam(required=false)String category,
+            @org.springframework.data.web.PageableDefault(size=20,sort="id",direction=Sort.Direction.DESC)Pageable p){return ApiResponse.success(PageResponse.of(service.list(from,to,category,p)));}
 
     @Operation(summary = "Ghi nhận khoản chi phí vận hành mới (Admin)", description = "Thêm mới một khoản mục chi phí thực tế phát sinh vào hệ thống")
     @PostMapping("/expenses") @PreAuthorize("hasRole('ADMIN')")public ApiResponse<?> expense(@RequestBody ProfitabilityService.Expense c){return ApiResponse.success(service.record(c));}

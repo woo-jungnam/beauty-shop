@@ -56,6 +56,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final accountNumber = TextEditingController();
   final accountName = TextEditingController();
   final List<String> evidenceUrls = [];
+  String returnMethod = 'SHIPPER_PICKUP';
   String refundMethod = 'BANK_TRANSFER';
   String selectedBankBin = '970422';
   bool uploadingEvidence = false;
@@ -203,6 +204,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       const Color(0xFFEFF6FF),
       const Color(0xFF1D4ED8),
     ),
+    'PICKUP_ASSIGNED' => (
+      'Đang điều shipper thu hồi',
+      const Color(0xFFEFF6FF),
+      const Color(0xFF1D4ED8),
+    ),
+    'PICKED_UP' => (
+      'Shipper đã lấy hàng hoàn',
+      const Color(0xFFEEF2FF),
+      const Color(0xFF4338CA),
+    ),
     'RECEIVED' => (
       'Đã nhận hàng trả',
       const Color(0xFFEFF6FF),
@@ -295,6 +306,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       'reason': reason.text.trim(),
       'lines': lines,
       'evidenceUrls': List<String>.from(evidenceUrls),
+      'returnMethod': returnMethod,
       'refundMethod': refundMethod,
       'bankBin': refundMethod == 'BANK_TRANSFER' ? bank['bin'] : null,
       'bankName': refundMethod == 'BANK_TRANSFER' ? bank['name'] : null,
@@ -611,6 +623,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ],
                       Text('Lý do: ${row['reason']}'),
                       Text(
+                        'Thu hồi hàng: ${(row['returnMethod']?.toString() ?? 'SELF_SHIP') == 'SHIPPER_PICKUP' ? 'Shipper đến lấy tại nhà' : 'Khách tự gửi về shop'}',
+                      ),
+                      if (row['pickupShipperName'] != null &&
+                          row['pickupShipperName'].toString().isNotEmpty)
+                        Text(
+                          'Shipper thu hồi: ${row['pickupShipperName']}'
+                          '${row['pickupShipperPhone'] != null && row['pickupShipperPhone'].toString().isNotEmpty ? ' (${row['pickupShipperPhone']})' : ''}',
+                        ),
+                      if (row['handoverRequestedAt'] != null &&
+                          row['handoverRequestedAt'].toString().isNotEmpty)
+                        const Text(
+                          'Shipper đã báo bàn giao về kho',
+                          style: TextStyle(
+                            color: Color(0xFF4338CA),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      if (row['pickupFailureReason'] != null &&
+                          row['pickupFailureReason'].toString().isNotEmpty)
+                        Text(
+                          'Lý do thu hồi chưa thành công: ${row['pickupFailureReason']}',
+                          style: const TextStyle(color: Color(0xFFB45309)),
+                        ),
+                      Text(
                         'Hình thức: ${row['refundMethod'] == 'VOUCHER' ? 'Voucher hoàn tiền' : 'Chuyển khoản ngân hàng'}'
                         '${row['accountNumber'] != null ? ' (${row['bankName'] ?? ''} · ${row['accountNumber']})' : ''}',
                       ),
@@ -683,6 +719,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 ),
                               )
                               .toList(),
+                        ),
+                      ],
+                      if (ImageUtils.resolveUrl(
+                            row['pickupProofUrl']?.toString(),
+                          )
+                          case final pickupProof?) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Ảnh shipper xác nhận lấy hàng hoàn:',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(
+                            pickupProof,
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.broken_image_outlined),
+                          ),
                         ),
                       ],
                     ],
@@ -834,6 +895,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   }).toList(),
                 ),
               ],
+              const SizedBox(height: 12),
+              const Text(
+                'Hình thức gửi trả hàng',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                value: 'SHIPPER_PICKUP',
+                groupValue: returnMethod,
+                title: const Text('Shipper đến lấy hàng hoàn tại nhà'),
+                subtitle: const Text(
+                  'Shipper kiểm tra và chụp ảnh xác nhận tại chỗ',
+                ),
+                onChanged: busy
+                    ? null
+                    : (v) =>
+                        setState(() => returnMethod = v ?? 'SHIPPER_PICKUP'),
+              ),
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                value: 'SELF_SHIP',
+                groupValue: returnMethod,
+                title: const Text('Tự gửi hàng về kho BeautyShop'),
+                onChanged: busy
+                    ? null
+                    : (v) => setState(() => returnMethod = v ?? 'SELF_SHIP'),
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Hình thức nhận hoàn tiền',

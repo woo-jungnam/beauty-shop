@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   User, ShoppingBag, Calendar, Clock, Mail, Phone, Heart, MapPin, Bell,
   Shield, LogOut, LayoutDashboard, ExternalLink, RefreshCw, Ticket, ArrowLeft,
-  ChevronRight, PanelLeftClose, PanelLeftOpen, Sparkles, Percent, Award, Store, Check,
+  ChevronRight, PanelLeftClose, PanelLeftOpen, Sparkles, Percent, Check,
 } from 'lucide-react';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { apiClient } from '../../shared/api/client';
@@ -383,30 +383,6 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
               ))}
 
               <div className="pf-sidebar-divider" />
-
-              <li className="pf-sidebar-nav-item">
-                <button
-                  type="button"
-                  className="pf-sidebar-btn"
-                  data-tooltip="Hệ thống chi nhánh"
-                  onClick={() => alert('Đang mở danh sách hệ thống cửa hàng & Spa BeautyShop')}
-                >
-                  <Store size={18} />
-                  <span className="pf-label">Hệ thống chi nhánh</span>
-                </button>
-              </li>
-
-              <li className="pf-sidebar-nav-item">
-                <button
-                  type="button"
-                  className="pf-sidebar-btn"
-                  data-tooltip="Chính sách bảo hành"
-                  onClick={() => onNavigate('spa-policy')}
-                >
-                  <Award size={18} />
-                  <span className="pf-label">Chính sách cam kết</span>
-                </button>
-              </li>
 
               <li className="pf-sidebar-nav-item">
                 <button

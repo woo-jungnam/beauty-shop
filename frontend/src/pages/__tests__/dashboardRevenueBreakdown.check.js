@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Test normalizeTimeline logic with productRevenue and spaRevenue
 function normalizeTimeline(records, period, range) {
@@ -57,5 +59,24 @@ assert.equal(points[0].productRevenue + points[0].spaRevenue, points[0].revenue)
 assert.equal(points[1].revenue, 12000000);
 assert.equal(points[1].productRevenue, 2000000);
 assert.equal(points[1].spaRevenue, 10000000);
+
+const dashboardSource = fs.readFileSync(
+  path.resolve(import.meta.dirname, '../DashboardPage.jsx'),
+  'utf8'
+);
+for (const status of ['DELIVERY_FAILED', 'RETURNING_TO_SENDER', 'RETURN_TO_SENDER']) {
+  assert.equal(dashboardSource.includes(status), true, `Missing status mapping ${status}`);
+}
+assert.equal(dashboardSource.includes('currentOpenOrders'), true);
+assert.equal(dashboardSource.includes('currentPendingPaymentOrders'), true);
+assert.equal(dashboardSource.includes('unclassifiedRevenue'), true);
+assert.equal(dashboardSource.includes('legacyFinalizedMinutes'), true);
+assert.equal(dashboardSource.includes('với thời gian giao hàng thành công thuộc kỳ đã chọn'), true);
+
+const dashboardCss = fs.readFileSync(
+  path.resolve(import.meta.dirname, '../../app/styles/dashboard-atelier.css'),
+  'utf8'
+);
+assert.equal(dashboardCss.includes('color: #111827;'), true);
 
 console.log('✓ All dashboard revenue breakdown tests passed successfully.');

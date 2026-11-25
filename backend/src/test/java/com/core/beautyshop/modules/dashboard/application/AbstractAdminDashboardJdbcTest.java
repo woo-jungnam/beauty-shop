@@ -45,7 +45,7 @@ abstract class AbstractAdminDashboardJdbcTest {
 
     @Test
     void overviewUsesCashLedgerPaidTimeCustomerRoleAndWholeSkuStock() {
-        jdbc.execute("INSERT INTO orders (id, created_at, paid_at, total_amount, paid_amount, status, payment_status, is_deleted) VALUES (1,'2026-09-30 10:00:00','2026-10-02 10:00:00',100,100,'DELIVERED','PAID',false), (2,'2026-09-30 10:00:00','2026-10-02 11:00:00',80,80,'CANCELLED','REFUND_PENDING',false), (3,'2026-10-02 10:00:00','2026-10-02 10:00:00',0,0,'CONFIRMED','PAID',false), (4,'2026-10-02 10:00:00',NULL,500,0,'PENDING','PENDING',false)");
+        jdbc.execute("INSERT INTO orders (id, created_at, paid_at, total_amount, paid_amount, status, payment_status, is_deleted) VALUES (1,'2026-09-30 10:00:00','2026-10-02 10:00:00',100,100,'DELIVERED','PAID',false), (2,'2026-09-30 10:00:00','2026-10-02 11:00:00',80,80,'CANCELLED','REFUND_PENDING',false), (3,'2026-10-02 10:00:00','2026-10-02 10:00:00',0,0,'CONFIRMED','PAID',false), (4,'2026-10-02 10:00:00',NULL,500,0,'PENDING','PENDING',false), (5,'2026-10-02 10:00:00',NULL,260,0,'CANCELLED','PENDING',false), (6,'2026-09-25 10:00:00',NULL,320,0,'DELIVERY_FAILED','PENDING',false)");
         receipt(1, "2026-10-02 10:00:00", 100, "SEPAY", "in", "SUCCESS");
         receipt(2, "2026-10-02 10:00:00", 40, "SEPAY", "in", "PARTIALLY_PAID");
         receipt(3, "2026-10-02 10:00:00", 60, "COD", "in", "SUCCESS");
@@ -65,7 +65,7 @@ abstract class AbstractAdminDashboardJdbcTest {
         jdbc.execute("UPDATE orders SET order_number='ORD-1' WHERE id=1");
         jdbc.execute("UPDATE payment_transactions SET order_number='ORD-1' WHERE id=1");
         var result = service.overview(Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-04T00:00:00Z"));
-        assertEquals(2, result.totalOrders());
+        assertEquals(3, result.totalOrders());
         assertEquals(3, result.paidOrders());
         assertMoney("60", result.averageOrderValue());
         assertMoney("310", result.revenue());
@@ -77,7 +77,12 @@ abstract class AbstractAdminDashboardJdbcTest {
         assertEquals(1, result.activeCustomers());
         assertEquals(1, result.lowStockItems());
         assertMoney("16", result.inventoryValue());
+        // Cancelled unpaid order (#5) must NOT be counted as awaiting payment
         assertEquals(1, result.pendingPaymentOrders());
+        assertEquals(2, result.openOrders());
+        assertEquals(3, result.currentOpenOrders());
+        assertEquals(2, result.currentPendingPaymentOrders());
+        assertMoney("210", result.unclassifiedRevenue());
         assertEquals(3, result.productPaidOrders());
         assertEquals(0, result.spaPaidOrders());
         assertMoney("100", result.productRevenue());

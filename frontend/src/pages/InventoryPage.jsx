@@ -91,20 +91,19 @@ const renderExpirationBadge = (expDate) => {
       <div style={{ textAlign: 'center' }}>
         <span
           style={{
-            background: '#FEE2E2',
-            color: '#B91C1C',
-            border: '1px solid #FCA5A5',
-            borderRadius: '4px',
-            padding: '2px 6px',
-            fontSize: '11px',
-            fontWeight: 700,
+            background: 'transparent',
+            color: '#111827',
+            border: 'none',
+            padding: 0,
+            fontSize: '12px',
+            fontWeight: 600,
             display: 'inline-block'
           }}
           title={`Đã hết hạn vào ngày ${formatDate(expDate)}`}
         >
           Hết hạn ({Math.abs(daysLeft)}d trước)
         </span>
-        <div style={{ fontSize: '10.5px', color: '#B91C1C', marginTop: '2px' }}>
+        <div style={{ fontSize: '11px', color: '#111827', marginTop: '2px' }}>
           {formatDate(expDate)}
         </div>
       </div>
@@ -115,20 +114,19 @@ const renderExpirationBadge = (expDate) => {
       <div style={{ textAlign: 'center' }}>
         <span
           style={{
-            background: '#FEF3C7',
-            color: '#B45309',
-            border: '1px solid #FDE68A',
-            borderRadius: '4px',
-            padding: '2px 6px',
-            fontSize: '11px',
-            fontWeight: 700,
+            background: 'transparent',
+            color: '#111827',
+            border: 'none',
+            padding: 0,
+            fontSize: '12px',
+            fontWeight: 600,
             display: 'inline-block'
           }}
           title={`Hết hạn vào ngày ${formatDate(expDate)}`}
         >
           Cận hạn (còn {daysLeft}d)
         </span>
-        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
           HSD: {formatDate(expDate)}
         </div>
       </div>
@@ -891,17 +889,16 @@ export const InventoryPage = () => {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
-                      background: '#FEE2E2',
-                      color: '#B91C1C',
-                      border: '1px solid #FECACA',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      fontSize: '10.5px',
-                      fontWeight: 700
+                      background: 'transparent',
+                      color: '#111827',
+                      border: 'none',
+                      padding: 0,
+                      fontSize: '11.5px',
+                      fontWeight: 600
                     }}
                     title={row.blockReason || 'Lô đang bị khóa luân chuyển'}
                   >
-                    <Lock size={10} /> ĐÃ KHÓA: {row.blockReason || 'Ngừng luân chuyển'}
+                    <Lock size={11} /> ĐÃ KHÓA: {row.blockReason || 'Ngừng luân chuyển'}
                   </span>
                 </div>
               )}
@@ -918,11 +915,10 @@ export const InventoryPage = () => {
             fontWeight: 700,
             fontSize: '12px',
             fontFamily: 'var(--font-mono)',
-            background: 'var(--bg-surface-subtle, #f6f3fb)',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            border: '1px solid var(--border-subtle, #eee9f4)',
-            color: 'var(--text-main)'
+            background: 'transparent',
+            padding: 0,
+            border: 'none',
+            color: '#111827'
           }}>
             {row.batchCode ? row.batchCode : 'Mặc định'}
           </code>
@@ -939,7 +935,6 @@ export const InventoryPage = () => {
       header: 'Tồn kho phân bổ',
       accessor: (row) => {
         const available = Math.max(0, (row.quantity || 0) - (row.reservedQuantity || 0));
-        const isOut = available <= 0;
         const isBelowMin = row.minQuantity && available <= row.minQuantity;
 
         return (
@@ -948,7 +943,7 @@ export const InventoryPage = () => {
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Khả dụng:</span>
               <strong style={{
                 fontSize: '13.5px',
-                color: isOut ? 'var(--color-danger-700, #b53d59)' : 'var(--color-success-700, #16766b)',
+                color: '#111827',
                 fontVariantNumeric: 'tabular-nums'
               }}>
                 {formatNumber(available)}
@@ -957,11 +952,11 @@ export const InventoryPage = () => {
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
               Tổng tồn: {formatNumber(row.quantity || 0)}
               {row.reservedQuantity > 0 && (
-                <span style={{ color: '#D97706', fontWeight: 600 }}> · Giữ: {row.reservedQuantity}</span>
+                <span style={{ color: '#111827', fontWeight: 600 }}> · Giữ: {row.reservedQuantity}</span>
               )}
             </div>
             {isBelowMin && (
-              <div style={{ fontSize: '10.5px', color: '#B45309', fontWeight: 600, marginTop: '2px' }}>
+              <div style={{ fontSize: '10.5px', color: '#111827', fontWeight: 600, marginTop: '2px' }}>
                 Chạm mức min ({row.minQuantity})
               </div>
             )}

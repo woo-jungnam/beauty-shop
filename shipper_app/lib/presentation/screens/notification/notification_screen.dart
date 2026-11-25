@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/shipper_formatters.dart';
 import '../../../providers/shipper_provider.dart';
 import '../delivery/shipper_order_detail_screen.dart';
+import '../returns/shipper_return_detail_screen.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -16,6 +17,9 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   static final RegExp _orderTargetPattern = RegExp(
     r'^/api/v1/shipper/orders/(\d+)$',
+  );
+  static final RegExp _returnTargetPattern = RegExp(
+    r'^/api/v1/shipper/returns/(\d+)$',
   );
 
   int _page = 0;
@@ -108,8 +112,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
         await _markReadInMemory(id);
       }
       final target = notification['target']?.toString().trim() ?? '';
-      final match = _orderTargetPattern.firstMatch(target);
-      final orderId = match != null ? int.tryParse(match.group(1)!) : null;
+      final orderMatch = _orderTargetPattern.firstMatch(target);
+      final orderId = orderMatch != null ? int.tryParse(orderMatch.group(1)!) : null;
+      final returnMatch = _returnTargetPattern.firstMatch(target);
+      final returnId = returnMatch != null ? int.tryParse(returnMatch.group(1)!) : null;
       if (orderId != null && mounted) {
         final order = await provider.fetchOrderDetail(orderId);
         if (!mounted) return;
@@ -118,6 +124,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
             builder: (_) => ShipperOrderDetailScreen(
               order: order,
               enableDeliveryActions: true,
+            ),
+          ),
+        );
+      } else if (returnId != null && mounted) {
+        final ret = await provider.fetchReturnDetail(returnId);
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ShipperReturnDetailScreen(
+              returnRequest: ret,
+              enableActions: true,
             ),
           ),
         );
@@ -257,11 +274,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final unread = row['readAt'] == null;
     final id = row['id'] as int?;
     final target = row['target']?.toString().trim() ?? '';
-    final hasOrderLink = _orderTargetPattern.hasMatch(target);
+    final hasOrderLink =
+        _orderTargetPattern.hasMatch(target) ||
+        _returnTargetPattern.hasMatch(target);
     final createdAt = DateTime.tryParse('${row['createdAt']}');
     final iconData = switch (row['type']) {
       'SHIPPER_ASSIGNMENT' => Icons.local_shipping_outlined,
-      'SHIPPER_RETURN_REQUEST' => Icons.assignment_return_outlined,
+      'SHIPPER_RETURN_REQUEST' ||
+      'SHIPPER_RETURN_PICKUP' => Icons.assignment_return_outlined,
       _ => Icons.notifications_outlined,
     };
 

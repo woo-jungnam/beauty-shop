@@ -2,11 +2,14 @@ package com.core.beautyshop.modules.order.application.service;
 
 import com.core.beautyshop.modules.order.domain.Order;
 import com.core.beautyshop.modules.order.domain.OrderRepository;
+import com.core.beautyshop.modules.order.domain.ProductReturn;
+import com.core.beautyshop.modules.order.domain.ProductReturnRepository;
 import com.core.beautyshop.modules.order.domain.enums.OrderStatus;
 import com.core.beautyshop.modules.payment.api.PaymentFacade;
 import com.core.beautyshop.modules.payment.api.dto.CodSettlementTransactionDto;
+import com.core.beautyshop.shared.domain.enums.PaymentMethod;
 import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,16 +22,33 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-/** Aggregates COD reconciliation metrics, shipper debt rollups, and settlement history. */
+/** Aggregates COD reconciliation metrics, shipper return-custody debt rollups, and settlement history. */
 @Service
-@RequiredArgsConstructor
 public class OrderReconciliationService {
 
     private final OrderRepository orderRepository;
     private final PaymentFacade paymentFacade;
+    private final ProductReturnRepository productReturnRepository;
+
+    public OrderReconciliationService(OrderRepository orderRepository, PaymentFacade paymentFacade) {
+        this(orderRepository, paymentFacade, null);
+    }
+
+    @Autowired
+    public OrderReconciliationService(
+            OrderRepository orderRepository,
+            PaymentFacade paymentFacade,
+            ProductReturnRepository productReturnRepository) {
+        this.orderRepository = orderRepository;
+        this.paymentFacade = paymentFacade;
+        this.productReturnRepository = productReturnRepository;
+    }
 
     public record ShipperReconciliationSummary(
             String channelKey,
@@ -42,7 +62,10 @@ public class OrderReconciliationService {
             BigDecimal collectedAmount,
             BigDecimal remittedAmount,
             BigDecimal pendingAmount,
-            BigDecimal inTransitAmount
+            BigDecimal inTransitAmount,
+            long pendingPickupReturnsCount,
+            long inCustodyReturnsCount,
+            BigDecimal inCustodyReturnAmount
     ) {}
 
     public record OrderReconciliationSummary(
@@ -55,7 +78,12 @@ public class OrderReconciliationService {
             BigDecimal shipperPendingCodAmount,
             BigDecimal carrierPendingCodAmount,
             long attentionOrdersCount,
-            List<ShipperReconciliationSummary> byShipper
+            List<ShipperReconciliationSummary> byShipper,
+            long pendingPickupReturnsCount,
+            long inCustodyReturnsCount,
+            BigDecimal inCustodyReturnValue,
+            long awaitingRefundReturnsCount,
+            BigDecimal awaitingRefundReturnAmount
     ) {}
 
     public record CodSettlementRecord(
@@ -77,7 +105,14 @@ public class OrderReconciliationService {
         Specification<Order> codSpec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isFalse(root.get("isDeleted")));
-            predicates.add(OrderReconciliationPredicates.codReconciliationMatches(root, cb, "ALL"));
+            predicates.add(cb.or(
+                    OrderReconciliationPredicates.codReconciliationMatches(root, cb, "ALL"),
+                    cb.and(
+                            cb.isNull(root.get("servicePackageId")),
+                            cb.isNull(root.get("appointmentId")),
+                            cb.equal(root.get("status"), OrderStatus.RETURNING_TO_SENDER)
+                    )
+            ));
             if (from != null) predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));
             if (to != null) predicates.add(cb.lessThan(root.get("createdAt"), to));
             if (shipperId != null) {
@@ -114,9 +149,18 @@ public class OrderReconciliationService {
         BigDecimal shipperPendingCodAmount = BigDecimal.ZERO;
         BigDecimal carrierPendingCodAmount = BigDecimal.ZERO;
 
+        long pendingPickupReturnsCount = 0;
+        long inCustodyReturnsCount = 0;
+        BigDecimal inCustodyReturnValue = BigDecimal.ZERO;
+        long awaitingRefundReturnsCount = 0;
+        BigDecimal awaitingRefundReturnAmount = BigDecimal.ZERO;
+
         Map<String, ChannelAccumulator> channelMap = new LinkedHashMap<>();
 
         for (Order order : codOrders) {
+            boolean isPhysicalCod = order.getPaymentMethod() == PaymentMethod.COD
+                    && order.getServicePackageId() == null
+                    && order.getAppointmentId() == null;
             boolean isShipperChannel = order.getShipperId() != null;
             String key = isShipperChannel
                     ? "SHIPPER-" + order.getShipperId()
@@ -127,6 +171,18 @@ public class OrderReconciliationService {
 
             ChannelAccumulator acc = channelMap.computeIfAbsent(key, ignored ->
                     new ChannelAccumulator(key, order.getShipperId(), !isShipperChannel, label, order.getShipperPhone()));
+
+            if (order.getStatus() == OrderStatus.RETURNING_TO_SENDER) {
+                BigDecimal parcelVal = nonNeg(order.getTotalAmount());
+                inCustodyReturnsCount++;
+                inCustodyReturnValue = inCustodyReturnValue.add(parcelVal);
+                acc.inCustodyReturnsCount++;
+                acc.inCustodyReturnAmount = acc.inCustodyReturnAmount.add(parcelVal);
+            }
+
+            if (!isPhysicalCod) {
+                continue;
+            }
 
             if (order.getStatus() == OrderStatus.SHIPPED
                     || order.getStatus() == OrderStatus.DELIVERY_FAILED
@@ -167,10 +223,60 @@ public class OrderReconciliationService {
             }
         }
 
+        if (productReturnRepository != null) {
+            List<ProductReturn> activeReturns = productReturnRepository.findByStatusIn(
+                    List.of("APPROVED", "PICKUP_ASSIGNED", "PICKED_UP", "RECEIVED"));
+            if (activeReturns != null && !activeReturns.isEmpty()) {
+                Set<Long> returnOrderIds = activeReturns.stream()
+                        .map(ProductReturn::getOrderId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+                Map<Long, Order> orderById = returnOrderIds.isEmpty() ? Map.of() :
+                        orderRepository.findAllById(returnOrderIds).stream()
+                                .filter(o -> !Boolean.TRUE.equals(o.getIsDeleted()))
+                                .collect(Collectors.toMap(Order::getId, o -> o, (a, b) -> a));
+
+                for (ProductReturn ret : activeReturns) {
+                    if (Boolean.TRUE.equals(ret.getIsDeleted())) continue;
+                    if (from != null && (ret.getCreatedAt() == null || ret.getCreatedAt().isBefore(from))) continue;
+                    if (to != null && (ret.getCreatedAt() == null || !ret.getCreatedAt().isBefore(to))) continue;
+                    Order order = orderById.get(ret.getOrderId());
+                    if (order == null) continue;
+                    if (shipperId != null && !shipperId.equals(ret.getPickupShipperId())) continue;
+                    if (Boolean.TRUE.equals(carrierOnly) && ret.getPickupShipperId() != null) continue;
+                    if (Boolean.FALSE.equals(carrierOnly) && ret.getPickupShipperId() == null) continue;
+                    if (keyword != null && !keyword.isBlank() && !matchesReturnKeyword(ret, order, keyword)) continue;
+
+                    BigDecimal amount = nonNeg(ret.getRefundAmount());
+                    if ("APPROVED".equals(ret.getStatus()) && ProductReturnService.RETURN_METHOD_SHIPPER_PICKUP.equals(ret.getReturnMethod())) {
+                        pendingPickupReturnsCount++;
+                    } else if ("PICKUP_ASSIGNED".equals(ret.getStatus())) {
+                        pendingPickupReturnsCount++;
+                        if (ret.getPickupShipperId() != null) {
+                            ChannelAccumulator acc = shipperAccumulator(channelMap, ret);
+                            acc.pendingPickupReturnsCount++;
+                        }
+                    } else if ("PICKED_UP".equals(ret.getStatus())) {
+                        inCustodyReturnsCount++;
+                        inCustodyReturnValue = inCustodyReturnValue.add(amount);
+                        if (ret.getPickupShipperId() != null) {
+                            ChannelAccumulator acc = shipperAccumulator(channelMap, ret);
+                            acc.inCustodyReturnsCount++;
+                            acc.inCustodyReturnAmount = acc.inCustodyReturnAmount.add(amount);
+                        }
+                    } else if ("RECEIVED".equals(ret.getStatus())) {
+                        awaitingRefundReturnsCount++;
+                        awaitingRefundReturnAmount = awaitingRefundReturnAmount.add(amount);
+                    }
+                }
+            }
+        }
+
         List<ShipperReconciliationSummary> byShipper = channelMap.values().stream()
                 .map(ChannelAccumulator::toSummary)
                 .sorted(Comparator
                         .comparing(ShipperReconciliationSummary::pendingAmount).reversed()
+                        .thenComparing(ShipperReconciliationSummary::inCustodyReturnAmount, Comparator.reverseOrder())
                         .thenComparing(ShipperReconciliationSummary::inTransitAmount, Comparator.reverseOrder())
                         .thenComparing(ShipperReconciliationSummary::remittedAmount, Comparator.reverseOrder()))
                 .toList();
@@ -185,8 +291,36 @@ public class OrderReconciliationService {
                 shipperPendingCodAmount,
                 carrierPendingCodAmount,
                 attentionCount,
-                byShipper
+                byShipper,
+                pendingPickupReturnsCount,
+                inCustodyReturnsCount,
+                inCustodyReturnValue,
+                awaitingRefundReturnsCount,
+                awaitingRefundReturnAmount
         );
+    }
+
+    private static ChannelAccumulator shipperAccumulator(Map<String, ChannelAccumulator> channelMap, ProductReturn ret) {
+        String key = "SHIPPER-" + ret.getPickupShipperId();
+        String label = !isBlank(ret.getPickupShipperName())
+                ? ret.getPickupShipperName().trim()
+                : "Tài xế #" + ret.getPickupShipperId();
+        return channelMap.computeIfAbsent(key, ignored ->
+                new ChannelAccumulator(key, ret.getPickupShipperId(), false, label, ret.getPickupShipperPhone()));
+    }
+
+    private static boolean matchesReturnKeyword(ProductReturn ret, Order order, String keyword) {
+        String q = keyword.trim().toLowerCase(Locale.ROOT);
+        return containsLower(order.getOrderNumber(), q)
+                || containsLower(order.getCustomerName(), q)
+                || containsLower(order.getCustomerPhone(), q)
+                || containsLower(ret.getPickupShipperName(), q)
+                || containsLower(ret.getPickupShipperPhone(), q)
+                || containsLower(order.getTrackingCode(), q);
+    }
+
+    private static boolean containsLower(String value, String q) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(q);
     }
 
     @Transactional(readOnly = true)
@@ -242,6 +376,9 @@ public class OrderReconciliationService {
         BigDecimal remittedAmount = BigDecimal.ZERO;
         BigDecimal pendingAmount = BigDecimal.ZERO;
         BigDecimal inTransitAmount = BigDecimal.ZERO;
+        long pendingPickupReturnsCount;
+        long inCustodyReturnsCount;
+        BigDecimal inCustodyReturnAmount = BigDecimal.ZERO;
 
         ChannelAccumulator(String channelKey, Long shipperId, boolean carrierChannel, String label, String phone) {
             this.channelKey = channelKey;
@@ -264,9 +401,11 @@ public class OrderReconciliationService {
                     collectedAmount,
                     remittedAmount,
                     pendingAmount,
-                    inTransitAmount
+                    inTransitAmount,
+                    pendingPickupReturnsCount,
+                    inCustodyReturnsCount,
+                    inCustodyReturnAmount
             );
         }
     }
 }
-

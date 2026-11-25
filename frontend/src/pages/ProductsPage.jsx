@@ -1274,12 +1274,12 @@ export const ProductsPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 650, color: 'var(--text-main)', fontSize: '13.5px', lineHeight: 1.35 }}>{row.name}</span>
             {row.isFeatured && (
-              <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#D97706', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
+              <span style={{ fontSize: '11px', color: '#111827', border: '1px solid #D1D5DB', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
                 NỔI BẬT
               </span>
             )}
             {(row.onSale || (row.discountPrice != null && Number(row.discountPrice) < Number(row.price))) && (
-              <span style={{ fontSize: '10px', background: '#FEE2E2', color: '#DC2626', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
+              <span style={{ fontSize: '11px', color: '#111827', border: '1px solid #D1D5DB', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
                 FLASH SALE
               </span>
             )}
@@ -1312,13 +1312,13 @@ export const ProductsPage = () => {
         if (min === undefined || min === null) return '-';
         if (max && Number(max) > Number(min)) {
           return (
-            <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--color-accent-700, #6040ce)' }}>
+            <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#111827' }}>
               {formatCurrency(min)} - {formatCurrency(max)}
             </span>
           );
         }
         return (
-          <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--color-accent-700, #6040ce)' }}>
+          <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#111827' }}>
             {formatCurrency(min)}
           </span>
         );
@@ -1336,12 +1336,12 @@ export const ProductsPage = () => {
             type="button"
             onClick={(e) => { e.stopPropagation(); handleOpenVariants(row); }}
             style={{
-              background: isOut ? '#FEE2E2' : 'var(--color-success-50, #edfaf5)',
-              color: isOut ? 'var(--color-danger-700, #b53d59)' : 'var(--color-success-700, #16766b)',
-              border: `1px solid ${isOut ? '#FCA5A5' : 'var(--color-success-100, #d6f3eb)'}`,
+              background: 'transparent',
+              color: '#111827',
+              border: '1px solid #D1D5DB',
               padding: '3px 8px',
               borderRadius: '6px',
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: '12px',
               cursor: 'pointer',
               display: 'inline-flex',
@@ -1545,26 +1545,16 @@ export const ProductsPage = () => {
             alignItems: 'center',
             gap: '6px',
             padding: '4px 10px',
-            borderRadius: '16px',
-            border: row.isActive ? '1px solid #A7F3D0' : '1px solid #D1D5DB',
-            backgroundColor: row.isActive ? '#ECFDF5' : '#F3F4F6',
-            color: row.isActive ? '#065F46' : '#6B7280',
+            borderRadius: '6px',
+            border: '1px solid #E5E7EB',
+            backgroundColor: 'transparent',
+            color: '#111827',
             fontSize: '12px',
             fontWeight: 600,
             cursor: togglingBannerId === row.id ? 'wait' : 'pointer',
             transition: 'all 0.15s ease',
           }}
         >
-          <span
-            style={{
-              display: 'inline-block',
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: row.isActive ? '#10B981' : '#9CA3AF',
-              boxShadow: row.isActive ? '0 0 0 2px rgba(16, 185, 129, 0.25)' : 'none',
-            }}
-          />
           {togglingBannerId === row.id
             ? 'Đang đổi...'
             : row.isActive
@@ -2454,7 +2444,7 @@ export const ProductsPage = () => {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           {hasDiscount ? (
-                            <span style={{ fontWeight: 750, color: 'var(--color-danger-700, #b53d59)', fontVariantNumeric: 'tabular-nums', fontSize: '13px' }}>
+                            <span style={{ fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums', fontSize: '13px' }}>
                               {formatCurrency(v.discountPrice)}
                             </span>
                           ) : (
@@ -2463,13 +2453,10 @@ export const ProductsPage = () => {
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <span style={{
-                            fontWeight: 700,
-                            fontSize: '12px',
-                            color: inStock ? 'var(--color-success-700, #16766b)' : 'var(--color-danger-700, #b53d59)',
-                            backgroundColor: inStock ? 'var(--color-success-50, #edfaf5)' : '#FEE2E2',
-                            border: `1px solid ${inStock ? 'var(--color-success-100, #d6f3eb)' : '#FCA5A5'}`,
-                            padding: '3px 8px',
-                            borderRadius: '6px',
+                            fontWeight: 600,
+                            fontSize: '12.5px',
+                            color: '#111827',
+                            backgroundColor: 'transparent',
                             fontVariantNumeric: 'tabular-nums',
                             display: 'inline-block'
                           }}>
@@ -2635,13 +2622,10 @@ export const ProductsPage = () => {
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <span style={{
-                            fontWeight: 700,
+                            fontWeight: 600,
                             fontSize: '12.5px',
-                            color: inStock ? 'var(--color-success-700, #16766b)' : 'var(--color-danger-700, #b53d59)',
-                            backgroundColor: inStock ? 'var(--color-success-50, #edfaf5)' : '#FEE2E2',
-                            border: `1px solid ${inStock ? 'var(--color-success-100, #d6f3eb)' : '#FCA5A5'}`,
-                            padding: '3px 10px',
-                            borderRadius: '6px',
+                            color: '#111827',
+                            backgroundColor: 'transparent',
                             fontVariantNumeric: 'tabular-nums',
                             display: 'inline-block'
                           }}>
