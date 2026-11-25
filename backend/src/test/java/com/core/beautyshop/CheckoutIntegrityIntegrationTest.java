@@ -809,4 +809,68 @@ class CheckoutIntegrityIntegrationTest {
         var notifications = asUser(ownerId, () -> customerNotificationService.mine(0, 20).getContent());
         assertTrue(notifications.stream().anyMatch(n -> n.title().contains("Voucher hoàn tiền")));
     }
+
+    @Test void adminOrderSearchSummarizesAndFiltersPerOrderReturns() {
+        var fixture = fixture(5);
+        tx(() -> {
+            var cart = carts.findBySessionId(fixture.session()).orElseThrow();
+            cart.getItems().getFirst().setQuantity(2);
+            return true;
+        });
+        var withReturn = service.checkout(null, request(fixture, PaymentMethod.COD));
+        status(withReturn.getId(), OrderStatus.PROCESSING);
+        status(withReturn.getId(), OrderStatus.SHIPPED);
+        status(withReturn.getId(), OrderStatus.DELIVERED);
+        asAdmin(() -> {
+            codSettlements.confirm(withReturn.getId(), new OrderCodSettlementService.Settlement(withReturn.getTotalAmount(), "cod-sum-" + UUID.randomUUID(), "Carrier settled COD"));
+            return true;
+        });
+
+        var cleanFixture = fixture(5);
+        var cleanOrder = service.checkout(null, request(cleanFixture, PaymentMethod.COD));
+        var req = new ProductReturnService.Request(
+                "Damaged seal",
+                List.of(new ProductReturnService.Line(withReturn.getItems().getFirst().getId(), 1)),
+                List.of("https://example.test/damage.jpg")
+        );
+        var createdReturn = productReturns.request(withReturn.getId(), fixture.session(), "admin-sum-" + UUID.randomUUID(), req);
+
+        var filtered = asAdmin(() -> service.searchAdminOrders(
+                new AdminOrderFilter(withReturn.getOrderNumber(), null, null, null, null, "PRODUCT", true),
+                org.springframework.data.domain.PageRequest.of(0, 20)
+        ));
+        assertEquals(1, filtered.getTotalElements());
+        OrderResponse summaryRow = filtered.getContent().getFirst();
+        assertEquals(withReturn.getId(), summaryRow.getId());
+        assertEquals(1, summaryRow.getReturnRequestCount());
+        assertEquals(1, summaryRow.getActiveReturnCount());
+        assertEquals("REQUESTED", summaryRow.getLatestReturnStatus());
+
+        var cleanFiltered = asAdmin(() -> service.searchAdminOrders(
+                new AdminOrderFilter(cleanOrder.getOrderNumber(), null, null, null, null, "PRODUCT", true),
+                org.springframework.data.domain.PageRequest.of(0, 20)
+        ));
+        assertEquals(0, cleanFiltered.getTotalElements());
+
+        var detail = asAdmin(() -> service.getAdminOrderById(withReturn.getId()));
+        assertEquals(1, detail.getReturnRequestCount());
+        assertEquals(1, detail.getActiveReturnCount());
+        assertEquals("REQUESTED", detail.getLatestReturnStatus());
+
+        var orderReturns = asAdmin(() -> productReturns.adminOrderReturns(withReturn.getId()));
+        assertEquals(1, orderReturns.size());
+        assertEquals(createdReturn.id(), orderReturns.getFirst().id());
+
+        productReturns.decide(createdReturn.id(), new ProductReturnService.Decision(false, "Rejected for filter check"));
+        var afterReject = asAdmin(() -> service.searchAdminOrders(
+                new AdminOrderFilter(withReturn.getOrderNumber(), null, null, null, null, "PRODUCT", true),
+                org.springframework.data.domain.PageRequest.of(0, 20)
+        ));
+        assertEquals(0, afterReject.getTotalElements());
+
+        var detailAfterReject = asAdmin(() -> service.getAdminOrderById(withReturn.getId()));
+        assertEquals(1, detailAfterReject.getReturnRequestCount());
+        assertEquals(0, detailAfterReject.getActiveReturnCount());
+        assertEquals("REJECTED", detailAfterReject.getLatestReturnStatus());
+    }
 }

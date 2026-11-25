@@ -94,6 +94,26 @@ public class ProductReturnService {
     @Transactional(readOnly=true)
     public List<View> customerList(Long orderId,String session) { owned(orders.findById(orderId).orElseThrow(()->new ResourceNotFoundException("Order not found")),session);return returns.findByOrderIdOrderByIdDesc(orderId).stream().map(this::view).toList(); }
     @Transactional(readOnly=true)
+    public List<View> adminOrderReturns(Long orderId) { orders.findById(orderId).orElseThrow(()->new ResourceNotFoundException("Order not found"));return returns.findByOrderIdOrderByIdDesc(orderId).stream().map(this::view).toList(); }
+    public record OrderReturnSummary(int totalCount, int activeCount, String latestStatus) {}
+    @Transactional(readOnly=true)
+    public java.util.Map<Long, OrderReturnSummary> summarizeByOrderIds(java.util.Collection<Long> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) return java.util.Map.of();
+        java.util.Set<String> activeStatuses = java.util.Set.of("REQUESTED", "APPROVED", "RECEIVED");
+        java.util.Map<Long, java.util.List<ProductReturn>> grouped = new java.util.LinkedHashMap<>();
+        for (ProductReturn r : returns.findByOrderIdInOrderByIdDesc(orderIds)) {
+            grouped.computeIfAbsent(r.getOrderId(), k -> new java.util.ArrayList<>()).add(r);
+        }
+        java.util.Map<Long, OrderReturnSummary> result = new java.util.LinkedHashMap<>();
+        for (var entry : grouped.entrySet()) {
+            java.util.List<ProductReturn> items = entry.getValue();
+            int activeCount = (int) items.stream().filter(r -> activeStatuses.contains(r.getStatus())).count();
+            String latestStatus = items.isEmpty() ? null : items.get(0).getStatus();
+            result.put(entry.getKey(), new OrderReturnSummary(items.size(), activeCount, latestStatus));
+        }
+        return result;
+    }
+    @Transactional(readOnly=true)
     public Page<View> list(Pageable paging) { return returns.findAll(paging).map(this::view); }
 
     @Transactional

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'shipper_settings_store.dart';
+
 typedef SessionTokens = ({String access, String refresh, String server});
 
 class StorageService {
@@ -31,6 +33,7 @@ class StorageService {
       );
     }
     await _prefs?.remove('shipper_access_token');
+    ShipperSettingsStore.instance.reload();
   }
 
   static Future<void> setTokens(
@@ -70,6 +73,24 @@ class StorageService {
   static Future<void> setBaseUrl(String url) async {
     await _prefs?.setString(_keyBaseUrl, url);
   }
+
+  static bool? getBool(String key) => _prefs?.getBool(key);
+  static Future<void> setBool(String key, bool value) async =>
+      await _prefs?.setBool(key, value);
+
+  static int? getInt(String key) => _prefs?.getInt(key);
+  static Future<void> setInt(String key, int value) async =>
+      await _prefs?.setInt(key, value);
+
+  static double? getDouble(String key) => _prefs?.getDouble(key);
+  static Future<void> setDouble(String key, double value) async =>
+      await _prefs?.setDouble(key, value);
+
+  static String? getString(String key) => _prefs?.getString(key);
+  static Future<void> setString(String key, String value) async =>
+      await _prefs?.setString(key, value);
+
+  static Future<void> removeKey(String key) async => await _prefs?.remove(key);
 
   static Future<void> clearAuth() async {
     sessionVersion++;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:beautyshop_shipper/core/storage/shipper_settings_store.dart';
 import 'package:beautyshop_shipper/core/storage/storage_service.dart';
 import 'package:beautyshop_shipper/core/theme/app_colors.dart';
 import 'package:beautyshop_shipper/presentation/screens/auth/login_screen.dart';
@@ -119,11 +120,92 @@ class ShipperApp extends StatelessWidget {
                 cardTheme: CardThemeData(
                   color: AppColors.card,
                   elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
+                  margin: const EdgeInsets.only(bottom: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(
+                      ShipperLayout.cardRadius,
+                    ),
                     side: const BorderSide(color: AppColors.border),
                   ),
+                ),
+                inputDecorationTheme: InputDecorationTheme(
+                  filled: true,
+                  fillColor: AppColors.background,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      ShipperLayout.innerRadius,
+                    ),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      ShipperLayout.innerRadius,
+                    ),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      ShipperLayout.innerRadius,
+                    ),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+                filledButtonTheme: FilledButtonThemeData(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        ShipperLayout.innerRadius,
+                      ),
+                    ),
+                  ),
+                ),
+                elevatedButtonTheme: ElevatedButtonThemeData(
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 46),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        ShipperLayout.innerRadius,
+                      ),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+                outlinedButtonTheme: OutlinedButtonThemeData(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        ShipperLayout.innerRadius,
+                      ),
+                    ),
+                  ),
+                ),
+                dialogTheme: DialogThemeData(
+                  backgroundColor: AppColors.card,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                dividerTheme: const DividerThemeData(
+                  color: AppColors.border,
+                  thickness: 1,
                 ),
                 navigationBarTheme: const NavigationBarThemeData(
                   backgroundColor: AppColors.card,
@@ -143,6 +225,24 @@ class ShipperApp extends StatelessWidget {
               home: auth.isAuthenticated
                   ? const ShipperDashboardScreen()
                   : const LoginScreen(),
+              builder: (context, child) {
+                if (child == null) return const SizedBox.shrink();
+                return ListenableBuilder(
+                  listenable: ShipperSettingsStore.instance,
+                  builder: (context, _) {
+                    final userScale = ShipperSettingsStore.instance.textScaleFactor;
+                    if (userScale == 1.0) return child;
+                    final media = MediaQuery.of(context);
+                    final baseScale = media.textScaler.scale(10.0) / 10.0;
+                    return MediaQuery(
+                      data: media.copyWith(
+                        textScaler: TextScaler.linear(baseScale * userScale),
+                      ),
+                      child: child,
+                    );
+                  },
+                );
+              },
             ),
           );
         },

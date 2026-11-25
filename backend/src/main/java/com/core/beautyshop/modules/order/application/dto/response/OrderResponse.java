@@ -115,4 +115,13 @@ public class OrderResponse {
 
     @Schema(description = "Hướng dẫn khi còn cần thanh toán; có thể null khi đã PAID/hoàn hoặc ở phản hồi danh sách. Invoice BANK dùng số còn thiếu cho QR")
     private PaymentInstruction paymentInstruction;
+
+    @Schema(description = "Tổng số yêu cầu đổi trả từng sản phẩm của đơn hàng", example = "1")
+    private Integer returnRequestCount;
+
+    @Schema(description = "Số yêu cầu đổi trả đang chờ xử lý (REQUESTED/APPROVED/RECEIVED)", example = "1")
+    private Integer activeReturnCount;
+
+    @Schema(description = "Trạng thái yêu cầu đổi trả gần nhất của đơn hàng", example = "REQUESTED")
+    private String latestReturnStatus;
 }

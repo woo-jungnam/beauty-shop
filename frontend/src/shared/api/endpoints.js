@@ -49,6 +49,15 @@ export const ENDPOINTS = {
     CONFIRM_PAYMENT: (id) => `/api/v1/admin/orders/${id}/confirm-payment`,
     CONFIRM_REFUND: (id) => `/api/v1/admin/orders/${id}/refund-confirmation`,
     ASSIGN_SHIPPER: (id) => `/api/v1/admin/orders/${id}/assign-shipper`,
+    COMMERCE_BALANCES: (id) => `/api/v1/admin/commerce/orders/${id}/balances`,
+    COMMERCE_RETURNS: (id) => `/api/v1/admin/commerce/orders/${id}/returns`,
+    COMMERCE_REALLOCATE: (id) => `/api/v1/admin/commerce/orders/${id}/reallocate`,
+    COMMERCE_COD_SETTLEMENT: (id) => `/api/v1/admin/commerce/orders/${id}/cod-settlement`,
+    COMMERCE_OVERPAYMENT_REFUND: (id) => `/api/v1/admin/commerce/orders/${id}/overpayment-refund`,
+    COMMERCE_RETURN_DECISION: (returnId) => `/api/v1/admin/commerce/returns/${returnId}/decision`,
+    COMMERCE_RETURN_RECEIVE: (returnId) => `/api/v1/admin/commerce/returns/${returnId}/receive`,
+    COMMERCE_RETURN_REFUND: (returnId) => `/api/v1/admin/commerce/returns/${returnId}/refund`,
+    COMMERCE_RETURN_REPLACEMENT: (returnId) => `/api/v1/admin/commerce/returns/${returnId}/replacement`,
   },
 
   INVENTORY: {

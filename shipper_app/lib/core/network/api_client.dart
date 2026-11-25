@@ -205,9 +205,15 @@ class ApiClient {
     }
   }
 
-  Future<ApiResponse<T>> put<T>(String path) async {
+  Future<ApiResponse<T>> put<T>(
+    String path, {
+    dynamic data,
+    Options? options,
+    T Function(dynamic json)? fromJsonT,
+  }) async {
     try {
-      return _handleResponse<T>(await _dio.put(path), null);
+      final response = await _dio.put(path, data: data, options: options);
+      return _handleResponse<T>(response, fromJsonT);
     } on DioException catch (e) {
       throw _handleError(e);
     }

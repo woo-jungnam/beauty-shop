@@ -18,6 +18,9 @@ public class AdminCommerceController {
     @Operation(summary = "Kiểm tra số dư tài chính đơn hàng", description = "Xem chi tiết số tiền đã thanh toán, giá trị hoàn trả và số dư còn lại của đơn hàng")
     @GetMapping("/orders/{id}/balances") public ApiResponse<?> balances(@PathVariable Long id){return ApiResponse.success(returns.balances(id));}
 
+    @Operation(summary = "Danh sách yêu cầu đổi trả theo đơn hàng", description = "Lấy toàn bộ yêu cầu đổi trả từng sản phẩm gắn với một đơn hàng cụ thể")
+    @GetMapping("/orders/{id}/returns") public ApiResponse<?> orderReturns(@PathVariable Long id){return ApiResponse.success(returns.adminOrderReturns(id));}
+
     @Operation(summary = "Tái phân bổ lô hàng thay thế", description = "Chỉ định lô hàng mới còn khả dụng trong kho để thay thế sản phẩm bị trả lại")
     @PostMapping("/orders/{id}/reallocate") public ApiResponse<?> reallocate(@PathVariable Long id){returns.replaceAllocation(id);return ApiResponse.success("Sellable replacement batches allocated");}
 

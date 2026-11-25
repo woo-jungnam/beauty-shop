@@ -1,157 +1,570 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/storage/shipper_settings_store.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/shipper_formatters.dart';
 import '../../../data/models/shipper_order_model.dart';
+import '../../../providers/shipper_provider.dart';
+import 'delivery_confirmation_screen.dart';
 
-final _money = NumberFormat.currency(
-  locale: 'vi_VN',
-  symbol: '₫',
-  decimalDigits: 0,
-);
-final _date = DateFormat('dd/MM/yyyy HH:mm');
-
-class ShipperOrderDetailScreen extends StatelessWidget {
-  const ShipperOrderDetailScreen({super.key, required this.order});
+class ShipperOrderDetailScreen extends StatefulWidget {
+  const ShipperOrderDetailScreen({
+    super.key,
+    required this.order,
+    this.enableDeliveryActions = false,
+  });
 
   final ShipperOrderModel order;
+  final bool enableDeliveryActions;
+
+  @override
+  State<ShipperOrderDetailScreen> createState() =>
+      _ShipperOrderDetailScreenState();
+}
+
+class _ShipperOrderDetailScreenState extends State<ShipperOrderDetailScreen> {
+  late ShipperOrderModel _order = widget.order;
+  bool _busy = false;
+
+  Future<void> _reloadOrder() async {
+    if (!widget.enableDeliveryActions) return;
+    try {
+      final latest = await context.read<ShipperProvider>().fetchOrderDetail(
+        _order.id,
+      );
+      if (mounted) {
+        setState(() => _order = latest);
+      }
+    } catch (_) {
+      // Keep current snapshot if background detail reload fails.
+    }
+  }
+
+  Future<void> _startDelivery() async {
+    if (_busy || !widget.enableDeliveryActions) return;
+    if (ShipperSettingsStore.instance.confirmBeforeStart) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Bắt đầu giao hàng'),
+          content: Text('Xác nhận bắt đầu đi giao đơn #${_order.orderNumber}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Bắt đầu'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
+    setState(() => _busy = true);
+    try {
+      await context.read<ShipperProvider>().startDelivery(_order.id);
+      await _reloadOrder();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã bắt đầu giao hàng')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reportFailure() async {
+    if (_busy || !widget.enableDeliveryActions) return;
+    final reason = await showDeliveryFailureDialog(context);
+    if (!mounted || reason == null) return;
+    setState(() => _busy = true);
+    try {
+      await context.read<ShipperProvider>().reportFailure(_order.id, reason);
+      await _reloadOrder();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã báo giao thất bại')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openConfirmation() async {
+    if (_busy || !widget.enableDeliveryActions) return;
+    final completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => DeliveryConfirmationScreen(order: _order),
+      ),
+    );
+    if (completed == true && mounted) {
+      await _reloadOrder();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final status = switch (order.status) {
-      'SHIPPED' => order.deliveryStartedAt == null ? 'Cần giao' : 'Đang giao',
-      'DELIVERED' => 'Đã giao',
-      'DELIVERY_FAILED' => 'Giao thất bại',
-      'RETURNING_TO_SENDER' => 'Đang hoàn về kho',
-      'RETURN_TO_SENDER' => 'Đã hoàn về kho',
-      'RETURNED' => 'Đã trả hàng',
-      'CANCELLED' => 'Đã hủy',
-      'REFUNDED' => 'Đã hoàn tiền',
-      _ => order.status,
-    };
-    final payment = switch (order.paymentStatus) {
-      'PAID' => 'Đã thanh toán',
-      'PENDING' => 'Chờ thanh toán',
-      'FAILED' => 'Thanh toán thất bại',
-      'REFUND_PENDING' => 'Chờ hoàn tiền',
-      'REFUNDED' => 'Đã hoàn tiền',
-      _ => order.paymentStatus,
-    };
-    final method = switch (order.paymentMethod) {
-      'COD' => 'Thu hộ khi giao (COD)',
-      'BANK' => 'Chuyển khoản',
-      'CASH' => 'Tiền mặt',
-      _ => order.paymentMethod,
-    };
+    final style = ShipperStatusStyle.fromOrder(_order);
+    final showActionFooter =
+        widget.enableDeliveryActions && _order.isShipped;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Chi tiết đơn giao')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          _DetailSection(
-            title: '#${order.orderNumber}',
-            children: [
-              _fact('Trạng thái', status),
-              if (order.hasOrderDetails) ...[
-                _fact('Người nhận', order.customerName),
-                _fact('Điện thoại', order.customerPhone),
-                _fact('Địa chỉ', order.displayShippingAddress),
-              ],
-              _fact('Đơn vị vận chuyển', order.carrierName),
-              _fact('Mã vận đơn', order.trackingCode),
-              _fact('Ghi chú đơn', order.notes),
-              _fact('Lý do hủy', order.cancelReason),
-            ],
-          ),
-          if (order.hasOrderDetails) ...[
-            _DetailSection(
-              title: 'Sản phẩm',
-              children: [OrderItemsSection(order: order)],
-            ),
-            _DetailSection(
-              title: 'Thanh toán',
-              children: [
-                _fact('Phương thức', method),
-                _fact('Trạng thái', payment),
-                _amount('Tiền hàng', order.subTotal),
-                _amount('Phí vận chuyển', order.shippingFee),
-                _amount('Giảm giá', order.discountAmount),
-                _amount('Tổng đơn', order.totalAmount),
-                _amount('Đã thanh toán', order.paidAmount),
-                if (order.paymentMethod == 'COD') ...[
-                  _amount('COD cần thu', order.codAmount),
-                  if (order.codCollected > 0) ...[
-                    _amount('COD đã thu', order.codCollected),
-                    _amount('COD đã bàn giao', order.codRemitted),
-                    _amount(
-                      'COD chờ bàn giao',
-                      order.codCollected - order.codRemitted,
-                    ),
-                  ],
-                ],
-              ],
-            ),
-          ],
-          _DetailSection(
-            title: 'Mốc giao hàng',
-            children: [
-              _time(
-                order.hasOrderDetails ? 'Tạo đơn' : 'Ghi nhận',
-                order.createdAt,
-              ),
-              _time('Phân công', order.assignedAt),
-              _time('Bắt đầu giao', order.deliveryStartedAt),
-              _time('Hoàn tất giao', order.deliveredAt),
-              _time('Thanh toán', order.paidAt),
-            ],
-          ),
-          if (order.isDelivered ||
-              order.deliveryProofUrl != null ||
-              (order.deliveredNotes?.trim().isNotEmpty ?? false))
-            _DetailSection(
-              title: 'Bằng chứng giao hàng',
-              children: [
-                if (order.deliveryProofUrl case final proof?)
-                  _OrderPhoto(
-                    url: proof,
-                    label: 'Ảnh xác nhận giao hàng',
-                    height: 180,
-                    fit: BoxFit.contain,
-                  )
-                else
-                  const Text('Chưa có ảnh xác nhận giao hàng.'),
-                _fact('Ghi chú giao hàng', order.deliveredNotes),
-              ],
+      appBar: AppBar(
+        title: const Text(
+          'Chi tiết đơn giao',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          if (widget.enableDeliveryActions)
+            IconButton(
+              tooltip: 'Làm mới',
+              onPressed: _busy ? null : _reloadOrder,
+              icon: const Icon(Icons.refresh_rounded),
             ),
         ],
       ),
-    );
-  }
-
-  static Widget _fact(String label, String? value) {
-    if (value == null || value.trim().isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Text.rich(
-        TextSpan(
+      bottomNavigationBar: showActionFooter ? _buildBottomActions() : null,
+      body: ShipperPageContainer(
+        child: ListView(
+          padding: ShipperLayout.pagePadding,
           children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            _buildStatusBanner(style),
+            if (_order.hasOrderDetails) ...[
+              _buildRecipientCard(),
+              _DetailSection(
+                title: 'Sản phẩm (${_order.items.isNotEmpty ? _order.items.length : _order.itemsSummary.length})',
+                children: [OrderItemsSection(order: _order)],
+              ),
+              _buildPaymentSection(),
+            ] else
+              _DetailSection(
+                title: 'Thông tin đơn hàng',
+                children: [
+                  _fact(context, 'Đơn vị vận chuyển', _order.carrierName),
+                  _fact(context, 'Mã vận đơn', _order.trackingCode),
+                  _fact(context, 'Ghi chú đơn', _order.notes),
+                  _fact(context, 'Lý do hủy', _order.cancelReason),
+                ],
+              ),
+            _DetailSection(
+              title: 'Mốc giao hàng',
+              children: [
+                _time(
+                  context,
+                  _order.hasOrderDetails ? 'Tạo đơn' : 'Ghi nhận',
+                  _order.createdAt,
+                ),
+                _time(context, 'Phân công', _order.assignedAt),
+                _time(context, 'Bắt đầu giao', _order.deliveryStartedAt),
+                _time(context, 'Hoàn tất giao', _order.deliveredAt),
+                _time(context, 'Thanh toán', _order.paidAt),
+              ],
             ),
-            TextSpan(text: value),
+            if (_order.isDelivered ||
+                _order.deliveryProofUrl != null ||
+                (_order.deliveredNotes?.trim().isNotEmpty ?? false))
+              _DetailSection(
+                title: 'Bằng chứng giao hàng',
+                children: [
+                  const SizedBox(height: 10),
+                  if (_order.deliveryProofUrl case final proof?) ...[
+                    _OrderPhoto(
+                      url: proof,
+                      label: 'Ảnh xác nhận giao hàng',
+                      height: 220,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Nhấn vào ảnh để phóng to',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ] else
+                    const Text(
+                      'Chưa có ảnh xác nhận giao hàng.',
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                  _fact(context, 'Ghi chú giao hàng', _order.deliveredNotes),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 
-  static Widget _amount(String label, double? value) =>
-      _fact(label, value == null ? null : _money.format(value));
+  Widget _buildStatusBanner(ShipperStatusStyle style) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            color: style.background,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(style.icon, size: 20, color: style.foreground),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: InkWell(
+                        onTap: () => copyTextWithFeedback(
+                          context,
+                          _order.orderNumber,
+                          'mã đơn',
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '#${_order.orderNumber}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: style.foreground,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.copy_rounded,
+                              size: 14,
+                              color: style.foreground.withValues(alpha: 0.75),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: style.badgeColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    style.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_order.hasOrderDetails)
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _order.isCod
+                      ? AppColors.warningLight
+                      : AppColors.successLight,
+                  borderRadius: BorderRadius.circular(
+                    ShipperLayout.innerRadius,
+                  ),
+                ),
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 10,
+                  runSpacing: 6,
+                  children: [
+                    Text(
+                      _order.isCod
+                          ? 'Tiền mặt cần thu (COD)'
+                          : 'Tổng giá trị đơn (${paymentStatusLabel(_order.paymentStatus)})',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: _order.isCod
+                            ? AppColors.warning
+                            : AppColors.success,
+                      ),
+                    ),
+                    Text(
+                      formatCurrency(
+                        _order.isCod ? _order.codAmount : _order.totalAmount,
+                      ),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: _order.isCod
+                            ? AppColors.warning
+                            : AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
-  static Widget _time(String label, DateTime? value) =>
-      _fact(label, value == null ? null : _date.format(value.toLocal()));
+  Widget _buildRecipientCard() {
+    return _DetailSection(
+      title: 'Thông tin giao nhận',
+      children: [
+        _fact(context, 'Người nhận', _order.customerName),
+        if (_order.customerPhone.trim().isNotEmpty)
+          _fact(
+            context,
+            'Điện thoại',
+            _order.customerPhone,
+            trailing: IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Sao chép SĐT',
+              onPressed: () => copyTextWithFeedback(
+                context,
+                _order.customerPhone,
+                'số điện thoại',
+              ),
+              icon: const Icon(Icons.copy_rounded, size: 16),
+            ),
+          ),
+        _fact(
+          context,
+          'Địa chỉ',
+          _order.displayShippingAddress,
+          trailing: _order.shippingAddress.isNotEmpty
+              ? IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Sao chép địa chỉ',
+                  onPressed: () => copyTextWithFeedback(
+                    context,
+                    _order.shippingAddress,
+                    'địa chỉ',
+                  ),
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                )
+              : null,
+        ),
+        _fact(context, 'Đơn vị vận chuyển', _order.carrierName),
+        _fact(
+          context,
+          'Mã vận đơn',
+          _order.trackingCode,
+          trailing: (_order.trackingCode?.trim().isNotEmpty ?? false)
+              ? IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Sao chép mã vận đơn',
+                  onPressed: () => copyTextWithFeedback(
+                    context,
+                    _order.trackingCode!.trim(),
+                    'mã vận đơn',
+                  ),
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                )
+              : null,
+        ),
+        _fact(context, 'Ghi chú đơn', _order.notes),
+        _fact(context, 'Lý do hủy', _order.cancelReason),
+        if (_order.customerPhone.trim().isNotEmpty ||
+            (_order.isShipped && _order.shippingAddress.isNotEmpty)) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (_order.customerPhone.trim().isNotEmpty)
+                FilledButton.icon(
+                  onPressed: () =>
+                      launchPhoneCall(context, _order.customerPhone),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.phone_rounded, size: 18),
+                  label: const Text('Gọi ngay'),
+                ),
+              if (_order.isShipped && _order.shippingAddress.isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      openMapDirections(context, _order.shippingAddress),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                  ),
+                  icon: const Icon(Icons.directions_outlined, size: 18),
+                  label: const Text('Chỉ đường'),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPaymentSection() {
+    return _DetailSection(
+      title: 'Thanh toán & đối soát',
+      children: [
+        _fact(context, 'Phương thức', paymentMethodLabel(_order.paymentMethod)),
+        _fact(context, 'Trạng thái', paymentStatusLabel(_order.paymentStatus)),
+        _amount(context, 'Tiền hàng', _order.subTotal),
+        _amount(context, 'Phí vận chuyển', _order.shippingFee),
+        _amount(context, 'Giảm giá', _order.discountAmount),
+        _amount(context, 'Tổng đơn', _order.totalAmount),
+        _amount(context, 'Đã thanh toán', _order.paidAmount),
+        if (_order.paymentMethod == 'COD') ...[
+          _amount(context, 'COD cần thu', _order.codAmount),
+          if (_order.codCollected > 0) ...[
+            _amount(context, 'COD đã thu', _order.codCollected),
+            _amount(context, 'COD đã bàn giao', _order.codRemitted),
+            _amount(
+              context,
+              'COD chờ bàn giao',
+              _order.codCollected - _order.codRemitted,
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBottomActions() {
+    return ColoredBox(
+      color: AppColors.card,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: ShipperLayout.maxContentWidth,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_order.deliveryStartedAt == null)
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _startDelivery,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.local_shipping_outlined),
+                    label: Text(_busy ? 'Đang cập nhật…' : 'Bắt đầu giao'),
+                  )
+                else ...[
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _openConfirmation,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text('Chụp ảnh xác nhận giao hàng'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _reportFailure,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.danger,
+                      side: BorderSide(
+                        color: AppColors.danger.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    icon: const Icon(Icons.report_problem_outlined),
+                    label: const Text('Báo giao thất bại'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _fact(
+    BuildContext context,
+    String label,
+    String? value, {
+    Widget? trailing,
+  }) {
+    if (value == null || value.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.trim(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMain,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
+    );
+  }
+
+  static Widget _amount(BuildContext context, String label, double? value) =>
+      _fact(context, label, value == null ? null : formatCurrency(value));
+
+  static Widget _time(BuildContext context, String label, DateTime? value) =>
+      _fact(context, label, value == null ? null : formatVnDateTime(value));
 }
 
 class _DetailSection extends StatelessWidget {
@@ -162,14 +575,22 @@ class _DetailSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasVisibleContent = children.any((w) => w is! SizedBox);
+    if (!hasVisibleContent) return const SizedBox.shrink();
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textMain,
+              ),
+            ),
             ...children,
           ],
         ),
@@ -195,27 +616,54 @@ class OrderItemsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (order.itemsSummary.isEmpty && !preview)
-            const Text('Chưa có thông tin dòng hàng.'),
+            const Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text(
+                'Chưa có thông tin dòng hàng.',
+                style: TextStyle(color: AppColors.textMuted),
+              ),
+            ),
           for (final item
               in preview ? order.itemsSummary.take(2) : order.itemsSummary)
-            Padding(padding: const EdgeInsets.only(top: 6), child: Text(item)),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                '• $item',
+                style: const TextStyle(color: AppColors.textMain, fontSize: 13),
+              ),
+            ),
+          if (preview && order.itemsSummary.length > 2)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Còn ${order.itemsSummary.length - 2} sản phẩm khác',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ),
         ],
       );
     }
+
+    final visibleItems = preview ? order.items.take(2) : order.items;
+    final photoSize = preview ? 46.0 : 56.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final item in preview ? order.items.take(2) : order.items)
+        for (final item in visibleItems)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: 10),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _OrderPhoto(
                   url: item.imageUrl,
                   label: item.productName,
-                  width: 56,
-                  height: 56,
+                  width: photoSize,
+                  height: photoSize,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -224,20 +672,50 @@ class OrderItemsSection extends StatelessWidget {
                     children: [
                       Text(
                         item.productName,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        maxLines: preview ? 2 : 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textMain,
+                        ),
                       ),
                       if (item.variantName?.trim().isNotEmpty ?? false)
-                        Text(item.variantName!),
+                        Text(
+                          item.variantName!.trim(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       if (item.quantity case final quantity?)
-                        Text('Số lượng: $quantity'),
+                        Text(
+                          'Số lượng: $quantity',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textMain,
+                          ),
+                        ),
                       if (!preview) ...[
                         if (item.sku?.trim().isNotEmpty ?? false)
-                          Text('SKU: ${item.sku}'),
+                          Text(
+                            'SKU: ${item.sku}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
                         if (item.price case final price?)
-                          Text('Đơn giá: ${_money.format(price)}'),
+                          Text(
+                            'Đơn giá: ${formatCurrency(price)}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
                         if ((item.discount ?? 0) > 0)
                           Text(
-                            'Giảm mỗi sản phẩm: ${_money.format(item.discount!)}',
+                            'Giảm mỗi sản phẩm: ${formatCurrency(item.discount!)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.success,
+                            ),
                           ),
                       ],
                     ],
@@ -249,7 +727,14 @@ class OrderItemsSection extends StatelessWidget {
         if (preview && order.items.length > 2)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text('Còn ${order.items.length - 2} dòng hàng'),
+            child: Text(
+              'Còn ${order.items.length - 2} dòng hàng',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
           ),
       ],
     );
@@ -286,11 +771,16 @@ class _OrderPhoto extends StatelessWidget {
       width: width,
       height: height,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         child: Material(
           color: AppColors.primarySurface,
           child: photo == null
-              ? const Center(child: Icon(Icons.image_not_supported_outlined))
+              ? const Center(
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    color: AppColors.primaryDark,
+                  ),
+                )
               : Semantics(
                   label: 'Mở ảnh $label',
                   button: true,

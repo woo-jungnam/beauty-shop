@@ -1,5 +1,9 @@
-import { CommerceOperationsPanel } from '../features/commerce/AdminCommercePanels';
 import { DeliveryProofDetails } from '../features/commerce/DeliveryProofDetails';
+import { OrderCommerceModal } from '../features/commerce/OrderCommerceModal';
+import {
+  hasOrderReturnOrRefundAttention,
+  shouldShowOrderCommerceButton,
+} from '../features/commerce/orderCommerceHelpers';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
@@ -27,6 +31,7 @@ import {
   CreditCard,
   AlertTriangle,
   Camera,
+  RotateCcw,
 } from 'lucide-react';
 import { apiClient } from '../shared/api/client';
 import { ENDPOINTS } from '../shared/api/endpoints';
@@ -38,6 +43,7 @@ import {
   getOrderTypeBadge,
   getPaymentStatusBadge,
   getPaymentMethodLabel,
+  getReturnStatusBadge,
   resolveMediaUrl,
 } from '../shared/utils/formatters';
 import { Button } from '../shared/ui/Button';
@@ -157,7 +163,9 @@ export const OrdersPage = () => {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [pendingReturnOnly, setPendingReturnOnly] = useState(false);
 
+  const [commerceOrder, setCommerceOrder] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -233,6 +241,7 @@ export const OrdersPage = () => {
       if (fromDate) params.append('from', new Date(`${fromDate}T00:00:00+07:00`).toISOString());
       if (toDate) params.append('to', new Date(`${toDate}T23:59:59.999+07:00`).toISOString());
       if (orderTypeTab && orderTypeTab !== 'ALL') params.append('orderType', orderTypeTab);
+      if (pendingReturnOnly) params.append('pendingReturn', 'true');
 
       const res = await apiClient.get(`${ENDPOINTS.ORDERS.LIST}?${params.toString()}`);
       const pageData = res.data || res;
@@ -249,7 +258,7 @@ export const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders(0);
-  }, [status, paymentStatus, fromDate, toDate, orderTypeTab]);
+  }, [status, paymentStatus, fromDate, toDate, orderTypeTab, pendingReturnOnly]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -521,7 +530,19 @@ export const OrdersPage = () => {
       header: 'Trạng thái đơn',
       accessor: (row) => {
         const badge = getOrderStatusBadge(row.status);
-        return <Badge variant={badge.variant}>{badge.text}</Badge>;
+        const returnBadge = row.latestReturnStatus ? getReturnStatusBadge(row.latestReturnStatus) : null;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+            <Badge variant={badge.variant}>{badge.text}</Badge>
+            {Number(row.returnRequestCount || 0) > 0 && returnBadge && (
+              <Badge variant={Number(row.activeReturnCount || 0) > 0 ? 'warning' : returnBadge.variant}>
+                {Number(row.activeReturnCount || 0) > 0
+                  ? `Đổi trả (${row.activeReturnCount} chờ · ${returnBadge.text})`
+                  : `Đổi trả: ${returnBadge.text}`}
+              </Badge>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -532,136 +553,91 @@ export const OrdersPage = () => {
     {
       header: 'Thao tác',
       align: 'right',
-      accessor: (row) => (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenDetail(row)}
-            title="Xem chi tiết đơn"
-          >
-            <Eye size={14} />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!availableStatuses(row).length}
-            onClick={() => handleOpenStatusModal(row)}
-            title="Đổi trạng thái"
-          >
-            <Edit size={14} />
-          </Button>
-          {row.deliveryProofUrl && (
+      render: (row) => {
+        const needsReturnAttention = hasOrderReturnOrRefundAttention(row);
+        return (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenDetail(row)}
+              title="Xem chi tiết đơn"
+            >
+              <Eye size={14} />
+            </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setProofOrder(row)}
-              title="Xem ảnh bằng chứng giao hàng (PoD)"
-              style={{ color: '#059669', borderColor: '#059669' }}
+              disabled={!availableStatuses(row).length}
+              onClick={() => handleOpenStatusModal(row)}
+              title="Đổi trạng thái"
             >
-              <Camera size={14} />
+              <Edit size={14} />
             </Button>
-          )}
-          {canAssignShipper(row) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenAssignModal(row)}
-              title={row.shipperName ? `Đổi tài xế (${row.shipperName})` : 'Điều phối tài xế giao'}
-              style={row.shipperName ? { color: '#4F46E5', borderColor: '#818CF8' } : {}}
-            >
-              <Truck size={14} />
-            </Button>
-          )}
-          {row.paymentStatus !== 'PAID' && row.status !== 'CANCELLED' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleConfirmPayment(row)}
-              title="Đánh dấu đã thanh toán (PAID)"
-              style={{ color: '#059669', borderColor: '#059669' }}
-            >
-              <CheckCircle2 size={14} />
-            </Button>
-          )}
-          {isAdmin && (row.status === 'CANCELLED' || row.status === 'RETURNED' || row.paymentStatus === 'REFUND_PENDING') &&
-            row.paymentStatus !== 'REFUNDED' && (
+            {row.deliveryProofUrl && (
               <Button
-                variant="danger"
+                variant="outline"
                 size="sm"
-                onClick={() => handleOpenRefundModal(row)}
-                title="Xác nhận hoàn tiền"
+                onClick={() => setProofOrder(row)}
+                title="Xem ảnh bằng chứng giao hàng (PoD)"
+                style={{ color: '#059669', borderColor: '#059669' }}
               >
-                <DollarSign size={14} />
+                <Camera size={14} />
               </Button>
             )}
-        </div>
-      ),
-      render: (row) => (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenDetail(row)}
-            title="Xem chi tiết đơn"
-          >
-            <Eye size={14} />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!availableStatuses(row).length}
-            onClick={() => handleOpenStatusModal(row)}
-            title="Đổi trạng thái"
-          >
-            <Edit size={14} />
-          </Button>
-          {row.deliveryProofUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setProofOrder(row)}
-              title="Xem ảnh bằng chứng giao hàng (PoD)"
-              style={{ color: '#059669', borderColor: '#059669' }}
-            >
-              <Camera size={14} />
-            </Button>
-          )}
-          {canAssignShipper(row) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenAssignModal(row)}
-              title={row.shipperName ? `Đổi tài xế (${row.shipperName})` : 'Điều phối tài xế giao'}
-              style={row.shipperName ? { color: '#4F46E5', borderColor: '#818CF8' } : {}}
-            >
-              <Truck size={14} />
-            </Button>
-          )}
-          {row.paymentStatus !== 'PAID' && row.status !== 'CANCELLED' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleConfirmPayment(row)}
-              title="Đánh dấu đã thanh toán (PAID)"
-              style={{ color: '#059669', borderColor: '#059669' }}
-            >
-              <CheckCircle2 size={14} />
-            </Button>
-          )}
-          {isAdmin && (row.status === 'CANCELLED' || row.status === 'RETURNED' || row.paymentStatus === 'REFUND_PENDING') &&
-            row.paymentStatus !== 'REFUNDED' && (
+            {canAssignShipper(row) && (
               <Button
-                variant="danger"
+                variant="outline"
                 size="sm"
-                onClick={() => handleOpenRefundModal(row)}
-                title="Xác nhận hoàn tiền"
+                onClick={() => handleOpenAssignModal(row)}
+                title={row.shipperName ? `Đổi tài xế (${row.shipperName})` : 'Điều phối tài xế giao'}
+                style={row.shipperName ? { color: '#4F46E5', borderColor: '#818CF8' } : {}}
               >
-                <DollarSign size={14} />
+                <Truck size={14} />
               </Button>
             )}
-        </div>
-      ),
+            {row.paymentStatus !== 'PAID' && row.status !== 'CANCELLED' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleConfirmPayment(row)}
+                title="Đánh dấu đã thanh toán (PAID)"
+                style={{ color: '#059669', borderColor: '#059669' }}
+              >
+                <CheckCircle2 size={14} />
+              </Button>
+            )}
+            {shouldShowOrderCommerceButton(row) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCommerceOrder(row)}
+                title="Xử lý hoàn hàng / hoàn tiền & đối soát đơn"
+                style={
+                  needsReturnAttention
+                    ? { color: '#D97706', borderColor: '#F59E0B', background: '#FFFBEB' }
+                    : {}
+                }
+              >
+                <RotateCcw size={14} />
+              </Button>
+            )}
+            {isAdmin &&
+              (row.status === 'CANCELLED' || row.status === 'RETURNED' || row.paymentStatus === 'REFUND_PENDING') &&
+              row.paymentStatus !== 'REFUNDED' &&
+              Number(row.returnRequestCount || 0) === 0 && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleOpenRefundModal(row)}
+                  title="Xác nhận hoàn tiền toàn đơn"
+                >
+                  <DollarSign size={14} />
+                </Button>
+              )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -954,7 +930,7 @@ export const OrdersPage = () => {
             Lọc đơn
           </Button>
 
-          {(keyword || status || paymentStatus || fromDate || toDate || orderTypeTab !== 'ALL') && (
+          {(keyword || status || paymentStatus || fromDate || toDate || orderTypeTab !== 'ALL' || pendingReturnOnly) && (
             <Button
               type="button"
               variant="outline"
@@ -965,6 +941,7 @@ export const OrdersPage = () => {
                 setFromDate('');
                 setToDate('');
                 setOrderTypeTab('ALL');
+                setPendingReturnOnly(false);
               }}
             >
               Đặt lại
@@ -1012,6 +989,22 @@ export const OrdersPage = () => {
             <Sparkles size={14} />
             <span>Đơn dịch vụ đơn</span>
           </button>
+          <button
+            type="button"
+            className={`btn ${pendingReturnOnly ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setPendingReturnOnly((prev) => !prev)}
+            style={{
+              fontSize: '13px',
+              padding: '6px 14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              ...(pendingReturnOnly ? { background: '#D97706', borderColor: '#D97706', color: '#FFFFFF' } : {}),
+            }}
+          >
+            <RotateCcw size={14} />
+            <span>Cần xử lý hoàn hàng / tiền</span>
+          </button>
         </div>
         <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
           Hiển thị: <strong>{totalElements.toLocaleString('vi-VN')}</strong> đơn hàng
@@ -1036,23 +1029,16 @@ export const OrdersPage = () => {
           />
         </div>
       ) : (
-        <>
-          <DataTable
-            columns={columns}
-            data={orders}
-            loading={loading}
-            emptyMessage="Không tìm thấy đơn hàng nào phù hợp bộ lọc."
-            page={page}
-            totalPages={totalPages}
-            totalElements={totalElements}
-            onPageChange={(p) => fetchOrders(p)}
-          />
-
-          {/* Đổi trả sản phẩm & đối soát COD (chỉ hiển thị khi xem sản phẩm hoặc tất cả) */}
-          {(orderTypeTab === 'ALL' || orderTypeTab === 'PRODUCT') && (
-            <CommerceOperationsPanel orders={orders} onChanged={() => fetchOrders(page)} />
-          )}
-        </>
+        <DataTable
+          columns={columns}
+          data={orders}
+          loading={loading}
+          emptyMessage="Không tìm thấy đơn hàng nào phù hợp bộ lọc."
+          page={page}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          onPageChange={(p) => fetchOrders(p)}
+        />
       )}
 
             <Modal
@@ -1073,6 +1059,21 @@ export const OrdersPage = () => {
                 In hóa đơn
               </Button>
               <div style={{ display: 'flex', gap: '8px' }}>
+                {shouldShowOrderCommerceButton(selectedOrder) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={RotateCcw}
+                    onClick={() => setCommerceOrder(selectedOrder)}
+                    style={
+                      hasOrderReturnOrRefundAttention(selectedOrder)
+                        ? { color: '#D97706', borderColor: '#F59E0B', background: '#FFFBEB' }
+                        : {}
+                    }
+                  >
+                    Hoàn hàng / tiền
+                  </Button>
+                )}
                 {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
                   <Button
                     variant="outline"
@@ -1283,7 +1284,7 @@ export const OrdersPage = () => {
                           {getPaymentStatusBadge(selectedOrder.paymentStatus).text}
                         </Badge>
                         <span style={{ color: '#475569' }}>· {getPaymentMethodLabel(selectedOrder.paymentMethod)}</span>
-                        {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
+                {selectedOrder.paymentStatus !== 'PAID' && selectedOrder.status !== 'CANCELLED' && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -1951,6 +1952,20 @@ export const OrdersPage = () => {
           />
         </form>
       </Modal>
+
+      <OrderCommerceModal
+        key={commerceOrder?.id || 'closed'}
+        order={commerceOrder}
+        isOpen={Boolean(commerceOrder)}
+        onClose={() => setCommerceOrder(null)}
+        onChanged={() => {
+          fetchOrders(page);
+          if (detailModalOpen && commerceOrder && selectedOrder?.id === commerceOrder.id) {
+            handleOpenDetail(commerceOrder);
+          }
+        }}
+        onOpenWholeRefund={(targetOrder) => handleOpenRefundModal(targetOrder)}
+      />
 
       {/* Modal điều phối Shipper nội bộ */}
       <Modal

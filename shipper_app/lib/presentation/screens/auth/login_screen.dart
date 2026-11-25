@@ -78,24 +78,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // App Icon / Logo
-                    Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySurface,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.3),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.local_shipping_rounded,
-                        size: 48,
-                        color: AppColors.primaryDark,
+                    Center(
+                      child: Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySurface,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.local_shipping_rounded,
+                          size: 44,
+                          color: AppColors.primaryDark,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -153,6 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           // Username Field
                           TextFormField(
                             controller: _usernameController,
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.username],
                             decoration: InputDecoration(
                               labelText: 'Tài khoản / Mã bưu tá',
                               prefixIcon: const Icon(Icons.person_outline),
@@ -173,10 +177,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            autofillHints: const [AutofillHints.password],
+                            onFieldSubmitted: (_) =>
+                                auth.isLoading ? null : _handleLogin(),
                             decoration: InputDecoration(
                               labelText: 'Mật khẩu',
                               prefixIcon: const Icon(Icons.lock_outline),
                               suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Hiện mật khẩu'
+                                    : 'Ẩn mật khẩu',
                                 icon: Icon(
                                   _obscurePassword
                                       ? Icons.visibility_off

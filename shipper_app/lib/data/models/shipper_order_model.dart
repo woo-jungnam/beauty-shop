@@ -65,19 +65,8 @@ class ShipperOrderModel {
     this.items = const [],
   });
 
-  static String? _resolveMediaUrl(String? url) {
-    final value = url?.trim();
-    if (value == null || value.isEmpty) return null;
-    final uri = Uri.tryParse(value);
-    if (uri == null || uri.userInfo.isNotEmpty) return null;
-    if (uri.hasScheme) {
-      return {'http', 'https'}.contains(uri.scheme) && uri.host.isNotEmpty
-          ? uri.toString()
-          : null;
-    }
-    if (uri.hasAuthority) return null;
-    return Uri.parse('${ApiConstants.baseUrl}/').resolveUri(uri).toString();
-  }
+  static String? _resolveMediaUrl(String? url) =>
+      ApiConstants.resolveMediaUrl(url);
 
   factory ShipperOrderModel.fromJson(Map<String, dynamic> json) {
     return ShipperOrderModel(

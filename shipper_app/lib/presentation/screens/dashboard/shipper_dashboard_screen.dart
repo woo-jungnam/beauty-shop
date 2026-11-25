@@ -1,16 +1,16 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:beautyshop_shipper/core/storage/shipper_settings_store.dart';
 import 'package:beautyshop_shipper/core/theme/app_colors.dart';
+import 'package:beautyshop_shipper/core/utils/shipper_formatters.dart';
 import 'package:beautyshop_shipper/data/models/shipper_order_model.dart';
 import 'package:beautyshop_shipper/providers/auth_provider.dart';
 import 'package:beautyshop_shipper/providers/shipper_provider.dart';
 import 'package:beautyshop_shipper/presentation/screens/delivery/delivery_confirmation_screen.dart';
 
+import '../account/shipper_account_screen.dart';
 import '../delivery/delivery_history_screen.dart';
 import '../delivery/shipper_order_detail_screen.dart';
 import '../delivery/shipper_stats_screen.dart';
@@ -25,29 +25,32 @@ class ShipperDashboardScreen extends StatefulWidget {
 
 class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     with WidgetsBindingObserver {
-  static final Uri _mapsDirections = _resolveMapsDirections();
-
-  static Uri _resolveMapsDirections() {
-    const configuredUrl = String.fromEnvironment('MAPS_DIRECTIONS_URL');
-    final uri = Uri.tryParse(configuredUrl.trim());
-    if (uri != null && uri.scheme == 'https' && uri.host.isNotEmpty) {
-      return uri;
-    }
-    return Uri.https('www.google.com', '/maps/dir/');
-  }
-
+  final TextEditingController _searchController = TextEditingController();
   Timer? _pollTimer;
   int _tab = 0;
+  final Set<int> _visitedTabs = {0};
+  bool _searchOpen = false;
+  String _searchQuery = '';
 
   void _startPolling() {
     _pollTimer?.cancel();
     if (!mounted) return;
     final shipper = context.read<ShipperProvider>();
     unawaited(shipper.refreshUnreadCount());
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      unawaited(shipper.refreshUnreadCount());
-      if (_tab == 0) unawaited(shipper.fetchOrders(background: true));
-    });
+    final settings = ShipperSettingsStore.instance;
+    if (!settings.autoRefreshEnabled) return;
+    _pollTimer = Timer.periodic(
+      Duration(seconds: settings.refreshIntervalSeconds),
+      (_) {
+        unawaited(shipper.refreshUnreadCount());
+        if (_tab == 0) unawaited(shipper.fetchOrders(background: true));
+      },
+    );
+  }
+
+  void _onSettingsChanged() {
+    if (!mounted) return;
+    _startPolling();
   }
 
   @override
@@ -60,22 +63,10 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
   }
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _pollTimer?.cancel();
-    super.dispose();
-  }
-
-  final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'vi_VN',
-    symbol: 'đ',
-  );
-  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-
-  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ShipperSettingsStore.instance.addListener(_onSettingsChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<ShipperProvider>().fetchOrders();
@@ -83,170 +74,94 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     });
   }
 
-  Future<void> _makePhoneCall(String phone) async {
-    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-    final uri = Uri(scheme: 'tel', path: cleanPhone);
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể gọi đến $cleanPhone: $e')),
-      );
-    }
-  }
-
-  Future<void> _openDirections(String address) async {
-    final url = _mapsDirections.replace(
-      queryParameters: {
-        'api': '1',
-        'destination': address,
-        'dir_action': 'navigate',
-      },
-    );
-    try {
-      if (await launchUrl(url, mode: LaunchMode.externalApplication)) return;
-    } on Exception {
-      // The device may have no app available to open the link.
-    }
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Không mở được bản đồ. Vui lòng thử lại.')),
-    );
-  }
-
-  void _showProofDialog(ShipperOrderModel order) {
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Bằng chứng đơn #${order.orderNumber}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (order.deliveryProofUrl != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: order.deliveryProofUrl!,
-                      height: 260,
-                      fit: BoxFit.contain,
-                      placeholder: (context, url) => Container(
-                        height: 260,
-                        color: Colors.grey.shade200,
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        height: 260,
-                        color: Colors.grey.shade200,
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.broken_image,
-                              size: 48,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 8),
-                            Text('Không thể tải hình ảnh'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  Container(
-                    height: 120,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text('Đơn hàng không có ảnh đính kèm'),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                if (order.deliveredAt != null) ...[
-                  Text(
-                    'Thời gian giao: ${_dateFormat.format(order.deliveredAt!)}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                ],
-                if (order.deliveredNotes != null &&
-                    order.deliveredNotes!.isNotEmpty) ...[
-                  Text(
-                    'Ghi chú: ${order.deliveredNotes}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    ShipperSettingsStore.instance.removeListener(_onSettingsChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _handleLogout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Đăng xuất'),
-        content: const Text(
-          'Bạn có chắc muốn đăng xuất khỏi ca làm việc không?',
+    _pollTimer?.cancel();
+    final loggedOut = await confirmAndLogout(context);
+    if (!loggedOut && mounted) {
+      _startPolling();
+    }
+  }
+
+  Future<void> _openOrderDetail(ShipperOrderModel order) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ShipperOrderDetailScreen(
+          order: order,
+          enableDeliveryActions: true,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('Đăng xuất'),
-          ),
-        ],
       ),
     );
+  }
 
-    if (confirm == true && mounted) {
-      _pollTimer?.cancel();
-      context.read<ShipperProvider>().clearSession();
-      await context.read<AuthProvider>().logout();
+  Future<void> _startDelivery(ShipperOrderModel order) async {
+    if (ShipperSettingsStore.instance.confirmBeforeStart) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Bắt đầu giao hàng'),
+          content: Text('Xác nhận bắt đầu giao đơn #${order.orderNumber}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Bắt đầu'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true || !mounted) return;
     }
+    try {
+      await context.read<ShipperProvider>().startDelivery(order.id);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+  }
+
+  Future<void> _reportFailure(ShipperOrderModel order) async {
+    final reason = await showDeliveryFailureDialog(context);
+    if (!mounted || reason == null) return;
+    try {
+      await context.read<ShipperProvider>().reportFailure(order.id, reason);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã báo giao thất bại')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+  }
+
+  List<ShipperOrderModel> _filterOrdersByQuery(List<ShipperOrderModel> orders) {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return orders;
+    return orders.where((order) {
+      return order.orderNumber.toLowerCase().contains(query) ||
+          order.customerName.toLowerCase().contains(query) ||
+          order.customerPhone.toLowerCase().contains(query) ||
+          order.shippingAddress.toLowerCase().contains(query);
+    }).toList();
   }
 
   @override
@@ -254,6 +169,7 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
     final auth = context.watch<AuthProvider>();
     if (!auth.isAuthenticated) return const SizedBox.shrink();
     final shipper = context.watch<ShipperProvider>();
+    final driverName = auth.currentFullName ?? auth.currentUsername ?? 'Bưu tá';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -270,10 +186,10 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
             Text(
-              'Tài xế: ${auth.currentFullName ?? auth.currentUsername ?? "Bưu tá"}',
+              'Tài xế: $driverName',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           ],
         ),
@@ -298,58 +214,123 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
               tooltip: 'Làm mới danh sách',
               onPressed: () => shipper.fetchOrders(),
             ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Đăng xuất',
-            onPressed: _handleLogout,
+          PopupMenuButton<String>(
+            tooltip: 'Menu tài khoản',
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (value) {
+              if (value == 'account') {
+                setState(() {
+                  _tab = 3;
+                  _visitedTabs.add(3);
+                });
+              } else if (value == 'logout') {
+                _handleLogout();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                enabled: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      driverName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textMain,
+                      ),
+                    ),
+                    if (auth.currentUsername != null)
+                      Text(
+                        '@${auth.currentUsername}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'account',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.manage_accounts_outlined,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    SizedBox(width: 8),
+                    Text('Hồ sơ & Cài đặt'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.logout_rounded,
+                      size: 18,
+                      color: AppColors.danger,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Đăng xuất',
+                      style: TextStyle(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (index) {
-          setState(() => _tab = index);
-          if (index == 0) shipper.fetchOrders();
+          setState(() {
+            _tab = index;
+            _visitedTabs.add(index);
+          });
         },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.local_shipping_outlined),
+            selectedIcon: Icon(Icons.local_shipping),
             label: 'Đơn giao',
           ),
           NavigationDestination(icon: Icon(Icons.history), label: 'Lịch sử'),
           NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Thống kê'),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Tài khoản',
+          ),
         ],
       ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: switch (_tab) {
-              1 => const DeliveryHistoryScreen(),
-              2 => const ShipperStatsScreen(),
-              _ => _buildDashboard(shipper),
-            },
-          ),
+      body: ShipperPageContainer(
+        child: IndexedStack(
+          index: _tab,
+          children: [
+            _buildDashboard(shipper),
+            _visitedTabs.contains(1)
+                ? const DeliveryHistoryScreen()
+                : const SizedBox.shrink(),
+            _visitedTabs.contains(2)
+                ? const ShipperStatsScreen()
+                : const SizedBox.shrink(),
+            _visitedTabs.contains(3)
+                ? const ShipperAccountScreen()
+                : const SizedBox.shrink(),
+          ],
         ),
       ),
     );
-  }
-
-  VoidCallback? _shipperStartAction(ShipperOrderModel order) {
-    if (context.watch<ShipperProvider>().isLoading) return null;
-    return () async {
-      try {
-        await context.read<ShipperProvider>().startDelivery(order.id);
-      } catch (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('$error')));
-        }
-      }
-    };
   }
 
   Widget _buildDashboard(ShipperProvider shipper) {
@@ -360,483 +341,685 @@ class _ShipperDashboardScreenState extends State<ShipperDashboardScreen>
       'DELIVERY_FAILED': 'Giao thất bại',
       'RETURNING_TO_SENDER': 'Cần hoàn kho',
     };
+
+    final visibleOrders = _filterOrdersByQuery(shipper.orders);
+
     return RefreshIndicator(
       onRefresh: shipper.fetchOrders,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: shipper.orders.length + 2,
+        padding: ShipperLayout.pagePadding,
+        itemCount: visibleOrders.length + 2,
         itemBuilder: (context, index) {
           if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Danh sách đơn',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final filter in filters.entries)
-                        ChoiceChip(
-                          label: Text(filter.value),
-                          selected: shipper.currentFilter == filter.key,
-                          onSelected: (_) => shipper.setFilter(filter.key),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+            return _buildDashboardHeader(
+              shipper: shipper,
+              filters: filters,
+              visibleCount: visibleOrders.length,
             );
           }
-          if (index <= shipper.orders.length) {
-            return _buildOrderCard(shipper.orders[index - 1]);
+          if (index <= visibleOrders.length) {
+            return _buildOrderCard(visibleOrders[index - 1], shipper.isLoading);
           }
-          if (shipper.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (shipper.ordersError case final error?) {
-            return Column(
-              children: [
-                Text(error),
-                TextButton(
-                  onPressed: () =>
-                      shipper.fetchOrders(loadMore: shipper.hasMore),
-                  child: const Text('Thử lại'),
-                ),
-              ],
-            );
-          }
-          if (shipper.hasMore) {
-            return TextButton(
-              onPressed: () => shipper.fetchOrders(loadMore: true),
-              child: const Text('Tải thêm'),
-            );
-          }
-          return shipper.orders.isEmpty
-              ? const Center(child: Text('Không có đơn hàng trong mục này'))
-              : const SizedBox.shrink();
+          return _buildDashboardFooter(shipper, visibleOrders);
         },
       ),
     );
   }
 
-  Future<void> _reportFailure(ShipperOrderModel order) async {
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (_) => const _DeliveryFailureDialog(),
+  Widget _buildDashboardHeader({
+    required ShipperProvider shipper,
+    required Map<String, String> filters,
+    required int visibleCount,
+  }) {
+    final activeShipped = shipper.orders.where((o) => o.isShipped).toList();
+    final pendingCod = activeShipped.fold<double>(
+      0,
+      (sum, o) => sum + (o.isCod ? o.codAmount : 0),
     );
-    if (!mounted || reason == null) return;
-    try {
-      await context.read<ShipperProvider>().reportFailure(order.id, reason);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Đã báo giao thất bại')));
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('$error')));
-      }
-    }
-  }
+    final unremittedCod = shipper.orders.fold<double>(
+      0,
+      (sum, o) =>
+          sum + (o.codCollected > o.codRemitted ? o.codCollected - o.codRemitted : 0),
+    );
 
-  Widget _buildOrderCard(ShipperOrderModel order) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Danh sách đơn',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMain,
+                  ),
+                ),
+              ),
+              if (!shipper.isLoading || shipper.orders.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySurface,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    '$visibleCount đơn',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+              IconButton(
+                tooltip: _searchOpen ? 'Đóng tìm kiếm' : 'Tìm kiếm đơn',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  _searchOpen ? Icons.search_off_rounded : Icons.search_rounded,
+                  color: _searchOpen ? AppColors.primary : AppColors.textMuted,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _searchOpen = !_searchOpen;
+                    if (!_searchOpen) {
+                      _searchController.clear();
+                      _searchQuery = '';
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
+          if (activeShipped.isNotEmpty || unremittedCod > 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              [
+                'Đang phụ trách: ${activeShipped.length} đơn',
+                if (pendingCod > 0) 'COD cần thu: ${formatCurrency(pendingCod)}',
+                if (unremittedCod > 0)
+                  'Chờ nộp: ${formatCurrency(unremittedCod)}',
+              ].join(' • '),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ],
+          if (_searchOpen || _searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchQuery = val),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Tìm mã đơn, tên khách, SĐT, địa chỉ…',
+                hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                ),
+                isDense: true,
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        tooltip: 'Xóa tìm kiếm',
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.card,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(
+                    ShipperLayout.innerRadius,
+                  ),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(
+                    ShipperLayout.innerRadius,
+                  ),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final entry in filters.entries)
+                ChoiceChip(
+                  label: Text(entry.value),
+                  selected: shipper.currentFilter == entry.key,
+                  selectedColor: AppColors.primarySurface,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: shipper.currentFilter == entry.key
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: shipper.currentFilter == entry.key
+                        ? AppColors.primaryDark
+                        : AppColors.textMain,
+                  ),
+                  side: BorderSide(
+                    color: shipper.currentFilter == entry.key
+                        ? AppColors.primary
+                        : AppColors.border,
+                  ),
+                  showCheckmark: false,
+                  onSelected: (_) => shipper.setFilter(entry.key),
+                ),
+            ],
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Order ID and delivery status
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: order.isDelivered
-                  ? AppColors.successLight
-                  : AppColors.primarySurface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(17),
+    );
+  }
+
+  Widget _buildDashboardFooter(
+    ShipperProvider shipper,
+    List<ShipperOrderModel> visibleOrders,
+  ) {
+    if (shipper.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 28),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (shipper.ordersError case final error?) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.cloud_off_outlined,
+                size: 36,
+                color: AppColors.textMuted,
               ),
-            ),
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      order.isDelivered
-                          ? Icons.check_circle
-                          : Icons.local_shipping,
-                      size: 18,
-                      color: order.isDelivered
-                          ? AppColors.success
-                          : AppColors.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        '#${order.orderNumber}',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: order.isDelivered
-                              ? AppColors.success
-                              : AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: switch (order.status) {
-                      'DELIVERED' => AppColors.success,
-                      'DELIVERY_FAILED' => AppColors.danger,
-                      'RETURNING_TO_SENDER' => AppColors.warning,
-                      _ => AppColors.primary,
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    switch (order.status) {
-                      'DELIVERED' => 'Đã giao',
-                      'SHIPPED' =>
-                        order.deliveryStartedAt == null
-                            ? 'Cần giao'
-                            : 'Đang giao',
-                      'DELIVERY_FAILED' => 'Giao thất bại',
-                      'RETURNING_TO_SENDER' => 'Cần hoàn kho',
-                      _ => order.status,
-                    },
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              const SizedBox(height: 8),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textMain),
+              ),
+              const SizedBox(height: 10),
+              FilledButton(
+                onPressed: () =>
+                    shipper.fetchOrders(loadMore: shipper.hasMore),
+                child: const Text('Thử lại'),
+              ),
+            ],
           ),
-
-          // Body Details
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Customer Name & Phone with Call Action
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.person,
-                      size: 18,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            order.customerName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            order.customerPhone.isNotEmpty
-                                ? order.customerPhone
-                                : 'Không có SĐT',
-                            style: const TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (order.customerPhone.isNotEmpty)
-                      ElevatedButton.icon(
-                        onPressed: () => _makePhoneCall(order.customerPhone),
-                        icon: const Icon(
-                          Icons.phone,
-                          size: 15,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          'Gọi ngay',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                  ],
+        ),
+      );
+    }
+    if (shipper.hasMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: OutlinedButton(
+            onPressed: () => shipper.fetchOrders(loadMore: true),
+            child: const Text('Tải thêm đơn hàng'),
+          ),
+        ),
+      );
+    }
+    if (visibleOrders.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.inbox_outlined,
+                size: 40,
+                color: AppColors.textMuted,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _searchQuery.trim().isNotEmpty
+                    ? 'Không tìm thấy đơn khớp từ khóa'
+                    : 'Không có đơn hàng trong mục này',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
                 ),
-                const SizedBox(height: 10),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
 
-                // Address
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 18,
-                      color: AppColors.danger,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            order.displayShippingAddress,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textMain,
-                            ),
-                          ),
-                          if (order.isShipped &&
-                              order.shippingAddress.isNotEmpty)
-                            TextButton.icon(
-                              onPressed: () =>
-                                  _openDirections(order.shippingAddress),
-                              icon: const Icon(
-                                Icons.directions_outlined,
-                                size: 18,
-                              ),
-                              label: const Text('Chỉ đường'),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+  Widget _buildOrderCard(ShipperOrderModel order, bool providerBusy) {
+    final style = ShipperStatusStyle.fromOrder(order);
 
-                if (order.items.isNotEmpty ||
-                    order.itemsSummary.isNotEmpty) ...[
-                  const Text(
-                    'Sản phẩm trong đơn',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  OrderItemsSection(order: order, preview: true),
-                  const SizedBox(height: 10),
-                ],
-                TextButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ShipperOrderDetailScreen(order: order),
-                    ),
-                  ),
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  label: const Text('Xem chi tiết đơn'),
-                ),
-
-                // COD / Payment Info Box
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: order.isCod
-                        ? AppColors.warningLight
-                        : AppColors.successLight,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    spacing: 12,
-                    runSpacing: 6,
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: AppColors.card,
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(ShipperLayout.cardRadius),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: InkWell(
+        onTap: () => _openOrderDetail(order),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header synced with semantic order status colors
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: style.background,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        order.isCod ? 'Thu tiền COD:' : 'Thanh toán:',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: order.isCod
-                              ? AppColors.warning
-                              : AppColors.success,
-                        ),
-                      ),
-                      Text(
-                        _currencyFormat.format(
-                          order.isCod ? order.codAmount : order.totalAmount,
-                        ),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: order.isCod
-                              ? AppColors.warning
-                              : AppColors.success,
+                      Icon(style.icon, size: 18, color: style.foreground),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          '#${order.orderNumber}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: style.foreground,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                // Action Buttons
-                const SizedBox(height: 12),
-                if (order.codCollected > 0) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'COD đã thu: ${_currencyFormat.format(order.codCollected)}',
-                  ),
-                  Text(
-                    'Đã bàn giao: ${_currencyFormat.format(order.codRemitted)}',
-                  ),
-                  Text(
-                    'Chờ bàn giao: ${_currencyFormat.format(order.codCollected - order.codRemitted)}',
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: style.badgeColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            style.label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: style.foreground,
+                      ),
+                    ],
                   ),
                 ],
-                if (order.isShipped && order.deliveryStartedAt == null)
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.local_shipping_outlined),
-                    label: const Text('Bắt đầu giao'),
-                    onPressed: _shipperStartAction(order),
-                  ),
-                if (order.isShipped && order.deliveryStartedAt != null) ...[
-                  OutlinedButton.icon(
-                    onPressed: () => _reportFailure(order),
-                    icon: const Icon(Icons.report_problem_outlined),
-                    label: const Text('Báo giao thất bại'),
-                  ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final res = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                DeliveryConfirmationScreen(order: order),
-                          ),
-                        );
-                        if (res == true && mounted) {
-                          context.read<ShipperProvider>().fetchOrders();
-                        }
-                      },
-                      icon: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      label: const Text(
-                        'Chụp ảnh xác nhận giao hàng',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 1,
-                      ),
-                    ),
-                  ),
-                ] else if (order.isDelivered)
-                  OutlinedButton.icon(
-                    onPressed: () => _showProofDialog(order),
-                    icon: const Icon(Icons.photo_outlined, size: 16),
-                    label: const Text('Xem bằng chứng giao hàng'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.success,
-                      side: const BorderSide(color: AppColors.success),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
-class _DeliveryFailureDialog extends StatefulWidget {
-  const _DeliveryFailureDialog();
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Recipient & call action
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.person_outline_rounded,
+                        size: 18,
+                        color: AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.customerName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: AppColors.textMain,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              order.customerPhone.isNotEmpty
+                                  ? order.customerPhone
+                                  : 'Không có SĐT',
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (order.customerPhone.isNotEmpty)
+                        FilledButton.icon(
+                          onPressed: () =>
+                              launchPhoneCall(context, order.customerPhone),
+                          icon: const Icon(Icons.phone_rounded, size: 15),
+                          label: const Text(
+                            'Gọi',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            minimumSize: const Size(0, 34),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
 
-  @override
-  State<_DeliveryFailureDialog> createState() => _DeliveryFailureDialogState();
-}
+                  // Shipping Address & flush-left Directions action
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 18,
+                        color: AppColors.danger,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.displayShippingAddress,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textMain,
+                              ),
+                            ),
+                            if (order.isShipped &&
+                                order.shippingAddress.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              OutlinedButton.icon(
+                                onPressed: () => openMapDirections(
+                                  context,
+                                  order.shippingAddress,
+                                ),
+                                icon: const Icon(
+                                  Icons.directions_outlined,
+                                  size: 16,
+                                ),
+                                label: const Text(
+                                  'Chỉ đường',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: const BorderSide(
+                                    color: AppColors.border,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  minimumSize: const Size(0, 34),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
 
-class _DeliveryFailureDialogState extends State<_DeliveryFailureDialog> {
-  final _form = GlobalKey<FormState>();
-  String _reason = '';
+                  if (order.items.isNotEmpty ||
+                      order.itemsSummary.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Sản phẩm trong đơn',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    OrderItemsSection(order: order, preview: true),
+                  ],
 
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Báo giao thất bại'),
-      content: Form(
-        key: _form,
-        child: TextFormField(
-          autofocus: true,
-          maxLength: 500,
-          maxLines: 3,
-          onChanged: (value) => _reason = value.trim(),
-          validator: (_) => _reason.isEmpty ? 'Nhập lý do giao thất bại' : null,
-          decoration: const InputDecoration(labelText: 'Lý do'),
+                  const SizedBox(height: 12),
+
+                  // COD / Payment Highlight Box
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: order.isCod
+                          ? AppColors.warningLight
+                          : AppColors.successLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          order.isCod ? 'Thu tiền COD:' : 'Thanh toán:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: order.isCod
+                                ? AppColors.warning
+                                : AppColors.success,
+                          ),
+                        ),
+                        Text(
+                          formatCurrency(
+                            order.isCod ? order.codAmount : order.totalAmount,
+                          ),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: order.isCod
+                                ? AppColors.warning
+                                : AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (order.codCollected > 0) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'COD đã thu: ${formatCurrency(order.codCollected)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMain,
+                            ),
+                          ),
+                          Text(
+                            'Đã bàn giao: ${formatCurrency(order.codRemitted)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          Text(
+                            'Chờ bàn giao: ${formatCurrency(order.codCollected - order.codRemitted)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Consistent full-width action buttons with clear hierarchy
+                  if (order.isShipped || order.isDelivered)
+                    const SizedBox(height: 12),
+                  if (order.isShipped && order.deliveryStartedAt == null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: providerBusy
+                            ? null
+                            : () => _startDelivery(order),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.local_shipping_outlined),
+                        label: const Text('Bắt đầu giao'),
+                      ),
+                    ),
+                  if (order.isShipped && order.deliveryStartedAt != null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          final res = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  DeliveryConfirmationScreen(order: order),
+                            ),
+                          );
+                          if (res == true && mounted) {
+                            context.read<ShipperProvider>().fetchOrders();
+                          }
+                        },
+                        icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                        label: const Text(
+                          'Chụp ảnh xác nhận giao hàng',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _reportFailure(order),
+                        icon: const Icon(
+                          Icons.report_problem_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Báo giao thất bại'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.danger,
+                          side: BorderSide(
+                            color: AppColors.danger.withValues(alpha: 0.45),
+                          ),
+                          minimumSize: const Size(0, 42),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else if (order.isDelivered)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => showDeliveryProofDialog(context, order),
+                        icon: const Icon(Icons.photo_outlined, size: 17),
+                        label: const Text('Xem bằng chứng giao hàng'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.success,
+                          side: const BorderSide(color: AppColors.success),
+                          minimumSize: const Size(0, 42),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Hủy'),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (_form.currentState!.validate()) Navigator.pop(context, _reason);
-          },
-          child: const Text('Gửi báo cáo'),
-        ),
-      ],
     );
   }
 }

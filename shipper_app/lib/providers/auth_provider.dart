@@ -20,6 +20,13 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated =>
       StorageService.tokens?.server == ApiConstants.baseUrl;
 
+  Future<void> updateCachedFullName(String fullName) async {
+    final cleanName = fullName.trim();
+    if (cleanName.isEmpty) return;
+    await StorageService.setUserInfo(currentUsername ?? '', cleanName);
+    notifyListeners();
+  }
+
   void _sessionEnded() {
     _errorMessage = 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.';
     notifyListeners();

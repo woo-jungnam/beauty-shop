@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
+import '../core/storage/storage_service.dart';
+import '../data/models/shipper_account_model.dart';
 import '../data/models/shipper_order_model.dart';
 
 class ShipperProvider extends ChangeNotifier {
@@ -29,6 +31,10 @@ class ShipperProvider extends ChangeNotifier {
     _ordersError = null;
     _nextPage = 0;
     _hasMore = false;
+    _userProfile = null;
+    _workProfile = null;
+    _isProfileLoading = false;
+    _profileError = null;
     notifyListeners();
   }
 
@@ -79,6 +85,161 @@ class ShipperProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>> fetchStats(String from, String to) =>
       _fetchData(ApiConstants.shipperStats, {'from': from, 'to': to});
+
+  Future<ShipperOrderModel> fetchOrderDetail(int orderId) async {
+    final data = await _fetchData(ApiConstants.shipperOrderDetail(orderId), {});
+    return ShipperOrderModel.fromJson(data);
+  }
+
+  ShipperUserProfile? _userProfile;
+  ShipperWorkProfile? _workProfile;
+  bool _isProfileLoading = false;
+  String? _profileError;
+
+  ShipperUserProfile? get userProfile => _userProfile;
+  ShipperWorkProfile? get workProfile => _workProfile;
+  bool get isProfileLoading => _isProfileLoading;
+  String? get profileError => _profileError;
+
+  Future<void> fetchAccountProfile() async {
+    final session = _session;
+    _isProfileLoading = true;
+    _profileError = null;
+    notifyListeners();
+
+    try {
+      final results = await Future.wait([
+        _fetchData(ApiConstants.userProfile, {}),
+        _fetchData(ApiConstants.shipperProfile, {}),
+      ]);
+      if (session != _session) return;
+      final user = ShipperUserProfile.fromJson(results[0]);
+      final work = ShipperWorkProfile.fromJson(results[1]);
+      _userProfile = user;
+      _workProfile = work;
+      if (user.fullName.isNotEmpty) {
+        await StorageService.setUserInfo(user.username, user.fullName);
+      }
+    } catch (e) {
+      if (session == _session) {
+        _profileError = e.toString();
+      }
+    } finally {
+      if (session == _session) {
+        _isProfileLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<ShipperUserProfile> updateUserProfile({
+    required String fullName,
+    String? phone,
+    String? avatarUrl,
+    String? bio,
+    String? gender,
+    String? dateOfBirth,
+  }) async {
+    final session = _session;
+    final payload = <String, dynamic>{
+      'fullName': fullName.trim(),
+      'phone': (phone ?? '').trim(),
+      'bio': (bio ?? '').trim(),
+      if (avatarUrl != null) 'avatarUrl': avatarUrl.trim(),
+      if (gender != null && gender.trim().isNotEmpty) 'gender': gender.trim(),
+      if (dateOfBirth != null && dateOfBirth.trim().isNotEmpty)
+        'dateOfBirth': dateOfBirth.trim(),
+    };
+    final response = await ApiClient().put<Map<String, dynamic>>(
+      ApiConstants.userProfile,
+      data: payload,
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw response.message ?? 'Không thể cập nhật thông tin cá nhân';
+    }
+    final updated = ShipperUserProfile.fromJson(response.data!);
+    if (session == _session) {
+      _userProfile = updated;
+      if (updated.fullName.isNotEmpty) {
+        await StorageService.setUserInfo(updated.username, updated.fullName);
+      }
+      notifyListeners();
+    }
+    return updated;
+  }
+
+  Future<String> uploadAvatar(XFile imageFile) async {
+    final MultipartFile filePart;
+    if (kIsWeb) {
+      final bytes = await imageFile.readAsBytes();
+      filePart = MultipartFile.fromBytes(bytes, filename: imageFile.name);
+    } else {
+      filePart = await MultipartFile.fromFile(
+        imageFile.path,
+        filename: imageFile.name,
+      );
+    }
+    final formData = FormData.fromMap({'file': filePart});
+    final response = await ApiClient().post<Map<String, dynamic>>(
+      ApiConstants.shipperAvatar,
+      data: formData,
+    );
+    final url =
+        response.data?['url']?.toString() ??
+        response.data?['publicUrl']?.toString();
+    if (!response.isSuccess || url == null || url.isEmpty) {
+      throw response.message ?? 'Không thể tải ảnh đại diện lên máy chủ';
+    }
+    return url;
+  }
+
+  Future<ShipperWorkProfile> updateWorkProfile({
+    String? vehicleType,
+    String? vehiclePlate,
+    String? serviceArea,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? workShift,
+  }) async {
+    final session = _session;
+    final payload = <String, dynamic>{
+      'vehicleType': (vehicleType ?? '').trim(),
+      'vehiclePlate': (vehiclePlate ?? '').trim(),
+      'serviceArea': (serviceArea ?? '').trim(),
+      'emergencyContactName': (emergencyContactName ?? '').trim(),
+      'emergencyContactPhone': (emergencyContactPhone ?? '').trim(),
+      'workShift': (workShift ?? '').trim(),
+    };
+    final response = await ApiClient().put<Map<String, dynamic>>(
+      ApiConstants.shipperProfile,
+      data: payload,
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw response.message ?? 'Không thể cập nhật thông tin tài xế';
+    }
+    final updated = ShipperWorkProfile.fromJson(response.data!);
+    if (session == _session) {
+      _workProfile = updated;
+      notifyListeners();
+    }
+    return updated;
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await ApiClient().put<dynamic>(
+      ApiConstants.changePassword,
+      data: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+    );
+    if (!response.isSuccess) {
+      throw response.message ?? 'Không thể đổi mật khẩu';
+    }
+  }
 
   Future<Map<String, dynamic>> _fetchData(
     String endpoint,

@@ -47,12 +47,30 @@ class ApiConstants {
   static const refresh = '/api/v1/auth/refresh';
   static const String logout = '/api/v1/auth/logout';
   static const String profile = '/api/v1/auth/profile';
+  static const String userProfile = '/api/v1/users/profile';
+  static const String changePassword = '/api/v1/users/password';
 
   static const notifications = '/api/v1/users/notifications';
   static const unreadNotifications = '$notifications/unread-count';
   static String notificationRead(int id) => '$notifications/$id/read';
   static const shipperHistory = '/api/v1/shipper/history';
   static const shipperStats = '/api/v1/shipper/stats';
+  static const String shipperProfile = '/api/v1/shipper/profile';
+  static const String shipperAvatar = '/api/v1/shipper/profile/avatar';
+
+  static String? resolveMediaUrl(String? url) {
+    final value = url?.trim();
+    if (value == null || value.isEmpty) return null;
+    final uri = Uri.tryParse(value);
+    if (uri == null || uri.userInfo.isNotEmpty) return null;
+    if (uri.hasScheme) {
+      return {'http', 'https'}.contains(uri.scheme) && uri.host.isNotEmpty
+          ? uri.toString()
+          : null;
+    }
+    if (uri.hasAuthority) return null;
+    return Uri.parse('$baseUrl/').resolveUri(uri).toString();
+  }
 
   // Shipper Deliveries
   static const String shipperOrders = '/api/v1/shipper/orders';

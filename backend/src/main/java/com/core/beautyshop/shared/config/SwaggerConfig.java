@@ -77,7 +77,7 @@ public class SwaggerConfig {
     public GroupedOpenApi orderCartApis() {
         return GroupedOpenApi.builder()
                 .group("04-orders").displayName("04 · Giỏ hàng, đơn hàng và hoàn tiền")
-                .pathsToMatch("/api/v1/orders/**", "/api/v1/cart/**", "/api/v1/admin/orders/**", "/api/v1/admin/commerce/**")
+                .pathsToMatch("/api/v1/orders/**", "/api/v1/cart/**", "/api/v1/admin/orders/**", "/api/v1/admin/commerce/**", "/api/v1/shipper/**")
                 .build();
     }
 

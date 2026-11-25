@@ -263,7 +263,21 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + id));
-        return buildOrderResponse(order);
+        OrderResponse response = buildOrderResponse(order);
+        if (productReturns != null && response.getId() != null) {
+            ProductReturnService.OrderReturnSummary summary = productReturns
+                    .summarizeByOrderIds(java.util.List.of(response.getId()))
+                    .get(response.getId());
+            if (summary != null) {
+                response.setReturnRequestCount(summary.totalCount());
+                response.setActiveReturnCount(summary.activeCount());
+                response.setLatestReturnStatus(summary.latestStatus());
+            } else {
+                response.setReturnRequestCount(0);
+                response.setActiveReturnCount(0);
+            }
+        }
+        return response;
     }
 
     private boolean matchesGuestSession(String expected, String provided) {
@@ -339,9 +353,47 @@ public class OrderServiceImpl implements OrderService {
                     }
                 }
             }
+            if (filter != null && Boolean.TRUE.equals(filter.pendingReturn())) {
+                jakarta.persistence.criteria.Subquery<Long> activeReturnSubquery = query.subquery(Long.class);
+                jakarta.persistence.criteria.Root<com.core.beautyshop.modules.order.domain.ProductReturn> returnRoot =
+                        activeReturnSubquery.from(com.core.beautyshop.modules.order.domain.ProductReturn.class);
+                activeReturnSubquery.select(returnRoot.get("id")).where(
+                        cb.equal(returnRoot.get("orderId"), root.get("id")),
+                        returnRoot.get("status").in("REQUESTED", "APPROVED", "RECEIVED")
+                );
+                jakarta.persistence.criteria.Predicate hasActiveProductReturn = cb.exists(activeReturnSubquery);
+                jakarta.persistence.criteria.Predicate refundPending = cb.equal(root.get("paymentStatus"), PaymentStatus.REFUND_PENDING);
+                jakarta.persistence.criteria.Predicate wholeOrderNeedsRefund = cb.and(
+                        root.get("paymentStatus").in(PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED),
+                        root.get("status").in(
+                                OrderStatus.DELIVERY_FAILED,
+                                OrderStatus.RETURNING_TO_SENDER,
+                                OrderStatus.RETURN_TO_SENDER,
+                                OrderStatus.RETURNED,
+                                OrderStatus.CANCELLED
+                        )
+                );
+                predicates.add(cb.or(hasActiveProductReturn, refundPending, wholeOrderNeedsRefund));
+            }
             return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
-        return orderRepository.findAll(specification, pageable).map(orderMapper::toOrderResponse);
+        Page<OrderResponse> page = orderRepository.findAll(specification, pageable).map(orderMapper::toOrderResponse);
+        if (productReturns != null && !page.isEmpty()) {
+            java.util.List<Long> orderIds = page.getContent().stream().map(OrderResponse::getId).toList();
+            java.util.Map<Long, ProductReturnService.OrderReturnSummary> summaries = productReturns.summarizeByOrderIds(orderIds);
+            for (OrderResponse item : page.getContent()) {
+                ProductReturnService.OrderReturnSummary summary = summaries.get(item.getId());
+                if (summary != null) {
+                    item.setReturnRequestCount(summary.totalCount());
+                    item.setActiveReturnCount(summary.activeCount());
+                    item.setLatestReturnStatus(summary.latestStatus());
+                } else {
+                    item.setReturnRequestCount(0);
+                    item.setActiveReturnCount(0);
+                }
+            }
+        }
+        return page;
     }
 
     @Override
