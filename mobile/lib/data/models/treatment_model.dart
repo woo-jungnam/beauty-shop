@@ -58,12 +58,30 @@ class TreatmentTemplate {
   int get versionNumber => treatmentInt(raw['versionNumber']);
   String get name => raw['name']?.toString() ?? '';
   String get description => raw['description']?.toString() ?? '';
+  String get shortDescription => raw['shortDescription']?.toString() ?? '';
+  String? get thumbnailUrl => raw['thumbnailUrl']?.toString();
+  String? get categoryName => raw['categoryName']?.toString();
   String get status => raw['status']?.toString() ?? '';
   String get terms => raw['terms']?.toString() ?? '';
   double get price => double.tryParse('${raw['price']}') ?? 0;
+  double? get originalPrice => raw['originalPrice'] == null
+      ? null
+      : double.tryParse('${raw['originalPrice']}');
+  int get totalDurationMinutes => treatmentInt(raw['totalDurationMinutes']);
   int? get validityDays =>
       raw['validityDays'] == null ? null : treatmentInt(raw['validityDays']);
   List<JsonMap> get sessions => treatmentMaps(raw['sessions']);
+  Map<int, JsonMap> get serviceDetails {
+    final map = <int, JsonMap>{};
+    final source = raw['serviceDetails'];
+    if (source is Map) {
+      source.forEach((key, value) {
+        final id = int.tryParse('$key');
+        if (id != null && value is Map) map[id] = treatmentMap(value);
+      });
+    }
+    return map;
+  }
   List<String> get allowedActions => (raw['allowedActions'] as List? ?? [])
       .map((value) => value.toString())
       .toList();
@@ -72,6 +90,7 @@ class TreatmentTemplate {
     'description': description,
     if (raw['serviceId'] != null) 'serviceId': raw['serviceId'],
     if (raw['packageId'] != null) 'packageId': raw['packageId'],
+    if (thumbnailUrl != null && thumbnailUrl!.isNotEmpty) 'thumbnailUrl': thumbnailUrl,
     'price': price,
     'validityDays': validityDays,
     'terms': terms,
@@ -113,6 +132,18 @@ class TreatmentSessionItem {
   String get status => raw['status']?.toString() ?? 'PLANNED';
   String get result => raw['result']?.toString() ?? '';
   String get aftercare => raw['aftercare']?.toString() ?? '';
+  String? get thumbnailUrl => raw['thumbnailUrl']?.toString();
+  String get shortDescription => raw['shortDescription']?.toString() ?? '';
+  String get description => raw['description']?.toString() ?? '';
+  String? get categoryName => raw['categoryName']?.toString();
+  int? get durationMinutes =>
+      raw['durationMinutes'] == null ? null : treatmentInt(raw['durationMinutes']);
+  int? get preparationTimeMinutes => raw['preparationTimeMinutes'] == null
+      ? null
+      : treatmentInt(raw['preparationTimeMinutes']);
+  double? get basePrice => raw['basePrice'] == null
+      ? null
+      : double.tryParse('${raw['basePrice']}');
   bool get required => raw['required'] != false;
 }
 
@@ -123,7 +154,12 @@ class TreatmentSession {
   int get sequence => treatmentInt(raw['sequence']);
   String get title => raw['title']?.toString() ?? '';
   String get status => raw['status']?.toString() ?? 'PLANNED';
+  int get minGapDays => treatmentInt(raw['minGapDays']);
+  int? get maxGapDays =>
+      raw['maxGapDays'] == null ? null : treatmentInt(raw['maxGapDays']);
   String? get earliestBookingAt => raw['earliestBookingAt']?.toString();
+  String? get latestBookingAt => raw['latestBookingAt']?.toString();
+  int get totalDurationMinutes => treatmentInt(raw['totalDurationMinutes']);
   String get blockedReason => raw['blockedReason']?.toString() ?? '';
   String get result => raw['result']?.toString() ?? '';
   String get aftercare => raw['aftercare']?.toString() ?? '';
@@ -156,6 +192,14 @@ class TreatmentEnrollment {
   int get version => treatmentInt(raw['version']);
   int get orderId => treatmentInt(raw['orderId']);
   String get name => raw['name']?.toString() ?? '';
+  String get description => raw['description']?.toString() ?? '';
+  String get shortDescription => raw['shortDescription']?.toString() ?? '';
+  String? get thumbnailUrl => raw['thumbnailUrl']?.toString();
+  String? get categoryName => raw['categoryName']?.toString();
+  double? get originalPrice => raw['originalPrice'] == null
+      ? null
+      : double.tryParse('${raw['originalPrice']}');
+  int get totalDurationMinutes => treatmentInt(raw['totalDurationMinutes']);
   String get status => raw['status']?.toString() ?? '';
   String get customerName =>
       raw['customerName']?.toString() ?? 'Khách #$userId';

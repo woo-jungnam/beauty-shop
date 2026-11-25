@@ -13,7 +13,6 @@ import {
   Calendar,
   Trash2,
   Building,
-  Receipt,
   FolderTree,
   Award,
   FileText,
@@ -33,7 +32,6 @@ import { Badge } from '../shared/ui/Badge';
 import { DataTable } from '../shared/ui/DataTable';
 import { Modal } from '../shared/ui/Modal';
 import { SpaCatalogTab } from './spa-catalog/SpaCatalogTab';
-import { SpaVisitCheckout } from '../shared/ui/SpaVisitCheckout';
 import { spaErrorMessage } from '../shared/utils/spaMessages';
 import { SpaOperatingPolicy } from './spa-catalog/SpaOperatingPolicy';
 import { TreatmentAppointmentDialog } from '../features/treatments/TreatmentAppointmentDialog';
@@ -105,13 +103,6 @@ export const SpaPage = () => {
   const aptRequest = useRef(null);
   const aptRequestedPage = useRef(0);
   const [statusFilter, setStatusFilter] = useState('');
-
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [selectedApt, setSelectedApt] = useState(null);
-  const [targetAptStatus, setTargetAptStatus] = useState('CONFIRMED');
-  const [staffNote, setStaffNote] = useState('');
-  const [appointmentAssignments, setAppointmentAssignments] = useState({});
-  const [submittingStatus, setSubmittingStatus] = useState(false);
 
   const [services, setServices] = useState([]);
   const [spaCategories, setSpaCategories] = useState([]);
@@ -191,9 +182,6 @@ export const SpaPage = () => {
   const [blockEnd, setBlockEnd] = useState(() => toLocalDatetimeString(new Date(Date.now() + 3600000 * 2)));
   const [blockReason, setBlockReason] = useState('Bảo trì thiết bị định kỳ');
   const [blockSubmitting, setBlockSubmitting] = useState(false);
-
-  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [selectedAptForInvoice, setSelectedAptForInvoice] = useState(null);
 
   const fetchAppointments = async (p = 0) => {
     aptRequest.current?.abort();
@@ -322,55 +310,6 @@ export const SpaPage = () => {
     }
     return () => aptRequest.current?.abort();
   }, [activeTab, statusFilter]);
-
-  const handleOpenStatusModal = (apt) => {
-    setSelectedApt(apt);
-    setTargetAptStatus(apt.status || 'CONFIRMED');
-    setStaffNote(apt.notes || '');
-    setAppointmentAssignments(Object.fromEntries((apt.items || []).filter((item) => item.staffId).map((item) => [item.id, item.staffId])));
-    if (staffList.length === 0) fetchStaff();
-    setStatusModalOpen(true);
-  };
-
-  const handleCheckIn = async (aptId) => {
-    try {
-      await apiClient.put(ENDPOINTS.SPA.CHECK_IN_APPOINTMENT(aptId));
-      alert('Đã tiếp nhận khách!');
-      fetchAppointments(aptPage);
-    } catch (err) {
-      alert(err.message || 'Không thể tiếp nhận khách');
-    }
-  };
-
-  const handleUpdateStatus = async (e) => {
-    e.preventDefault();
-    if (!selectedApt) return;
-    if (staffNote.trim().length > 500) {
-      alert('Ghi chú của chuyên viên / Lễ tân tối đa 500 ký tự. Vui lòng rút gọn nội dung.');
-      return;
-    }
-    setSubmittingStatus(true);
-    try {
-      await apiClient.put(ENDPOINTS.SPA.UPDATE_APPOINTMENT_STATUS(selectedApt.id), {
-        status: targetAptStatus,
-        notes: staffNote.trim() || undefined,
-        staffAssignments: targetAptStatus === 'CONFIRMED'
-          ? Object.fromEntries(
-              Object.entries(appointmentAssignments)
-                .filter(([, staffId]) => staffId !== '')
-                .map(([itemId, staffId]) => [itemId, Number(staffId)]),
-            )
-          : undefined,
-      });
-      setStatusModalOpen(false);
-      alert(`Cập nhật trạng thái lịch hẹn #${selectedApt.id} thành công!`);
-      fetchAppointments(aptPage);
-    } catch (err) {
-      alert(err.message || 'Lỗi cập nhật lịch hẹn');
-    } finally {
-      setSubmittingStatus(false);
-    }
-  };
 
   const handleOpenCreateCategory = () => {
     setEditingCategory(null);
@@ -728,11 +667,6 @@ export const SpaPage = () => {
     }
   };
 
-  const handleOpenInvoiceModal = (apt) => {
-    setSelectedAptForInvoice(apt);
-    setInvoiceModalOpen(true);
-  };
-
   const appointmentColumns = [
     { header: 'ID', accessor: 'id', width: '60px' },
     {
@@ -784,26 +718,21 @@ export const SpaPage = () => {
       header: 'Thao tác',
       accessor: (row) => (
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <Button variant="outline" size="sm" onClick={()=>setWorkspaceId(row.id)}>Chuẩn bị / thực hiện</Button>
-          {isSpaReception && row.status === 'CONFIRMED' && !row.checkedInAt && (
-            <Button variant="outline" size="sm" onClick={() => handleCheckIn(row.id)} icon={UserCheck} title="Tiếp nhận khách">
-              Tiếp nhận khách
-            </Button>
-          )}
-          {isSpaReception && (
-            <Button variant="outline" size="sm" onClick={() => handleOpenStatusModal(row)} icon={Edit} title="Cập nhật trạng thái">
-              Cập nhật
-            </Button>
-          )}
-          {isSpaReception && row.status === 'COMPLETED' && (
-            <Button variant="primary" size="sm" onClick={() => handleOpenInvoiceModal(row)} icon={Receipt} title="Chốt hóa đơn / Thu tiền">
-              Hóa đơn
+          <Button variant="outline" size="sm" onClick={() => setWorkspaceId(row.id)}>Chuẩn bị / thực hiện</Button>
+          {isSpaReception && ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(row.status) && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => { window.location.hash = '#/admin/spa-reception'; }}
+              title="Tiếp nhận, bắt đầu ca và thu ngân tại Quầy lễ tân"
+            >
+              Xử lý tại quầy
             </Button>
           )}
         </div>
       ),
       align: 'right',
-      width: '240px',
+      width: '260px',
     },
   ];
 
@@ -1219,70 +1148,6 @@ export const SpaPage = () => {
           />
         </div>
       )}
-
-      <Modal
-        isOpen={statusModalOpen}
-        onClose={() => setStatusModalOpen(false)}
-        title={`Cập nhật lịch hẹn #${selectedApt?.id}`}
-      >
-        <form onSubmit={handleUpdateStatus}>
-          <Select
-            label="Trạng thái lịch hẹn"
-            value={targetAptStatus}
-            onChange={(e) => setTargetAptStatus(e.target.value)}
-            options={[
-              { label: 'Xác nhận lịch (CONFIRMED)', value: 'CONFIRMED' },
-              { label: 'Bắt đầu phục vụ (IN_PROGRESS)', value: 'IN_PROGRESS' },
-              { label: 'Hoàn tất buổi dịch vụ (COMPLETED)', value: 'COMPLETED' },
-              { label: 'Khách không đến (NO_SHOW)', value: 'NO_SHOW' },
-              { label: 'Hủy lịch hẹn (CANCELLED)', value: 'CANCELLED' },
-            ]}
-          />
-          {targetAptStatus === 'CONFIRMED' && (selectedApt?.items || []).map((item) => (
-            <div key={item.id} style={{ marginTop: '12px' }}>
-              <Select
-                label={`Chuyên viên phụ trách: ${item.serviceName || ('Dịch vụ #' + item.serviceId)}`}
-                value={String(appointmentAssignments[item.id] || '')}
-                onChange={(e) => setAppointmentAssignments((current) => ({
-                  ...current,
-                  [item.id]: e.target.value,
-                }))}
-                options={[
-                  { label: 'Chưa chỉ định', value: '' },
-                  ...(() => {
-                    const activeStaff = staffList.filter((s) => s.active !== false);
-                    const matchingStaff = activeStaff.filter((s) => s.skills?.some((sk) => Number(sk.serviceId || sk.id) === Number(item.serviceId)));
-                    const listToUse = matchingStaff.length > 0 ? matchingStaff : activeStaff;
-                    return listToUse.map((staff) => ({
-                      label: `${staff.fullName || `Chuyên viên #${staff.id}`}${staff.skills?.some((sk) => Number(sk.serviceId || sk.id) === Number(item.serviceId)) ? ' (Đúng chuyên môn)' : ''}`,
-                      value: String(staff.id),
-                    }));
-                  })(),
-                ]}
-              />
-            </div>
-          ))}
-          <div style={{ marginTop: '12px' }}>
-            <label className="form-label">Ghi chú của chuyên viên / Lễ tân</label>
-            <textarea
-              className="form-textarea"
-              rows={3}
-              maxLength={500}
-              value={staffNote}
-              onChange={(e) => setStaffNote(e.target.value)}
-              placeholder="VD: Khách hàng hài lòng, liệu trình bước 2..."
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: staffNote.length >= 500 ? 'var(--color-danger-600)' : 'var(--text-muted)', marginTop: '4px' }}>
-              <span>Tối đa 500 ký tự</span>
-              <span>{staffNote.length}/500</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
-            <Button variant="outline" type="button" onClick={() => setStatusModalOpen(false)}>Hủy</Button>
-            <Button variant="primary" type="submit" loading={submittingStatus}>Cập nhật trạng thái</Button>
-          </div>
-        </form>
-      </Modal>
 
       <Modal
         isOpen={categoryModalOpen}
@@ -1777,16 +1642,6 @@ export const SpaPage = () => {
       </Modal>
 
       {workspaceId&&<TreatmentAppointmentDialog appointmentId={workspaceId} role={isAdmin?'admin':'staff'} onClose={()=>setWorkspaceId(null)} onSaved={()=>fetchAppointments(aptPage)} />}
-      <Modal
-        isOpen={invoiceModalOpen}
-        onClose={() => setInvoiceModalOpen(false)}
-        title={`Thanh toán buổi Spa #${selectedAptForInvoice?.id}`}
-        maxWidth="600px"
-      >
-        {invoiceModalOpen && selectedAptForInvoice && (
-          <SpaVisitCheckout key={selectedAptForInvoice.id} appointment={selectedAptForInvoice} onUpdated={() => fetchAppointments(aptPage)} />
-        )}
-      </Modal>
     </div>
   );
 };

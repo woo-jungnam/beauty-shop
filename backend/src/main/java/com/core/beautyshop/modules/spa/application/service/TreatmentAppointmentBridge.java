@@ -35,12 +35,14 @@ public class TreatmentAppointmentBridge {
                 .map(courses::item).map(SessionItem::getCourseId).distinct().sorted().forEach(courses::lockCourse);
     }
 
+    public Long resolveAvailableSessionItemId(Long ticketId, Long serviceId, Set<Long> excludingItemIds) {
+        return courses.resolveAvailableSessionItemId(ticketId, serviceId, excludingItemIds);
+    }
+
     public void validateAndLockBooking(Long sessionItemId, Long userId, Long serviceId, Long ticketId, Instant scheduledStart) {
         if (sessionItemId == null) {
             BeautyService svc = serviceId == null ? null : services.findById(serviceId).orElse(null);
             if (svc != null && "TREATMENT_COURSE".equals(svc.getServiceType())) throw business("Vui lòng mua gói liệu trình trước khi đặt lịch cho các buổi điều trị.");
-            Course course = ticketId == null ? null : courses.courseForTicket(ticketId);
-            if (course != null) { courses.lockCourse(course.getId()); throw business("Quyền lợi liệu trình cần được đặt lịch thông qua buổi điều trị tương ứng."); }
             return;
         }
         SessionItem observed = courses.item(sessionItemId); Course course = courses.lockCourse(observed.getCourseId());
@@ -50,7 +52,7 @@ public class TreatmentAppointmentBridge {
         if (item.isRetired() || !"PLANNED".equals(item.getStatus())) throw business("Dịch vụ điều trị này đã ngừng áp dụng, đã có lịch hẹn hoặc đã hoàn thành.");
         Session session = courses.getSession(item.getSessionId()); String blocked = courses.blocked(course, session);
         if (blocked != null) throw business(blocked);
-        if (scheduledStart == null || !courses.withinWindow(course, session, scheduledStart)) throw business("Lịch hẹn nằm ngoài khoảng thời gian hoặc thời hạn cho phép của buổi điều trị.");
+        if (scheduledStart == null || !courses.withinWindow(course, session, scheduledStart)) throw business("Lịch hẹn vượt quá thời hạn sử dụng của gói liệu trình.");
     }
 
     public void linkBooking(Long sessionItemId, Long appointmentItemId) {
@@ -71,16 +73,12 @@ public class TreatmentAppointmentBridge {
         SessionItem observed = courses.item(item.getTreatmentSessionItemId()); Course course = courses.lockCourse(observed.getCourseId());
         SessionItem treatmentItem = courses.lockSessionItem(item.getTreatmentSessionItemId());
         requireLink(treatmentItem, item);
-        if (!"ACTIVE".equals(course.getStatus()) || (course.getExpiryDate() != null && !course.getExpiryDate().isAfter(Instant.now())))
-            throw business("Hồ sơ liệu trình chưa được Bác sĩ tiếp nhận (Intake) hoặc đã hết hạn điều trị.");
+        if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(course.getStatus()) || (course.getExpiryDate() != null && !course.getExpiryDate().isAfter(Instant.now())))
+            throw business("Hồ sơ liệu trình hiện đang tạm dừng, chờ đánh giá hoặc đã hết hạn điều trị.");
         if (!Objects.equals(course.getUserId(), item.getAppointment().getUserId()) || item.getTicket() == null || !Objects.equals(course.getTicketId(), item.getTicket().getId())) throw business("Quyền sở hữu lộ trình hoặc vé liệu trình không khớp.");
         if (!access.hasRole("ADMIN") && (!access.hasRole("STAFF") || item.getStaff() == null
                 || !Objects.equals(item.getStaff().getUserId(), SecurityUtils.getCurrentUserId())))
             throw new AccessDeniedException("Chỉ chuyên viên/bác sĩ được phân công mới có thể thực hiện dịch vụ liệu trình này.");
-        Session session = courses.getSession(treatmentItem.getSessionId());
-        if (courses.sessions(course).stream().anyMatch(s -> s.isRequired() && s.getSequence() < session.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())))
-            throw business("Cần hoàn tất buổi điều trị trước đó trước khi thực hiện buổi này.");
-        if (!courses.withinWindow(course, session, Instant.now())) throw business("Thời điểm thực hiện nằm ngoài khoảng thời gian quy định của buổi điều trị.");
         if ("COMPLETED".equals(treatmentItem.getStatus())) throw business("Dịch vụ liệu trình này đã được hoàn thành trước đó.");
     }
 
@@ -91,12 +89,10 @@ public class TreatmentAppointmentBridge {
             if (!treatmentExecutionEnabled) throw business("Thực hiện lộ trình đang tạm dừng theo cấu hình hệ thống");
             SessionItem observed = courses.item(item.getTreatmentSessionItemId()); Course course = courses.lockCourse(observed.getCourseId());
             SessionItem linked = courses.lockSessionItem(item.getTreatmentSessionItemId()); requireLink(linked, item);
-            if (!"ACTIVE".equals(course.getStatus()))
-                throw business("Hồ sơ liệu trình chưa được Bác sĩ tiếp nhận (Intake). Vui lòng hoàn tất khám sàng lọc trước khi bắt đầu dịch vụ.");
-            if (!courses.withinWindow(course, courses.getSession(linked.getSessionId()), Instant.now()))
-                throw business("Thời điểm thực hiện nằm ngoài khoảng thời gian quy định hoặc thời hạn của lộ trình.");
-            Session session = courses.getSession(linked.getSessionId());
-            if (courses.sessions(course).stream().anyMatch(s -> s.isRequired() && s.getSequence() < session.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus()))) throw business("Cần hoàn tất buổi điều trị trước đó trước khi bắt đầu buổi này.");
+            if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(course.getStatus()))
+                throw business("Hồ sơ liệu trình hiện đang tạm dừng hoặc chờ đánh giá sự cố.");
+            if (course.getExpiryDate() != null && !course.getExpiryDate().isAfter(Instant.now()))
+                throw business("Gói liệu trình đã hết thời hạn sử dụng.");
         }
     }
 
@@ -134,17 +130,21 @@ public class TreatmentAppointmentBridge {
         SessionItem observed = courses.item(item.getTreatmentSessionItemId()); Course course = courses.lockCourse(observed.getCourseId());
         SessionItem treatmentItem = courses.lockSessionItem(item.getTreatmentSessionItemId()); requireLink(treatmentItem, item);
         if (!Set.of("PENDING_INTAKE", "ACTIVE").contains(course.getStatus()) || !courses.withinWindow(course, courses.getSession(treatmentItem.getSessionId()), newStart))
-            throw business("Thời gian hẹn mới nằm ngoài khoảng thời gian cho phép hoặc thời hạn của lộ trình.");
+            throw business("Lộ trình không ở trạng thái hoạt động hoặc thời gian hẹn mới vượt quá thời hạn sử dụng của gói.");
     }
 
     public boolean canStaffBookForCustomer(Long staffUserId, Long targetUserId, List<AppointmentItemRequest> items) {
         if (staffUserId == null || targetUserId == null || items == null || items.isEmpty()) return false;
         if (!access.permission("SPA_EXECUTION")) return false;
         for (var item : items) {
-            if (item.getTreatmentSessionItemId() == null) return false;
-            SessionItem sessionItem = courses.item(item.getTreatmentSessionItemId());
-            if (sessionItem == null) return false;
-            Course course = courses.getCourse(sessionItem.getCourseId());
+            Course course = null;
+            if (item.getTreatmentSessionItemId() != null) {
+                SessionItem sessionItem = courses.item(item.getTreatmentSessionItemId());
+                if (sessionItem == null) return false;
+                course = courses.getCourse(sessionItem.getCourseId());
+            } else if (item.getTicketId() != null) {
+                course = courses.courseForTicket(item.getTicketId());
+            }
             if (course == null || !Objects.equals(course.getUserId(), targetUserId) || !courses.isAssigned(course)) return false;
         }
         return true;

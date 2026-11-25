@@ -256,13 +256,49 @@ class _SpaTicketsScreenState extends State<SpaTicketsScreen> {
             child: const Text('Chi tiết quyền lợi & lịch sử / đặt lịch'),
           ),
 
-          Text(
-            ticket.serviceName,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.getTextMain(context),
-            ),
+          Row(
+            children: [
+              if (ticket.packageThumbnailUrl != null &&
+                  ticket.packageThumbnailUrl!.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    ticket.packageThumbnailUrl!,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ticket.serviceName,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.getTextMain(context),
+                      ),
+                    ),
+                    if (ticket.packageDescription != null &&
+                        ticket.packageDescription!.isNotEmpty)
+                      Text(
+                        ticket.packageDescription!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
 

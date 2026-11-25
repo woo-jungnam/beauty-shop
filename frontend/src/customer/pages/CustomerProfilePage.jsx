@@ -841,7 +841,20 @@ function ProfileContent({ onNavigate, initialTab = 'overview' }) {
                             {ticketWindow.rows.map(ticket => (
                               <article key={ticket.id} className="account-card profile-ticket-card">
                                 <header className="profile-card-heading">
-                                  <h3>{ticket.packageName || `Gói #${ticket.id}`}</h3>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                                    {ticket.packageThumbnailUrl && (
+                                      <img
+                                        src={resolveMediaUrl(ticket.packageThumbnailUrl)}
+                                        alt={ticket.packageName || ''}
+                                        style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                      />
+                                    )}
+                                    <div style={{ minWidth: 0 }}>
+                                      <h3>{ticket.packageName || `Gói #${ticket.id}`}</h3>
+                                      {ticket.packageDescription && <small style={{ display: 'block', color: 'var(--pf-text-dim)', marginTop: 2 }}>{ticket.packageDescription}</small>}
+                                    </div>
+                                  </div>
                                   <span className="pf-pill-pink">{getTicketStatusText(ticket.status)}</span>
                                 </header>
                                 <dl className="profile-card-facts">

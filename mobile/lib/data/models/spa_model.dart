@@ -186,6 +186,8 @@ class UserServiceTicket {
   final int id;
   final String ticketCode;
   final String serviceName;
+  final String? packageDescription;
+  final String? packageThumbnailUrl;
   final int remainingQuantity;
   final int totalQuantity;
   final String status;
@@ -202,6 +204,8 @@ class UserServiceTicket {
     required this.id,
     required this.ticketCode,
     required this.serviceName,
+    this.packageDescription,
+    this.packageThumbnailUrl,
     required this.remainingQuantity,
     required this.totalQuantity,
     required this.status,
@@ -231,6 +235,10 @@ class UserServiceTicket {
           json['serviceName']?.toString() ??
           json['packageName']?.toString() ??
           'Chưa cập nhật tên dịch vụ',
+      packageDescription: json['packageDescription']?.toString(),
+      packageThumbnailUrl: ImageUtils.resolveUrl(
+        json['packageThumbnailUrl']?.toString(),
+      ),
       remainingQuantity:
           ((json['remainingQuantity'] ?? json['remainingSessions']) as num?)
               ?.toInt() ??

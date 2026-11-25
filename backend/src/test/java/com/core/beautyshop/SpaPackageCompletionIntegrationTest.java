@@ -192,4 +192,38 @@ class SpaPackageCompletionIntegrationTest extends SpaWorkflowTestSupport {
         var q=as(f.admin(),()->refunds.visitQuote(aid));assertEquals(0,new BigDecimal("272").compareTo(q.items().stream().map(SpaRefundService.LineQuote::allocatedAmount).reduce(BigDecimal.ZERO,BigDecimal::add)));
         assertEquals(0,new BigDecimal("90").compareTo(q.items().getFirst().allocatedAmount()));
     }
+
+    @Test void activePackagesExposeEnrichedServiceImagesDurationsAndSavings() {
+        var f = fixture();
+        Long packageId = tx(() -> {
+            var service = services.findById(f.serviceId()).orElseThrow();
+            service.setThumbnailUrl("/images/spa/service-detail.jpg");
+            service.setShortDescription("Dịch vụ chăm sóc da chuyên sâu");
+            service.setDescription("Quy trình 4 bước chuẩn spa");
+            service.setDurationMinutes(45);
+            service.setBasePrice(new BigDecimal("500"));
+            var pack = ServicePackage.builder()
+                    .name("Gói giàu thông tin")
+                    .description("Mô tả gói dịch vụ")
+                    .price(new BigDecimal("1200"))
+                    .validityDays(90)
+                    .isActive(true)
+                    .items(new ArrayList<>())
+                    .build();
+            pack.getItems().add(ServicePackageItem.builder().servicePackage(pack).service(service).quantity(3).build());
+            return packages.saveAndFlush(pack).getId();
+        });
+        var list = availability.getActivePackages();
+        var enriched = list.stream().filter(p -> p.getId().equals(packageId)).findFirst().orElseThrow();
+        assertEquals("/images/spa/service-detail.jpg", enriched.getThumbnailUrl());
+        assertEquals(0, new BigDecimal("1500").compareTo(enriched.getOriginalPrice()));
+        assertEquals(0, new BigDecimal("300").compareTo(enriched.getSavingsAmount()));
+        assertEquals(3, enriched.getTotalSessions());
+        assertEquals(135, enriched.getTotalDurationMinutes());
+        var item = enriched.getItems().getFirst();
+        assertEquals("/images/spa/service-detail.jpg", item.getThumbnailUrl());
+        assertEquals("Dịch vụ chăm sóc da chuyên sâu", item.getShortDescription());
+        assertEquals("Quy trình 4 bước chuẩn spa", item.getDescription());
+        assertEquals(45, item.getDurationMinutes());
+    }
 }

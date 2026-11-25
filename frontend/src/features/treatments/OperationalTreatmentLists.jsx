@@ -1,5 +1,5 @@
 import { Button } from '../../shared/ui/Button';
-import { getVietnamDateString } from '../../shared/utils/formatters';
+import { getVietnamDateString, resolveMediaUrl } from '../../shared/utils/formatters';
 import { dateLabel, money, statusLabel } from './treatmentApi';
 import './operational-treatment-lists.css';
 
@@ -15,7 +15,9 @@ export function TreatmentSchedule({ sessions = [], template = false }) {
       const services = sessionServices(session);
       return <li key={session.id ?? session.sequence}>
         <span><strong>Buổi {session.sequence ?? index + 1}</strong><small>{template
-          ? session.minGapDays > 0 ? `Cách buổi trước ít nhất ${session.minGapDays} ngày` : null
+          ? (session.minGapDays > 0 || session.maxGapDays != null)
+            ? `Giãn cách tham khảo: ${session.minGapDays || 0}${session.maxGapDays != null ? `–${session.maxGapDays}` : '+'} ngày`
+            : null
           : session.appointmentDate ? `${dateLabel(session.appointmentDate)}${session.startTime ? ` · ${session.startTime.slice(0, 5)}` : ''}` : statusLabel(session.status)}</small></span>
         <span>{session.title}{services.length > 0 && !(services.length === 1 && services[0] === session.title) && <small>{services.join(' · ')}</small>}</span>
       </li>;
@@ -45,7 +47,24 @@ export function OperationalTreatmentTemplates({ templates, renderActions }) {
   return <div className="operational-treatment-list">{templates.map(template => (
     <article className="treatment-card operational-treatment-record" key={template.id} data-treatment-template-id={template.id}>
       <div className="treatment-card-heading">
-        <div><h2>{template.name}</h2><small>{template.sessions?.length || 0} buổi · {template.validityDays ? `${template.validityDays} ngày · ` : ''}v{template.versionNumber}</small></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          {template.thumbnailUrl && (
+            <img
+              src={resolveMediaUrl(template.thumbnailUrl)}
+              alt={template.name}
+              style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid #ececf1' }}
+              onError={event => { event.currentTarget.style.display = 'none'; }}
+            />
+          )}
+          <div>
+            <h2>{template.name}</h2>
+            <small>
+              {template.sessions?.length || 0} buổi
+              {template.totalDurationMinutes > 0 ? ` · ${template.totalDurationMinutes} phút` : ''}
+              {` · ${template.validityDays ? `${template.validityDays} ngày · ` : ''}v${template.versionNumber}`}
+            </small>
+          </div>
+        </div>
         <span className="treatment-badge">{statusLabel(template.status)}</span>
       </div>
       <details>

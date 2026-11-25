@@ -16,5 +16,21 @@ const statuses = {
   PAUSE: 'Tạm dừng', RESUME: 'Tiếp tục', CANCEL: 'Dừng / hoàn tiền', EXTEND: 'Gia hạn', INCIDENT: 'Đánh giá sự cố / phản ứng', PRICE_ADJUSTMENT: 'Hoàn chênh lệch giảm giá', UNAPPLIED_SETTLEMENT: 'Hoàn thanh toán điều chỉnh chưa áp dụng', SETTLEMENT_REFUND_PENDING: 'Chờ hoàn thanh toán điều chỉnh', AWAITING_RESULT: 'Chờ ghi kết quả buổi',
 };
 export const statusLabel = value => statuses[value] || value || 'Chưa xác định';
-export const planPayload = form => ({ name: form.name.trim(), description: form.description || '', terms: form.terms || '', serviceId: Number(form.serviceId), price: Number(form.price), validityDays: form.validityDays === '' || form.validityDays == null ? null : Number(form.validityDays), sessions: form.sessions.map((session, index) => ({ sequence: index + 1, title: session.title.trim(), minGapDays: Number(session.minGapDays), maxGapDays: session.maxGapDays === '' || session.maxGapDays == null ? null : Number(session.maxGapDays), required: session.required, items: session.items.map(item => ({ serviceId: Number(item.serviceId), required: item.required })) })) });
+export const planPayload = form => ({
+  name: form.name.trim(),
+  description: form.description || '',
+  terms: form.terms || '',
+  serviceId: Number(form.serviceId),
+  price: Number(form.price),
+  validityDays: form.validityDays === '' || form.validityDays == null ? null : Number(form.validityDays),
+  thumbnailUrl: form.thumbnailUrl?.trim() || null,
+  sessions: form.sessions.map((session, index) => ({
+    sequence: index + 1,
+    title: session.title.trim(),
+    minGapDays: Number(session.minGapDays),
+    maxGapDays: session.maxGapDays === '' || session.maxGapDays == null ? null : Number(session.maxGapDays),
+    required: session.required,
+    items: session.items.map(item => ({ serviceId: Number(item.serviceId), required: item.required })),
+  })),
+});
 export const bookingPayload = ({ course, session, role, date, slot, notes = '' }) => ({ appointmentDate: date, startTime: slot.length === 5 ? `${slot}:00` : slot, notes: notes.trim(), ...(role !== 'customer' ? { targetUserId: course.userId } : {}), items: session.items.filter(item => !['PERFORMED', 'COMPLETED'].includes(item.status)).map(item => ({ serviceId: item.serviceId, ticketId: item.ticketId, treatmentSessionItemId: item.id })) });

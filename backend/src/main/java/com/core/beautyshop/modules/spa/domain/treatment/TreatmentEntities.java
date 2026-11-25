@@ -63,7 +63,7 @@ public final class TreatmentEntities {
         @Column(name = "plan_json", nullable = false, columnDefinition = "LONGTEXT") private String planJson;
         @Column(name = "plan_revision", nullable = false) private int planRevision = 1;
         @Version @Column(name = "row_version", nullable = false) private long rowVersion;
-        @Column(nullable = false, length = 30) private String status = "PENDING_INTAKE";
+        @Column(nullable = false, length = 30) private String status = "ACTIVE";
         @Column(name = "expiry_date") private Instant expiryDate;
         @Column(name = "paused_at") private Instant pausedAt;
         @Column(name = "intake_notes", columnDefinition = "TEXT") private String intakeNotes;

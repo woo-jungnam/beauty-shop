@@ -16,8 +16,14 @@ public final class TreatmentContracts {
         @NotNull(message = "Giá là bắt buộc") @DecimalMin(value = "1.00", message = "Giá phải lớn hơn 0") BigDecimal price,
         @Min(value = 1, message = "Hạn tối thiểu 1 ngày") @Max(value = 3650, message = "Hạn tối đa 3650 ngày") Integer validityDays,
         @NotBlank(message = "Điều khoản là bắt buộc") @Size(max = 10000, message = "Điều khoản tối đa 10000 ký tự") String terms,
-        @NotEmpty(message = "Danh sách buổi không được để trống") List<@Valid PlanSession> sessions
-    ) {}
+        @NotEmpty(message = "Danh sách buổi không được để trống") List<@Valid PlanSession> sessions,
+        @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự") String thumbnailUrl
+    ) {
+        public Plan(String name, String description, Long serviceId, BigDecimal price,
+                    Integer validityDays, String terms, List<PlanSession> sessions) {
+            this(name, description, serviceId, price, validityDays, terms, sessions, null);
+        }
+    }
     public record PlanSession(
         int sequence,
         @NotBlank(message = "Tiêu đề buổi là bắt buộc") @Size(max = 150, message = "Tiêu đề buổi tối đa 150 ký tự") String title,
@@ -31,9 +37,15 @@ public final class TreatmentContracts {
         String serviceName,
         Boolean required
     ) {}
+    public record ServiceDetail(Long serviceId, String name, String slug, String shortDescription,
+                                String description, String thumbnailUrl, BigDecimal basePrice,
+                                Integer durationMinutes, Integer preparationTimeMinutes,
+                                String categoryName, boolean requiresCertification) {}
     public record TemplateView(Long id, Long versionId, int versionNumber, String status, String name,
                                String description, Long serviceId, Long packageId, BigDecimal price,
-                               Integer validityDays, String terms, List<PlanSession> sessions, List<String> allowedActions) {}
+                               Integer validityDays, String terms, List<PlanSession> sessions, List<String> allowedActions,
+                               String thumbnailUrl, String shortDescription, String categoryName,
+                               BigDecimal originalPrice, int totalDurationMinutes, Map<Long, ServiceDetail> serviceDetails) {}
     public record PurchaseCommand(
         @NotNull(message = "Mã mẫu phác đồ là bắt buộc") Long templateId,
         @NotNull(message = "Phiên bản phác đồ là bắt buộc") Long versionId,
@@ -78,12 +90,15 @@ public final class TreatmentContracts {
     ) {}
     public record ItemView(Long id, Long serviceId, String serviceName, Long ticketId, String status,
                            boolean required, Long appointmentItemId, Long appointmentId, String appointmentStatus,
-                           String appointmentDate, String startTime, BigDecimal allocatedAmount, String result, String aftercare) {}
+                           String appointmentDate, String startTime, BigDecimal allocatedAmount, String result, String aftercare,
+                           String thumbnailUrl, String shortDescription, String description,
+                           Integer durationMinutes, Integer preparationTimeMinutes, BigDecimal basePrice, String categoryName) {}
     public record SessionView(Long id, int sequence, String title, String status, int minGapDays,
                               Integer maxGapDays, boolean required, Instant earliestBookingAt, Instant latestBookingAt,
                               String blockedReason, Long appointmentId, String appointmentDate, String startTime,
                               String result, String aftercare, String internalNotes, Instant completedAt,
-                              List<ItemView> items, List<String> allowedActions, List<ResultView> results) {}
+                              List<ItemView> items, List<String> allowedActions, List<ResultView> results,
+                              int totalDurationMinutes) {}
     public record ResultView(Long id, Long authorId, String result, String aftercare, String internalNotes,
                              boolean sharedWithCustomer, Instant createdAt) {}
     public record ChangeView(Long id, String status, int expectedVersion, String reason, Plan plan, Plan oldPlan,
@@ -98,7 +113,9 @@ public final class TreatmentContracts {
                              int totalSessions, int progressPercent, List<SessionView> sessions,
                              List<ChangeView> changes, List<RequestView> requests, List<AuditView> audit,
                              List<String> allowedActions, Plan plan, Plan currentPlan,
-                             String customerName, String customerPhone) {}
+                             String customerName, String customerPhone,
+                             String thumbnailUrl, String shortDescription, String description, String categoryName,
+                             BigDecimal originalPrice, int totalDurationMinutes, Map<Long, ServiceDetail> serviceDetails) {}
     public record Report(long totalCourses, long pendingIntake, long activeCourses, long pausedCourses,
                          long completedCourses, long expiredCourses, long sessionsDue, long customersWithoutNextBooking,
                          BigDecimal collectedAmount, BigDecimal refundedAmount, BigDecimal unusedEntitlementAmount,

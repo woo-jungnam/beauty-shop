@@ -1,8 +1,9 @@
 import { auditActionLabel, treatmentAuditDetails } from '../../shared/utils/adminAuditLabels';
 import React, { useState } from 'react';
-import { ArrowLeft, CalendarDays, Clock, RefreshCw, UserRound } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, Info, RefreshCw, Sparkles, Tag, UserRound } from 'lucide-react';
 import { Button } from '../../shared/ui/Button';
 import { apiClient } from '../../shared/api/client';
+import { resolveMediaUrl } from '../../shared/utils/formatters';
 import { TreatmentActionDialog } from './TreatmentActionDialog';
 import { TreatmentAppointmentDialog } from './TreatmentAppointmentDialog';
 import { TreatmentBookingDialog } from './TreatmentBookingDialog';
@@ -12,7 +13,38 @@ import { openTreatmentPayment } from './paymentNavigation';
 import { useAuth } from '../../app/providers/AuthProvider';
 
 const Reason = { key: 'reason', label: 'Lý do', rows: 3, maxLength: 1000 };
-const PlanSummary = ({ plan }) => <><strong>{plan?.name}</strong><p>{money(plan?.price)} · {plan?.validityDays == null ? 'Không giới hạn' : `${plan.validityDays} ngày`}</p><ol className="treatment-mini-sessions">{(plan?.sessions || []).map((session, index) => <li key={index}>{session.title}<small>{(session.items || []).map(item => item.serviceName || `Dịch vụ #${item.serviceId}`).join(', ')} · Cách buổi trước tối thiểu {session.minGapDays || 0} ngày</small></li>)}</ol><details><summary>Điều khoản</summary><p>{plan?.terms}</p></details></>;
+const formatAdvisoryGap = session => {
+  const min = Number(session?.minGapDays || 0);
+  const max = session?.maxGapDays;
+  if (min <= 0 && max == null) return '';
+  return max != null ? `Giãn cách tham khảo: ${min}–${max} ngày` : `Giãn cách tham khảo: ${min}+ ngày`;
+};
+const fallbackImage = '/images/spa/facial-care.jpg';
+const ServiceThumb = ({ src, alt, className = 'treatment-item-thumb' }) => {
+  const [failed, setFailed] = useState(false);
+  const resolved = !failed && src ? resolveMediaUrl(src) : fallbackImage;
+  return <img className={className} src={resolved} alt={alt || ''} loading="lazy" onError={() => setFailed(true)} />;
+};
+const PlanSummary = ({ plan, serviceDetails = {} }) => <>
+  <strong>{plan?.name}</strong>
+  <p>{money(plan?.price)} · {plan?.validityDays == null ? 'Không giới hạn' : `${plan.validityDays} ngày`}</p>
+  {plan?.description && <p className="treatment-muted" style={{ marginBottom: 10 }}>{plan.description}</p>}
+  <ol className="treatment-mini-sessions">{(plan?.sessions || []).map((session, index) => {
+    const gapText = formatAdvisoryGap(session);
+    return <li key={index}>
+      {session.title}
+      <small>
+        {(session.items || []).map(item => {
+          const detail = serviceDetails?.[item.serviceId];
+          const duration = detail?.durationMinutes ? ` (${detail.durationMinutes}p)` : '';
+          return `${item.serviceName || detail?.name || `Dịch vụ #${item.serviceId}`}${duration}`;
+        }).join(', ')}
+        {gapText ? ` · ${gapText} (không bắt buộc)` : ''}
+      </small>
+    </li>;
+  })}</ol>
+  <details><summary>Điều khoản</summary><p>{plan?.terms}</p></details>
+</>;
 
 export const TreatmentCourseDetail = ({ course, role, refresh, onBack, refreshing }) => {
   const { isSpaReception } = useAuth();
@@ -42,19 +74,53 @@ export const TreatmentCourseDetail = ({ course, role, refresh, onBack, refreshin
       <Button variant="outline" loading={refreshing} onClick={() => refresh()}><RefreshCw size={16} />Làm mới hồ sơ</Button>
     </div>
     <div className="treatment-detail-layout"><div className="treatment-stack">
-      <section className="treatment-card"><div className="treatment-card-heading"><h2>Tiến độ điều trị</h2><strong>{course.completedSessions}/{course.totalSessions} buổi hoàn thành</strong></div><div className="treatment-progress" role="progressbar" aria-label="Tiến độ điều trị" aria-valuemin={0} aria-valuemax={100} aria-valuenow={course.progressPercent || 0}><span style={{ width: `${Math.min(100, Math.max(0, course.progressPercent || 0))}%` }} /></div>{!operator && <p className="treatment-muted">Tiến độ được tính từ các buổi thực sự hoàn thành. Số lượt đã trừ do vắng hẹn không tính là đã điều trị.</p>}<div className="treatment-meta"><span><Clock size={14} />{['PAUSED', 'PENDING_REVIEW'].includes(course.status) ? 'Hạn đang bảo lưu, sẽ cộng thời gian dừng khi admin duyệt tiếp tục. Mốc trước bảo lưu:' : 'Hiệu lực đến'} {course.expiryDate ? dateLabel(course.expiryDate) : 'Không giới hạn'}</span><span><UserRound size={14} />{course.assignedStaffId ? `Phụ trách #${course.assignedStaffId}` : 'Chờ phân công tiếp nhận'}</span></div>{course.summary && <div className="treatment-result"><strong>Tổng kết lộ trình</strong><p>{course.summary}</p></div>}</section>
+      <section className="treatment-card">
+        {(course.thumbnailUrl || course.description || course.shortDescription || course.categoryName || course.totalDurationMinutes > 0 || course.originalPrice) && (
+          <div className="treatment-course-overview">
+            {course.thumbnailUrl && <ServiceThumb src={course.thumbnailUrl} alt={course.name} className="treatment-course-cover" />}
+            <div className="treatment-course-overview-copy">
+              <div className="treatment-meta" style={{ marginTop: 0 }}>
+                {course.categoryName && <span className="treatment-badge"><Tag size={12} />{course.categoryName}</span>}
+                {course.totalDurationMinutes > 0 && <span><Clock size={14} />Tổng thời lượng: {course.totalDurationMinutes} phút</span>}
+                {course.originalPrice && Number(course.originalPrice) > Number(course.paidAmount) && (
+                  <span><Sparkles size={14} />Giá trị dịch vụ lẻ: <del>{money(course.originalPrice)}</del></span>
+                )}
+              </div>
+              {course.shortDescription && <p><strong>{course.shortDescription}</strong></p>}
+              {(course.description || course.plan?.description) && <p className="treatment-muted">{course.description || course.plan?.description}</p>}
+            </div>
+          </div>
+        )}
+        <div className="treatment-card-heading"><h2>Tiến độ điều trị</h2><strong>{course.completedSessions}/{course.totalSessions} buổi hoàn thành</strong></div><div className="treatment-progress" role="progressbar" aria-label="Tiến độ điều trị" aria-valuemin={0} aria-valuemax={100} aria-valuenow={course.progressPercent || 0}><span style={{ width: `${Math.min(100, Math.max(0, course.progressPercent || 0))}%` }} /></div>{!operator && <p className="treatment-muted">Tiến độ được tính từ các buổi thực sự hoàn thành. Số lượt đã trừ do vắng hẹn không tính là đã điều trị.</p>}<div className="treatment-meta"><span><Clock size={14} />{['PAUSED', 'PENDING_REVIEW'].includes(course.status) ? 'Hạn đang bảo lưu, sẽ cộng thời gian dừng khi admin duyệt tiếp tục. Mốc trước bảo lưu:' : 'Hiệu lực đến'} {course.expiryDate ? dateLabel(course.expiryDate) : 'Không giới hạn'}</span><span><UserRound size={14} />{course.assignedStaffId ? `Phụ trách #${course.assignedStaffId}` : 'Không bắt buộc phân công trước'}</span></div>{course.summary && <div className="treatment-result"><strong>Tổng kết lộ trình</strong><p>{course.summary}</p></div>}</section>
       {(course.sessions || []).map(session => {
         const booked = Boolean(session.appointmentId) && session.items?.some(item => ['PENDING', 'CONFIRMED'].includes(item.appointmentStatus));
-        return <section className="treatment-card treatment-session" key={session.id} data-treatment-session-id={session.id}><span className="treatment-session-number">{session.sequence}</span><div className="treatment-card-heading"><h3>{session.title}</h3><span className="treatment-badge">{statusLabel(session.status)}</span></div><div className="treatment-meta"><span>{session.required ? 'Buổi bắt buộc' : 'Buổi tùy chọn'}</span>{session.earliestBookingAt && <span><CalendarDays size={14} />Sớm nhất {dateLabel(session.earliestBookingAt)}</span>}{session.latestBookingAt && <span>Muộn nhất {dateLabel(session.latestBookingAt)}</span>}</div>
+        const closed = ['COMPLETED', 'WAIVED', 'NO_SHOW'].includes(session.status);
+        const advisoryGap = formatAdvisoryGap(session);
+        const showBlocked = session.blockedReason && !closed;
+        return <section className="treatment-card treatment-session" key={session.id} data-treatment-session-id={session.id}><span className="treatment-session-number">{session.sequence}</span><div className="treatment-card-heading"><h3>{session.title}</h3><span className="treatment-badge">{statusLabel(session.status)}</span></div><div className="treatment-meta"><span>{session.required ? 'Buổi bắt buộc' : 'Buổi tùy chọn'}</span>{session.totalDurationMinutes > 0 && <span><Clock size={14} />{session.totalDurationMinutes} phút</span>}{(session.earliestBookingAt || session.latestBookingAt) ? <span className="treatment-advisory-note"><CalendarDays size={14} />Thời gian tham khảo: {session.earliestBookingAt ? `từ ${dateLabel(session.earliestBookingAt)}` : ''}{session.latestBookingAt ? ` đến ${dateLabel(session.latestBookingAt)}` : ''} (không bắt buộc)</span> : advisoryGap ? <span className="treatment-advisory-note"><Info size={14} />{advisoryGap} sau buổi trước (không bắt buộc)</span> : null}</div>
           {session.appointmentDate && <p><strong>Lịch hẹn #{session.appointmentId}</strong> · {dateLabel(session.appointmentDate)} · {session.startTime?.slice(0, 5)}</p>}
-          {session.blockedReason && <p className="treatment-notice warning">{session.blockedReason}</p>}
-          <ul className="treatment-items">{(session.items || []).map(item => <li key={item.id}><div className="treatment-card-heading"><strong>{item.serviceName}</strong><small>{statusLabel(item.status)}</small></div>{item.result && <div className="treatment-result"><strong>Kết quả</strong><p>{item.result}</p>{item.aftercare && <><strong>Hướng dẫn sau buổi</strong><p>{item.aftercare}</p></>}</div>}{item.appointmentId && item.appointmentId !== session.appointmentId && <Button size="sm" variant="outline" onClick={() => setAppointmentId(item.appointmentId)}>Xem lần hẹn #{item.appointmentId}</Button>}</li>)}</ul>
+          {showBlocked && <p className="treatment-notice warning">{session.blockedReason}</p>}
+          <ul className="treatment-items">{(session.items || []).map(item => <li key={item.id}><div className="treatment-item-row">
+            <ServiceThumb src={item.thumbnailUrl} alt={item.serviceName} />
+            <div className="treatment-item-body">
+              <div className="treatment-card-heading"><strong>{item.serviceName}</strong><small>{statusLabel(item.status)}</small></div>
+              <div className="treatment-meta" style={{ margin: '4px 0' }}>
+                {item.categoryName && <span className="treatment-badge">{item.categoryName}</span>}
+                {item.durationMinutes != null && <span><Clock size={13} />{item.durationMinutes} phút{item.preparationTimeMinutes ? ` + ${item.preparationTimeMinutes}p chuẩn bị` : ''}</span>}
+                {item.basePrice != null && <span>Giá lẻ niêm yết: <strong>{money(item.basePrice)}</strong></span>}
+              </div>
+              {item.shortDescription && <p className="treatment-muted">{item.shortDescription}</p>}
+              {item.description && <details className="treatment-item-details"><summary>Thông tin chi tiết dịch vụ</summary><p>{item.description}</p></details>}
+              {item.result && <div className="treatment-result"><strong>Kết quả</strong><p>{item.result}</p>{item.aftercare && <><strong>Hướng dẫn sau buổi</strong><p>{item.aftercare}</p></>}</div>}
+              {item.appointmentId && item.appointmentId !== session.appointmentId && <Button size="sm" variant="outline" onClick={() => setAppointmentId(item.appointmentId)}>Xem lần hẹn #{item.appointmentId}</Button>}
+            </div>
+          </div></li>)}</ul>
           {session.result && <div className="treatment-result"><strong>Kết quả buổi</strong><p>{session.result}</p>{session.aftercare && <><strong>Hướng dẫn chăm sóc</strong><p>{session.aftercare}</p></>}</div>}{operator && session.internalNotes && <div className="treatment-result internal"><strong>Ghi chú nội bộ</strong><p>{session.internalNotes}</p></div>}
           {(session.results || []).length > 1 && <details><summary>Lịch sử {session.results.length} lần ghi kết quả</summary>{session.results.map(result => <div className="treatment-result" key={result.id}><small>{dateLabel(result.createdAt)}{operator ? ` · Người ghi #${result.authorId} · ${result.sharedWithCustomer ? 'Đã chia sẻ' : 'Nội bộ'}` : ''}</small><p>{result.result}</p>{result.aftercare && <p>Hướng dẫn: {result.aftercare}</p>}{operator && result.internalNotes && <div className="treatment-result internal">{result.internalNotes}</div>}</div>)}</details>}
           <div className="treatment-actions">{canCoordinate && hasAction(session, 'BOOK') && <Button size="sm" onClick={() => setBooking({ session })}>Đặt lịch buổi {session.sequence}</Button>}{session.appointmentId && <Button size="sm" variant="outline" onClick={() => setAppointmentId(session.appointmentId)}>{operator ? 'Chuẩn bị / phân công / thực hiện' : 'Xem lịch & điền phiếu chuẩn bị'}</Button>}{canCoordinate && booked && <><Button size="sm" variant="outline" onClick={() => setBooking({ session, reschedule: true })}>Đổi lịch</Button><Button size="sm" variant="outline" onClick={() => setAction({ title: 'Hủy lịch hẹn của buổi', description: 'Hủy lịch trả quyền lợi đang giữ theo chính sách; buổi vẫn chờ đặt lại và chưa được tính hoàn thành.', fields: [{ ...Reason, maxLength: 500 }], submit: values => apiClient.put(`/api/v1/appointments/${session.appointmentId}/cancel`, { reason: values.reason }), success: 'Đã hủy lịch hẹn và cập nhật lại quyền lợi buổi.' })}>Hủy lịch</Button></>}{operator && hasAction(session, 'WRITE_RESULT') && <Button size="sm" onClick={() => setAction({ title: `Ghi kết quả buổi ${session.sequence}`, fields: [{ key: 'result', label: 'Kết quả thực hiện', value: session.result || '', maxLength: 4000 }, { key: 'aftercare', label: 'Hướng dẫn chăm sóc sau buổi', value: session.aftercare || '', maxLength: 4000 }, { key: 'internalNotes', label: 'Ghi chú nội bộ (chỉ nhân viên có quyền xem)', value: session.internalNotes || '', required: false, maxLength: 4000 }, { key: 'sharedWithCustomer', label: 'Chia sẻ kết quả và hướng dẫn với khách', type: 'checkbox', value: true }], submit: values => treatmentApi.post(`${root}/sessions/${session.id}/result`, values), success: 'Đã lưu kết quả buổi và cập nhật tiến độ theo các dịch vụ thực sự hoàn thành.' })}>Ghi kết quả & hướng dẫn</Button>}{operator && hasAction(session, 'WAIVE') && <Button size="sm" variant="outline" onClick={() => setAction({ title: `Miễn buổi tùy chọn ${session.sequence}: ${session.title}`, description: 'Buổi không bắt buộc sẽ được đánh dấu đã miễn theo chỉ định chuyên môn và không chặn tiến độ của lộ trình.', fields: [{ ...Reason, maxLength: 500 }], submitLabel: 'Xác nhận miễn buổi', submit: values => treatmentApi.post(`${root}/sessions/${session.id}/waive`, values), success: 'Đã miễn buổi tùy chọn.' })}>Miễn buổi</Button>}</div>
         </section>;
       })}
-      {(course.changes || []).length > 0 && <section className="treatment-card"><h2>Điều chỉnh kế hoạch</h2>{course.changes.map(change => <article key={change.id} className="treatment-form-session"><div className="treatment-card-heading"><strong>Đề xuất #{change.id}</strong><span className="treatment-badge">{statusLabel(change.status)}</span></div><p>{change.reason}</p><p>Chênh lệch: <strong>{money(change.priceDifference)}</strong></p><div className="treatment-plan-comparison"><div><h4>Kế hoạch hiện hành khi đề xuất</h4><PlanSummary plan={change.oldPlan} /></div><div><h4>Kế hoạch đề nghị</h4><PlanSummary plan={change.plan} /></div></div>
+      {(course.changes || []).length > 0 && <section className="treatment-card"><h2>Điều chỉnh kế hoạch</h2>{course.changes.map(change => <article key={change.id} className="treatment-form-session"><div className="treatment-card-heading"><strong>Đề xuất #{change.id}</strong><span className="treatment-badge">{statusLabel(change.status)}</span></div><p>{change.reason}</p><p>Chênh lệch: <strong>{money(change.priceDifference)}</strong></p><div className="treatment-plan-comparison"><div><h4>Kế hoạch hiện hành khi đề xuất</h4><PlanSummary plan={change.oldPlan} serviceDetails={course.serviceDetails} /></div><div><h4>Kế hoạch đề nghị</h4><PlanSummary plan={change.plan} serviceDetails={course.serviceDetails} /></div></div>
         <div className="treatment-actions">{admin && change.status === 'PENDING_APPROVAL' && <><Button onClick={() => decide('changes', change, 'approve')}>Duyệt điều chỉnh</Button><Button variant="outline" onClick={() => decide('changes', change, 'reject')}>Từ chối</Button></>}{!operator && ['AWAITING_CUSTOMER', 'PENDING_CUSTOMER', 'PENDING_CUSTOMER_ACCEPTANCE'].includes(change.status) && <><Button onClick={() => decide('changes', change, 'accept')}>Tôi chấp thuận kế hoạch mới</Button><Button variant="outline" onClick={() => decide('changes', change, 'reject')}>Không đồng ý</Button></>}{!operator && change.status === 'AWAITING_SETTLEMENT' && <Button onClick={() => setAction({ title: 'Thanh toán chênh lệch kế hoạch đã chấp thuận', description: `Số tiền chênh lệch ${money(change.priceDifference)}. Đơn hiện có sẽ được sử dụng lại để tránh tạo trùng.`, fields: [], submitLabel: 'Mở thanh toán chênh lệch', submit: async () => { const order = await treatmentApi.post(`${customerRoot}/changes/${change.id}/settlement`); openTreatmentPayment(order); } })}>Thanh toán chênh lệch</Button>}{change.status === 'AWAITING_SETTLEMENT' && change.settlementOrderId && <Button variant="outline" onClick={() => setAction({ title: 'Đối soát và áp dụng kế hoạch đã thanh toán', description: 'Hệ thống kiểm tra thanh toán thành công và các lịch hẹn liên quan trước khi áp dụng. Nếu chưa đủ tiền hoặc còn lịch cần xử lý, kế hoạch cũ được giữ nguyên.', fields: [], submit: () => treatmentApi.post(`${customerRoot}/changes/${change.id}/apply`), success: 'Đã đối soát và áp dụng kế hoạch mới.' })}>Kiểm tra thanh toán & áp dụng</Button>}{change.settlementOrderId && <a className="treatment-link" href={`#/order-success?id=${change.settlementOrderId}&method=BANK`}>Xem đơn chênh lệch #{change.settlementOrderId}</a>}</div>
       </article>)}</section>}
       {(course.requests || []).length > 0 && <section className="treatment-card"><h2>Yêu cầu hỗ trợ & quyết định</h2>{course.requests.map(item => <article className="treatment-form-session" key={item.id}>
@@ -73,7 +139,7 @@ export const TreatmentCourseDetail = ({ course, role, refresh, onBack, refreshin
       {operator && hasAction(course, 'PROPOSE_CHANGE') && <Button variant="outline" disabled={!course.plan} onClick={() => setRevision(true)}>Đề xuất điều chỉnh kế hoạch</Button>}
       {['PAUSE', 'RESUME', 'EXTEND', 'CANCEL', 'INCIDENT'].filter(type => hasAction(course, `REQUEST_${type}`)).map(type => <Button key={type} variant="outline" onClick={() => request(type)}>{type === 'INCIDENT' ? 'Báo cáo sự cố / phản ứng' : `Yêu cầu ${statusLabel(type).toLowerCase()}`}</Button>)}
       {operator && hasAction(course, 'COMPLETE') && <Button onClick={() => setAction({ title: 'Tổng kết và kết thúc lộ trình', description: 'Chỉ kết thúc khi các buổi bắt buộc đã đủ điều kiện. Tổng kết được chia sẻ với khách.', fields: [{ key: 'summary', label: 'Tổng kết lộ trình', maxLength: 4000 }], submit: values => treatmentApi.post(`${root}/complete`, values), success: 'Đã tổng kết và kết thúc lộ trình.' })}>Tổng kết & kết thúc</Button>}
-    </div>{operator && course.intakeNotes && <div className="treatment-result internal"><strong>Tiếp nhận nội bộ</strong><p>{course.intakeNotes}</p></div>}</section>{course.plan && (operator ? <details className="treatment-card"><summary>Kế hoạch đã chấp thuận</summary><PlanSummary plan={course.plan} /></details> : <section className="treatment-card"><h2>Kế hoạch đã chấp thuận</h2><PlanSummary plan={course.plan} /></section>)}</aside></div>
+    </div>{operator && course.intakeNotes && <div className="treatment-result internal"><strong>Tiếp nhận nội bộ</strong><p>{course.intakeNotes}</p></div>}</section>{course.plan && (operator ? <details className="treatment-card"><summary>Kế hoạch đã chấp thuận</summary><PlanSummary plan={course.plan} serviceDetails={course.serviceDetails} /></details> : <section className="treatment-card"><h2>Kế hoạch đã chấp thuận</h2><PlanSummary plan={course.plan} serviceDetails={course.serviceDetails} /></section>)}</aside></div>
     {action && <TreatmentActionDialog action={action} onClose={() => setAction(null)} onSaved={refresh} />}
     {booking && <TreatmentBookingDialog {...booking} course={course} role={role} onClose={() => setBooking(null)} onSaved={refresh} />}
     {appointmentId && <TreatmentAppointmentDialog appointmentId={appointmentId} role={role} onClose={() => setAppointmentId(null)} onSaved={refresh} />}

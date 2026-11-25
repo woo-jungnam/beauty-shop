@@ -154,7 +154,7 @@ public class TreatmentCourseService {
             c.setVersionId(purchase.getVersionId()); c.setOrderId(ticket.getOrderId()); c.setTicketId(ticket.getId());
             c.setPlanJson(purchase.getPlanJson()); c.setPaidAmount(snapshots.findById(ticket.getOrderId()).orElseThrow(() -> business("Missing paid purchase snapshot")).getPurchaseAmount());
             c.setExpiryDate(ticket.getExpiryDate());
-            if (expired(c)) c.setStatus("EXPIRED");
+            c.setStatus(expired(c) ? "EXPIRED" : "ACTIVE");
             persist(c); ticket.setTreatmentCourseId(c.getId()); createSessions(c, plan); audit(c, "PURCHASE_PAID", "Purchased published plan version " + purchase.getVersionId());
             return;
         }
@@ -216,7 +216,7 @@ public class TreatmentCourseService {
 
     public CourseView intake(Long id, IntakeCommand command) {
         Course c = lock(Course.class, id); requireClinical(c);
-        if (!"PENDING_INTAKE".equals(c.getStatus()) || expired(c)) throw business("Chỉ hồ sơ đang chờ tiếp nhận và còn hạn mới có thể tiếp nhận");
+        if (!Set.of("PENDING_INTAKE", "ACTIVE").contains(c.getStatus()) || expired(c)) throw business("Chỉ hồ sơ còn hiệu lực mới có thể cập nhật tiếp nhận");
         c.setIntakeNotes(text(command == null ? null : command.notes(), "Intake assessment", 4000));
         c.setStatus("ACTIVE"); audit(c, "INTAKE_ACCEPTED", "Responsible staff accepted the purchased plan");
         return courseView(c, true);
@@ -350,7 +350,7 @@ public class TreatmentCourseService {
                         tickets.findByIdForUpdate(c.getTicketId()).orElseThrow(() -> missing("Ticket")).setExpiryDate(c.getExpiryDate());
                     }
                     c.setPausedAt(null);
-                    c.setStatus(c.getIntakeNotes() == null ? "PENDING_INTAKE" : "ACTIVE");
+                    c.setStatus("ACTIVE");
                 }
                 case "EXTEND" -> {
                     if (c.getExpiryDate() == null) throw business("This treatment already has unlimited validity");
@@ -358,7 +358,7 @@ public class TreatmentCourseService {
                     c.setExpiryDate((c.getExpiryDate().isAfter(extensionBase) ? c.getExpiryDate() : extensionBase).plus(r.getExtensionDays(), ChronoUnit.DAYS));
                     UserServiceTicket ticket = tickets.findByIdForUpdate(c.getTicketId()).orElseThrow(() -> missing("Ticket")); ticket.setExpiryDate(c.getExpiryDate());
                     if (ticket.getStatus() == TicketStatus.EXPIRED) ticket.setStatus(TicketStatus.ACTIVE);
-                    if ("EXPIRED".equals(c.getStatus())) c.setStatus(c.getPausedAt() != null ? "PAUSED" : (c.getIntakeNotes() == null ? "PENDING_INTAKE" : "ACTIVE"));
+                    if ("EXPIRED".equals(c.getStatus())) c.setStatus(c.getPausedAt() != null ? "PAUSED" : "ACTIVE");
                 }
                 case "CANCEL" -> {
                     cancelFutureBookings(c); c.setStatus("CANCELLED");
@@ -421,11 +421,14 @@ public class TreatmentCourseService {
 
     public CourseView complete(Long id, CompleteCommand command) {
         Course c = lock(Course.class, id); requireClinical(c);
-        if (!"ACTIVE".equals(c.getStatus()) || expired(c)) throw business("Only an active valid course can be completed");
+        if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(c.getStatus()) || expired(c)) throw business("Only an active valid course can be completed");
         if (sessions(c).stream().anyMatch(s -> s.isRequired() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())))
-            throw business("Every required treatment session must be completed with a result");
+            throw business("Cần hoàn thành tất cả các buổi bắt buộc trước khi kết thúc gói");
         if (hasLiveBookings(c)) throw business("Resolve all open treatment appointments before completion");
-        c.setSummary(text(command == null ? null : command.summary(), "Completion summary", 4000)); c.setStatus("COMPLETED"); c.setCompletedAt(Instant.now());
+        String summaryText = (command == null || command.summary() == null || command.summary().isBlank())
+                ? "Đã hoàn thành gói dịch vụ"
+                : optionalText(command.summary(), 4000);
+        c.setSummary(summaryText); c.setStatus("COMPLETED"); c.setCompletedAt(Instant.now());
         UserServiceTicket ticket = tickets.findByIdForUpdate(c.getTicketId()).orElse(null);
         if (ticket != null && ticket.getStatus() == TicketStatus.ACTIVE) {
             ticket.setStatus(TicketStatus.COMPLETED);
@@ -551,9 +554,29 @@ public class TreatmentCourseService {
     List<Session> sessions(Course c) { return list(Session.class, "select s from TreatmentSession s where s.courseId=:cid and s.retired=false order by s.sequence", "cid", c.getId()); }
     List<SessionItem> items(Session s) { return list(SessionItem.class, "select i from TreatmentSessionItem i where i.sessionId=:sid order by i.id", "sid", s.getId()); }
     Session getSession(Long id) { return get(Session.class, id); }
+    Long resolveAvailableSessionItemId(Long ticketId, Long serviceId, Set<Long> excludingItemIds) {
+        if (ticketId == null || serviceId == null) return null;
+        Course course = courseForTicket(ticketId);
+        if (course == null) return null;
+        Course locked = lockCourse(course.getId());
+        String state = effectiveStatus(locked);
+        if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(state)) {
+            throw business("Gói liệu trình đang ở trạng thái " + state + ", không thể đặt lịch.");
+        }
+        for (Session s : sessions(locked)) {
+            if (Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) continue;
+            for (SessionItem item : items(s)) {
+                if (!item.isRetired() && "PLANNED".equals(item.getStatus())
+                        && Objects.equals(item.getServiceId(), serviceId)
+                        && (excludingItemIds == null || !excludingItemIds.contains(item.getId()))) {
+                    return lockSessionItem(item.getId()).getId();
+                }
+            }
+        }
+        throw business("Gói liệu trình không còn buổi chưa đặt cho dịch vụ này.");
+    }
     boolean withinWindow(Course c, Session s, Instant at) {
-        Instant earliest = earliest(c, s), latest = latest(c, s);
-        return (earliest == null || !at.isBefore(earliest)) && (latest == null || !at.isAfter(latest)) && (c.getExpiryDate() == null || at.isBefore(c.getExpiryDate()));
+        return c.getExpiryDate() == null || (at != null && at.isBefore(c.getExpiryDate()));
     }
     String blocked(Course c, Session s) {
         return blocked(c, s, null);
@@ -561,9 +584,7 @@ public class TreatmentCourseService {
     private String blocked(Course c, Session s, Appointment rescheduling) {
         String state = effectiveStatus(c);
         if (!Set.of("ACTIVE", "PENDING_INTAKE").contains(state)) return "Lộ trình đang ở trạng thái " + state;
-        if ("PENDING_INTAKE".equals(state) && s.getSequence() != 1) return "Cần hoàn tất tiếp nhận (Intake) lâm sàng trước khi thực hiện các buổi tiếp theo";
         if (Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(s.getStatus())) return "Buổi điều trị này đã hoàn thành hoặc kết thúc";
-        if (sessions(c).stream().anyMatch(p -> p.isRequired() && p.getSequence() < s.getSequence() && !Set.of("COMPLETED", "WAIVED", "NO_SHOW").contains(p.getStatus()))) return "Cần hoàn tất buổi điều trị trước đó trước khi tiếp tục";
         if (items(s).stream().anyMatch(i -> Set.of("SCHEDULED", "IN_PROGRESS").contains(i.getStatus())
                 && (rescheduling == null || rescheduling.getItems().stream().noneMatch(a -> Objects.equals(a.getId(), i.getAppointmentItemId()))))) return "Buổi điều trị này đã có một lịch hẹn đang hoạt động";
         return null;
@@ -573,13 +594,12 @@ public class TreatmentCourseService {
         List<SessionItem> all = items(s);
         boolean requiredComplete = all.stream().filter(SessionItem::isRequired).allMatch(i -> "COMPLETED".equals(i.getStatus()));
         boolean allRequiredClosed = all.stream().filter(SessionItem::isRequired).allMatch(i -> Set.of("COMPLETED", "NO_SHOW").contains(i.getStatus()));
-        if (requiredComplete && all.stream().anyMatch(i -> "COMPLETED".equals(i.getStatus())) && s.getResult() != null && !s.getResult().isBlank()) {
+        if (requiredComplete && all.stream().anyMatch(i -> "COMPLETED".equals(i.getStatus()))) {
             s.setStatus("COMPLETED"); s.setCompletedAt(all.stream().map(SessionItem::getCompletedAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(Instant.now()));
         } else if (allRequiredClosed && all.stream().allMatch(i -> "NO_SHOW".equals(i.getStatus()))) {
             s.setStatus("NO_SHOW"); s.setCompletedAt(all.stream().map(SessionItem::getCompletedAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(Instant.now()));
         } else if (all.stream().anyMatch(i -> "IN_PROGRESS".equals(i.getStatus()))) s.setStatus("IN_PROGRESS");
         else if (all.stream().anyMatch(i -> "SCHEDULED".equals(i.getStatus()))) s.setStatus("SCHEDULED");
-        else if (all.stream().anyMatch(i -> "COMPLETED".equals(i.getStatus()))) s.setStatus("AWAITING_RESULT");
         else s.setStatus("PLANNED");
     }
 
@@ -609,25 +629,92 @@ public class TreatmentCourseService {
             sessions.add(new PlanSession(s.sequence(), s.title().trim(), min, s.maxGapDays(), s.required() == null || s.required(), components));
         }
         if (p.validityDays() != null) {
-            long minimumMinutes = 0; boolean previousRequired = false;
+            long minimumMinutes = 0;
             for (PlanSession session : sessions) if (Boolean.TRUE.equals(session.required())) {
-                if (previousRequired) minimumMinutes += session.minGapDays() * 1440L;
                 for (PlanItem item : session.items()) if (Boolean.TRUE.equals(item.required())) {
                     BeautyService svc = availableService(item.serviceId());
                     minimumMinutes += svc.getDurationMinutes() + (svc.getPreparationTimeMinutes() == null ? 0 : svc.getPreparationTimeMinutes());
                 }
-                previousRequired = true;
             }
             if (minimumMinutes >= p.validityDays() * 1440L) throw business("Required sessions cannot be completed within the treatment validity");
         }
-        return new Plan(p.name().trim(), optionalText(p.description(), 10000), p.serviceId(), p.price(), p.validityDays(), p.terms().trim(), sessions);
+        return new Plan(p.name().trim(), optionalText(p.description(), 10000), p.serviceId(), p.price(), p.validityDays(), p.terms().trim(), sessions, optionalText(p.thumbnailUrl(), 500));
+    }
+
+    private Map<Long, ServiceDetail> serviceDetailMap(Plan p) {
+        Set<Long> ids = new LinkedHashSet<>();
+        if (p.serviceId() != null) ids.add(p.serviceId());
+        if (p.sessions() != null) {
+            p.sessions().stream().flatMap(s -> s.items().stream()).map(PlanItem::serviceId).filter(Objects::nonNull).forEach(ids::add);
+        }
+        Map<Long, ServiceDetail> result = new LinkedHashMap<>();
+        if (ids.isEmpty()) return result;
+        List<BeautyService> found = list(BeautyService.class,
+                "select s from BeautyService s left join fetch s.category where s.id in :ids", "ids", ids);
+        for (BeautyService s : found) {
+            result.put(s.getId(), new ServiceDetail(
+                    s.getId(), s.getName(), s.getSlug(), s.getShortDescription(), s.getDescription(),
+                    s.getThumbnailUrl(), s.getBasePrice(), s.getDurationMinutes(), s.getPreparationTimeMinutes(),
+                    s.getCategory() != null ? s.getCategory().getName() : null,
+                    Boolean.TRUE.equals(s.getRequiresCertification())));
+        }
+        return result;
+    }
+
+    private String resolvePlanThumbnail(Plan p, Long packageId, Map<Long, ServiceDetail> details) {
+        if (p.thumbnailUrl() != null && !p.thumbnailUrl().isBlank()) return p.thumbnailUrl().trim();
+        ServiceDetail parent = p.serviceId() == null ? null : details.get(p.serviceId());
+        if (parent != null && parent.thumbnailUrl() != null && !parent.thumbnailUrl().isBlank()) return parent.thumbnailUrl();
+        if (packageId != null) {
+            ServicePackage pack = packages.findById(packageId).orElse(null);
+            if (pack != null && pack.getThumbnailUrl() != null && !pack.getThumbnailUrl().isBlank()) return pack.getThumbnailUrl();
+        }
+        if (p.sessions() != null) {
+            for (PlanSession s : p.sessions()) {
+                for (PlanItem i : s.items()) {
+                    ServiceDetail itemDetail = details.get(i.serviceId());
+                    if (itemDetail != null && itemDetail.thumbnailUrl() != null && !itemDetail.thumbnailUrl().isBlank()) {
+                        return itemDetail.thumbnailUrl();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private BigDecimal computeOriginalPrice(Plan p, Map<Long, ServiceDetail> details) {
+        if (p.sessions() == null) return BigDecimal.ZERO;
+        return p.sessions().stream()
+                .flatMap(s -> s.items().stream())
+                .map(i -> details.get(i.serviceId()))
+                .filter(d -> d != null && d.basePrice() != null)
+                .map(ServiceDetail::basePrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private int computeTotalDurationMinutes(Plan p, Map<Long, ServiceDetail> details) {
+        if (p.sessions() == null) return 0;
+        return p.sessions().stream()
+                .flatMap(s -> s.items().stream())
+                .map(i -> details.get(i.serviceId()))
+                .filter(d -> d != null && d.durationMinutes() != null)
+                .mapToInt(ServiceDetail::durationMinutes)
+                .sum();
     }
 
     private TemplateView templateView(Template t, boolean admin) {
         Long versionId = admin && t.getDraftVersionId() != null ? t.getDraftVersionId() : t.getPublishedVersionId();
         TemplateVersion v = get(TemplateVersion.class, versionId); Plan p = read(v.getPlanJson());
         List<String> actions = admin ? (t.getDraftVersionId() == null ? List.of("CREATE_VERSION", "ARCHIVE") : List.of("EDIT", "PUBLISH", "ARCHIVE")) : (treatmentSalesEnabled ? List.of("PURCHASE") : List.of());
-        return new TemplateView(t.getId(), v.getId(), v.getVersionNumber(), t.isArchived() ? "ARCHIVED" : v.getStatus(), p.name(), p.description(), p.serviceId(), v.getPackageId(), p.price(), p.validityDays(), p.terms(), p.sessions(), actions);
+        Map<Long, ServiceDetail> details = serviceDetailMap(p);
+        ServiceDetail parent = p.serviceId() == null ? null : details.get(p.serviceId());
+        String thumb = resolvePlanThumbnail(p, v.getPackageId(), details);
+        BigDecimal originalPrice = computeOriginalPrice(p, details);
+        int totalDuration = computeTotalDurationMinutes(p, details);
+        return new TemplateView(t.getId(), v.getId(), v.getVersionNumber(), t.isArchived() ? "ARCHIVED" : v.getStatus(),
+                p.name(), p.description(), p.serviceId(), v.getPackageId(), p.price(), p.validityDays(), p.terms(), p.sessions(), actions,
+                thumb, parent != null ? parent.shortDescription() : null, parent != null ? parent.categoryName() : null,
+                originalPrice.signum() > 0 ? originalPrice : null, totalDuration, details);
     }
 
     private CourseView courseView(Course c, boolean clinical) {
@@ -636,7 +723,22 @@ public class TreatmentCourseService {
 
     private CourseView courseView(Course c, boolean clinical, UserSummaryDto profile, boolean canSeeContact) {
         Plan p = read(c.getPlanJson()); boolean owner = Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserIdOptional().orElse(null));
-        List<SessionView> sessionViews = sessions(c).stream().map(s -> sessionView(c, s, clinical)).toList();
+        Map<Long, ServiceDetail> details = serviceDetailMap(p);
+        for (Session s : sessions(c)) {
+            for (SessionItem i : items(s)) {
+                if (i.getServiceId() != null && !details.containsKey(i.getServiceId())) {
+                    BeautyService svc = services.findWithCategoryById(i.getServiceId()).orElseGet(() -> services.findById(i.getServiceId()).orElse(null));
+                    if (svc != null) {
+                        details.put(svc.getId(), new ServiceDetail(
+                                svc.getId(), svc.getName(), svc.getSlug(), svc.getShortDescription(), svc.getDescription(),
+                                svc.getThumbnailUrl(), svc.getBasePrice(), svc.getDurationMinutes(), svc.getPreparationTimeMinutes(),
+                                svc.getCategory() != null ? svc.getCategory().getName() : null,
+                                Boolean.TRUE.equals(svc.getRequiresCertification())));
+                    }
+                }
+            }
+        }
+        List<SessionView> sessionViews = sessions(c).stream().map(s -> sessionView(c, s, clinical, details)).toList();
         int completed = (int) sessionViews.stream().filter(s -> "COMPLETED".equals(s.status())).count();
         List<ChangeView> changeViews = list(Change.class, "select x from TreatmentChange x where x.courseId=:cid order by x.id desc", "cid", c.getId()).stream()
                 .map(x -> new ChangeView(x.getId(), x.getStatus(), x.getBaseRevision(), x.getReason(), read(x.getPlanJson()), read(x.getOldPlanJson()), x.getPriceDifference(), x.getSettlementOrderId(), x.getProposedBy(), x.getApprovedBy(), x.getCreatedAt(), x.getAcceptedAt())).toList();
@@ -647,7 +749,7 @@ public class TreatmentCourseService {
         if (access.canManageReception() && !Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(state)) actions.add("ASSIGN");
         if (clinical && "PENDING_INTAKE".equals(state)) actions.add("INTAKE");
         if (clinical && Set.of("ACTIVE", "PENDING_INTAKE", "PAUSED").contains(state)) actions.add("PROPOSE_CHANGE");
-        if (clinical && "ACTIVE".equals(state) && !hasLiveBookings(c) && sessionViews.stream().filter(SessionView::required).allMatch(s -> Set.of("COMPLETED", "WAIVED").contains(s.status()))) actions.add("COMPLETE");
+        if (clinical && Set.of("ACTIVE", "PENDING_INTAKE").contains(state) && !hasLiveBookings(c) && sessionViews.stream().filter(SessionView::required).allMatch(s -> Set.of("COMPLETED", "WAIVED").contains(s.status()))) actions.add("COMPLETE");
         if ((owner || access.canManageReception()) && !Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(state)) {
             actions.addAll(List.of("REQUEST_CANCEL", "REQUEST_EXTEND", "REQUEST_INCIDENT"));
             if (Set.of("ACTIVE", "PENDING_INTAKE").contains(state)) actions.add("REQUEST_PAUSE");
@@ -655,16 +757,31 @@ public class TreatmentCourseService {
         } else if (clinical && !Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(state)) {
             actions.add("REQUEST_INCIDENT");
         }
+        ServiceDetail parent = p.serviceId() == null ? null : details.get(p.serviceId());
+        TemplateVersion version = c.getVersionId() == null ? null : em.find(TemplateVersion.class, c.getVersionId());
+        String thumb = resolvePlanThumbnail(p, version == null ? null : version.getPackageId(), details);
+        BigDecimal originalPrice = computeOriginalPrice(p, details);
+        int totalDuration = computeTotalDurationMinutes(p, details);
         return new CourseView(c.getId(), c.getUserId(), c.getTemplateId(), c.getVersionId(), p.name(), state, c.getPlanRevision(), c.getOrderId(), c.getTicketId(), c.getAssignedStaffId(), c.getExpiryDate(), clinical ? c.getIntakeNotes() : null, clinical || owner ? c.getSummary() : null, c.getPaidAmount(), completed, sessionViews.size(), sessionViews.isEmpty() ? 0 : completed * 100 / sessionViews.size(), sessionViews, clinical || owner ? changeViews : List.of(), clinical || owner ? requestViews : List.of(), audits, actions, p, p,
-                profile == null ? null : profile.getFullName(), canSeeContact && profile != null ? profile.getPhone() : null);
+                profile == null ? null : profile.getFullName(), canSeeContact && profile != null ? profile.getPhone() : null,
+                thumb, parent != null ? parent.shortDescription() : null, p.description(), parent != null ? parent.categoryName() : null,
+                originalPrice.signum() > 0 ? originalPrice : null, totalDuration, details);
     }
 
-    private SessionView sessionView(Course c, Session s, boolean clinical) {
+    private SessionView sessionView(Course c, Session s, boolean clinical, Map<Long, ServiceDetail> details) {
         boolean sharedResultVisible = clinical || (Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserIdOptional().orElse(null)) && s.isSharedWithCustomer());
         List<ItemView> views = items(s).stream().map(i -> {
             AppointmentItem appointmentItem = i.getAppointmentItemId() == null ? null : em.find(AppointmentItem.class, i.getAppointmentItemId());
             Appointment a = appointmentItem == null ? null : appointmentItem.getAppointment();
-            return new ItemView(i.getId(), i.getServiceId(), i.getServiceName(), c.getTicketId(), i.getStatus(), i.isRequired(), i.getAppointmentItemId(), a == null ? null : a.getId(), a == null ? null : a.getStatus().name(), a == null ? null : a.getAppointmentDate().toString(), appointmentItem == null || appointmentItem.getStartTime() == null ? null : appointmentItem.getStartTime().toString(), i.getAllocatedAmount(), sharedResultVisible ? s.getResult() : null, sharedResultVisible ? s.getAftercare() : null);
+            ServiceDetail detail = details.get(i.getServiceId());
+            return new ItemView(i.getId(), i.getServiceId(), i.getServiceName(), c.getTicketId(), i.getStatus(), i.isRequired(), i.getAppointmentItemId(), a == null ? null : a.getId(), a == null ? null : a.getStatus().name(), a == null ? null : a.getAppointmentDate().toString(), appointmentItem == null || appointmentItem.getStartTime() == null ? null : appointmentItem.getStartTime().toString(), i.getAllocatedAmount(), sharedResultVisible ? s.getResult() : null, sharedResultVisible ? s.getAftercare() : null,
+                    detail != null ? detail.thumbnailUrl() : null,
+                    detail != null ? detail.shortDescription() : null,
+                    detail != null ? detail.description() : null,
+                    detail != null ? detail.durationMinutes() : null,
+                    detail != null ? detail.preparationTimeMinutes() : null,
+                    detail != null ? detail.basePrice() : null,
+                    detail != null ? detail.categoryName() : null);
         }).toList();
         ItemView live = views.stream().filter(i -> i.appointmentId() != null && Set.of("SCHEDULED", "IN_PROGRESS").contains(i.status())).findFirst().orElse(null);
         String blocked = blocked(c, s); List<String> actions = new ArrayList<>();
@@ -674,7 +791,8 @@ public class TreatmentCourseService {
         List<ResultView> results = list(SessionResult.class, "select r from TreatmentSessionResult r where r.sessionId=:sid order by r.id desc", "sid", s.getId()).stream()
                 .filter(r -> clinical || (Objects.equals(c.getUserId(), SecurityUtils.getCurrentUserIdOptional().orElse(null)) && r.isSharedWithCustomer()))
                 .map(r -> new ResultView(r.getId(), r.getAuthorId(), r.getResult(), r.getAftercare(), clinical ? r.getInternalNotes() : null, r.isSharedWithCustomer(), r.getCreatedAt())).toList();
-        return new SessionView(s.getId(), s.getSequence(), s.getTitle(), s.getStatus(), s.getMinGapDays(), s.getMaxGapDays(), s.isRequired(), earliest(c, s), latest(c, s), blocked, live == null ? null : live.appointmentId(), live == null ? null : live.appointmentDate(), live == null ? null : live.startTime(), sharedResultVisible ? s.getResult() : null, sharedResultVisible ? s.getAftercare() : null, clinical ? s.getInternalNotes() : null, s.getCompletedAt(), views, actions, results);
+        int sessionDuration = views.stream().map(ItemView::durationMinutes).filter(Objects::nonNull).mapToInt(Integer::intValue).sum();
+        return new SessionView(s.getId(), s.getSequence(), s.getTitle(), s.getStatus(), s.getMinGapDays(), s.getMaxGapDays(), s.isRequired(), earliest(c, s), latest(c, s), blocked, live == null ? null : live.appointmentId(), live == null ? null : live.appointmentDate(), live == null ? null : live.startTime(), sharedResultVisible ? s.getResult() : null, sharedResultVisible ? s.getAftercare() : null, clinical ? s.getInternalNotes() : null, s.getCompletedAt(), views, actions, results, sessionDuration);
     }
 
     private void createSessions(Course c, Plan plan) {
@@ -705,8 +823,7 @@ public class TreatmentCourseService {
                 PlanSession replacement = plan.sessions().get(s.getSequence() - 1);
                 List<Long> a = existing.stream().map(SessionItem::getServiceId).toList();
                 List<Long> b = replacement.items().stream().map(PlanItem::serviceId).toList();
-                if (!a.equals(b) || replacement.minGapDays() != s.getMinGapDays() || !Objects.equals(replacement.maxGapDays(), s.getMaxGapDays())
-                        || Boolean.TRUE.equals(replacement.required()) != s.isRequired()
+                if (!a.equals(b) || Boolean.TRUE.equals(replacement.required()) != s.isRequired()
                         || !existing.stream().map(SessionItem::isRequired).toList().equals(replacement.items().stream().map(i -> Boolean.TRUE.equals(i.required())).toList())) throw business("Performed session commitments cannot change");
             }
         }
@@ -837,8 +954,10 @@ public class TreatmentCourseService {
     }
     private boolean financiallyConsumed(SessionItem item) { return first(FinancialConsumption.class, "select f from TreatmentFinancialConsumption f where f.sessionItemId=:sid", "sid", item.getId()) != null; }
     private ServicePackage createManagedPackage(Plan p, BigDecimal price) {
+        Map<Long, ServiceDetail> details = serviceDetailMap(p);
         ServicePackage pack = new ServicePackage(); pack.setName(p.name()); pack.setDescription(p.description()); pack.setPrice(price);
-        pack.setValidityDays(p.validityDays()); pack.setIsActive(false); pack.setTreatmentManaged(true); pack.setItems(new ArrayList<>());
+        pack.setValidityDays(p.validityDays()); pack.setThumbnailUrl(resolvePlanThumbnail(p, null, details));
+        pack.setIsActive(false); pack.setTreatmentManaged(true); pack.setItems(new ArrayList<>());
         counts(p).forEach((id, n) -> pack.getItems().add(ServicePackageItem.builder().servicePackage(pack).service(services.getReferenceById(id)).quantity(n).build()));
         return packages.saveAndFlush(pack);
     }

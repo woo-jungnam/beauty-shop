@@ -90,12 +90,7 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
         : <CustomerAppointmentSummary appointment={appointment} user={user} />}
       {appointment.items?.some(item => item.treatmentSessionItemId != null) && (
         <div className="treatment-notice info" style={{ marginBottom: 12 }}>
-          <span>Buổi chăm sóc này thuộc <strong>Lộ trình điều trị chuyên sâu</strong>. Nếu hồ sơ mới mua, Bác sĩ cần hoàn tất tiếp nhận lâm sàng trước khi ca có thể bắt đầu.</span>
-          {operator && (
-            <a href="#/staff/treatments" style={{ marginLeft: 8, textDecoration: 'underline', fontWeight: 600 }}>
-              Mở Lộ trình điều trị →
-            </a>
-          )}
+          <span>Buổi chăm sóc này thuộc <strong>Gói liệu trình</strong> đã kích hoạt — quy trình tiếp nhận và bắt đầu ca áp dụng giống dịch vụ đơn.</span>
         </div>
       )}
       {(reception || String(appointment.userId) === String(user?.id)) && <AppointmentFinance appointmentId={appointment.id} role={role} />}
@@ -192,7 +187,7 @@ export const TreatmentAppointmentDialog = ({ appointmentId, role, onClose, onSav
             </>}
           </div>}
         </section>)}
-        {canUpdateVisit && appointment.status === 'IN_PROGRESS' && <Button disabled={Boolean(busy) || !appointment.items?.every(item => ['PERFORMED', 'SKIPPED', 'LEGACY_FINALIZED'].includes(item.executionStatus))} loading={busy === 'complete'} onClick={() => run('complete', () => updateStatus('COMPLETED'), 'Đã kết thúc lịch hẹn. Vui lòng ghi kết quả buổi trong hồ sơ lộ trình.')}>Kết thúc lịch hẹn đã xử lý đủ các mục</Button>}
+        {canUpdateVisit && appointment.status === 'IN_PROGRESS' && <Button disabled={Boolean(busy) || !appointment.items?.every(item => ['PERFORMED', 'SKIPPED', 'LEGACY_FINALIZED'].includes(item.executionStatus))} loading={busy === 'complete'} onClick={() => run('complete', () => updateStatus('COMPLETED'), 'Đã kết thúc lịch hẹn và cập nhật tiến độ gói dịch vụ.')}>Kết thúc lịch hẹn đã xử lý đủ các mục</Button>}
       </>}
       {instructions.length > 0 && <section className="treatment-form-session"><h3>Hướng dẫn sau buổi</h3>{instructions.map(instruction => <p key={instruction.id}>{instruction.content}</p>)}</section>}
     </>}

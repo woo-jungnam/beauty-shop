@@ -7,13 +7,13 @@ export const spaErrorMessage = (error, fallback = 'Thao tác chưa hoàn tất. 
   if (typeof message === 'string' && message.trim()) {
     const raw = message.trim();
     if (raw.includes('Intake must be accepted') || raw.includes('chưa được Bác sĩ tiếp nhận')) {
-      return 'Hồ sơ liệu trình chưa được Bác sĩ tiếp nhận. Vui lòng hoàn tất khám sàng lọc trước khi bắt đầu dịch vụ.';
+      return 'Hồ sơ liệu trình chưa sẵn sàng để bắt đầu. Vui lòng làm mới lịch và kiểm tra trạng thái gói.';
     }
     if (raw.includes('Complete the previous') || raw.includes('hoàn tất buổi điều trị trước')) {
       return 'Cần hoàn tất buổi điều trị trước đó trước khi bắt đầu buổi này.';
     }
     if (raw.includes('permitted interval') || raw.includes('allowed interval') || raw.includes('khoảng thời gian quy định')) {
-      return 'Lịch hẹn nằm ngoài khoảng thời gian cho phép giữa các buổi của liệu trình.';
+      return 'Lịch hẹn chưa phù hợp với khung giờ hoạt động hoặc thời hạn của gói.';
     }
     if (raw.includes('Cancel future treatment bookings') || raw.includes('hủy các lịch hẹn điều trị tương lai')) {
       return 'Vui lòng hủy các lịch hẹn tương lai trước khi áp dụng phác đồ mới.';

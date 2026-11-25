@@ -428,16 +428,50 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    if (course.thumbnailUrl != null &&
+                        course.thumbnailUrl!.isNotEmpty) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        height: 175,
+                        child: TreatmentThumbImage(
+                          url: course.thumbnailUrl,
+                          borderRadius: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    if (course.categoryName != null)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Chip(
+                          visualDensity: VisualDensity.compact,
+                          label: Text(course.categoryName!),
+                        ),
+                      ),
                     Text(
                       course.name,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
+                    if (course.shortDescription.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        course.shortDescription,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
+                    if (course.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(course.description),
+                    ],
+                    const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         TreatmentStatusChip(course.status),
                         Text('Kế hoạch phiên bản ${course.version}'),
+                        if (course.totalDurationMinutes > 0)
+                          Text('• ${course.totalDurationMinutes} phút'),
                       ],
                     ),
                     if (_operations) Text(course.customerName),
@@ -521,26 +555,96 @@ class _TreatmentEnrollmentScreenState extends State<TreatmentEnrollmentScreen> {
                                 'Buổi ${session.sequence}: ${session.title}',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
-                              TreatmentStatusChip(session.status),
+                              Wrap(
+                                spacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  TreatmentStatusChip(session.status),
+                                  if (session.totalDurationMinutes > 0)
+                                    Text('${session.totalDurationMinutes} phút'),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
                               ...session.items.map(
                                 (item) => Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 3,
+                                    vertical: 5,
                                   ),
-                                  child: Text(
-                                    '${item.name} • ${treatmentStatus(item.status)}${item.required ? ' • Bắt buộc' : ''}',
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (item.thumbnailUrl != null &&
+                                          item.thumbnailUrl!.isNotEmpty) ...[
+                                        TreatmentThumbImage(
+                                          url: item.thumbnailUrl,
+                                          width: 44,
+                                          height: 44,
+                                          borderRadius: 8,
+                                        ),
+                                        const SizedBox(width: 10),
+                                      ],
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${item.name} • ${treatmentStatus(item.status)}${item.required ? ' • Bắt buộc' : ''}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            if (item.durationMinutes != null ||
+                                                item.basePrice != null ||
+                                                item.categoryName != null)
+                                              Text(
+                                                [
+                                                  if (item.categoryName != null)
+                                                    item.categoryName!,
+                                                  if (item.durationMinutes != null)
+                                                    '${item.durationMinutes} phút',
+                                                  if (item.basePrice != null)
+                                                    'Giá lẻ ${AppFormatters.formatCurrency(item.basePrice!)}',
+                                                ].join(' • '),
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
+                                              ),
+                                            if (item.shortDescription.isNotEmpty)
+                                              Text(
+                                                item.shortDescription,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                              if (session.earliestBookingAt != null)
+                              if (session.earliestBookingAt != null ||
+                                  session.latestBookingAt != null)
                                 Text(
-                                  'Sớm nhất: ${treatmentDate(session.earliestBookingAt)}',
-                                ),
-                              if (session.raw['latestBookingAt'] != null)
+                                  'Thời gian tham khảo (không bắt buộc): '
+                                  '${session.earliestBookingAt != null ? 'từ ${treatmentDate(session.earliestBookingAt)}' : ''}'
+                                  '${session.latestBookingAt != null ? ' đến ${treatmentDate(session.latestBookingAt)}' : ''}',
+                                )
+                              else if (treatmentAdvisoryGap(
+                                session.minGapDays,
+                                session.maxGapDays,
+                              ).isNotEmpty)
                                 Text(
-                                  'Muộn nhất: ${treatmentDate('${session.raw['latestBookingAt']}')}',
+                                  treatmentAdvisoryGap(
+                                    session.minGapDays,
+                                    session.maxGapDays,
+                                  ),
                                 ),
-                              if (session.blockedReason.isNotEmpty)
+                              if (session.blockedReason.isNotEmpty &&
+                                  !const {'COMPLETED', 'WAIVED', 'NO_SHOW'}
+                                      .contains(session.status))
                                 Text(session.blockedReason),
                               if (_shared(course) && session.result.isNotEmpty)
                                 ListTile(
@@ -905,14 +1009,22 @@ class _PlanSummary extends StatelessWidget {
           '${AppFormatters.formatCurrency(double.tryParse('${plan['price']}') ?? 0)} • ${plan['validityDays'] ?? 'Không giới hạn'} ngày',
         ),
         ...treatmentMaps(plan['sessions']).map(
-          (session) => Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              'Buổi ${session['sequence']}: ${session['title']} (${session['required'] == false ? 'Tùy chọn' : 'Bắt buộc'})\n'
-              '${treatmentMaps(session['items']).map((item) => '${item['serviceName'] ?? 'Dịch vụ #${item['serviceId']}'}${item['required'] == false ? ' (tùy chọn)' : ''}').join(', ')}\n'
-              'Khoảng cách: ${session['minGapDays'] ?? 0}–${session['maxGapDays'] ?? 'không giới hạn'} ngày',
-            ),
-          ),
+          (session) {
+            final gap = treatmentAdvisoryGap(
+              treatmentInt(session['minGapDays']),
+              session['maxGapDays'] == null
+                  ? null
+                  : treatmentInt(session['maxGapDays']),
+            );
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Buổi ${session['sequence']}: ${session['title']} (${session['required'] == false ? 'Tùy chọn' : 'Bắt buộc'})\n'
+                '${treatmentMaps(session['items']).map((item) => '${item['serviceName'] ?? 'Dịch vụ #${item['serviceId']}'}${item['required'] == false ? ' (tùy chọn)' : ''}').join(', ')}'
+                '${gap.isNotEmpty ? '\n$gap' : ''}',
+              ),
+            );
+          },
         ),
         const SizedBox(height: 8),
         Text('Điều khoản: ${plan['terms'] ?? ''}'),

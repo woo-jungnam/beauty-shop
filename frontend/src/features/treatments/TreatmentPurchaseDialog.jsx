@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { Modal } from '../../shared/ui/Modal';
 import { Button } from '../../shared/ui/Button';
+import { resolveMediaUrl } from '../../shared/utils/formatters';
 import { errorMessage, idempotencyKey, money, treatmentApi } from './treatmentApi';
 import { openTreatmentPayment } from './paymentNavigation';
 
@@ -36,26 +37,72 @@ export const TreatmentPurchaseDialog = ({ template, onClose, onPurchased }) => {
     } catch (err) { setError(`${errorMessage(err)} Các lần thử lại sử dụng cùng yêu cầu để tránh tạo đơn trùng.`); }
     finally { lock.current = false; setBusy(false); }
   };
-  return <Modal isOpen title={`Đăng ký ${template.name}`} onClose={() => { if (!busy) onClose(); }} className="treatment-dialog" maxWidth="760px"><form className="treatment-form" onSubmit={submit}>
-    <div className="treatment-card-heading">
-      <span className="treatment-badge">Phiên bản {template.versionNumber}</span>
-      <div style={{ textAlign: 'right' }}>
-        {membershipDiscount > 0 ? (
-          <>
-            <del style={{ display: 'block', fontSize: '13px', color: '#9CA3AF' }}>{money(template.price)}</del>
-            <div style={{ fontSize: '11px', color: 'var(--c-safe-green, #059669)', fontWeight: 600 }}>
-              Ưu đãi {user?.membershipTier} (−{tierPercent}%)
-            </div>
-            <strong className="treatment-price">{money(finalPrice)}</strong>
-          </>
-        ) : (
-          <strong className="treatment-price">{money(template.price)}</strong>
-        )}
+  const serviceDetails = template.serviceDetails || {};
+  const fallbackCover = '/images/spa/facial-care.jpg';
+  const coverImage = template.thumbnailUrl ? resolveMediaUrl(template.thumbnailUrl) : fallbackCover;
+  const retailTotal = Number(template.originalPrice || 0);
+  return <Modal isOpen title={`Đăng ký ${template.name}`} onClose={() => { if (!busy) onClose(); }} className="treatment-dialog" maxWidth="780px"><form className="treatment-form" onSubmit={submit}>
+    <div className="treatment-course-overview">
+      <img className="treatment-course-cover" src={coverImage} alt={template.name} loading="lazy" onError={e => { if (e.currentTarget.getAttribute('src') !== fallbackCover) e.currentTarget.src = fallbackCover; }} />
+      <div className="treatment-course-overview-copy">
+        <div className="treatment-card-heading">
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <span className="treatment-badge">Phiên bản {template.versionNumber}</span>
+            {template.categoryName && <span className="treatment-badge">{template.categoryName}</span>}
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            {retailTotal > finalPrice && <del style={{ display: 'block', fontSize: '12px', color: '#9CA3AF' }}>Giá lẻ: {money(retailTotal)}</del>}
+            {membershipDiscount > 0 ? (
+              <>
+                <del style={{ display: 'block', fontSize: '13px', color: '#9CA3AF' }}>{money(template.price)}</del>
+                <div style={{ fontSize: '11px', color: 'var(--c-safe-green, #059669)', fontWeight: 600 }}>
+                  Ưu đãi {user?.membershipTier} (−{tierPercent}%)
+                </div>
+                <strong className="treatment-price">{money(finalPrice)}</strong>
+              </>
+            ) : (
+              <strong className="treatment-price">{money(template.price)}</strong>
+            )}
+          </div>
+        </div>
+        {template.shortDescription && <p><strong>{template.shortDescription}</strong></p>}
+        <p>{template.description}</p>
+        <p className="treatment-muted">
+          {template.sessions?.length || 0} buổi
+          {template.totalDurationMinutes > 0 ? ` · ${template.totalDurationMinutes} phút tổng thời lượng` : ''}
+          {` · ${template.validityDays == null ? 'Không giới hạn thời hạn' : `Hiệu lực ${template.validityDays} ngày từ khi thanh toán`}`}
+        </p>
       </div>
-    </div><p>{template.description}</p><p>{template.sessions?.length || 0} buổi · Hiệu lực {template.validityDays} ngày từ khi thanh toán</p>
-    <ol className="treatment-mini-sessions">{(template.sessions || []).map(session => <li key={session.sequence}><strong>{session.title}</strong><small>{(session.items || []).map(item => item.serviceName || `Dịch vụ #${item.serviceId}`).join(', ')} · {session.required ? 'Bắt buộc' : 'Tùy chọn'} · Cách buổi trước tối thiểu {session.minGapDays || 0} ngày{session.maxGapDays != null ? `, tối đa ${session.maxGapDays} ngày` : ''}</small></li>)}</ol>
+    </div>
+    <ol className="treatment-mini-sessions">{(template.sessions || []).map(session => {
+      const gapText = (session.minGapDays > 0 || session.maxGapDays != null)
+        ? ` · Giãn cách tham khảo: ${session.minGapDays || 0}${session.maxGapDays != null ? `–${session.maxGapDays}` : '+'} ngày (không bắt buộc)`
+        : '';
+      return <li key={session.sequence}>
+        <strong>{session.title}</strong>
+        <small>
+          {(session.items || []).map(item => {
+            const detail = serviceDetails[item.serviceId];
+            return `${item.serviceName || detail?.name || `Dịch vụ #${item.serviceId}`}${detail?.durationMinutes ? ` (${detail.durationMinutes}p)` : ''}`;
+          }).join(', ')} · {session.required ? 'Bắt buộc' : 'Tùy chọn'}{gapText}
+        </small>
+        <div className="treatment-purchase-thumbs">
+          {(session.items || []).map(item => {
+            const detail = serviceDetails[item.serviceId];
+            if (!detail) return null;
+            return <div key={item.serviceId} className="treatment-item-row" style={{ marginTop: 6 }}>
+              {detail.thumbnailUrl && <img className="treatment-item-thumb" src={resolveMediaUrl(detail.thumbnailUrl)} alt={detail.name} loading="lazy" />}
+              <div>
+                <small>{detail.shortDescription || detail.description || ''}</small>
+                {detail.basePrice != null && <small>Giá lẻ tham chiếu: {money(detail.basePrice)}</small>}
+              </div>
+            </div>;
+          })}
+        </div>
+      </li>;
+    })}</ol>
     <div className="treatment-form-session"><strong>Điều khoản mua và sử dụng</strong><p style={{ whiteSpace: 'pre-wrap' }}>{template.terms}</p></div>
-    <p className="treatment-notice warning">Thanh toán toàn bộ trước khi mở quyền sử dụng. Nhân viên tiếp nhận và điều chỉnh khi cần; mọi thay đổi cam kết cần bạn xác nhận.</p>
+    <p className="treatment-notice">Thanh toán toàn bộ để kích hoạt hồ sơ và đặt từng buổi linh hoạt theo danh sách dịch vụ trong gói. Mọi điều chỉnh phác đồ (nếu phát sinh) đều cần bạn xác nhận.</p>
     {error && <div className="treatment-notice error" role="alert">{error}</div>}
     <fieldset disabled={busy || submitted}><label>Ghi chú đăng ký<textarea maxLength={500} rows={2} value={notes} onChange={event => setNotes(event.target.value)} /></label><label className="treatment-check"><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} />Tôi đã đọc kế hoạch từng buổi, giá, hiệu lực và đồng ý điều khoản phiên bản {template.versionNumber}.</label></fieldset>
     <div className="treatment-actions"><Button variant="outline" disabled={busy} onClick={onClose}>Đóng</Button><Button type="submit" disabled={!accepted} loading={busy}>{submitted ? 'Kiểm tra lại đơn & thanh toán' : 'Tạo đơn & thanh toán'}</Button></div>

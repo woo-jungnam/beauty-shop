@@ -38,6 +38,7 @@ export const ServicePackages = ({ onNavigate }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [detailPack, setDetailPack] = useState(null);
   const [revision, setRevision] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
@@ -212,11 +213,24 @@ export const ServicePackages = ({ onNavigate }) => {
               const userPrice = Math.max(0, pack.price - userDiscount);
               const perSession =
                 totalSessions > 0 ? Math.round(userPrice / totalSessions) : null;
-              const cardImage = pack.thumbnailUrl
-                ? resolveMediaUrl(pack.thumbnailUrl)
-                : (firstIndex + index) % 2 === 0
+              const fallbackThumb = (firstIndex + index) % 2 === 0
                 ? '/images/spa/facial-care.jpg'
                 : '/images/spa/spa-ritual.jpg';
+              const cardImage = pack.thumbnailUrl
+                ? resolveMediaUrl(pack.thumbnailUrl)
+                : fallbackThumb;
+              const retailValue = Number(pack.originalPrice || 0) || (pack.items || []).reduce(
+                (sum, item) => sum + Number(item.basePrice || 0) * Number(item.quantity || 0),
+                0
+              );
+              const packageSavings = retailValue > pack.price ? retailValue - pack.price : 0;
+              const discountPct = retailValue > 0 && packageSavings > 0
+                ? Math.round((packageSavings / retailValue) * 100)
+                : 0;
+              const totalDuration = Number(pack.totalDurationMinutes || 0) || (pack.items || []).reduce(
+                (sum, item) => sum + Number(item.durationMinutes || 0) * Number(item.quantity || 0),
+                0
+              );
 
               return (
                 <article className="spa-benefit-card" key={pack.id}>
@@ -236,7 +250,7 @@ export const ServicePackages = ({ onNavigate }) => {
                       }}
                     />
                     <div className="spa-package-ribbon">
-                      <Sparkles size={11} /> Gói nhiều lượt
+                      <Sparkles size={11} /> {discountPct > 0 ? `Tiết kiệm ${discountPct}%` : 'Gói nhiều lượt'}
                     </div>
                     <div className="spa-package-validity-pill">
                       <Clock size={12} />
@@ -251,30 +265,68 @@ export const ServicePackages = ({ onNavigate }) => {
                     <h2>{pack.name}</h2>
                     <p className="spa-package-desc">{pack.description}</p>
 
-                    {/* Total Sessions Badge */}
-                    <div className="spa-package-total-badge">
-                      <Ticket size={13} />
-                      <span>Tổng cộng: {totalSessions} buổi dịch vụ</span>
+                    {/* Total Sessions & Duration Badges */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                      <div className="spa-package-total-badge" style={{ marginBottom: 0 }}>
+                        <Ticket size={13} />
+                        <span>Tổng cộng: {totalSessions} buổi dịch vụ</span>
+                      </div>
+                      {totalDuration > 0 && (
+                        <div className="spa-package-total-badge is-duration" style={{ marginBottom: 0 }}>
+                          <Clock size={13} />
+                          <span>Tổng thời lượng: {totalDuration} phút</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Included Services List */}
                     <div className="spa-package-items-wrapper">
                       <div className="spa-package-items-label">
-                        Quyền lợi trong gói
+                        Quyền lợi & dịch vụ trong gói
                       </div>
                       <ul className="spa-package-items-list">
                         {(pack.items || []).map((item) => (
                           <li
                             key={item.serviceId}
-                            className="spa-package-item-row"
+                            className="spa-package-item-row spa-package-item-rich"
                           >
-                            <span className="spa-package-item-name">
-                              <CheckCircle2 size={14} />
-                              <span>{item.serviceName}</span>
-                            </span>
-                            <span className="spa-package-item-qty">
-                              {item.quantity} lượt
-                            </span>
+                            {item.thumbnailUrl ? (
+                              <img
+                                className="spa-package-item-thumb"
+                                src={resolveMediaUrl(item.thumbnailUrl)}
+                                alt={item.serviceName}
+                                loading="lazy"
+                                onError={(e) => {
+                                  if (e.currentTarget.getAttribute('src') !== '/images/spa/facial-care.jpg') {
+                                    e.currentTarget.src = '/images/spa/facial-care.jpg';
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0, marginTop: 2 }} />
+                            )}
+                            <div className="spa-package-item-info">
+                              <div className="spa-package-item-top">
+                                <span className="spa-package-item-name">
+                                  <span>{item.serviceName}</span>
+                                </span>
+                                <span className="spa-package-item-qty">
+                                  {item.quantity} lượt
+                                </span>
+                              </div>
+                              {(item.durationMinutes || item.basePrice != null || item.categoryName) && (
+                                <small className="spa-package-item-meta">
+                                  {[
+                                    item.categoryName,
+                                    item.durationMinutes ? `${item.durationMinutes} phút/buổi` : null,
+                                    item.basePrice != null ? `Giá lẻ ${money(item.basePrice)}` : null,
+                                  ].filter(Boolean).join(' · ')}
+                                </small>
+                              )}
+                              {item.shortDescription && (
+                                <small className="spa-package-item-short">{item.shortDescription}</small>
+                              )}
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -296,14 +348,21 @@ export const ServicePackages = ({ onNavigate }) => {
                           >
                             {userDiscount > 0 ? `Giá ưu đãi ${user?.membershipTier}` : 'Giá trọn gói'}
                           </small>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
                             <strong className="spa-package-price">
                               {money(userPrice)}
                             </strong>
-                            {userDiscount > 0 && (
+                            {userDiscount > 0 ? (
                               <del style={{ fontSize: 12, color: '#9CA3AF' }}>{money(pack.price)}</del>
-                            )}
+                            ) : retailValue > pack.price ? (
+                              <del style={{ fontSize: 12, color: '#9CA3AF' }}>{money(retailValue)}</del>
+                            ) : null}
                           </div>
+                          {packageSavings > 0 && (
+                            <small style={{ color: '#059669', fontSize: 11.5, fontWeight: 600 }}>
+                              Tiết kiệm {money(packageSavings)} so với đặt lẻ
+                            </small>
+                          )}
                         </div>
                         {perSession && (
                           <span className="spa-package-per-session">
@@ -312,12 +371,22 @@ export const ServicePackages = ({ onNavigate }) => {
                         )}
                       </div>
 
-                      <Button
-                        className="spa-package-buy-btn"
-                        onClick={() => selectPackage(pack)}
-                      >
-                        <Sparkles size={15} /> Xem điều kiện & mua gói
-                      </Button>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <Button
+                          variant="outline"
+                          onClick={() => setDetailPack(pack)}
+                          style={{ flex: '0 0 auto' }}
+                        >
+                          <Info size={15} /> Chi tiết gói
+                        </Button>
+                        <Button
+                          className="spa-package-buy-btn"
+                          style={{ flex: 1 }}
+                          onClick={() => selectPackage(pack)}
+                        >
+                          <Sparkles size={15} /> Xem điều kiện & mua gói
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -424,6 +493,79 @@ export const ServicePackages = ({ onNavigate }) => {
         </>
       )}
 
+      {/* Package Detail Modal */}
+      {detailPack && (
+        <Modal
+          isOpen
+          title={detailPack.name}
+          onClose={() => setDetailPack(null)}
+          maxWidth="760px"
+        >
+          <div className="spa-package-detail-modal">
+            <img
+              className="spa-package-detail-hero"
+              src={detailPack.thumbnailUrl ? resolveMediaUrl(detailPack.thumbnailUrl) : '/images/spa/facial-care.jpg'}
+              alt={detailPack.name}
+              onError={(e) => {
+                if (e.currentTarget.getAttribute('src') !== '/images/spa/facial-care.jpg') {
+                  e.currentTarget.src = '/images/spa/facial-care.jpg';
+                }
+              }}
+            />
+            <div className="spa-package-detail-meta">
+              <span><strong>Giá gói:</strong> {money(detailPack.price)}</span>
+              {detailPack.originalPrice > detailPack.price && (
+                <span><strong>Giá lẻ:</strong> <del>{money(detailPack.originalPrice)}</del> (Tiết kiệm {money(detailPack.originalPrice - detailPack.price)})</span>
+              )}
+              <span><strong>Hạn dùng:</strong> {detailPack.validityDays == null ? 'Không giới hạn' : `${detailPack.validityDays} ngày từ thanh toán`}</span>
+              {detailPack.totalDurationMinutes > 0 && (
+                <span><strong>Tổng thời lượng:</strong> {detailPack.totalDurationMinutes} phút</span>
+              )}
+            </div>
+            {detailPack.description && <p className="spa-package-detail-desc">{detailPack.description}</p>}
+            <h4>Chi tiết dịch vụ bao gồm trong gói</h4>
+            <div className="spa-package-detail-services">
+              {(detailPack.items || []).map((item) => (
+                <article key={item.serviceId} className="spa-package-detail-item">
+                  <img
+                    src={item.thumbnailUrl ? resolveMediaUrl(item.thumbnailUrl) : '/images/spa/facial-care.jpg'}
+                    alt={item.serviceName}
+                    onError={(e) => {
+                      if (e.currentTarget.getAttribute('src') !== '/images/spa/facial-care.jpg') {
+                        e.currentTarget.src = '/images/spa/facial-care.jpg';
+                      }
+                    }}
+                  />
+                  <div>
+                    <div className="spa-package-item-top">
+                      <strong>{item.serviceName}</strong>
+                      <span className="spa-package-item-qty">{item.quantity} lượt</span>
+                    </div>
+                    <small className="spa-package-item-meta">
+                      {[
+                        item.categoryName,
+                        item.durationMinutes ? `${item.durationMinutes} phút thực hiện` : null,
+                        item.preparationTimeMinutes ? `+ ${item.preparationTimeMinutes}p chuẩn bị` : null,
+                        item.basePrice != null ? `Giá lẻ ${money(item.basePrice)}/buổi` : null,
+                        item.requiresCertification ? 'Yêu cầu KTV có chứng nhận' : null,
+                      ].filter(Boolean).join(' · ')}
+                    </small>
+                    {item.shortDescription && <p>{item.shortDescription}</p>}
+                    {item.description && <p style={{ color: '#4B5563' }}>{item.description}</p>}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+              <Button variant="outline" onClick={() => setDetailPack(null)}>Đóng</Button>
+              <Button onClick={() => { const chosen = detailPack; setDetailPack(null); selectPackage(chosen); }}>
+                <Sparkles size={15} /> Mua gói này
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Package Purchase Modal */}
       {selected && (
         <PackagePurchase
@@ -500,6 +642,14 @@ const PackagePurchase = ({ pack, user, authenticated, onNavigate, onClose }) => 
     >
       <form className="spa-benefit-form" onSubmit={submit}>
         <div className="spa-purchase-summary-box">
+          {pack.thumbnailUrl && (
+            <img
+              src={resolveMediaUrl(pack.thumbnailUrl)}
+              alt={pack.name}
+              style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 10, marginBottom: 12 }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          )}
           <div className="spa-purchase-summary-header">
             <div>
               <span className="spa-benefit-eyebrow">Quyền lợi trọn gói</span>
@@ -545,7 +695,10 @@ const PackagePurchase = ({ pack, user, authenticated, onNavigate, onClose }) => 
           <ul className="spa-purchase-items-list">
             {(pack.items || []).map((s) => (
               <li key={s.serviceId}>
-                <span>{s.serviceName}</span>
+                <span>
+                  {s.serviceName}
+                  {s.durationMinutes ? ` (${s.durationMinutes}p)` : ''}
+                </span>
                 <strong>{s.quantity} lượt</strong>
               </li>
             ))}

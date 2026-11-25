@@ -111,6 +111,12 @@
 }
 .customer-treatment-plan-body h2 { color: var(--tc-ink); }
 .customer-treatment-plan-body .treatment-price { color: var(--tc-accent); margin: 4px 0 0; }
+.customer-treatment-pricing { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin: 4px 0 0; }
+.customer-treatment-retail { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--tc-muted); }
+.customer-treatment-item-chip { display: flex; align-items: flex-start; gap: 8px; margin-top: 4px; }
+.customer-treatment-item-thumb { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 7px; object-fit: cover; border: 1px solid var(--tc-line); background: var(--tc-blush); }
+.customer-treatment-record-top { display: flex; align-items: flex-start; gap: 14px; }
+.customer-treatment-record-thumb { width: 76px; height: 58px; flex: 0 0 76px; border-radius: 10px; object-fit: cover; border: 1px solid var(--tc-line); background: var(--tc-blush); }
 .customer-treatment-plan-body .treatment-actions { margin-top: auto; padding-top: 16px; }
 .customer-treatment-plan-body .treatment-actions button {
   width: 100%;

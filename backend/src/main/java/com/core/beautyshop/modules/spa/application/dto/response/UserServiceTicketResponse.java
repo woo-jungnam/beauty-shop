@@ -24,6 +24,8 @@ public class UserServiceTicketResponse {
     private Long packageId;
     @Schema(description = "Tên lúc mua; vé cũ thiếu snapshot dùng tên hiện tại và nameSnapshot=false")
     private String packageName;
+    private String packageDescription;
+    private String packageThumbnailUrl;
     private boolean nameSnapshot;
     private String benefitType;
     private Long treatmentCourseId;
@@ -57,6 +59,8 @@ public class UserServiceTicketResponse {
                 .userId(ticket.getUserId())
                 .packageId(ticket.getServicePackage() != null ? ticket.getServicePackage().getId() : null)
                 .packageName(ticket.getPackageNameSnapshot() != null ? ticket.getPackageNameSnapshot() : ticket.getServicePackage() != null ? ticket.getServicePackage().getName() : null)
+                .packageDescription(ticket.getServicePackage() != null ? ticket.getServicePackage().getDescription() : null)
+                .packageThumbnailUrl(ticket.getServicePackage() != null ? ticket.getServicePackage().getThumbnailUrl() : null)
                 .nameSnapshot(ticket.getPackageNameSnapshot() != null)
                 .benefitType(ticket.getServicePackage() != null && Boolean.TRUE.equals(ticket.getServicePackage().getTreatmentManaged()) ? "TREATMENT_COURSE" : "SERVICE_PACKAGE")
                 .treatmentCourseId(ticket.getTreatmentCourseId())

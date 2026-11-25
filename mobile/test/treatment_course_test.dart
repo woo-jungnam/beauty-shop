@@ -1164,4 +1164,74 @@ void main() {
       auth.dispose();
     },
   );
+
+  test('Treatment models parse enriched media, duration, original price and advisory gaps', () {
+    final tpl = TreatmentTemplate.fromJson({
+      ...template(),
+      'thumbnailUrl': '/images/spa/facial.jpg',
+      'shortDescription': 'Mô tả ngắn',
+      'categoryName': 'Điều trị da',
+      'originalPrice': 1200000,
+      'totalDurationMinutes': 120,
+      'serviceDetails': {
+        '11': {
+          'serviceId': 11,
+          'name': 'Chăm sóc da',
+          'thumbnailUrl': '/images/spa/item.jpg',
+          'durationMinutes': 60,
+          'basePrice': 600000,
+        },
+      },
+    });
+    expect(tpl.thumbnailUrl, '/images/spa/facial.jpg');
+    expect(tpl.categoryName, 'Điều trị da');
+    expect(tpl.originalPrice, 1200000);
+    expect(tpl.totalDurationMinutes, 120);
+    expect(tpl.serviceDetails[11]?['durationMinutes'], 60);
+
+    final enrollment = TreatmentEnrollment.fromJson({
+      ...course(),
+      'thumbnailUrl': '/images/spa/facial.jpg',
+      'description': 'Chi tiết gói',
+      'totalDurationMinutes': 120,
+      'sessions': [
+        {
+          'id': 8,
+          'sequence': 1,
+          'title': 'Buổi 1',
+          'status': 'COMPLETED',
+          'minGapDays': 0,
+          'blockedReason': 'Buổi điều trị này đã hoàn thành hoặc kết thúc',
+          'totalDurationMinutes': 60,
+          'items': [
+            {
+              'id': 1,
+              'serviceId': 11,
+              'serviceName': 'Chăm sóc da',
+              'status': 'COMPLETED',
+              'thumbnailUrl': '/images/spa/item.jpg',
+              'durationMinutes': 60,
+              'basePrice': 600000,
+            },
+          ],
+        },
+        {
+          'id': 9,
+          'sequence': 2,
+          'title': 'Buổi 2',
+          'status': 'PLANNED',
+          'minGapDays': 7,
+          'maxGapDays': 14,
+          'totalDurationMinutes': 60,
+          'allowedActions': ['BOOK'],
+          'items': [],
+        },
+      ],
+    });
+    expect(enrollment.thumbnailUrl, '/images/spa/facial.jpg');
+    expect(enrollment.totalDurationMinutes, 120);
+    expect(enrollment.sessions.first.items.first.durationMinutes, 60);
+    expect(enrollment.sessions.last.minGapDays, 7);
+    expect(enrollment.sessions.last.maxGapDays, 14);
+  });
 }

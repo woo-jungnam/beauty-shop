@@ -36,37 +36,74 @@ export function CustomerTreatmentHero({ banner, compact }) {
 }
 
 export function CustomerTreatmentCatalog({ templates, services, loading, onPurchase }) {
+  const serviceMap = new Map(services.filter(service => service.isActive !== false)
+    .map(service => [String(service.id), service]));
   const serviceImages = new Map(services.filter(service => service.isActive !== false && service.thumbnailUrl)
     .map(service => [String(service.id), service.thumbnailUrl]));
   return (
     <div id="treatment-catalog" tabIndex={-1} className="treatment-grid customer-treatment-catalog">
       {templates.map(template => {
         const sessions = template.sessions || [];
-        const image = serviceImages.get(String(template.serviceId))
-          || sessions.flatMap(session => session.items || []).map(item => serviceImages.get(String(item.serviceId))).find(Boolean);
+        const details = template.serviceDetails || {};
+        const image = template.thumbnailUrl
+          || serviceImages.get(String(template.serviceId))
+          || sessions.flatMap(session => session.items || []).map(item => details[item.serviceId]?.thumbnailUrl || serviceImages.get(String(item.serviceId))).find(Boolean);
+        const originalPrice = Number(template.originalPrice || 0);
+        const price = Number(template.price || 0);
+        const discountPercent = originalPrice > price && price > 0 ? Math.round((originalPrice - price) * 100 / originalPrice) : 0;
+        const duration = Number(template.totalDurationMinutes || 0);
         return (
           <article className="treatment-card customer-treatment-plan" key={template.id} data-treatment-template-id={template.id}>
-            <StoreImage key={image} source={image} className="customer-treatment-cover" />
+            <StoreImage key={image} source={image} label={template.name} className="customer-treatment-cover" />
             <div className="customer-treatment-plan-body">
+              {template.categoryName && <span className="treatment-badge" style={{ alignSelf: 'flex-start', marginBottom: 6 }}>{template.categoryName}</span>}
               <h2>{template.name}</h2>
-              {template.price != null && <div className="treatment-price">{money(template.price)}</div>}
+              {template.shortDescription && <p className="treatment-muted" style={{ marginBottom: 6 }}>{template.shortDescription}</p>}
+              {template.price != null && (
+                <div className="customer-treatment-pricing">
+                  <div className="treatment-price">{money(template.price)}</div>
+                  {originalPrice > price && (
+                    <div className="customer-treatment-retail">
+                      <del>{money(originalPrice)}</del>
+                      {discountPercent > 0 && <span className="treatment-badge">Tiết kiệm {discountPercent}%</span>}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="treatment-meta">
                 <span><CalendarDays size={15} aria-hidden="true" />{sessions.length} buổi</span>
-                {template.validityDays != null && <span><Clock size={15} aria-hidden="true" />{template.validityDays} ngày</span>}
+                {duration > 0 && <span><Clock size={15} aria-hidden="true" />{duration} phút</span>}
+                <span><Clock size={15} aria-hidden="true" />{template.validityDays != null ? `${template.validityDays} ngày` : 'Không giới hạn'}</span>
               </div>
               <ol className="customer-treatment-timeline" aria-label="Các buổi trong lộ trình">
-                {sessions.map(session => (
-                  <li key={session.sequence}>
-                    <span className="customer-treatment-number" aria-hidden="true">{session.sequence}</span>
-                    <div>
-                      <strong>Buổi {session.sequence}: {session.title}</strong>
-                      {(session.items || []).length > 0 && (
-                        <small>{session.items.map(item => item.serviceName || `Dịch vụ #${item.serviceId}`).join(', ')}</small>
-                      )}
-                      {session.minGapDays > 0 && <small>Cách tối thiểu {session.minGapDays} ngày</small>}
-                    </div>
-                  </li>
-                ))}
+                {sessions.map(session => {
+                  const firstItem = (session.items || [])[0];
+                  const detail = firstItem ? (details[firstItem.serviceId] || serviceMap.get(String(firstItem.serviceId))) : null;
+                  const gapText = (session.minGapDays > 0 || session.maxGapDays != null)
+                    ? `Giãn cách tham khảo: ${session.minGapDays || 0}${session.maxGapDays != null ? `–${session.maxGapDays}` : '+'} ngày (không bắt buộc)`
+                    : '';
+                  return (
+                    <li key={session.sequence}>
+                      <span className="customer-treatment-number" aria-hidden="true">{session.sequence}</span>
+                      <div>
+                        <strong>Buổi {session.sequence}: {session.title}</strong>
+                        {(session.items || []).length > 0 && (
+                          <div className="customer-treatment-item-chip">
+                            {detail?.thumbnailUrl && <StoreImage source={detail.thumbnailUrl} label={detail.name} className="customer-treatment-item-thumb" />}
+                            <div>
+                              <small>{session.items.map(item => {
+                                const info = details[item.serviceId] || serviceMap.get(String(item.serviceId));
+                                return `${item.serviceName || info?.name || `Dịch vụ #${item.serviceId}`}${info?.durationMinutes ? ` (${info.durationMinutes}p)` : ''}`;
+                              }).join(', ')}</small>
+                              {detail?.shortDescription && <small>{detail.shortDescription}</small>}
+                            </div>
+                          </div>
+                        )}
+                        {gapText && <small>{gapText}</small>}
+                      </div>
+                    </li>
+                  );
+                })}
               </ol>
               {(template.description || template.terms) && <details>
                 <summary>{template.description && template.terms ? 'Mô tả và điều khoản' : template.terms ? 'Điều khoản sử dụng' : 'Mô tả lộ trình'}</summary>
@@ -119,11 +156,23 @@ export function CustomerTreatmentCourses({ courses, allCourses, onOpen }) {
         <h2>Hồ sơ và tiến độ</h2>
         {courses.map(course => (
           <article className="treatment-card customer-treatment-record" key={course.id} data-treatment-course-id={course.id}>
-            <div className="treatment-card-heading">
-              <h3>{course.name}</h3>
-              <span className="treatment-badge" data-status={course.status}>{statusLabel(course.status)}</span>
+            <div className="customer-treatment-record-top">
+              {course.thumbnailUrl && <StoreImage source={course.thumbnailUrl} label={course.name} className="customer-treatment-record-thumb" />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="treatment-card-heading">
+                  <h3>{course.name}</h3>
+                  <span className="treatment-badge" data-status={course.status}>{statusLabel(course.status)}</span>
+                </div>
+                <p className="treatment-muted">
+                  Hồ sơ #{course.id} · {course.completedSessions}/{course.totalSessions} buổi hoàn thành
+                  {course.totalDurationMinutes > 0 ? ` · ${course.totalDurationMinutes} phút` : ''}
+                  {course.categoryName ? ` · ${course.categoryName}` : ''}
+                </p>
+                {(course.shortDescription || course.description) && (
+                  <p className="treatment-muted" style={{ marginTop: 4 }}>{course.shortDescription || course.description}</p>
+                )}
+              </div>
             </div>
-            <p className="treatment-muted">Hồ sơ #{course.id} · {course.completedSessions}/{course.totalSessions} buổi hoàn thành</p>
             {(course.sessions || []).length > 0 && (
               <ol className="customer-treatment-progress" aria-label="Trạng thái từng buổi">
                 {course.sessions.map(session => (

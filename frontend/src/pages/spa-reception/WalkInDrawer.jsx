@@ -86,7 +86,7 @@ export const WalkInDrawer = ({ services, facilities, facilityId, onClose, onBook
   }, [form.customerId]);
   const service = services.find(item => String(item.id) === form.serviceId);
   const visitStart = Date.parse(`${form.appointmentDate}T${form.startTime}+07:00`);
-  const eligibleTickets = tickets.filter(ticket => ticket.benefitType !== 'TREATMENT_COURSE' && Number(ticket.remainingByService?.[form.serviceId]) > 0
+  const eligibleTickets = tickets.filter(ticket => Number(ticket.remainingByService?.[form.serviceId]) > 0
     && (!ticket.expiryDate || Date.parse(ticket.expiryDate) > Math.max(Date.now(), visitStart)));
   const visitNames = [service?.name, ...extraIds.map(id => ticket?.services?.find(item => item.serviceId === id)?.serviceName)].filter(Boolean).join(' + ');
   const checkInAllowed = Boolean(form.staffId) && !extraIds.length && form.appointmentDate === getVietnamDateString();

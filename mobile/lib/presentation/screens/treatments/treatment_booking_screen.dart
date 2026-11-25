@@ -30,18 +30,6 @@ class _TreatmentBookingScreenState extends State<TreatmentBookingScreen> {
   void initState() {
     super.initState();
     _generation = context.read<TreatmentProvider>().generation;
-    final first = widget.session.earliestBookingAt;
-    if (first != null) {
-      final parsed = DateTime.tryParse(first);
-      if (parsed != null) {
-        final hasOffset =
-            first.endsWith('Z') || RegExp(r'[+-]\d\d:\d\d$').hasMatch(first);
-        final earliest = hasOffset
-            ? parsed.toUtc().add(const Duration(hours: 7))
-            : parsed;
-        if (earliest.isAfter(_date)) _date = earliest;
-      }
-    }
     _load();
   }
 
@@ -141,16 +129,46 @@ class _TreatmentBookingScreenState extends State<TreatmentBookingScreen> {
             (item) => ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.spa_outlined),
+              leading: item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
+                  ? TreatmentThumbImage(
+                      url: item.thumbnailUrl,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 8,
+                    )
+                  : const Icon(Icons.spa_outlined),
               title: Text(item.name),
+              subtitle: (item.durationMinutes != null || item.shortDescription.isNotEmpty)
+                  ? Text(
+                      [
+                        if (item.durationMinutes != null)
+                          '${item.durationMinutes} phút',
+                        if (item.shortDescription.isNotEmpty)
+                          item.shortDescription,
+                      ].join(' • '),
+                    )
+                  : null,
             ),
           ),
           const Text(
             'Ngày giờ theo múi giờ Việt Nam. Giờ trống chỉ được giữ sau khi máy chủ xác nhận đặt lịch.',
           ),
-          if (widget.session.earliestBookingAt != null)
+          if (widget.session.earliestBookingAt != null ||
+              widget.session.latestBookingAt != null)
             Text(
-              'Được đặt sớm nhất: ${treatmentDate(widget.session.earliestBookingAt)}',
+              'Thời gian tham khảo (không bắt buộc): '
+              '${widget.session.earliestBookingAt != null ? 'từ ${treatmentDate(widget.session.earliestBookingAt)}' : ''}'
+              '${widget.session.latestBookingAt != null ? ' đến ${treatmentDate(widget.session.latestBookingAt)}' : ''}',
+            )
+          else if (treatmentAdvisoryGap(
+            widget.session.minGapDays,
+            widget.session.maxGapDays,
+          ).isNotEmpty)
+            Text(
+              treatmentAdvisoryGap(
+                widget.session.minGapDays,
+                widget.session.maxGapDays,
+              ),
             ),
           OutlinedButton.icon(
             onPressed: _busy

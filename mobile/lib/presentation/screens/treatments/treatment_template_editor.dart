@@ -25,6 +25,7 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController(),
       _description = TextEditingController(),
+      _thumbnailUrl = TextEditingController(),
       _price = TextEditingController(),
       _validity = TextEditingController(),
       _terms = TextEditingController();
@@ -44,6 +45,7 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
     final plan = widget.initialPlan ?? widget.template?.command ?? {};
     _name.text = plan['name']?.toString() ?? '';
     _description.text = plan['description']?.toString() ?? '';
+    _thumbnailUrl.text = plan['thumbnailUrl']?.toString() ?? '';
     _price.text = plan['price']?.toString() ?? '';
     _validity.text = plan.isEmpty
         ? '90'
@@ -73,7 +75,14 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
   });
   @override
   void dispose() {
-    for (final controller in [_name, _description, _price, _validity, _terms]) {
+    for (final controller in [
+      _name,
+      _description,
+      _thumbnailUrl,
+      _price,
+      _validity,
+      _terms,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -86,6 +95,8 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
       'name': _name.text.trim(),
       'description': _description.text.trim(),
       'serviceId': _serviceId,
+      if (_thumbnailUrl.text.trim().isNotEmpty)
+        'thumbnailUrl': _thumbnailUrl.text.trim(),
       'price': num.parse(_price.text),
       'validityDays': int.tryParse(_validity.text),
       'terms': _terms.text.trim(),
@@ -213,6 +224,13 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
                     controller: _description,
                     decoration: const InputDecoration(labelText: 'Mô tả'),
                     maxLines: 3,
+                  ),
+                  TextFormField(
+                    controller: _thumbnailUrl,
+                    decoration: const InputDecoration(
+                      labelText: 'URL ảnh đại diện (tùy chọn)',
+                    ),
+                    maxLength: 500,
                   ),
                   DropdownButtonFormField<int>(
                     key: ValueKey('course-$_serviceId-${courses.length}'),
@@ -345,7 +363,7 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
                                         '${session['minGapDays'] ?? 0}',
                                     keyboardType: TextInputType.number,
                                     decoration: const InputDecoration(
-                                      labelText: 'Cách tối thiểu (ngày)',
+                                      labelText: 'Giãn cách tham khảo (ngày)',
                                     ),
                                     onChanged: (value) =>
                                         session['minGapDays'] = int.tryParse(
@@ -364,7 +382,7 @@ class _TreatmentTemplateEditorState extends State<TreatmentTemplateEditor> {
                                         session['maxGapDays']?.toString() ?? '',
                                     keyboardType: TextInputType.number,
                                     decoration: const InputDecoration(
-                                      labelText: 'Tối đa (tùy chọn)',
+                                      labelText: 'Tối đa tham khảo (tùy chọn)',
                                     ),
                                     onChanged: (value) =>
                                         session['maxGapDays'] = int.tryParse(

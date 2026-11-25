@@ -178,7 +178,6 @@ class _SpaBookingScreenState extends State<SpaBookingScreen> {
         .where(
           (t) =>
               t.isValid &&
-              t.benefitType != 'TREATMENT_COURSE' &&
               (t.remainingByService[widget.service.id] ?? 0) > 0,
         )
         .toList();

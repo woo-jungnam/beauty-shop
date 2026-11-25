@@ -19,7 +19,7 @@ public interface ServicePackageRepository extends JpaRepository<ServicePackage, 
     @Query("select count(t) from TreatmentTemplate t where t.serviceId = :serviceId")
     long countTreatmentReferences(@Param("serviceId") Long serviceId);
 
-    @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service " +
+    @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service s LEFT JOIN FETCH s.category " +
             "WHERE p.isActive = true AND p.isDeleted = false AND (p.treatmentManaged = false OR p.treatmentManaged IS NULL) AND p.items IS NOT EMPTY " +
             "AND NOT EXISTS (SELECT bad.id FROM ServicePackageItem bad WHERE bad.servicePackage = p " +
             "AND (bad.isDeleted = true OR bad.service.isDeleted = true OR bad.service.isActive = false OR bad.service.serviceType = 'TREATMENT_COURSE')) ORDER BY p.id")
@@ -30,10 +30,10 @@ public interface ServicePackageRepository extends JpaRepository<ServicePackage, 
             "WHERE servicePackage.id = :id AND servicePackage.isDeleted = false")
     Optional<ServicePackage> findByIdForUpdateAndIsDeletedFalse(@Param("id") Long id);
 
-    @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service "
+    @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service s LEFT JOIN FETCH s.category "
             + "WHERE p.id = :id AND p.isDeleted = false")
     Optional<ServicePackage> findDetailByIdAndIsDeletedFalse(@Param("id") Long id);
 
-    @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service WHERE p.isDeleted = false ORDER BY p.id DESC")
+    @Query("SELECT DISTINCT p FROM ServicePackage p LEFT JOIN FETCH p.items i LEFT JOIN FETCH i.service s LEFT JOIN FETCH s.category WHERE p.isDeleted = false ORDER BY p.id DESC")
     List<ServicePackage> findAllAdminWithItems();
 }

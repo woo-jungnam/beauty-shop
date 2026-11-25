@@ -84,37 +84,184 @@ class _TreatmentTemplateScreenState extends State<TreatmentTemplateScreen> {
       body: TreatmentAsync(
         future: _future,
         retry: () => setState(_load),
-        builder: (template) => ListView(
+        builder: (template) {
+          final serviceDetails = template.serviceDetails;
+          final retail = template.originalPrice ?? 0;
+          final hasSavings = retail > template.price && template.price > 0;
+          final savingsPct = hasSavings
+              ? ((retail - template.price) * 100 / retail).round()
+              : 0;
+          return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (template.thumbnailUrl != null &&
+                template.thumbnailUrl!.isNotEmpty) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 190,
+                child: TreatmentThumbImage(
+                  url: template.thumbnailUrl,
+                  borderRadius: 12,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (template.categoryName != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Chip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text(template.categoryName!),
+                ),
+              ),
             Text(
               template.name,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            Text(template.description),
+            if (template.shortDescription.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                template.shortDescription,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ],
+            if (template.description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(template.description),
+            ],
             const SizedBox(height: 12),
-            Text(
-              AppFormatters.formatCurrency(template.price),
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Text(
+                  AppFormatters.formatCurrency(template.price),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                if (hasSavings) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    AppFormatters.formatCurrency(retail),
+                    style: const TextStyle(
+                      decoration: TextDecoration.lineThrough,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Chip(
+                    visualDensity: VisualDensity.compact,
+                    label: Text('Tiết kiệm $savingsPct%'),
+                  ),
+                ],
+              ],
             ),
             Text(
-              '${template.sessions.length} buổi • ${template.validityDays == null ? 'Không giới hạn hiệu lực' : 'Hiệu lực ${template.validityDays} ngày từ thanh toán'} • Phiên bản ${template.versionNumber}',
+              '${template.sessions.length} buổi'
+              '${template.totalDurationMinutes > 0 ? ' • ${template.totalDurationMinutes} phút' : ''}'
+              ' • ${template.validityDays == null ? 'Không giới hạn hiệu lực' : 'Hiệu lực ${template.validityDays} ngày từ thanh toán'} • Phiên bản ${template.versionNumber}',
             ),
             const SizedBox(height: 12),
             ...template.sessions.map(
-              (session) => Card(
-                child: ListTile(
-                  title: Text(
-                    'Buổi ${session['sequence']}: ${session['title']}',
+              (session) {
+                final minGap = treatmentInt(session['minGapDays']);
+                final maxGap = session['maxGapDays'] == null
+                    ? null
+                    : treatmentInt(session['maxGapDays']);
+                final gapLabel = treatmentAdvisoryGap(minGap, maxGap);
+                final items = treatmentMaps(session['items']);
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Buổi ${session['sequence']}: ${session['title']}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${session['required'] != false ? 'Buổi bắt buộc' : 'Buổi tùy chọn'}'
+                          '${gapLabel.isNotEmpty ? ' • $gapLabel' : ''}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        ...items.map((item) {
+                          final sid = treatmentInt(item['serviceId']);
+                          final detail = serviceDetails[sid] ?? {};
+                          final thumb = detail['thumbnailUrl']?.toString();
+                          final duration = detail['durationMinutes'];
+                          final basePrice = double.tryParse(
+                            '${detail['basePrice']}',
+                          );
+                          final shortDesc =
+                              detail['shortDescription']?.toString() ?? '';
+                          final fullDesc =
+                              detail['description']?.toString() ?? '';
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (thumb != null && thumb.isNotEmpty) ...[
+                                  TreatmentThumbImage(
+                                    url: thumb,
+                                    width: 48,
+                                    height: 48,
+                                    borderRadius: 8,
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${item['serviceName'] ?? detail['name'] ?? 'Dịch vụ #$sid'}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      if (duration != null || basePrice != null)
+                                        Text(
+                                          [
+                                            if (duration != null)
+                                              '$duration phút',
+                                            if (basePrice != null)
+                                              'Giá lẻ ${AppFormatters.formatCurrency(basePrice)}',
+                                          ].join(' • '),
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                      if (shortDesc.isNotEmpty)
+                                        Text(
+                                          shortDesc,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                      if (fullDesc.isNotEmpty &&
+                                          fullDesc != shortDesc)
+                                        Text(
+                                          fullDesc,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
-                  subtitle: Text(
-                    '${treatmentMaps(session['items']).map((item) => item['serviceName'] ?? 'Dịch vụ #${item['serviceId']}').join('\n')}\n'
-                    'Khoảng cách tối thiểu: ${session['minGapDays'] ?? 0} ngày'
-                    '${session['maxGapDays'] == null ? '' : ' • Tối đa ${session['maxGapDays']} ngày'}\n'
-                    '${session['required'] != false ? 'Buổi bắt buộc' : 'Buổi tùy chọn'}',
-                  ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             Text('Điều khoản', style: Theme.of(context).textTheme.titleMedium),
@@ -122,7 +269,7 @@ class _TreatmentTemplateScreenState extends State<TreatmentTemplateScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                'Sau thanh toán, nhân viên tiếp nhận và rà soát kế hoạch riêng. Mọi thay đổi cam kết cần được bạn xác nhận. Hồ sơ chỉ được cấp khi hệ thống ghi nhận thanh toán.',
+                'Sau thanh toán, hồ sơ lộ trình được kích hoạt ngay để bạn chủ động đặt từng buổi. Giãn cách ngày chỉ mang tính tham khảo; mọi thay đổi phác đồ đều cần bạn xác nhận.',
               ),
             ),
             CheckboxListTile(
@@ -173,7 +320,8 @@ class _TreatmentTemplateScreenState extends State<TreatmentTemplateScreen> {
               child: const Text('Xem đơn chờ thanh toán'),
             ),
           ],
-        ),
+        );
+        },
       ),
     );
   }

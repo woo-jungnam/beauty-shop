@@ -50,12 +50,18 @@ class SpaBusinessAuditIntegrationTest extends TreatmentCourseIntegrationTest {
                 new RefundCommand(amount, "AUDIT-" + UUID.randomUUID(), "Confirmed refund evidence"))));
     }
 
-    @Test void auditImpossibleSessionIntervalCanBePublishedAndPurchased() {
+    @Test void auditAdvisorySessionIntervalAllowedWhileDurationExceedingValidityIsRejected() {
         CourseFixture f = courseFixture();
-        Plan impossible = new Plan("Impossible timing", "Two required sessions", f.template().serviceId(), new BigDecimal("1000"), 1, "Accepted terms",
+        Plan advisoryGap = new Plan("Advisory timing", "Two required sessions", f.template().serviceId(), new BigDecimal("1000"), 1, "Accepted terms",
                 List.of(new PlanSession(1, "First", 0, null, true, List.of(new PlanItem(f.base().serviceId(), null, true))),
                         new PlanSession(2, "Second", 30, 40, true, List.of(new PlanItem(f.base().serviceId(), null, true)))));
-        assertThrows(BusinessException.class, () -> as(f.base().admin(), () -> treatments.saveTemplate(null, impossible)));
+        assertDoesNotThrow(() -> as(f.base().admin(), () -> treatments.saveTemplate(null, advisoryGap)));
+        long marathonService = tx(() -> services.saveAndFlush(BeautyService.builder().name("Marathon session").slug(UUID.randomUUID().toString())
+                .basePrice(BigDecimal.valueOf(500)).durationMinutes(720).preparationTimeMinutes(120).build()).getId());
+        Plan impossibleDuration = new Plan("Impossible duration", "Exceeds validity by execution minutes", f.template().serviceId(), new BigDecimal("1000"), 1, "Accepted terms",
+                List.of(new PlanSession(1, "First", 0, null, true, List.of(new PlanItem(marathonService, null, true))),
+                        new PlanSession(2, "Second", 0, null, true, List.of(new PlanItem(marathonService, null, true)))));
+        assertThrows(BusinessException.class, () -> as(f.base().admin(), () -> treatments.saveTemplate(null, impossibleDuration)));
     }
 
     @Test void auditGenericCompensationAddsTreatmentQuotaWithoutCreatingAnySession() {
@@ -117,13 +123,19 @@ class SpaBusinessAuditIntegrationTest extends TreatmentCourseIntegrationTest {
             stored.setConsumedAmount(item.getAllocatedAmount()); return null;
         });
         var second = course.sessions().get(1);
-        assertFalse(as(f.base().customer(), () -> treatments.availableSlots(course.id(), second.id(), f.base().date(), f.base().firstStaffId())).contains("10:00"));
+        assertTrue(as(f.base().customer(), () -> treatments.availableSlots(course.id(), second.id(), f.base().date(), f.base().firstStaffId())).contains("10:00"));
         var command = new BookAppointmentRequest(); command.setAppointmentDate(f.base().date()); command.setStartTime(LocalTime.of(10, 0));
         command.setItems(second.items().stream().map(i -> {
             var item = new AppointmentItemRequest(); item.setServiceId(i.serviceId()); item.setStaffId(f.base().firstStaffId());
             item.setTicketId(course.ticketId()); item.setTreatmentSessionItemId(i.id()); return item;
         }).toList());
-        assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> appointments.bookAppointment(command)));
+        assertDoesNotThrow(() -> as(f.base().customer(), () -> appointments.bookAppointment(command)));
+        tx(() -> {
+            var stored = entityManager.find(Course.class, course.id());
+            stored.setExpiryDate(Instant.now().minusSeconds(60));
+            return null;
+        });
+        assertFalse(as(f.base().customer(), () -> treatments.availableSlots(course.id(), course.sessions().getFirst().id(), f.base().date(), f.base().firstStaffId())).contains("12:00"));
     }
     @Test void pausedTreatmentPreservesElapsedTimeOnResumeEvenAfterOriginalExpiry() {
         CourseFixture f=courseFixture();
@@ -133,7 +145,7 @@ class SpaBusinessAuditIntegrationTest extends TreatmentCourseIntegrationTest {
         tx(() -> { var c=entityManager.find(Course.class,f.course().id()); c.setPausedAt(original.minusSeconds(86400)); c.setExpiryDate(original); return null; });
         var resume=as(f.base().customer(), () -> treatments.request(f.course().id(),new RequestCommand("RESUME","Return from travel",null)));
         var resumed=as(f.base().admin(), () -> treatments.reviewRequest(f.course().id(),resume.requests().getFirst().id(),new DecisionCommand(1,"Approved resume"),true));
-        assertEquals("PENDING_INTAKE",resumed.status());
+        assertEquals("ACTIVE",resumed.status());
         assertTrue(resumed.expiryDate().isAfter(Instant.now().plusSeconds(86000)));
         assertTrue(java.time.Duration.between(resumed.expiryDate(), tx(() -> tickets.findById(f.course().ticketId()).orElseThrow().getExpiryDate())).abs().compareTo(java.time.Duration.ofNanos(1000)) <= 0);
     }

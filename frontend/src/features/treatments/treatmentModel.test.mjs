@@ -47,7 +47,9 @@ test('UI actions require explicit server permission and invalid timestamps do no
 });
 
 test('unlimited validity survives editing and time limits display Vietnam local hours', () => {
-  const source = {name:'Unlimited',serviceId:'1',price:'1000',validityDays:'',terms:'Accepted',sessions:[]};
-  assert.equal(planPayload(source).validityDays,null);
+  const source = {name:'Unlimited',serviceId:'1',price:'1000',validityDays:'',terms:'Accepted',thumbnailUrl:' https://example.com/p.jpg ',sessions:[]};
+  const parsed = planPayload(source);
+  assert.equal(parsed.validityDays,null);
+  assert.equal(parsed.thumbnailUrl,'https://example.com/p.jpg');
   assert.match(dateLabel('2026-11-07T03:30:00Z'),/10:30/);
 });

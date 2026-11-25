@@ -77,7 +77,7 @@ class TreatmentCourseIntegrationTest extends SpaWorkflowTestSupport {
                 .filter(c -> c.orderId().equals(purchase.getOrderId())).findFirst().orElseThrow();
         assertNotNull(course.ticketId());
         assertEquals(2, course.sessions().size());
-        assertEquals("PENDING_INTAKE", course.status());
+        assertEquals("ACTIVE", course.status());
         assertTrue(tickets.existsByOrderId(purchase.getOrderId()));
     }
 
@@ -230,13 +230,71 @@ class TreatmentCourseIntegrationTest extends SpaWorkflowTestSupport {
         assertThrows(AccessDeniedException.class, () -> as(reception, () -> treatments.intake(f.course().id(), new IntakeCommand("Assignment does not grant execution access"))));
     }
 
-    @Test void firstBookingBeforeIntakeIsAllowedButExecutionAndOutOfOrderBookingsAreBlocked() {
-        CourseFixture f = courseFixture(); long appointment = bookCourse(f);
-        assertThrows(BusinessException.class, () -> as(f.base().admin(), () -> tx(() -> { treatmentAppointments.validateAppointmentStart(appointmentRows.findById(appointment).orElseThrow()); return null; })));
-        assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> appointments.bookAppointment(courseBooking(f, f.course().sessions().getLast(), LocalTime.of(12, 0)))));
-        assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> appointments.bookAppointment(booking(f.base(), f.base().secondStaffId(), LocalTime.of(14, 0), f.course().ticketId()))));
-        var parentBooking = booking(f.base(), f.base().firstStaffId(), LocalTime.of(16, 0), null); parentBooking.getItems().getFirst().setServiceId(f.template().serviceId());
+    @Test void paidCourseStartsActiveAllowsAnySessionOrderAndAutoBindsPredefinedTicketBookings() {
+        CourseFixture f = courseFixture();
+        // Book Visit 2 out-of-order without prior intake() and validate immediate start
+        long visitTwo = as(f.base().customer(), () -> appointments.bookAppointment(courseBooking(f, f.course().sessions().getLast(), LocalTime.of(10, 0)))).getId();
+        assertDoesNotThrow(() -> as(f.base().admin(), () -> tx(() -> { treatmentAppointments.validateAppointmentStart(appointmentRows.findById(visitTwo).orElseThrow()); return null; })));
+        // Book Visit 1 through normal booking endpoint using ticketId only (auto-binds predefined single service)
+        long visitOne = as(f.base().customer(), () -> appointments.bookAppointment(booking(f.base(), f.base().secondStaffId(), LocalTime.of(14, 0), f.course().ticketId()))).getId();
+        tx(() -> {
+            assertNotNull(appointmentRows.findById(visitOne).orElseThrow().getItems().getFirst().getTreatmentSessionItemId());
+            return null;
+        });
+        // Exhausted predefined quota cannot book a third time
+        assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> appointments.bookAppointment(booking(f.base(), f.base().secondStaffId(), LocalTime.of(16, 0), f.course().ticketId()))));
+        // Direct booking of parent TREATMENT_COURSE service remains blocked
+        var parentBooking = booking(f.base(), f.base().firstStaffId(), LocalTime.of(18, 0), null); parentBooking.getItems().getFirst().setServiceId(f.template().serviceId());
         assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> appointments.bookAppointment(parentBooking)));
+    }
+
+    @Test void enrichedTemplatesAndCoursesExposeServiceImagesDurationAndAdvisoryGapSlots() {
+        CourseFixture f = courseFixture();
+        tx(() -> {
+            BeautyService parent = services.findById(f.template().serviceId()).orElseThrow();
+            parent.setThumbnailUrl("/images/spa/parent-course.jpg");
+            parent.setShortDescription("Gói phục hồi toàn diện");
+            BeautyService child = services.findById(f.base().serviceId()).orElseThrow();
+            child.setThumbnailUrl("/images/spa/child-service.jpg");
+            child.setShortDescription("Chăm sóc chuyên sâu");
+            child.setDescription("Chi tiết từng bước chuẩn y khoa");
+            child.setDurationMinutes(60);
+            child.setBasePrice(BigDecimal.valueOf(700));
+            return null;
+        });
+        TemplateView enrichedTemplate = as(f.base().customer(), () -> treatments.template(f.template().id(), false));
+        assertEquals("/images/spa/parent-course.jpg", enrichedTemplate.thumbnailUrl());
+        assertEquals("Gói phục hồi toàn diện", enrichedTemplate.shortDescription());
+        assertEquals(0, BigDecimal.valueOf(1400).compareTo(enrichedTemplate.originalPrice()));
+        assertEquals(120, enrichedTemplate.totalDurationMinutes());
+        assertEquals("/images/spa/child-service.jpg", enrichedTemplate.serviceDetails().get(f.base().serviceId()).thumbnailUrl());
+
+        CourseView enrichedCourse = as(f.base().customer(), () -> treatments.course(f.course().id()));
+        assertEquals("/images/spa/parent-course.jpg", enrichedCourse.thumbnailUrl());
+        assertEquals(120, enrichedCourse.totalDurationMinutes());
+        var firstItem = enrichedCourse.sessions().getFirst().items().getFirst();
+        assertEquals("/images/spa/child-service.jpg", firstItem.thumbnailUrl());
+        assertEquals("Chăm sóc chuyên sâu", firstItem.shortDescription());
+        assertEquals(60, firstItem.durationMinutes());
+
+        // Advisory minGapDays does not prevent booking right away
+        Plan withGaps = new Plan("Gap advisory plan", "Advisory test", f.template().serviceId(), BigDecimal.valueOf(1000), 90, "Terms",
+                List.of(new PlanSession(1, "V1", 0, null, true, List.of(new PlanItem(f.base().serviceId(), null, true))),
+                        new PlanSession(2, "V2", 14, 21, true, List.of(new PlanItem(f.base().serviceId(), null, true)))),
+                "/images/spa/custom-plan.jpg");
+        TemplateView draft = as(f.base().admin(), () -> treatments.saveTemplate(null, withGaps));
+        TemplateView published = as(f.base().admin(), () -> treatments.publish(draft.id()));
+        assertEquals("/images/spa/custom-plan.jpg", published.thumbnailUrl());
+        var order = as(f.base().customer(), () -> treatments.purchase(new PurchaseCommand(published.id(), published.versionId(), true, UUID.randomUUID().toString(), null)));
+        pay(f.base(), order.getOrderId());
+        CourseView gapCourse = as(f.base().customer(), () -> treatments.myCourses()).stream().filter(c -> c.orderId().equals(order.getOrderId())).findFirst().orElseThrow();
+        tx(() -> {
+            var s1 = entityManager.find(Session.class, gapCourse.sessions().getFirst().id());
+            s1.setStatus("COMPLETED");
+            s1.setCompletedAt(Instant.now());
+            return null;
+        });
+        assertFalse(as(f.base().customer(), () -> treatments.availableSlots(gapCourse.id(), gapCourse.sessions().get(1).id(), f.base().date(), f.base().firstStaffId())).isEmpty());
     }
 
     @Test void canceledAttemptCanBeRebookedAndPlanRevisionPreservesItsHistoricalForeignKey() {

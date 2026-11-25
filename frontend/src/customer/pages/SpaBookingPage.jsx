@@ -528,7 +528,6 @@ export const SpaBookingPage = ({ onNavigate, preselectedServiceId, preselectedTi
     () =>
       tickets.filter(
         (ticket) =>
-          ticket.benefitType !== "TREATMENT_COURSE" &&
           (ticket.remainingByService?.[selectedService?.id] ?? 0) > 0,
       ),
     [tickets, selectedService?.id],

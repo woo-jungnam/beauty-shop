@@ -1,8 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/utils/image_utils.dart';
 import '../../../data/models/treatment_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/treatment_provider.dart';
+
+class TreatmentThumbImage extends StatelessWidget {
+  const TreatmentThumbImage({
+    super.key,
+    required this.url,
+    this.width,
+    this.height,
+    this.borderRadius = 10,
+    this.placeholderIcon = Icons.spa_outlined,
+  });
+  final String? url;
+  final double? width;
+  final double? height;
+  final double borderRadius;
+  final IconData placeholderIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = ImageUtils.resolveUrl(url);
+    if (resolved == null || resolved.isEmpty) {
+      return Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        child: Icon(
+          placeholderIcon,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: Image.network(
+        resolved,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Container(
+          width: width,
+          height: height,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Icon(
+            placeholderIcon,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String treatmentAdvisoryGap(int minGapDays, int? maxGapDays) {
+  if (minGapDays <= 0 && maxGapDays == null) return '';
+  return maxGapDays != null
+      ? 'Giãn cách tham khảo: $minGapDays–$maxGapDays ngày (không bắt buộc)'
+      : 'Giãn cách tham khảo: $minGapDays+ ngày (không bắt buộc)';
+}
 
 class TreatmentAsync<T> extends StatelessWidget {
   const TreatmentAsync({

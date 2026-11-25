@@ -10,6 +10,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -157,12 +158,24 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .filter(Objects::nonNull).toList();
         if (sessionIds.stream().distinct().count() != sessionIds.size())
             throw new BusinessException("Một mục điều trị không thể xuất hiện hai lần trong cùng lịch hẹn");
-        request.getItems().stream().sorted(Comparator.comparing(
-                AppointmentItemRequest::getTreatmentSessionItemId,
-                Comparator.nullsFirst(Comparator.naturalOrder())))
-                .forEach(item -> treatments.validateAndLockBooking(item.getTreatmentSessionItemId(), bookingUserId,
-                        item.getServiceId(), item.getTicketId(), request.getAppointmentDate()
-                                .atTime(request.getStartTime()).atZone(SpaTimeRules.ZONE).toInstant()));
+
+        Set<Long> claimedSessionItemIds = new HashSet<>(sessionIds);
+        List<Long> resolvedSessionItemIds = new ArrayList<>(request.getItems().size());
+        for (var itemReq : request.getItems()) {
+            Long sid = itemReq.getTreatmentSessionItemId();
+            if (sid == null && itemReq.getTicketId() != null) {
+                sid = treatments.resolveAvailableSessionItemId(itemReq.getTicketId(), itemReq.getServiceId(), claimedSessionItemIds);
+                if (sid != null) claimedSessionItemIds.add(sid);
+            }
+            resolvedSessionItemIds.add(sid);
+        }
+
+        Instant bookingInstant = request.getAppointmentDate().atTime(request.getStartTime()).atZone(SpaTimeRules.ZONE).toInstant();
+        for (int idx = 0; idx < request.getItems().size(); idx++) {
+            var itemReq = request.getItems().get(idx);
+            treatments.validateAndLockBooking(resolvedSessionItemIds.get(idx), bookingUserId,
+                    itemReq.getServiceId(), itemReq.getTicketId(), bookingInstant);
+        }
 
         request.getItems().stream().map(AppointmentItemRequest::getStaffId)
                 .filter(Objects::nonNull).distinct().sorted()
@@ -178,7 +191,9 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .forEach(id -> beautyServiceRepository.findAvailableByIdForUpdate(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Service not found")));
 
-        for (var itemReq : request.getItems()) {
+        for (int idx = 0; idx < request.getItems().size(); idx++) {
+            var itemReq = request.getItems().get(idx);
+            Long resolvedSessionItemId = resolvedSessionItemIds.get(idx);
             BeautyService service = beautyServiceRepository.findAvailableByIdForUpdate(itemReq.getServiceId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ"));
             
@@ -191,7 +206,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             validateService(service);
             if (staff != null) validateStaff(staff, service, request.getAppointmentDate());
             LocalTime itemEndTime = serviceEnd(currentStartTime, service);
-            treatments.validateAndLockBooking(itemReq.getTreatmentSessionItemId(), bookingUserId,
+            treatments.validateAndLockBooking(resolvedSessionItemId, bookingUserId,
                     itemReq.getServiceId(), itemReq.getTicketId(), request.getAppointmentDate()
                             .atTime(currentStartTime).atZone(SpaTimeRules.ZONE).toInstant());
 
@@ -247,7 +262,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                     .serviceNameSnapshot(service.getName())
                     .staff(staff)
                     .ticket(ticket)
-                    .treatmentSessionItemId(itemReq.getTreatmentSessionItemId())
+                    .treatmentSessionItemId(resolvedSessionItemId)
                     .price(itemPrice)
                     .startTime(currentStartTime)
                     .endTime(itemEndTime)

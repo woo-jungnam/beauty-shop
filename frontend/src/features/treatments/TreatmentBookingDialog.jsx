@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { Button } from '../../shared/ui/Button';
 import { apiClient } from '../../shared/api/client';
+import { resolveMediaUrl } from '../../shared/utils/formatters';
 import { dateLabel, errorMessage, rows, today, treatmentApi } from './treatmentApi';
 import { bookingPayload } from './treatmentModel';
 
@@ -30,7 +31,7 @@ export const TreatmentBookingDialog = ({ course, session, role, reschedule = fal
       const body = { appointmentDate: date, startTime: slot.length === 5 ? `${slot}:00` : slot, notes: notes.trim() };
       if (reschedule) await apiClient.put(`/api/v1/appointments/${session.appointmentId}/reschedule`, body);
       else await treatmentApi.post(`${root}/book`, bookingPayload({ course, session, role, date, slot, notes }));
-      await onSaved(reschedule ? 'Đã đổi lịch hẹn và kiểm tra lại điều kiện lộ trình.' : 'Đã gửi yêu cầu đặt buổi. Lịch đang chờ xác nhận.'); onClose();
+      await onSaved(reschedule ? 'Đã đổi lịch hẹn và kiểm tra lại thời hạn gói.' : 'Đã gửi yêu cầu đặt buổi. Lịch đang chờ xác nhận.'); onClose();
     } catch (err) {
       if (!err.response || err.response.status >= 500) { setUncertain(true); await onSaved('Chưa xác minh được kết quả đặt lịch. Đã tải lại hồ sơ; hãy kiểm tra buổi trước khi đặt lại.', 'warning'); }
       setError(errorMessage(err));
@@ -38,13 +39,28 @@ export const TreatmentBookingDialog = ({ course, session, role, reschedule = fal
   };
   return <Modal isOpen title={`${reschedule ? 'Đổi lịch' : 'Đặt lịch'} buổi ${session.sequence}: ${session.title}`} onClose={() => { if (!busy) onClose(); }} className="treatment-dialog" maxWidth="640px"><form className="treatment-form" onSubmit={submit}>
     {!reschedule && <BookingPolicyNotice />}
-    {session.sequence === 1 && !reschedule && (
-      <div className="treatment-notice info" style={{ margin: '8px 0', fontSize: '0.85rem' }}>
-        <strong>Lưu ý cho Buổi 1:</strong> Buổi đầu tiên bao gồm bước thăm khám lâm sàng & soi da cùng Bác sĩ để tiếp nhận hồ sơ. Quý khách vui lòng có mặt trước giờ hẹn 10-15 phút.
-      </div>
+    {(session.items || []).length > 0 && (
+      <ul className="treatment-mini-sessions" style={{ margin: 0, listStyle: 'none', padding: 0 }}>
+        {session.items.map(item => (
+          <li key={item.id} className="treatment-item-row">
+            {item.thumbnailUrl && <img className="treatment-item-thumb" src={resolveMediaUrl(item.thumbnailUrl)} alt={item.serviceName} loading="lazy" />}
+            <div>
+              <strong>{item.serviceName}</strong>
+              <small>{[item.durationMinutes ? `${item.durationMinutes} phút` : null, item.shortDescription].filter(Boolean).join(' · ')}</small>
+            </div>
+          </li>
+        ))}
+      </ul>
     )}
-    <p className="treatment-muted">Giờ Việt Nam (UTC+7). Hệ thống kiểm tra toàn bộ dịch vụ, nhân sự, tài nguyên, khoảng cách buổi và quyền lợi khi đặt.</p>
-    {(session.earliestBookingAt || session.latestBookingAt) && <p>{session.earliestBookingAt ? `Sớm nhất: ${dateLabel(session.earliestBookingAt)}` : ''}{session.latestBookingAt ? ` · Chậm nhất: ${dateLabel(session.latestBookingAt)}` : ''}. Mỗi dịch vụ trong buổi phải bắt đầu trong khoảng này.</p>}
+    <p className="treatment-muted">Giờ Việt Nam (UTC+7). Hệ thống kiểm tra dịch vụ, nhân sự, buồng phòng và thời hạn gói khi đặt lịch.</p>
+    {(session.earliestBookingAt || session.latestBookingAt || session.minGapDays > 0 || session.maxGapDays != null) && (
+      <p className="treatment-notice">
+        <strong>Thời gian tham khảo (không bắt buộc):</strong>{' '}
+        {session.earliestBookingAt
+          ? `Khuyến nghị đặt ${session.earliestBookingAt ? `từ ${dateLabel(session.earliestBookingAt)}` : ''}${session.latestBookingAt ? ` đến ${dateLabel(session.latestBookingAt)}` : ''}`
+          : `Khuyến nghị cách buổi trước ${session.minGapDays || 0}${session.maxGapDays != null ? `–${session.maxGapDays}` : '+'} ngày`}. Bạn vẫn có thể chọn ngày giờ phù hợp khác trong thời hạn gói.
+      </p>
+    )}
     {error && <div role="alert" className="treatment-notice error">{error}<Button variant="outline" disabled={busy || uncertain} onClick={() => setRetry(value => value + 1)}>Tải lại giờ trống</Button></div>}
     <fieldset disabled={busy || uncertain}><label>Ngày hẹn<input required type="date" min={today()} value={date} onChange={event => setDate(event.target.value)} /></label>
       {loading ? <p role="status">Đang kiểm tra giờ trống…</p> : <div className="treatment-slots" role="group" aria-label="Giờ trống">{slots.map(value => <button type="button" key={value} aria-pressed={slot === value} onClick={() => setSlot(value)}>{value.slice(0, 5)}</button>)}{!slots.length && !error && <p>Ngày này chưa có giờ phù hợp. Vui lòng chọn ngày khác.</p>}</div>}

@@ -170,21 +170,18 @@ class _TemplateListState extends State<_TemplateList> {
                     itemCount: templates.length,
                     itemBuilder: (context, index) {
                       final template = templates[index];
+                      final retail = template.originalPrice ?? 0;
+                      final hasDiscount = retail > template.price && template.price > 0;
+                      final discountPct = hasDiscount
+                          ? ((retail - template.price) * 100 / retail).round()
+                          : 0;
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
                         ),
-                        child: ListTile(
-                          title: Text(template.name),
-                          subtitle: Text(
-                            '${template.sessions.length} buổi • ${template.validityDays == null ? 'Không giới hạn' : '${template.validityDays} ngày'}\n'
-                            '${AppFormatters.formatCurrency(template.price)} • Phiên bản ${template.versionNumber}',
-                          ),
-                          isThreeLine: true,
-                          trailing: widget.admin
-                              ? TreatmentStatusChip(template.status)
-                              : const Icon(Icons.chevron_right),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
                           onTap: () async {
                             await Navigator.push(
                               context,
@@ -198,6 +195,37 @@ class _TemplateListState extends State<_TemplateList> {
                             );
                             if (mounted) _reload();
                           },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (template.thumbnailUrl != null &&
+                                  template.thumbnailUrl!.isNotEmpty)
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 145,
+                                  child: TreatmentThumbImage(
+                                    url: template.thumbnailUrl,
+                                    borderRadius: 0,
+                                  ),
+                                ),
+                              ListTile(
+                                title: Text(template.name),
+                                subtitle: Text(
+                                  '${template.sessions.length} buổi'
+                                  '${template.totalDurationMinutes > 0 ? ' • ${template.totalDurationMinutes} phút' : ''}'
+                                  ' • ${template.validityDays == null ? 'Không giới hạn' : '${template.validityDays} ngày'}\n'
+                                  '${AppFormatters.formatCurrency(template.price)}'
+                                  '${discountPct > 0 ? ' (Tiết kiệm $discountPct%)' : ''}'
+                                  '${template.categoryName != null ? ' • ${template.categoryName}' : ''}'
+                                  ' • v${template.versionNumber}',
+                                ),
+                                isThreeLine: true,
+                                trailing: widget.admin
+                                    ? TreatmentStatusChip(template.status)
+                                    : const Icon(Icons.chevron_right),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -321,6 +349,15 @@ class _EnrollmentListState extends State<_EnrollmentList> {
                               vertical: 6,
                             ),
                             child: ListTile(
+                              leading: course.thumbnailUrl != null &&
+                                      course.thumbnailUrl!.isNotEmpty
+                                  ? TreatmentThumbImage(
+                                      url: course.thumbnailUrl,
+                                      width: 52,
+                                      height: 52,
+                                      borderRadius: 8,
+                                    )
+                                  : null,
                               title: Text(course.name),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,7 +365,9 @@ class _EnrollmentListState extends State<_EnrollmentList> {
                                   if (widget.area != TreatmentArea.customer)
                                     Text(course.customerName),
                                   Text(
-                                    '${course.completedSessions}/${course.totalSessions} buổi • ${treatmentStatus(course.status)}',
+                                    '${course.completedSessions}/${course.totalSessions} buổi'
+                                    '${course.totalDurationMinutes > 0 ? ' • ${course.totalDurationMinutes}p' : ''}'
+                                    ' • ${treatmentStatus(course.status)}',
                                   ),
                                   const SizedBox(height: 6),
                                   LinearProgressIndicator(

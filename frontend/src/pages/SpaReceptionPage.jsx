@@ -453,11 +453,6 @@ export const SpaReceptionPage = () => {
 
       {notice && <div className={`reception-notice ${notice.tone}`} role={notice.tone === 'error' || notice.tone === 'warning' ? 'alert' : 'status'}>
         <span>{notice.message}</span>
-        {notice.message?.includes('tiếp nhận') && (
-          <a href="#/staff/treatments" style={{ marginLeft: 8, textDecoration: 'underline', fontWeight: 600, color: 'inherit' }}>
-            Mở Lộ trình điều trị →
-          </a>
-        )}
         <button type="button" onClick={() => setNotice(null)} aria-label="Đóng thông báo">×</button>
       </div>}
       {data.error && <div className="reception-notice error" role="alert">{data.error}</div>}
