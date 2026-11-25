@@ -147,6 +147,34 @@ class _ShipperOrderDetailScreenState extends State<ShipperOrderDetailScreen> {
           padding: ShipperLayout.pagePadding,
           children: [
             _buildStatusBanner(style),
+            if (_order.isReturningToSender)
+              Card(
+                color: AppColors.warningLight,
+                child: const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.assignment_return_outlined,
+                        size: 20,
+                        color: AppColors.warning,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Đơn hàng đang cần hoàn trả về kho BeautyShop. Vui lòng bàn giao lại kiện hàng cho bộ phận kho kiểm nhận.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (_order.hasOrderDetails) ...[
               _buildRecipientCard(),
               _DetailSection(

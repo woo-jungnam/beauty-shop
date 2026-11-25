@@ -18,9 +18,15 @@ import '../spa/spa_tickets_screen.dart';
 import '../treatments/treatment_hub_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
-  const OrderDetailScreen({super.key, required this.orderId, this.initialRaw});
+  const OrderDetailScreen({
+    super.key,
+    required this.orderId,
+    this.initialRaw,
+    this.apiClient,
+  });
   final int orderId;
   final Map<String, dynamic>? initialRaw;
+  final ApiClient? apiClient;
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
@@ -41,7 +47,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     {'bin': '970448', 'name': 'OCB'},
   ];
 
-  final api = ApiClient();
+  late final ApiClient api = widget.apiClient ?? ApiClient();
   final _picker = ImagePicker();
   Map<String, dynamic>? order;
   List<dynamic> returns = [];
@@ -186,6 +192,77 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  (String, Color, Color) _returnStatusMeta(String? status) => switch (status) {
+    'REQUESTED' => (
+      'Chờ xét duyệt',
+      const Color(0xFFFFFBEB),
+      const Color(0xFF92400E),
+    ),
+    'APPROVED' => (
+      'Đã chấp thuận',
+      const Color(0xFFEFF6FF),
+      const Color(0xFF1D4ED8),
+    ),
+    'RECEIVED' => (
+      'Đã nhận hàng trả',
+      const Color(0xFFEFF6FF),
+      const Color(0xFF1E40AF),
+    ),
+    'REFUNDED' => (
+      'Đã hoàn tiền',
+      const Color(0xFFECFDF5),
+      const Color(0xFF047857),
+    ),
+    'REJECTED' => (
+      'Từ chối',
+      const Color(0xFFFEF2F2),
+      const Color(0xFFB91C1C),
+    ),
+    _ => (
+      status ?? 'Đang xử lý',
+      const Color(0xFFF3F4F6),
+      const Color(0xFF374151),
+    ),
+  };
+
+  String _historyStatusLabel(String? status) => switch (status) {
+    'PENDING' => 'Chờ xử lý',
+    'CONFIRMED' => 'Đã xác nhận',
+    'PROCESSING' => 'Đang đóng gói',
+    'SHIPPED' => 'Đang giao hàng',
+    'DELIVERED' => 'Đã giao hàng',
+    'COMPLETED' => 'Hoàn tất',
+    'CANCELLED' => 'Đã hủy',
+    'RETURNED' => 'Đã hoàn trả hàng',
+    'DELIVERY_FAILED' => 'Giao không thành công',
+    'RETURNING_TO_SENDER' => 'Đang hoàn về shop',
+    'RETURN_TO_SENDER' => 'Hàng chuyển về shop',
+    _ => status ?? '',
+  };
+
+  String _formatReturnLines(dynamic row, Map<String, dynamic> orderMap) {
+    final items = (orderMap['items'] as List? ?? []);
+    final lines = (row['lines'] as List? ?? []);
+    if (lines.isEmpty) return '';
+    return lines
+        .map((line) {
+          final orderItemId = line['orderItemId'];
+          final qty = line['quantity'] ?? 0;
+          Map? matched;
+          for (final item in items) {
+            if (item is Map && item['id'] == orderItemId) {
+              matched = item;
+              break;
+            }
+          }
+          if (matched == null) return 'Mặt hàng #$orderItemId × $qty';
+          final name = matched['productName']?.toString() ?? 'Sản phẩm';
+          final variant = matched['variantName']?.toString();
+          return '${variant != null && variant.isNotEmpty ? '$name ($variant)' : name} × $qty';
+        })
+        .join(', ');
+  }
+
   Future<void> sendReturn() async {
     final lines = quantities.entries
         .where((e) => e.value > 0)
@@ -195,12 +272,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       setState(() => error = 'Chọn sản phẩm và nhập lý do ít nhất 5 ký tự.');
       return;
     }
-    if (refundMethod == 'BANK_TRANSFER' &&
-        (accountNumber.text.trim().isEmpty || accountName.text.trim().isEmpty)) {
-      setState(
-        () => error = 'Vui lòng nhập số tài khoản và tên chủ tài khoản nhận hoàn tiền.',
-      );
-      return;
+    if (refundMethod == 'BANK_TRANSFER') {
+      final cleanAcc = accountNumber.text.trim();
+      final cleanName = accountName.text.trim();
+      if (cleanAcc.isEmpty || cleanName.isEmpty) {
+        setState(
+          () => error =
+              'Vui lòng nhập số tài khoản và tên chủ tài khoản nhận hoàn tiền.',
+        );
+        return;
+      }
+      if (!RegExp(r'^[0-9A-Za-z-]{4,40}$').hasMatch(cleanAcc)) {
+        setState(() => error = 'Số tài khoản ngân hàng không hợp lệ.');
+        return;
+      }
     }
     final bank = _vietnamBanks.firstWhere(
       (b) => b['bin'] == selectedBankBin,
@@ -453,7 +538,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               children: (value['statusHistories'] as List? ?? [])
                   .map<Widget>(
                     (row) => ListTile(
-                      title: Text('${row['status'] ?? row['toStatus'] ?? ''}'),
+                      title: Text(
+                        _historyStatusLabel(
+                          (row['status'] ?? row['toStatus'])?.toString(),
+                        ),
+                      ),
                       subtitle: Text(
                         '${row['notes'] ?? row['reason'] ?? ''}\n${row['createdAt'] ?? ''}',
                       ),
@@ -466,26 +555,71 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               'Yêu cầu đổi trả',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            ...returns.map(
-              (row) => Card(
+            ...returns.map((row) {
+              final (statusLabel, statusBg, statusFg) = _returnStatusMeta(
+                row['status']?.toString(),
+              );
+              final returnLinesText = _formatReturnLines(row, value);
+              final refundRef = row['refundReference']?.toString().trim();
+              final voucherCode = row['refundVoucherCode']?.toString().trim();
+              return Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '#${row['id']} · ${row['status']} · Hoàn ${money(row['refundAmount'])}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusBg,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '#${row['id']} · $statusLabel',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12.5,
+                                color: statusFg,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'Hoàn ${money(row['refundAmount'])}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF047857),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
+                      if (returnLinesText.isNotEmpty) ...[
+                        Text(
+                          'Sản phẩm: $returnLinesText',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
                       Text('Lý do: ${row['reason']}'),
                       Text(
                         'Hình thức: ${row['refundMethod'] == 'VOUCHER' ? 'Voucher hoàn tiền' : 'Chuyển khoản ngân hàng'}'
                         '${row['accountNumber'] != null ? ' (${row['bankName'] ?? ''} · ${row['accountNumber']})' : ''}',
                       ),
+                      if (refundRef != null &&
+                          refundRef.isNotEmpty &&
+                          refundRef != voucherCode)
+                        Text('Mã chứng từ hoàn: $refundRef'),
                       Text('Phản hồi: ${row['decisionReason'] ?? 'Đang xử lý'}'),
-                      if (row['refundVoucherCode'] != null &&
-                          row['refundVoucherCode'].toString().isNotEmpty) ...[
+                      if (voucherCode != null && voucherCode.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -502,7 +636,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Mã Voucher: ${row['refundVoucherCode']}',
+                                  'Mã Voucher: $voucherCode',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF065F46),
@@ -512,9 +646,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               TextButton(
                                 onPressed: () {
                                   Clipboard.setData(
-                                    ClipboardData(
-                                      text: row['refundVoucherCode'].toString(),
-                                    ),
+                                    ClipboardData(text: voucherCode),
                                   );
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -556,60 +688,98 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ],
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
             if (value['status'] == 'DELIVERED' && returnsLoaded) ...[
               const SizedBox(height: 8),
-              const Text('Chọn số lượng cần đổi trả'),
-              ...(value['items'] as List? ?? []).map((item) {
-                final max = returnable(item);
-                final id = (item['id'] as num).toInt();
-                return ListTile(
-                  title: Text('${item['productName']}'),
-                  subtitle: Text('Có thể yêu cầu: $max'),
-                  trailing: DropdownButton<int>(
-                    value: quantities[id] ?? 0,
-                    onChanged: busy
-                        ? null
-                        : (v) => setState(() => quantities[id] = v ?? 0),
-                    items: List.generate(
-                      max + 1,
-                      (i) => DropdownMenuItem(value: i, child: Text('$i')),
+              if (!(value['items'] as List? ?? []).any(
+                (item) => returnable(item) > 0,
+              ))
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Tất cả sản phẩm trong đơn hàng này đã được gửi yêu cầu đổi trả.',
+                    style: TextStyle(color: Color(0xFF4B5563)),
+                  ),
+                )
+              else ...[
+                const Text(
+                  'Chọn số lượng cần đổi trả',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                ...(value['items'] as List? ?? []).map((item) {
+                  final max = returnable(item);
+                  final id = (item['id'] as num).toInt();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${item['productName']}'),
+                              Text(
+                                'Có thể yêu cầu: $max',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        DropdownButton<int>(
+                          value: (quantities[id] ?? 0).clamp(0, max),
+                          onChanged: busy || max == 0
+                              ? null
+                              : (v) => setState(() => quantities[id] = v ?? 0),
+                          items: List.generate(
+                            max + 1,
+                            (i) => DropdownMenuItem(value: i, child: Text('$i')),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                );
-              }),
-              TextField(
-                controller: reason,
-                maxLength: 1000,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Lý do đổi trả'),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Ảnh bằng chứng (tối đa 8 ảnh)',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: busy || uploadingEvidence
-                        ? null
-                        : () => _pickAndUploadEvidence(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library_outlined, size: 18),
-                    label: const Text('Chọn ảnh'),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: busy || uploadingEvidence
-                        ? null
-                        : () => _pickAndUploadEvidence(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                    label: const Text('Chụp ảnh'),
-                  ),
-                ],
-              ),
+                  );
+                }),
+                TextField(
+                  controller: reason,
+                  maxLength: 1000,
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: 'Lý do đổi trả'),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ảnh bằng chứng (tối đa 8 ảnh)',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: busy || uploadingEvidence
+                          ? null
+                          : () => _pickAndUploadEvidence(ImageSource.gallery),
+                      icon: const Icon(Icons.photo_library_outlined, size: 18),
+                      label: const Text('Chọn ảnh'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: busy || uploadingEvidence
+                          ? null
+                          : () => _pickAndUploadEvidence(ImageSource.camera),
+                      icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                      label: const Text('Chụp ảnh'),
+                    ),
+                  ],
+                ),
               if (uploadingEvidence)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 6),
@@ -690,13 +860,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
               if (refundMethod == 'BANK_TRANSFER') ...[
                 DropdownButtonFormField<String>(
-                  value: selectedBankBin,
+                  initialValue: selectedBankBin,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Ngân hàng nhận hoàn'),
                   items: _vietnamBanks
                       .map(
                         (b) => DropdownMenuItem(
                           value: b['bin'],
-                          child: Text(b['name']!),
+                          child: Text(
+                            b['name']!,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       )
                       .toList(),
@@ -718,6 +892,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 onPressed: busy || uploadingEvidence ? null : () => run(sendReturn),
                 child: const Text('Gửi yêu cầu đổi trả'),
               ),
+              ],
             ],
           ],
         ],

@@ -121,6 +121,7 @@ class ShipperOrderModel {
   }
 
   bool get isDelivered => status == 'DELIVERED';
+  bool get isReturningToSender => status == 'RETURNING_TO_SENDER';
 
   String get displayShippingAddress =>
       shippingAddress.isEmpty ? 'Chưa có địa chỉ' : shippingAddress;

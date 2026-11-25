@@ -17,6 +17,7 @@ import 'package:beautyshop_shipper/presentation/screens/delivery/shipper_order_d
 import 'package:beautyshop_shipper/presentation/screens/notification/notification_screen.dart';
 import 'package:beautyshop_shipper/providers/auth_provider.dart';
 import 'package:beautyshop_shipper/providers/shipper_provider.dart';
+import 'package:beautyshop_shipper/presentation/screens/account/shipper_profile_edit_screens.dart';
 
 class _FakeAuth extends AuthProvider {
   String _fullName = 'Nguyễn Văn Giao';
@@ -485,24 +486,29 @@ void main() {
       expect(find.text('Tài khoản & Cài đặt'), findsOneWidget);
       expect(shipper.profileCalls, 1);
 
-      // Edit personal account info (fullName + phone + gender)
+      // Edit personal account info (full-screen ShipperEditPersonalScreen)
       await tester.tap(find.text('Chỉnh sửa'));
       await tester.pumpAndSettle();
+      expect(find.byType(ShipperEditPersonalScreen), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
       final textFields = find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(ShipperEditPersonalScreen),
         matching: find.byType(TextFormField),
       );
       await tester.enterText(textFields.at(0), 'Nguyễn Hoàng Nam');
       await tester.enterText(textFields.at(1), '0912345678');
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Nam'));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ChoiceChip, 'Nam'));
       await tester.tap(find.text('Lưu thay đổi'));
       await tester.pumpAndSettle();
 
+      expect(find.byType(ShipperEditPersonalScreen), findsNothing);
       expect(find.text('Nguyễn Hoàng Nam'), findsWidgets);
       expect(find.text('0912345678'), findsOneWidget);
       expect(auth.currentFullName, 'Nguyễn Hoàng Nam');
 
-      // Add shipper vehicle & work profile
+      // Add shipper vehicle & work profile (full-screen ShipperEditWorkScreen)
       await tester.scrollUntilVisible(
         find.text('Bổ sung'),
         150,
@@ -514,9 +520,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bổ sung'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ActionChip, 'Xe máy'));
+      expect(find.byType(ShipperEditWorkScreen), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Xe máy'));
       final workFields = find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(ShipperEditWorkScreen),
         matching: find.byType(TextFormField),
       );
       await tester.enterText(workFields.at(1), '59x1-999.88');
@@ -524,6 +532,7 @@ void main() {
       await tester.tap(find.text('Lưu thông tin'));
       await tester.pumpAndSettle();
 
+      expect(find.byType(ShipperEditWorkScreen), findsNothing);
       expect(find.text('Xe máy'), findsOneWidget);
       expect(find.text('59X1-999.88'), findsOneWidget);
       expect(find.text('Quận 1, Quận 3'), findsOneWidget);
@@ -564,7 +573,7 @@ void main() {
       expect(ShipperSettingsStore.instance.textScaleFactor, 1.0);
       expect(ShipperSettingsStore.instance.confirmBeforeStart, isFalse);
 
-      // Change password flow
+      // Change password flow (full-screen ShipperChangePasswordScreen)
       await tester.scrollUntilVisible(
         find.text('Đổi mật khẩu'),
         150,
@@ -576,8 +585,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đổi mật khẩu'));
       await tester.pumpAndSettle();
+      expect(find.byType(ShipperChangePasswordScreen), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
       final pwdFields = find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(ShipperChangePasswordScreen),
         matching: find.byType(TextFormField),
       );
       await tester.enterText(pwdFields.at(0), 'OldPass123!');
@@ -623,6 +634,91 @@ void main() {
 
       expect(find.text('Tài khoản & Cài đặt'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Full-screen edit screens render cleanly across 320px (1.5x text), 640x360 landscape, and 840px tablet',
+    (tester) async {
+      await _initTestStorage();
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      for (final (size, scale) in const [
+        (Size(320, 568), 1.5),
+        (Size(640, 360), 1.0),
+        (Size(840, 900), 1.0),
+      ]) {
+        await tester.binding.setSurfaceSize(size);
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: ShipperEditPersonalScreen(
+              initial: const ShipperUserProfile(
+                id: 50,
+                username: 'shipper01',
+                email: 'shipper01@beautyshop.vn',
+                fullName: 'Nguyễn Văn Giao',
+                phone: '0901234567',
+                gender: 'MALE',
+                dateOfBirth: '1998-05-20',
+              ),
+              onChangeAvatar: () async => null,
+              onSave: (_) async {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Chỉnh sửa thông tin cá nhân'), findsOneWidget);
+        expect(find.text('Lưu thay đổi'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: ShipperEditWorkScreen(
+              initial: const ShipperWorkProfile(
+                vehicleType: 'Xe máy',
+                vehiclePlate: '59X1-123.45',
+                serviceArea: 'Quận 1, Quận 3',
+                workShift: 'Cả ngày',
+              ),
+              onSave: (_) async {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Thông tin tài xế & phương tiện'), findsOneWidget);
+        expect(find.text('Lưu thông tin'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: ShipperChangePasswordScreen(
+              onSubmit: (_, _) async {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Đổi mật khẩu'), findsOneWidget);
+        expect(find.text('Xác nhận đổi'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
     },
   );
 }

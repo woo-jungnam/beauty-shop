@@ -218,7 +218,9 @@ public class ProductReturnService {
         if((row.getStatus().equals("RECEIVED")||row.getStatus().equals("REFUNDED"))&&command.reference().equals(row.getReceiptReference()))return view(row);
         if(!row.getStatus().equals("APPROVED"))throw new BusinessException("Return must be approved before goods are received");
         for(var line:lines(row)) {var item=order.getItems().stream().filter(i->i.getId().equals(line.orderItemId())).findFirst().orElseThrow();inventory.returnPartialStock(order.getOrderNumber(),item.getProductVariantId(),line.quantity());}
-        row.setStatus("RECEIVED");row.setReceiptReference(command.reference());returns.flush();financialEvent(order);
+        row.setStatus("RECEIVED");row.setReceiptReference(command.reference());returns.flush();
+        syncOrderOnReturnReceive(order, row);
+        financialEvent(order);
         notifyCustomer(order, row, "RECEIVED",
                 "Đã nhận hàng hoàn #" + row.getId(),
                 "BeautyShop đã nhận hàng trả về cho đơn #" + order.getOrderNumber() + " và đang xử lý hoàn tiền.");
@@ -252,6 +254,7 @@ public class ProductReturnService {
             row.setRefundReference(ref);
             row.setStatus("REFUNDED");
             returns.flush();
+            syncOrderOnReturnRefund(order, row);
             financialEvent(order);
             notifyCustomer(order, row, "REFUNDED",
                     "Đã cấp Voucher hoàn tiền #" + row.getId(),
@@ -264,7 +267,9 @@ public class ProductReturnService {
         requireReference(command);
         if(row.getStatus().equals("REFUNDED")&&command.reference().equals(row.getRefundReference()))return view(row);
         if(!row.getStatus().equals("RECEIVED"))throw new BusinessException("Receive returned goods before refund confirmation");
-        recordRefund(order,row.getRefundAmount(),command.reference(),command.reason(),"PRODUCT_RETURN",row.getId());row.setRefundReference(command.reference());row.setStatus("REFUNDED");returns.flush();financialEvent(order);
+        recordRefund(order,row.getRefundAmount(),command.reference(),command.reason(),"PRODUCT_RETURN",row.getId());row.setRefundReference(command.reference());row.setStatus("REFUNDED");returns.flush();
+        syncOrderOnReturnRefund(order, row);
+        financialEvent(order);
         notifyCustomer(order, row, "REFUNDED",
                 "Đã hoàn tiền cho yêu cầu #" + row.getId(),
                 "Khoản hoàn " + row.getRefundAmount().toPlainString() + " VND cho đơn #" + order.getOrderNumber() + " đã được xác nhận (Mã chứng từ: " + command.reference() + ").");
@@ -306,6 +311,48 @@ public class ProductReturnService {
                 order.setPaymentStatus(PaymentStatus.PARTIALLY_REFUNDED);
             }
         }
+    }
+
+    private void syncOrderOnReturnReceive(Order order, ProductReturn row) {
+        boolean hasUnrefundedReceipt = row.getRefundAmount() != null
+                && row.getRefundAmount().signum() > 0
+                && order.getPaidAmount() != null
+                && order.getRefundedAmount() != null
+                && order.getPaidAmount().compareTo(order.getRefundedAmount()) > 0;
+        if (hasUnrefundedReceipt && order.getPaymentStatus() == PaymentStatus.PAID) {
+            order.setPaymentStatus(PaymentStatus.REFUND_PENDING);
+        }
+        order.getStatusHistories().add(OrderStatusHistory.builder()
+                .order(order)
+                .status(order.getStatus())
+                .notes("Đã nhận hàng hoàn cho yêu cầu #" + row.getId()
+                        + (hasUnrefundedReceipt ? " — chờ xác nhận hoàn tiền" : ""))
+                .build());
+    }
+
+    private void syncOrderOnReturnRefund(Order order, ProductReturn row) {
+        int totalPurchasedQty = order.getItems() == null ? 0
+                : order.getItems().stream().mapToInt(OrderItem::getQuantity).sum();
+        int totalRefundedQty = returns.findByOrderIdOrderByIdDesc(order.getId()).stream()
+                .filter(r -> "REFUNDED".equals(r.getStatus()))
+                .flatMap(r -> lines(r).stream())
+                .mapToInt(Line::quantity)
+                .sum();
+        if (totalPurchasedQty > 0 && totalRefundedQty >= totalPurchasedQty
+                && order.getStatus() == OrderStatus.DELIVERED) {
+            order.setStatus(OrderStatus.RETURNED);
+            order.getStatusHistories().add(OrderStatusHistory.builder()
+                    .order(order)
+                    .status(OrderStatus.RETURNED)
+                    .notes("Đã hoàn đủ toàn bộ sản phẩm trong đơn và xác nhận hoàn tiền (Yêu cầu #" + row.getId() + ")")
+                    .build());
+            return;
+        }
+        order.getStatusHistories().add(OrderStatusHistory.builder()
+                .order(order)
+                .status(order.getStatus())
+                .notes("Đã xác nhận hoàn tiền cho yêu cầu đổi trả #" + row.getId())
+                .build());
     }
     private void financialEvent(Order order) {
         BigDecimal returned=returns.findByOrderIdOrderByIdDesc(order.getId()).stream().filter(r->r.getStatus().equals("RECEIVED")||r.getStatus().equals("REFUNDED")).map(ProductReturn::getRefundAmount).reduce(BigDecimal.ZERO,BigDecimal::add);

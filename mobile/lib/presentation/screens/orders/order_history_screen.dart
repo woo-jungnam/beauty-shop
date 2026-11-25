@@ -167,7 +167,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       1: {'PENDING'},
       2: {'CONFIRMED', 'PROCESSING', 'SHIPPED'},
       3: {'DELIVERED', 'COMPLETED'},
-      4: {'CANCELLED', 'RETURNED', 'DELIVERY_FAILED', 'RETURN_TO_SENDER'},
+      4: {
+        'CANCELLED',
+        'RETURNED',
+        'DELIVERY_FAILED',
+        'RETURNING_TO_SENDER',
+        'RETURN_TO_SENDER',
+      },
     };
     final accepted = statuses[tabIndex];
     return orders

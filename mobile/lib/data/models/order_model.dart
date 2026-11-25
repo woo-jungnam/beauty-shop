@@ -205,6 +205,7 @@ class OrderResponse {
     'CANCELLED' => 'Đã hủy',
     'RETURNED' => 'Đã trả hàng',
     'DELIVERY_FAILED' => 'Giao không thành công',
+    'RETURNING_TO_SENDER' => 'Đang hoàn về shop',
     'RETURN_TO_SENDER' => 'Hàng chuyển về shop',
     _ => status,
   };

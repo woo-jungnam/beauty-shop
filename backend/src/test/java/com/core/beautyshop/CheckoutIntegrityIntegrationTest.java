@@ -782,10 +782,12 @@ class CheckoutIntegrityIntegrationTest {
         assertEquals("0123456789", bankRow.accountNumber());
         productReturns.decide(bankRow.id(), new ProductReturnService.Decision(true, "Approved bottle 1"));
         productReturns.receive(bankRow.id(), new ProductReturnService.Confirmation("rcpt-1-" + UUID.randomUUID(), "Quarantined"));
+        assertEquals(PaymentStatus.REFUND_PENDING, orders.findById(userOrder.getId()).orElseThrow().getPaymentStatus());
         asAdmin(() -> productReturns.refund(bankRow.id(), new ProductReturnService.Confirmation("bank-ref-" + UUID.randomUUID(), "Transferred via VietQR")));
+        assertEquals(OrderStatus.DELIVERED, orders.findById(userOrder.getId()).orElseThrow().getStatus());
         assertEquals(PaymentStatus.PARTIALLY_REFUNDED, orders.findById(userOrder.getId()).orElseThrow().getPaymentStatus());
 
-        // 2) VOUCHER request for 2nd unit issues personal voucher locked to ownerId + sets REFUNDED
+        // 2) VOUCHER request for 2nd unit issues personal voucher locked to ownerId + transitions order to RETURNED + REFUNDED
         var voucherReq = new ProductReturnService.Request(
                 "Return bottle 2 for voucher",
                 List.of(new ProductReturnService.Line(userOrder.getItems().getFirst().getId(), 1)),
@@ -794,10 +796,13 @@ class CheckoutIntegrityIntegrationTest {
         var voucherRow = asUser(ownerId, () -> productReturns.request(userOrder.getId(), null, "voucher-" + UUID.randomUUID(), voucherReq));
         productReturns.decide(voucherRow.id(), new ProductReturnService.Decision(true, "Approved bottle 2"));
         productReturns.receive(voucherRow.id(), new ProductReturnService.Confirmation("rcpt-2-" + UUID.randomUUID(), "Quarantined"));
+        assertEquals(PaymentStatus.PARTIALLY_REFUNDED, orders.findById(userOrder.getId()).orElseThrow().getPaymentStatus());
         var refundedVoucher = asAdmin(() -> productReturns.refund(voucherRow.id(), new ProductReturnService.Confirmation(null, "Issued personal refund voucher")));
         assertEquals("REFUNDED", refundedVoucher.status());
         assertNotNull(refundedVoucher.refundVoucherCode());
-        assertEquals(PaymentStatus.REFUNDED, orders.findById(userOrder.getId()).orElseThrow().getPaymentStatus());
+        var updatedUserOrder = orders.findById(userOrder.getId()).orElseThrow();
+        assertEquals(PaymentStatus.REFUNDED, updatedUserOrder.getPaymentStatus());
+        assertEquals(OrderStatus.RETURNED, updatedUserOrder.getStatus());
 
         // Other user cannot validate/apply owner's refund voucher
         assertThrows(BusinessException.class,
@@ -872,5 +877,39 @@ class CheckoutIntegrityIntegrationTest {
         assertEquals(1, detailAfterReject.getReturnRequestCount());
         assertEquals(0, detailAfterReject.getActiveReturnCount());
         assertEquals("REJECTED", detailAfterReject.getLatestReturnStatus());
+    }
+
+    @Test void fullItemReturnInSingleRequestTransitionsOrderToRefundPendingThenReturned() {
+        var fixture = fixture(5);
+        tx(() -> {
+            var cart = carts.findBySessionId(fixture.session()).orElseThrow();
+            cart.getItems().getFirst().setQuantity(2);
+            return true;
+        });
+        var fullReturnOrder = service.checkout(null, request(fixture, PaymentMethod.BANK));
+        var webhook = payment(fullReturnOrder, UUID.randomUUID().toString());
+        webhook.setTransferAmount(fullReturnOrder.getTotalAmount());
+        payments.processSePayWebhook(webhook);
+        status(fullReturnOrder.getId(), OrderStatus.SHIPPED);
+        status(fullReturnOrder.getId(), OrderStatus.DELIVERED);
+
+        var returnReq = new ProductReturnService.Request(
+                "Both items damaged in transit",
+                List.of(new ProductReturnService.Line(fullReturnOrder.getItems().getFirst().getId(), 2)),
+                List.of("https://example.test/damaged-all.jpg")
+        );
+        var row = productReturns.request(fullReturnOrder.getId(), fixture.session(), "full-ret-" + UUID.randomUUID(), returnReq);
+        productReturns.decide(row.id(), new ProductReturnService.Decision(true, "Approved full return"));
+        productReturns.receive(row.id(), new ProductReturnService.Confirmation("rcpt-full-" + UUID.randomUUID(), "All 2 items received in quarantine"));
+
+        var afterReceive = orders.findById(fullReturnOrder.getId()).orElseThrow();
+        assertEquals(OrderStatus.DELIVERED, afterReceive.getStatus());
+        assertEquals(PaymentStatus.REFUND_PENDING, afterReceive.getPaymentStatus());
+
+        asAdmin(() -> productReturns.refund(row.id(), new ProductReturnService.Confirmation("ref-full-" + UUID.randomUUID(), "Full refund sent")));
+
+        var afterRefund = orders.findById(fullReturnOrder.getId()).orElseThrow();
+        assertEquals(OrderStatus.RETURNED, afterRefund.getStatus());
+        assertEquals(PaymentStatus.REFUNDED, afterRefund.getPaymentStatus());
     }
 }
