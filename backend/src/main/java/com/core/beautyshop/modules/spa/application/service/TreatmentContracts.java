@@ -72,8 +72,16 @@ public final class TreatmentContracts {
     public record RequestCommand(
         @NotBlank(message = "Loại yêu cầu là bắt buộc") String type,
         @NotBlank(message = "Lý do là bắt buộc") @Size(max = 1000, message = "Lý do tối đa 1000 ký tự") String reason,
-        @Min(value = 1, message = "Số ngày gia hạn tối thiểu 1") @Max(value = 3650, message = "Số ngày gia hạn tối đa 3650") Integer extensionDays
-    ) {}
+        @Min(value = 1, message = "Số ngày gia hạn tối thiểu 1") @Max(value = 3650, message = "Số ngày gia hạn tối đa 3650") Integer extensionDays,
+        @Size(max = 20, message = "Mã BIN ngân hàng tối đa 20 ký tự") String refundBankBin,
+        @Size(max = 100, message = "Tên ngân hàng tối đa 100 ký tự") String refundBankName,
+        @Size(max = 50, message = "Số tài khoản tối đa 50 ký tự") String refundAccountNumber,
+        @Size(max = 120, message = "Tên chủ tài khoản tối đa 120 ký tự") String refundAccountName
+    ) {
+        public RequestCommand(String type, String reason, Integer extensionDays) {
+            this(type, reason, extensionDays, null, null, null, null);
+        }
+    }
     public record ResultCommand(
         @NotBlank(message = "Kết quả buổi là bắt buộc") @Size(max = 4000, message = "Kết quả tối đa 4000 ký tự") String result,
         @Size(max = 4000, message = "Hướng dẫn sau buổi tối đa 4000 ký tự") String aftercare,
@@ -105,7 +113,8 @@ public final class TreatmentContracts {
                              BigDecimal priceDifference, Long settlementOrderId, Long proposedBy, Long approvedBy,
                              Instant createdAt, Instant acceptedAt) {}
     public record RequestView(Long id, String type, String status, String reason, Integer extensionDays,
-                              BigDecimal refundAmount, String refundReference, String reviewReason, Instant createdAt) {}
+                              BigDecimal refundAmount, String refundReference, String reviewReason, Instant createdAt,
+                              String refundBankBin, String refundBankName, String refundAccountNumber, String refundAccountName) {}
     public record AuditView(Long id, String action, Long actorId, String details, Instant createdAt) {}
     public record CourseView(Long id, Long userId, Long templateId, Long versionId, String name, String status,
                              int version, Long orderId, Long ticketId, Long assignedStaffId, Instant expiryDate,

@@ -415,7 +415,11 @@ export const ProcurementPage = () => {
     { header: 'Mã phiếu mua', accessor: (row) => <strong>{row.orderNumber}</strong> }, { header: 'Nhà cung cấp', accessor: 'supplierName' },
     { header: 'Kho nhận hàng', accessor: (row) => warehouses.find((w) => w.id === row.warehouseId)?.name || `Kho #${row.warehouseId}` },
     { header: 'Ngày dự kiến nhận', accessor: (row) => formatDate(row.expectedDate) },
-    { header: 'SL nhận / đặt', align: 'right', accessor: (row) => <span><strong>{row.receivedQuantity ?? 0}</strong> / {row.totalQuantity ?? 0}</span> },
+    { header: 'SL nhận / đặt', align: 'right', accessor: (row) => {
+      const returned = Number(row.returnedQuantity ?? 0);
+      const net = Math.max(0, Number(row.receivedQuantity ?? 0) - returned);
+      return <span><strong>{net}</strong> / {row.totalQuantity ?? 0}{returned > 0 ? <small style={{ display: 'block', color: 'var(--text-muted)' }}>Trả NCC {returned}</small> : null}</span>;
+    } },
     { header: 'Tổng tiền hàng', accessor: (row) => formatCurrency(row.totalAmount), align: 'right' },
     {
       header: 'Trạng thái',
@@ -427,7 +431,7 @@ export const ProcurementPage = () => {
     { header: 'Thao tác', align: 'right', accessor: (row) => <div className="table-actions">
       <Button size="sm" variant="outline" icon={Eye} onClick={() => openDetail(row.id)} aria-label={`Chi tiết phiếu ${row.orderNumber}`}>Chi tiết</Button>
       {row.status === 'DRAFT' && <Button size="sm" icon={Check} onClick={() => transition(ENDPOINTS.PROCUREMENT.APPROVE(row.id), 'Phê duyệt phiếu mua hàng này?')}>Duyệt</Button>}
-      {row.status === 'APPROVED' && <Button size="sm" icon={PackageCheck} onClick={() => transition(ENDPOINTS.PROCUREMENT.RECEIVE(row.id), 'Xác nhận đã nhận đủ hàng? Hàng sẽ được nhập tăng tồn kho theo lô.')}>Nhập kho</Button>}
+      {['APPROVED', 'PARTIALLY_RECEIVED'].includes(row.status) && <Button size="sm" icon={PackageCheck} onClick={() => transition(ENDPOINTS.PROCUREMENT.RECEIVE(row.id), row.status === 'PARTIALLY_RECEIVED' ? 'Xác nhận nhập đủ phần hàng còn lại? Hàng sẽ được nhập tăng tồn kho theo lô và ghi chứng từ.' : 'Xác nhận đã nhận đủ hàng? Hàng sẽ được nhập tăng tồn kho theo lô và ghi chứng từ.')}>Nhập kho</Button>}
       {!['RECEIVED','CANCELLED'].includes(row.status) && <Button size="sm" variant="danger" icon={X} onClick={() => transition(ENDPOINTS.PROCUREMENT.CANCEL(row.id), 'Hủy bỏ phiếu mua hàng này?')} title="Hủy phiếu" />}
     </div> },
   ];
@@ -512,6 +516,7 @@ export const ProcurementPage = () => {
     {tab !== 'suppliers' && (
       <ProcurementOperationsPanel
         orders={orders}
+        refreshRevision={historyRefresh}
         onChanged={() => {
           load();
           setHistoryRefresh((v) => v + 1);

@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import com.core.beautyshop.shared.exception.BusinessException;
 import com.core.beautyshop.shared.exception.ResourceNotFoundException;
 import com.core.beautyshop.shared.time.BusinessTime;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,8 @@ public class ProcurementService {
     private final PurchaseOrderRepository orders;
     private final InventoryAdminFacade inventory;
     private final CatalogFacade catalog;
+    private final ProcurementMovementRepository movements;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public List<ProductVariantSummaryDto> lookupVariants(VariantLookup command) {
@@ -109,6 +112,21 @@ public class ProcurementService {
             Instant to,
             boolean useReceivedDate,
             Pageable pageable) {
+        return orders(keyword, status, statuses, supplierId, warehouseId, from, to, useReceivedDate, false, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PurchaseOrderView> orders(
+            String keyword,
+            PurchaseOrder.Status status,
+            List<PurchaseOrder.Status> statuses,
+            Long supplierId,
+            Long warehouseId,
+            Instant from,
+            Instant to,
+            boolean useReceivedDate,
+            boolean payableOnly,
+            Pageable pageable) {
         Specification<PurchaseOrder> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isFalse(root.get("isDeleted")));
@@ -130,7 +148,20 @@ public class ProcurementService {
                 predicates.add(cb.greaterThanOrEqualTo(dateExpr, from));
             }
             if (to != null) {
-                predicates.add(cb.lessThan(dateExpr, to));
+                predicates.add(cb.lessThanOrEqualTo(dateExpr, to));
+            }
+            if (payableOnly) {
+                var sub = query.subquery(BigDecimal.class);
+                var itemRoot = sub.from(PurchaseOrderItem.class);
+                var netQty = cb.diff(
+                        cb.coalesce(itemRoot.<Integer>get("receivedQuantity"), 0),
+                        cb.coalesce(itemRoot.<Integer>get("returnedQuantity"), 0));
+                var lineVal = cb.prod(itemRoot.<BigDecimal>get("unitCost"), netQty.as(BigDecimal.class));
+                sub.select(cb.coalesce(cb.sum(lineVal), BigDecimal.ZERO))
+                        .where(cb.and(
+                                cb.equal(itemRoot.get("purchaseOrder"), root),
+                                cb.isFalse(itemRoot.get("isDeleted"))));
+                predicates.add(cb.notEqual(cb.coalesce(root.<BigDecimal>get("paidAmount"), BigDecimal.ZERO), sub));
             }
             if (keyword != null && !keyword.isBlank()) {
                 String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
@@ -231,17 +262,53 @@ public class ProcurementService {
     @Transactional
     public PurchaseOrderView receive(Long id) {
         PurchaseOrder order = locked(id);
-        if (order.getStatus() != PurchaseOrder.Status.APPROVED) throw new BusinessException("Chỉ đơn nhập hàng đã duyệt mới có thể nhập kho");
+        if (order.getStatus() != PurchaseOrder.Status.APPROVED && order.getStatus() != PurchaseOrder.Status.PARTIALLY_RECEIVED)
+            throw new BusinessException("Chỉ đơn nhập hàng đã duyệt hoặc nhập một phần mới có thể nhập kho");
         validateReferences(order);
+        BigDecimal receivedAmount = BigDecimal.ZERO;
+        List<ProcurementReceiptService.Line> receivedLines = new ArrayList<>();
         for (PurchaseOrderItem item : order.getItems()) {
             int remaining = item.getQuantity() - item.getReceivedQuantity();
             if (remaining <= 0) continue;
             inventory.receive(order.getWarehouseId(), item.getProductVariantId(), remaining, item.getUnitCost(),
                     item.getBatchCode(), item.getExpirationDate(), "PURCHASE_ORDER", order.getOrderNumber());
             item.setReceivedQuantity(item.getQuantity());
+            if (item.getUnitCost() != null) {
+                receivedAmount = receivedAmount.add(item.getUnitCost().multiply(BigDecimal.valueOf(remaining)));
+            }
+            String batch = item.getBatchCode() == null ? "" : item.getBatchCode().trim();
+            receivedLines.add(new ProcurementReceiptService.Line(item.getId(), remaining, batch, item.getExpirationDate()));
         }
         order.setStatus(PurchaseOrder.Status.RECEIVED); order.setReceivedAt(Instant.now());
+        recordDirectReceiptMovement(order, receivedAmount, receivedLines);
         return orderView(order);
+    }
+
+    private void recordDirectReceiptMovement(PurchaseOrder order, BigDecimal amount, List<ProcurementReceiptService.Line> lines) {
+        if (movements == null || lines.isEmpty()) return;
+        String baseRef = "RCV-" + order.getOrderNumber();
+        if (baseRef.length() > 100) baseRef = baseRef.substring(0, 100);
+        String reference = baseRef;
+        if (movements.findByReference(reference).isPresent()) {
+            String suffix = "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
+            int maxPrefix = 100 - suffix.length();
+            reference = (baseRef.length() > maxPrefix ? baseRef.substring(0, maxPrefix) : baseRef) + suffix;
+        }
+        String linesJson;
+        try {
+            ObjectMapper mapper = objectMapper != null ? objectMapper : new ObjectMapper().findAndRegisterModules();
+            linesJson = mapper.writeValueAsString(lines);
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot serialize receipt lines", e);
+        }
+        ProcurementMovement movement = new ProcurementMovement();
+        movement.setPurchaseOrderId(order.getId());
+        movement.setReference(reference);
+        movement.setKind("RECEIPT");
+        movement.setAmount(amount);
+        movement.setReason("Nhập kho trực tiếp theo phiếu mua " + order.getOrderNumber());
+        movement.setLinesJson(linesJson);
+        movements.saveAndFlush(movement);
     }
 
     @Transactional
@@ -257,6 +324,7 @@ public class ProcurementService {
     private PurchaseOrderView orderView(PurchaseOrder o, Map<Long, ProductVariantSummaryDto> variants) {
         int totalQty = 0;
         int receivedQty = 0;
+        int returnedQty = 0;
         BigDecimal netReceivedAmount = BigDecimal.ZERO;
         List<PurchaseOrderItem> rawItems = o.getItems() == null ? List.of() : o.getItems();
         List<ItemView> items = new ArrayList<>(rawItems.size());
@@ -267,6 +335,7 @@ public class ProcurementService {
             int net = Math.max(0, rec - ret);
             totalQty += qty;
             receivedQty += rec;
+            returnedQty += ret;
             if (i.getUnitCost() != null && net > 0) {
                 netReceivedAmount = netReceivedAmount.add(i.getUnitCost().multiply(BigDecimal.valueOf(net)));
             }
@@ -289,6 +358,7 @@ public class ProcurementService {
                 netReceivedAmount,
                 totalQty,
                 receivedQty,
+                returnedQty,
                 o.getNote(),
                 o.getApprovedAt(),
                 o.getReceivedAt(),
@@ -340,12 +410,21 @@ public class ProcurementService {
             BigDecimal receivedAmount,
             Integer totalQuantity,
             Integer receivedQuantity,
+            Integer returnedQuantity,
             String note, Instant approvedAt, Instant receivedAt, Instant createdAt, List<ItemView> items) {
+        public PurchaseOrderView(Long id, String orderNumber, Long supplierId, String supplierName, Long warehouseId,
+                                 PurchaseOrder.Status status, LocalDate expectedDate, BigDecimal totalAmount,
+                                 BigDecimal paidAmount, BigDecimal receivedAmount, Integer totalQuantity,
+                                 Integer receivedQuantity, String note, Instant approvedAt, Instant receivedAt,
+                                 Instant createdAt, List<ItemView> items) {
+            this(id, orderNumber, supplierId, supplierName, warehouseId, status, expectedDate, totalAmount,
+                    paidAmount, receivedAmount, totalQuantity, receivedQuantity, 0, note, approvedAt, receivedAt, createdAt, items);
+        }
         public PurchaseOrderView(Long id, String orderNumber, Long supplierId, String supplierName, Long warehouseId,
                                  PurchaseOrder.Status status, LocalDate expectedDate, BigDecimal totalAmount,
                                  String note, Instant approvedAt, Instant receivedAt, Instant createdAt, List<ItemView> items) {
             this(id, orderNumber, supplierId, supplierName, warehouseId, status, expectedDate, totalAmount,
-                    BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, note, approvedAt, receivedAt, createdAt, items);
+                    BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, 0, note, approvedAt, receivedAt, createdAt, items);
         }
     }
 }

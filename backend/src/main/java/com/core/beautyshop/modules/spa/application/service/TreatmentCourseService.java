@@ -313,10 +313,18 @@ public class TreatmentCourseService {
         if ("RESUME".equals(command.type()) && !Set.of("PAUSED", "PENDING_REVIEW").contains(c.getStatus())) throw business("Chỉ lộ trình đang tạm dừng mới có thể tiếp tục");
         if ("EXTEND".equals(command.type()) && (command.extensionDays() == null || command.extensionDays() < 1 || command.extensionDays() > 3650))
             throw business("Số ngày gia hạn phải từ 1 đến 3650 ngày");
+        String refundBankBin = trimToNull(command.refundBankBin());
+        String refundBankName = trimToNull(command.refundBankName());
+        String refundAccountNumber = trimToNull(command.refundAccountNumber());
+        String refundAccountName = trimToNull(command.refundAccountName());
+        validateRefundBankDetails(command.type(), refundBankBin, refundBankName, refundAccountNumber, refundAccountName);
         if (first(WorkflowRequest.class, "select r from TreatmentWorkflowRequest r where r.courseId=:cid and r.status='PENDING_APPROVAL' and r.type=:type", "cid", id, "type", command.type()) != null)
             throw business("Đã có một yêu cầu loại này đang chờ duyệt");
         WorkflowRequest r = new WorkflowRequest(); r.setCourseId(id); r.setType(command.type());
-        r.setReason(text(command.reason(), "Request reason", 1000)); r.setExtensionDays(command.extensionDays()); r.setRequestedBy(SecurityUtils.getCurrentUserId()); persist(r);
+        r.setReason(text(command.reason(), "Request reason", 1000)); r.setExtensionDays(command.extensionDays());
+        r.setRefundBankBin(refundBankBin); r.setRefundBankName(refundBankName);
+        r.setRefundAccountNumber(refundAccountNumber); r.setRefundAccountName(refundAccountName);
+        r.setRequestedBy(SecurityUtils.getCurrentUserId()); persist(r);
         if ("INCIDENT".equals(command.type())) {
             if (c.getPausedAt() == null && !expired(c)) c.setPausedAt(Instant.now());
             c.setStatus("PENDING_REVIEW");
@@ -743,7 +751,7 @@ public class TreatmentCourseService {
         List<ChangeView> changeViews = list(Change.class, "select x from TreatmentChange x where x.courseId=:cid order by x.id desc", "cid", c.getId()).stream()
                 .map(x -> new ChangeView(x.getId(), x.getStatus(), x.getBaseRevision(), x.getReason(), read(x.getPlanJson()), read(x.getOldPlanJson()), x.getPriceDifference(), x.getSettlementOrderId(), x.getProposedBy(), x.getApprovedBy(), x.getCreatedAt(), x.getAcceptedAt())).toList();
         List<RequestView> requestViews = list(WorkflowRequest.class, "select r from TreatmentWorkflowRequest r where r.courseId=:cid order by r.id desc", "cid", c.getId()).stream()
-                .map(r -> new RequestView(r.getId(), r.getType(), r.getStatus(), r.getReason(), r.getExtensionDays(), r.getRefundAmount(), r.getRefundReference(), r.getReviewReason(), r.getCreatedAt())).toList();
+                .map(r -> new RequestView(r.getId(), r.getType(), r.getStatus(), r.getReason(), r.getExtensionDays(), r.getRefundAmount(), r.getRefundReference(), r.getReviewReason(), r.getCreatedAt(), r.getRefundBankBin(), r.getRefundBankName(), r.getRefundAccountNumber(), r.getRefundAccountName())).toList();
         List<AuditView> audits = clinical ? list(Audit.class, "select a from TreatmentAudit a where a.courseId=:cid order by a.id desc", "cid", c.getId()).stream().map(a -> new AuditView(a.getId(), a.getAction(), a.getActorId(), a.getDetails(), a.getCreatedAt())).toList() : List.of();
         List<String> actions = new ArrayList<>(); String state = effectiveStatus(c);
         if (access.canManageReception() && !Set.of("COMPLETED", "CANCELLED", "REFUNDED").contains(state)) actions.add("ASSIGN");
@@ -1005,6 +1013,16 @@ public class TreatmentCourseService {
     private String reasonOr(String reason, String fallback) { return reason == null || reason.isBlank() ? fallback : optionalText(reason, 1000); }
     private String text(String value, String label, int max) { if (value == null || value.isBlank()) throw business(label + " is required"); return optionalText(value, max); }
     private String optionalText(String value, int max) { if (value != null && value.length() > max) throw business("Text exceeds " + max + " characters"); return value == null ? null : value.trim(); }
+    private static String trimToNull(String value) { if (value == null) return null; String trimmed = value.trim(); return trimmed.isEmpty() ? null : trimmed; }
+    private void validateRefundBankDetails(String type, String bankBin, String bankName, String accountNumber, String accountName) {
+        if (bankBin == null && bankName == null && accountNumber == null && accountName == null) return;
+        if (!"CANCEL".equals(type)) throw business("Chỉ yêu cầu dừng / hoàn tiền mới nhận thông tin tài khoản hoàn tiền");
+        if (bankBin == null || bankName == null || accountNumber == null || accountName == null)
+            throw business("Vui lòng nhập đầy đủ ngân hàng, số tài khoản và tên chủ tài khoản nhận hoàn tiền");
+        if (!bankBin.matches("[0-9]{4,12}")) throw business("Mã BIN ngân hàng không hợp lệ");
+        if (bankName.length() > 100 || accountName.length() > 120 || !accountNumber.matches("[0-9A-Za-z-]{4,40}"))
+            throw business("Thông tin tài khoản ngân hàng nhận hoàn tiền không hợp lệ");
+    }
     private String purchaseKey(Long uid, String key) { return hash("treatment:" + uid + ":" + key); }
     private String hash(String value) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); } catch (Exception e) { throw new IllegalStateException(e); } }
     private String write(Plan p) { return writeObject(p); }

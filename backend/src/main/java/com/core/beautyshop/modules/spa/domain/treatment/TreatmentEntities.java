@@ -159,6 +159,10 @@ public final class TreatmentEntities {
         @Column(name = "review_reason", length = 1000) private String reviewReason;
         @Column(name = "refund_amount", nullable = false, precision = 12, scale = 2) private BigDecimal refundAmount = BigDecimal.ZERO;
         @Column(name = "refund_reference", length = 100) private String refundReference;
+        @Column(name = "refund_bank_bin", length = 20) private String refundBankBin;
+        @Column(name = "refund_bank_name", length = 100) private String refundBankName;
+        @Column(name = "refund_account_number", length = 50) private String refundAccountNumber;
+        @Column(name = "refund_account_name", length = 120) private String refundAccountName;
         @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
         @Column(name = "reviewed_at") private Instant reviewedAt;
     }

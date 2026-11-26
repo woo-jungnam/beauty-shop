@@ -29,6 +29,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { buildCsvContent } from '../commerce/orderReconciliationHelpers';
 import {
+  computePoNetReceivedQty,
   computePoPayable,
   formatLinePreview,
   getMovementKindMeta,
@@ -59,12 +60,14 @@ export function ProcurementHistoryPanel({
   const [subTab, setSubTab] = useState('movements'); // 'movements' | 'orders'
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
-  const [kind, setKind] = useState('ALL'); // 'ALL' | 'RECEIPT' | 'SUPPLIER_RETURN' | 'PAYMENT' | 'SUPPLIER_REFUND'
+  const [kind, setKind] = useState('ALL'); // 'ALL' | 'RECEIPT' | 'SUPPLIER_RETURN' | 'PAYMENT' | 'SUPPLIER_REFUND' | 'CASHFLOW'
   const [receivedStatus, setReceivedStatus] = useState('ALL'); // 'ALL' | 'RECEIVED' | 'PARTIALLY_RECEIVED'
+  const [payableOnly, setPayableOnly] = useState(false);
   const [supplierId, setSupplierId] = useState('');
   const [warehouseId, setWarehouseId] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -114,19 +117,47 @@ export function ProcurementHistoryPanel({
     }
   }, [appendSharedFilters]);
 
+  const buildMovementParams = useCallback(
+    (targetPage = 0, pageSize = 15) => {
+      const params = new URLSearchParams();
+      params.append('page', String(targetPage));
+      params.append('size', String(pageSize));
+      params.append('sort', 'createdAt,desc');
+      params.append('sort', 'id,desc');
+      if (kind && kind !== 'ALL') params.append('kind', kind);
+      appendSharedFilters(params);
+      return params;
+    },
+    [kind, appendSharedFilters]
+  );
+
+  const buildOrderParams = useCallback(
+    (targetPage = 0, pageSize = 15) => {
+      const params = new URLSearchParams();
+      params.append('page', String(targetPage));
+      params.append('size', String(pageSize));
+      params.append('sort', 'receivedAt,desc');
+      params.append('sort', 'id,desc');
+      params.append('useReceivedDate', 'true');
+      if (payableOnly) params.append('payableOnly', 'true');
+      if (receivedStatus === 'ALL') {
+        params.append('statuses', 'PARTIALLY_RECEIVED');
+        params.append('statuses', 'RECEIVED');
+      } else {
+        params.append('status', receivedStatus);
+      }
+      appendSharedFilters(params);
+      return params;
+    },
+    [receivedStatus, payableOnly, appendSharedFilters]
+  );
+
   const loadMovements = useCallback(
     async (targetPage = 0) => {
       setMovLoading(true);
       setErrorMsg('');
       try {
-        const params = new URLSearchParams();
-        params.append('page', String(targetPage));
-        params.append('size', '15');
-        params.append('sort', 'createdAt,desc');
-        params.append('sort', 'id,desc');
-        if (kind && kind !== 'ALL') params.append('kind', kind);
-        appendSharedFilters(params);
-        const res = await apiClient.get(`${ENDPOINTS.PROCUREMENT.MOVEMENTS}?${params.toString()}`);
+        const res = await apiClient.get(`${ENDPOINTS.PROCUREMENT.MOVEMENTS}?${buildMovementParams(targetPage, 15).toString()}`);
         const pageData = unwrap(res) || {};
         setMovements(pageData.content || []);
         setMovPage(pageData.page ?? targetPage);
@@ -138,7 +169,7 @@ export function ProcurementHistoryPanel({
         setMovLoading(false);
       }
     },
-    [kind, appendSharedFilters]
+    [buildMovementParams]
   );
 
   const loadReceivedOrders = useCallback(
@@ -146,20 +177,7 @@ export function ProcurementHistoryPanel({
       setPoLoading(true);
       setErrorMsg('');
       try {
-        const params = new URLSearchParams();
-        params.append('page', String(targetPage));
-        params.append('size', '15');
-        params.append('sort', 'receivedAt,desc');
-        params.append('sort', 'id,desc');
-        params.append('useReceivedDate', 'true');
-        if (receivedStatus === 'ALL') {
-          params.append('statuses', 'PARTIALLY_RECEIVED');
-          params.append('statuses', 'RECEIVED');
-        } else {
-          params.append('status', receivedStatus);
-        }
-        appendSharedFilters(params);
-        const res = await apiClient.get(`${ENDPOINTS.PROCUREMENT.ORDERS}?${params.toString()}`);
+        const res = await apiClient.get(`${ENDPOINTS.PROCUREMENT.ORDERS}?${buildOrderParams(targetPage, 15).toString()}`);
         const pageData = unwrap(res) || {};
         setReceivedOrders(pageData.content || []);
         setPoPage(pageData.page ?? targetPage);
@@ -171,7 +189,7 @@ export function ProcurementHistoryPanel({
         setPoLoading(false);
       }
     },
-    [receivedStatus, appendSharedFilters]
+    [buildOrderParams]
   );
 
   useEffect(() => {
@@ -214,6 +232,7 @@ export function ProcurementHistoryPanel({
     setKeyword('');
     setKind('ALL');
     setReceivedStatus('ALL');
+    setPayableOnly(false);
     setSupplierId('');
     setWarehouseId('');
     setFromDate('');
@@ -226,41 +245,67 @@ export function ProcurementHistoryPanel({
     else loadReceivedOrders(poPage);
   };
 
-  const handleExportCsv = () => {
-    if (subTab === 'movements') {
+  const handleExportCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setErrorMsg('');
+    try {
+      const fetchAll = async (endpoint, buildParams) => {
+        const all = [];
+        let page = 0;
+        let totalPages = 1;
+        while (page < totalPages && page < 50) {
+          const res = await apiClient.get(`${endpoint}?${buildParams(page, 200).toString()}`);
+          const data = unwrap(res) || {};
+          if (Array.isArray(data.content)) all.push(...data.content);
+          totalPages = data.totalPages ?? 1;
+          page += 1;
+        }
+        return all;
+      };
+
+      if (subTab === 'movements') {
+        const allMovements = await fetchAll(ENDPOINTS.PROCUREMENT.MOVEMENTS, buildMovementParams);
+        downloadCsv(
+          `lich-su-chung-tu-nhap-hang-${new Date().toISOString().slice(0, 10)}.csv`,
+          ['Thời điểm', 'Loại', 'Mã chứng từ', 'Mã PO', 'Nhà cung cấp', 'Kho nhận', 'SL hàng', 'Giá trị', 'Nội dung'],
+          allMovements.map((row) => [
+            formatDateTime(row.createdAt),
+            getMovementKindMeta(row.kind).label,
+            row.reference,
+            row.orderNumber,
+            row.supplierName || '',
+            warehouseName(row.warehouseId),
+            row.totalQuantity || 0,
+            row.amount || 0,
+            row.reason || '',
+          ])
+        );
+        return;
+      }
+
+      const allOrders = await fetchAll(ENDPOINTS.PROCUREMENT.ORDERS, buildOrderParams);
       downloadCsv(
-        `lich-su-chung-tu-nhap-hang-${new Date().toISOString().slice(0, 10)}.csv`,
-        ['Thời điểm', 'Loại', 'Mã chứng từ', 'Mã PO', 'Nhà cung cấp', 'Kho nhận', 'SL hàng', 'Giá trị', 'Nội dung'],
-        movements.map((row) => [
-          formatDateTime(row.createdAt),
-          getMovementKindMeta(row.kind).label,
-          row.reference,
-          row.orderNumber,
-          row.supplierName || '',
-          warehouseName(row.warehouseId),
-          row.totalQuantity || 0,
-          row.amount || 0,
-          row.reason || '',
+        `lich-su-phieu-nhap-kho-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Mã PO', 'Nhà cung cấp', 'Kho nhận', 'Trạng thái', 'Ngày nhập gần nhất', 'SL nhận ròng / đặt', 'SL đã trả NCC', 'Giá trị đã nhận', 'Đã trả NCC', 'Công nợ còn lại'],
+        allOrders.map((po) => [
+          po.orderNumber,
+          po.supplierName || '',
+          warehouseName(po.warehouseId),
+          getPurchaseOrderStatus(po.status).label,
+          formatDateTime(po.receivedAt || po.createdAt),
+          `${computePoNetReceivedQty(po)}/${po.totalQuantity ?? 0}`,
+          po.returnedQuantity ?? 0,
+          po.receivedAmount ?? po.totalAmount ?? 0,
+          po.paidAmount ?? 0,
+          computePoPayable(po),
         ])
       );
-      return;
+    } catch (err) {
+      setErrorMsg(err.message || 'Không thể xuất file CSV.');
+    } finally {
+      setExporting(false);
     }
-
-    downloadCsv(
-      `lich-su-phieu-nhap-kho-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Mã PO', 'Nhà cung cấp', 'Kho nhận', 'Trạng thái', 'Ngày nhập gần nhất', 'SL nhận / đặt', 'Giá trị đã nhận', 'Đã trả NCC', 'Công nợ còn lại'],
-      receivedOrders.map((po) => [
-        po.orderNumber,
-        po.supplierName || '',
-        warehouseName(po.warehouseId),
-        getPurchaseOrderStatus(po.status).label,
-        formatDateTime(po.receivedAt || po.createdAt),
-        `${po.receivedQuantity ?? 0}/${po.totalQuantity ?? 0}`,
-        po.receivedAmount ?? po.totalAmount ?? 0,
-        po.paidAmount ?? 0,
-        computePoPayable(po),
-      ])
-    );
   };
 
   const movementColumns = [
@@ -406,13 +451,24 @@ export function ProcurementHistoryPanel({
       width: '155px',
     },
     {
-      header: 'SL nhận / đặt',
+      header: 'SL nhận ròng / đặt',
       align: 'right',
-      accessor: (row) => (
-        <span>
-          <strong>{row.receivedQuantity ?? 0}</strong> / {row.totalQuantity ?? 0}
-        </span>
-      ),
+      accessor: (row) => {
+        const netQty = computePoNetReceivedQty(row);
+        const returned = Number(row.returnedQuantity ?? 0);
+        return (
+          <div>
+            <span>
+              <strong>{netQty}</strong> / {row.totalQuantity ?? 0}
+            </span>
+            {returned > 0 && (
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                Nhận {row.receivedQuantity ?? 0} · Trả {returned}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       header: 'Giá trị đã nhận',
@@ -485,7 +541,7 @@ export function ProcurementHistoryPanel({
   ];
 
   const hasFilters = Boolean(
-    keywordInput || keyword || kind !== 'ALL' || receivedStatus !== 'ALL' || supplierId || warehouseId || fromDate || toDate
+    keywordInput || keyword || kind !== 'ALL' || receivedStatus !== 'ALL' || payableOnly || supplierId || warehouseId || fromDate || toDate
   );
 
   return (
@@ -537,15 +593,21 @@ export function ProcurementHistoryPanel({
           className="card"
           role="button"
           tabIndex={0}
-          onClick={() => setSubTab('orders')}
+          onClick={() => {
+            setSubTab('orders');
+            setPayableOnly(false);
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') setSubTab('orders');
+            if (e.key === 'Enter' || e.key === ' ') {
+              setSubTab('orders');
+              setPayableOnly(false);
+            }
           }}
           style={{
             padding: '14px 16px',
             cursor: 'pointer',
-            borderColor: subTab === 'orders' ? '#4F46E5' : undefined,
-            background: subTab === 'orders' ? '#EEF2FF' : '#FFFFFF',
+            borderColor: subTab === 'orders' && !payableOnly ? '#4F46E5' : undefined,
+            background: subTab === 'orders' && !payableOnly ? '#EEF2FF' : '#FFFFFF',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -566,19 +628,19 @@ export function ProcurementHistoryPanel({
           tabIndex={0}
           onClick={() => {
             setSubTab('movements');
-            setKind('PAYMENT');
+            setKind('CASHFLOW');
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               setSubTab('movements');
-              setKind('PAYMENT');
+              setKind('CASHFLOW');
             }
           }}
           style={{
             padding: '14px 16px',
             cursor: 'pointer',
-            borderColor: subTab === 'movements' && kind === 'PAYMENT' ? '#3B82F6' : undefined,
-            background: subTab === 'movements' && kind === 'PAYMENT' ? '#EFF6FF' : '#FFFFFF',
+            borderColor: subTab === 'movements' && ['PAYMENT', 'SUPPLIER_REFUND', 'CASHFLOW'].includes(kind) ? '#3B82F6' : undefined,
+            background: subTab === 'movements' && ['PAYMENT', 'SUPPLIER_REFUND', 'CASHFLOW'].includes(kind) ? '#EFF6FF' : '#FFFFFF',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -598,20 +660,20 @@ export function ProcurementHistoryPanel({
           role="button"
           tabIndex={0}
           onClick={() => {
-            setSubTab('movements');
-            setKind('SUPPLIER_RETURN');
+            setSubTab('orders');
+            setPayableOnly(true);
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-              setSubTab('movements');
-              setKind('SUPPLIER_RETURN');
+              setSubTab('orders');
+              setPayableOnly(true);
             }
           }}
           style={{
             padding: '14px 16px',
             cursor: 'pointer',
-            borderColor: subTab === 'movements' && kind === 'SUPPLIER_RETURN' ? '#F59E0B' : undefined,
-            background: subTab === 'movements' && kind === 'SUPPLIER_RETURN' ? '#FFFBEB' : '#FFFFFF',
+            borderColor: subTab === 'orders' && payableOnly ? '#F59E0B' : undefined,
+            background: subTab === 'orders' && payableOnly ? '#FFFBEB' : '#FFFFFF',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -667,7 +729,7 @@ export function ProcurementHistoryPanel({
             </Button>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <Button size="sm" variant="outline" icon={Download} onClick={handleExportCsv}>
+            <Button size="sm" variant="outline" icon={Download} loading={exporting} onClick={handleExportCsv}>
               Xuất CSV
             </Button>
             <Button
@@ -702,20 +764,32 @@ export function ProcurementHistoryPanel({
               <option value="ALL">Tất cả chứng từ</option>
               <option value="RECEIPT">Nhập kho</option>
               <option value="SUPPLIER_RETURN">Trả hàng NCC</option>
+              <option value="CASHFLOW">Thanh toán &amp; NCC hoàn tiền</option>
               <option value="PAYMENT">Thanh toán NCC</option>
               <option value="SUPPLIER_REFUND">NCC hoàn tiền</option>
             </Select>
           ) : (
-            <Select
-              label="Trạng thái nhập"
-              value={receivedStatus}
-              onChange={(e) => setReceivedStatus(e.target.value)}
-              className="form-group-compact"
-            >
-              <option value="ALL">Tất cả phiếu đã nhập</option>
-              <option value="RECEIVED">Đã nhận đủ</option>
-              <option value="PARTIALLY_RECEIVED">Nhập một phần</option>
-            </Select>
+            <>
+              <Select
+                label="Trạng thái nhập"
+                value={receivedStatus}
+                onChange={(e) => setReceivedStatus(e.target.value)}
+                className="form-group-compact"
+              >
+                <option value="ALL">Tất cả phiếu đã nhập</option>
+                <option value="RECEIVED">Đã nhận đủ</option>
+                <option value="PARTIALLY_RECEIVED">Nhập một phần</option>
+              </Select>
+              <Select
+                label="Công nợ NCC"
+                value={payableOnly ? 'PAYABLE' : 'ALL'}
+                onChange={(e) => setPayableOnly(e.target.value === 'PAYABLE')}
+                className="form-group-compact"
+              >
+                <option value="ALL">Tất cả công nợ</option>
+                <option value="PAYABLE">Còn nợ / cần thu hồi</option>
+              </Select>
+            </>
           )}
 
           <Select

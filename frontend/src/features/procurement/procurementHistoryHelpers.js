@@ -13,6 +13,13 @@ export const getMovementKindMeta = (kind) => {
   }
 };
 
+export const computePoNetReceivedQty = (po) => {
+  if (!po) return 0;
+  const received = Number(po.receivedQuantity ?? 0);
+  const returned = Number(po.returnedQuantity ?? 0);
+  return Math.max(0, received - returned);
+};
+
 export const computePoPayable = (po) => {
   if (!po) return 0;
   const receivedVal = Number(po.receivedAmount ?? 0);

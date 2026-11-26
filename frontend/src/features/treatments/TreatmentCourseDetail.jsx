@@ -11,8 +11,35 @@ import { TreatmentTemplateEditor } from './TreatmentTemplateEditor';
 import { courseRoot, dateLabel, hasAction, money, statusLabel, treatmentApi } from './treatmentApi';
 import { openTreatmentPayment } from './paymentNavigation';
 import { useAuth } from '../../app/providers/AuthProvider';
+import { VIETNAM_BANKS, buildVietQrUrl } from '../../shared/utils/vietnamBanks';
 
 const Reason = { key: 'reason', label: 'Lý do', rows: 3, maxLength: 1000 };
+const buildRefundQrUrl = (courseId, item) => {
+  if (!item?.refundBankBin || !item?.refundAccountNumber || Number(item?.refundAmount) <= 0) return '';
+  return buildVietQrUrl({
+    bankBin: item.refundBankBin,
+    accountNumber: item.refundAccountNumber,
+    accountName: item.refundAccountName,
+    amount: item.refundAmount,
+    addInfo: `HOAN TIEN LIEU TRINH #${courseId} YC #${item.id}`,
+  });
+};
+const RefundBankCard = ({ item, qrUrl }) => {
+  if (!item?.refundBankBin && !item?.refundAccountNumber) return null;
+  const activeQr = Boolean(qrUrl);
+  return (
+    <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', padding: 12, borderRadius: 10, background: activeQr ? '#F0FDF4' : '#F8FAFC', border: `1px solid ${activeQr ? '#BBF7D0' : '#CBD5E1'}`, marginTop: 8 }}>
+      {activeQr && <img src={qrUrl} alt="Mã VietQR hoàn tiền" style={{ width: 132, height: 132, objectFit: 'contain', borderRadius: 8, border: '1px solid #DCFCE7', background: '#FFFFFF' }} />}
+      <div style={{ fontSize: 13, lineHeight: 1.55, color: activeQr ? '#166534' : '#334155' }}>
+        <div style={{ fontWeight: 700, marginBottom: 2 }}>{activeQr ? 'Quét mã VietQR để chuyển khoản hoàn tiền' : 'Tài khoản ngân hàng nhận hoàn tiền'}</div>
+        <div>Ngân hàng: {item.refundBankName || item.refundBankBin}{item.refundBankBin ? ` (BIN: ${item.refundBankBin})` : ''}</div>
+        <div>Số tài khoản: <code>{item.refundAccountNumber || '—'}</code>{item.refundAccountName ? ` · Chủ TK: ` : ''}{item.refundAccountName && <strong>{item.refundAccountName}</strong>}</div>
+        {Number(item.refundAmount) > 0 && <div>Số tiền cần hoàn: <strong>{money(item.refundAmount)}</strong></div>}
+        {activeQr && <a className="treatment-link" href={qrUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 4, color: '#15803D' }}>Mở ảnh QR lớn</a>}
+      </div>
+    </div>
+  );
+};
 const formatAdvisoryGap = session => {
   const min = Number(session?.minGapDays || 0);
   const max = session?.maxGapDays;
@@ -57,7 +84,43 @@ export const TreatmentCourseDetail = ({ course, role, refresh, onBack, refreshin
   const admin = role === 'admin';
   const root = `${courseRoot(role)}/${course.id}`;
   const customerRoot = `/api/v1/spa/treatments/${course.id}`;
-  const request = type => setAction({ title: `Yêu cầu ${statusLabel(type).toLowerCase()} lộ trình`, description: type === 'INCIDENT' ? 'Báo cáo sự cố đưa hồ sơ vào chờ đánh giá và hủy các lịch tương lai ngay khi gửi. Quản trị xử lý và quyết định khi có thể tiếp tục.' : 'Yêu cầu được gửi cho quản trị xử lý. Hồ sơ chỉ đổi trạng thái sau khi yêu cầu được duyệt.', fields: [Reason, ...(type === 'EXTEND' ? [{ key: 'extensionDays', label: 'Số ngày đề nghị gia hạn', type: 'number', min: 1, max: 3650 }] : [])], submitLabel: 'Gửi yêu cầu', success: type === 'INCIDENT' ? 'Đã ghi nhận sự cố và đưa hồ sơ vào chờ đánh giá.' : 'Đã gửi yêu cầu xử lý. Hồ sơ giữ trạng thái hiện hành cho đến khi có quyết định.', submit: values => treatmentApi.post(`${customerRoot}/requests`, { type, reason: values.reason, ...(type === 'EXTEND' ? { extensionDays: Number(values.extensionDays) } : {}) }) });
+  const request = type => {
+    const extraFields = type === 'EXTEND'
+      ? [{ key: 'extensionDays', label: 'Số ngày đề nghị gia hạn', type: 'number', min: 1, max: 3650, step: 1 }]
+      : type === 'CANCEL'
+        ? [
+            { key: 'refundBankBin', label: 'Ngân hàng nhận hoàn tiền', type: 'select', placeholder: 'Chọn ngân hàng nhận hoàn', options: VIETNAM_BANKS.map(bank => ({ value: bank.bin, label: `${bank.shortName} - ${bank.name}` })) },
+            { key: 'refundAccountNumber', label: 'Số tài khoản nhận hoàn tiền', type: 'text', maxLength: 40, pattern: '[0-9A-Za-z-]{4,40}', patternTitle: 'Số tài khoản gồm 4–40 ký tự chữ, số hoặc dấu gạch ngang', placeholder: 'Nhập số tài khoản...' },
+            { key: 'refundAccountName', label: 'Tên chủ tài khoản', type: 'text', maxLength: 120, placeholder: 'VD: NGUYEN VAN A' },
+          ]
+        : [];
+    const description = type === 'INCIDENT'
+      ? 'Báo cáo sự cố đưa hồ sơ vào chờ đánh giá và hủy các lịch tương lai ngay khi gửi. Quản trị xử lý và quyết định khi có thể tiếp tục.'
+      : type === 'CANCEL'
+        ? 'Gửi yêu cầu dừng lộ trình kèm tài khoản ngân hàng nhận hoàn tiền (nếu còn quyền lợi chưa dùng). Hồ sơ chỉ dừng sau khi quản trị viên duyệt.'
+        : 'Yêu cầu được gửi cho quản trị xử lý. Hồ sơ chỉ đổi trạng thái sau khi yêu cầu được duyệt.';
+    setAction({
+      title: `Yêu cầu ${statusLabel(type).toLowerCase()} lộ trình`,
+      description,
+      fields: [Reason, ...extraFields],
+      submitLabel: 'Gửi yêu cầu',
+      success: type === 'INCIDENT' ? 'Đã ghi nhận sự cố và đưa hồ sơ vào chờ đánh giá.' : 'Đã gửi yêu cầu xử lý. Hồ sơ giữ trạng thái hiện hành cho đến khi có quyết định.',
+      submit: values => {
+        const selectedBank = type === 'CANCEL' ? VIETNAM_BANKS.find(bank => bank.bin === values.refundBankBin) : null;
+        return treatmentApi.post(`${customerRoot}/requests`, {
+          type,
+          reason: values.reason,
+          ...(type === 'EXTEND' ? { extensionDays: Number(values.extensionDays) } : {}),
+          ...(type === 'CANCEL' ? {
+            refundBankBin: values.refundBankBin,
+            refundBankName: selectedBank?.shortName || selectedBank?.name || '',
+            refundAccountNumber: values.refundAccountNumber?.trim(),
+            refundAccountName: values.refundAccountName?.trim(),
+          } : {}),
+        });
+      },
+    });
+  };
   const decide = (kind, resource, decision) => {
     const path = kind === 'changes' && !operator ? `${customerRoot}/changes/${resource.id}/${decision}` : `${root}/${kind}/${resource.id}/${decision}`;
     setAction({ title: `${decision === 'approve' ? 'Duyệt' : decision === 'accept' ? 'Chấp thuận' : 'Từ chối'} ${kind === 'changes' ? 'điều chỉnh kế hoạch' : 'yêu cầu'}`, description: kind === 'changes' ? 'Chỉ áp dụng phiên bản mới sau khi đủ phê duyệt, khách xác nhận và hoàn tất chênh lệch thanh toán nếu có.' : resource.type === 'CANCEL' ? 'Duyệt dừng sẽ khóa phần quyền lợi chưa dùng. Khoản hoàn chỉ được ghi nhận khi có chứng từ xác nhận hoàn riêng.' : undefined, fields: decision === 'accept' ? [] : [Reason], submitLabel: 'Xác nhận quyết định', submit: values => treatmentApi.post(path, { expectedVersion: resource.expectedVersion, reason: values.reason }), success: 'Đã ghi nhận quyết định và tải lại trạng thái hiện hành.' });
@@ -123,15 +186,20 @@ export const TreatmentCourseDetail = ({ course, role, refresh, onBack, refreshin
       {(course.changes || []).length > 0 && <section className="treatment-card"><h2>Điều chỉnh kế hoạch</h2>{course.changes.map(change => <article key={change.id} className="treatment-form-session"><div className="treatment-card-heading"><strong>Đề xuất #{change.id}</strong><span className="treatment-badge">{statusLabel(change.status)}</span></div><p>{change.reason}</p><p>Chênh lệch: <strong>{money(change.priceDifference)}</strong></p><div className="treatment-plan-comparison"><div><h4>Kế hoạch hiện hành khi đề xuất</h4><PlanSummary plan={change.oldPlan} serviceDetails={course.serviceDetails} /></div><div><h4>Kế hoạch đề nghị</h4><PlanSummary plan={change.plan} serviceDetails={course.serviceDetails} /></div></div>
         <div className="treatment-actions">{admin && change.status === 'PENDING_APPROVAL' && <><Button onClick={() => decide('changes', change, 'approve')}>Duyệt điều chỉnh</Button><Button variant="outline" onClick={() => decide('changes', change, 'reject')}>Từ chối</Button></>}{!operator && ['AWAITING_CUSTOMER', 'PENDING_CUSTOMER', 'PENDING_CUSTOMER_ACCEPTANCE'].includes(change.status) && <><Button onClick={() => decide('changes', change, 'accept')}>Tôi chấp thuận kế hoạch mới</Button><Button variant="outline" onClick={() => decide('changes', change, 'reject')}>Không đồng ý</Button></>}{!operator && change.status === 'AWAITING_SETTLEMENT' && <Button onClick={() => setAction({ title: 'Thanh toán chênh lệch kế hoạch đã chấp thuận', description: `Số tiền chênh lệch ${money(change.priceDifference)}. Đơn hiện có sẽ được sử dụng lại để tránh tạo trùng.`, fields: [], submitLabel: 'Mở thanh toán chênh lệch', submit: async () => { const order = await treatmentApi.post(`${customerRoot}/changes/${change.id}/settlement`); openTreatmentPayment(order); } })}>Thanh toán chênh lệch</Button>}{change.status === 'AWAITING_SETTLEMENT' && change.settlementOrderId && <Button variant="outline" onClick={() => setAction({ title: 'Đối soát và áp dụng kế hoạch đã thanh toán', description: 'Hệ thống kiểm tra thanh toán thành công và các lịch hẹn liên quan trước khi áp dụng. Nếu chưa đủ tiền hoặc còn lịch cần xử lý, kế hoạch cũ được giữ nguyên.', fields: [], submit: () => treatmentApi.post(`${customerRoot}/changes/${change.id}/apply`), success: 'Đã đối soát và áp dụng kế hoạch mới.' })}>Kiểm tra thanh toán & áp dụng</Button>}{change.settlementOrderId && <a className="treatment-link" href={`#/order-success?id=${change.settlementOrderId}&method=BANK`}>Xem đơn chênh lệch #{change.settlementOrderId}</a>}</div>
       </article>)}</section>}
-      {(course.requests || []).length > 0 && <section className="treatment-card"><h2>Yêu cầu hỗ trợ & quyết định</h2>{course.requests.map(item => <article className="treatment-form-session" key={item.id}>
-        <div className="treatment-card-heading"><strong>{statusLabel(item.type)} · #{item.id}</strong><span className="treatment-badge">{statusLabel(item.status)}</span></div><p>{item.reason}</p>
-        {item.extensionDays && <p>Đề nghị gia hạn {item.extensionDays} ngày</p>}
-        {item.refundAmount != null && <p>Số tiền hoàn theo quyết định: <strong>{money(item.refundAmount)}</strong>{item.refundReference ? ` · Chứng từ ${item.refundReference}` : ' · Chưa có chứng từ xác nhận hoàn'}</p>}
-        {item.reviewReason && <p>Phản hồi: {item.reviewReason}</p>}
-        <div className="treatment-actions">{admin && item.status === 'PENDING_APPROVAL' && <><Button onClick={() => decide('requests', item, 'approve')}>Duyệt yêu cầu</Button><Button variant="outline" onClick={() => decide('requests', item, 'reject')}>Từ chối yêu cầu</Button></>}
-          {admin && ['REFUND_PENDING', 'AWAITING_REFUND'].includes(item.status) && !item.refundReference && Number(item.refundAmount) > 0 && <Button onClick={() => setAction({ title: item.type === 'PRICE_ADJUSTMENT' ? 'Xác nhận đã hoàn chênh lệch giảm giá' : 'Xác nhận khoản tiền đã hoàn', description: 'Chỉ xác nhận khi đã hoàn tiền thực tế và có mã chứng từ. Duyệt yêu cầu trước đó không tự chuyển tiền cho khách.', fields: [{ key: 'amount', label: 'Số tiền đã hoàn (VND)', type: 'number', min: 1, value: item.refundAmount }, { key: 'reference', label: 'Mã chứng từ hoàn tiền', type: 'text', maxLength: 100 }, { ...Reason, maxLength: 250 }], submit: values => treatmentApi.post(`${root}/requests/${item.id}/refund-confirmation`, { ...values, amount: Number(values.amount) }), success: 'Đã ghi nhận chứng từ hoàn tiền và đối soát hồ sơ.' })}>Xác nhận đã hoàn tiền</Button>}
-        </div>
-      </article>)}</section>}
+      {(course.requests || []).length > 0 && <section className="treatment-card"><h2>Yêu cầu hỗ trợ & quyết định</h2>{course.requests.map(item => {
+        const awaitingRefund = ['REFUND_PENDING', 'AWAITING_REFUND'].includes(item.status) && !item.refundReference && Number(item.refundAmount) > 0;
+        const qrUrl = awaitingRefund ? buildRefundQrUrl(course.id, item) : '';
+        return <article className="treatment-form-session" key={item.id}>
+          <div className="treatment-card-heading"><strong>{statusLabel(item.type)} · #{item.id}</strong><span className="treatment-badge">{statusLabel(item.status)}</span></div><p>{item.reason}</p>
+          {item.extensionDays && <p>Đề nghị gia hạn {item.extensionDays} ngày</p>}
+          {item.refundAmount != null && <p>Số tiền hoàn theo quyết định: <strong>{money(item.refundAmount)}</strong>{item.refundReference ? ` · Chứng từ ${item.refundReference}` : ' · Chưa có chứng từ xác nhận hoàn'}</p>}
+          <RefundBankCard item={item} qrUrl={admin ? qrUrl : ''} />
+          {item.reviewReason && <p>Phản hồi: {item.reviewReason}</p>}
+          <div className="treatment-actions">{admin && item.status === 'PENDING_APPROVAL' && <><Button onClick={() => decide('requests', item, 'approve')}>Duyệt yêu cầu</Button><Button variant="outline" onClick={() => decide('requests', item, 'reject')}>Từ chối yêu cầu</Button></>}
+            {admin && awaitingRefund && <Button onClick={() => setAction({ title: item.type === 'PRICE_ADJUSTMENT' ? 'Xác nhận đã hoàn chênh lệch giảm giá' : 'Xác nhận khoản tiền đã hoàn', description: 'Chỉ xác nhận khi đã hoàn tiền thực tế và có mã chứng từ. Duyệt yêu cầu trước đó không tự chuyển tiền cho khách.', extraContent: item.refundBankBin && item.refundAccountNumber ? <RefundBankCard item={item} qrUrl={qrUrl} /> : <p className="treatment-notice warning">Yêu cầu này chưa có thông tin tài khoản ngân hàng của khách; hãy đối chiếu giao dịch thực tế và nhập mã chứng từ.</p>, fields: [{ key: 'amount', label: 'Số tiền đã hoàn (VND)', type: 'number', min: 1, value: item.refundAmount }, { key: 'reference', label: 'Mã chứng từ hoàn tiền', type: 'text', maxLength: 100 }, { ...Reason, maxLength: 250 }], submit: values => treatmentApi.post(`${root}/requests/${item.id}/refund-confirmation`, { ...values, amount: Number(values.amount) }), success: 'Đã ghi nhận chứng từ hoàn tiền và đối soát hồ sơ.' })}>Xác nhận đã hoàn tiền</Button>}
+          </div>
+        </article>;
+      })}</section>}
       {operator && (course.audit || []).length > 0 && <details className="treatment-card"><summary>Lịch sử xử lý</summary><ol className="treatment-audit">{course.audit.map(item => <li key={item.id}><strong>{auditActionLabel(item.action)}</strong> · {dateLabel(item.createdAt)} · Người thực hiện #{item.actorId}<p>{treatmentAuditDetails(item.details)}</p></li>)}</ol></details>}
     </div><aside className="treatment-stack"><section className="treatment-card"><h2>{operator ? 'Xử lý hồ sơ' : 'Hỗ trợ lộ trình'}</h2><p>Đã thanh toán: <strong>{money(course.paidAmount)}</strong></p><div className="treatment-stack">
       {operator && hasAction(course, 'ASSIGN') && <Button variant="outline" onClick={() => setAction({ title: 'Phân công người phụ trách lộ trình', fields: [{ key: 'staffId', label: 'Nhân viên phụ trách', type: 'staff', value: String(course.assignedStaffId || '') }, Reason], submit: values => treatmentApi.post(`${root}/assign`, { ...values, staffId: Number(values.staffId) }), success: 'Đã cập nhật người phụ trách hồ sơ.' })}>{course.assignedStaffId ? 'Phân công phụ trách' : 'Nhận phụ trách / phân công'}</Button>}

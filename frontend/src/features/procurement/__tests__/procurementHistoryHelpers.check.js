@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  computePoNetReceivedQty,
   computePoPayable,
   formatLinePreview,
   getMovementKindMeta,
@@ -12,6 +13,8 @@ assert.deepEqual(getMovementKindMeta('SUPPLIER_RETURN'), { label: 'Trả hàng N
 assert.deepEqual(getMovementKindMeta('PAYMENT'), { label: 'Thanh toán NCC', variant: 'info' });
 assert.deepEqual(getMovementKindMeta('SUPPLIER_REFUND'), { label: 'NCC hoàn tiền', variant: 'primary' });
 
+assert.equal(computePoNetReceivedQty({ receivedQuantity: 10, returnedQuantity: 3 }), 7);
+assert.equal(computePoNetReceivedQty({ receivedQuantity: 2, returnedQuantity: 5 }), 0);
 assert.equal(computePoPayable({ receivedAmount: 600000, paidAmount: 250000 }), 350000);
 assert.equal(computePoPayable({ receivedAmount: 200000, paidAmount: 250000 }), -50000);
 

@@ -137,5 +137,26 @@ class ProcurementHistoryIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].receivedQuantity").value(4))
                 .andExpect(jsonPath("$.data.content[0].totalQuantity").value(10))
                 .andExpect(jsonPath("$.data.content[0].receivedAmount").value(560000));
+
+        // Direct receive on remaining PARTIALLY_RECEIVED items also records RECEIPT movement & keeps summary consistent
+        procurementService.receive(po.id());
+        mvc.perform(get("/api/v1/admin/procurement/history/summary").with(authentication(authOf(staffWithPerm))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.receiptCount").value(2))
+                .andExpect(jsonPath("$.data.totalReceiptAmount").value(1400000))
+                .andExpect(jsonPath("$.data.receivedOrdersCount").value(1))
+                .andExpect(jsonPath("$.data.receivedOrdersValue").value(1400000))
+                .andExpect(jsonPath("$.data.outstandingPayableAmount").value(1400000));
+
+        // CASHFLOW kind and payableOnly filter work accurately
+        receiptService.payment(po.id(), new ProcurementReceiptService.Payment("PAY-HIST-01", "Trả đủ", new BigDecimal("1400000")), false);
+        mvc.perform(get("/api/v1/admin/procurement/movements?kind=CASHFLOW").with(authentication(authOf(staffWithPerm))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].kind").value("PAYMENT"));
+        mvc.perform(get("/api/v1/admin/procurement/orders?statuses=PARTIALLY_RECEIVED,RECEIVED&payableOnly=true&supplierId=" + supplier.id())
+                        .with(authentication(authOf(staffWithPerm))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(0));
     }
 }

@@ -295,6 +295,66 @@ test('ADMIN approves cancellation then confirms a real refund reference separate
   expect(pageErrors).toEqual([]);
 });
 
+test('USER submits cancellation request with refund bank account details', async ({ page }) => {
+  const { state, pageErrors } = await fixture(page, 'USER');
+  state.course.status = 'ACTIVE';
+  await page.route('**/api/v1/spa/treatments/41/requests', async route => {
+    const payload = route.request().postDataJSON();
+    state.calls.push({ path: '/api/v1/spa/treatments/41/requests', method: 'POST', body: payload });
+    state.course.requests = [{ id: 81, type: 'CANCEL', status: 'PENDING_APPROVAL', reason: payload.reason, refundAmount: 0, refundReference: null, refundBankBin: payload.refundBankBin, refundBankName: payload.refundBankName, refundAccountNumber: payload.refundAccountNumber, refundAccountName: payload.refundAccountName }];
+    await route.fulfill({ json: { data: state.course } });
+  });
+  await page.goto('/#/treatments?course=41');
+  await page.getByRole('button', { name: 'Yêu cầu dừng / hoàn tiền', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Lý do', { exact: true }).fill('Chuyển công tác xa không thể theo hết liệu trình.');
+  await dialog.getByLabel('Ngân hàng nhận hoàn tiền').selectOption('970436');
+  await dialog.getByLabel('Số tài khoản nhận hoàn tiền').fill('0011001234567');
+  await dialog.getByLabel('Tên chủ tài khoản').fill('NGUYEN VAN A');
+  await dialog.getByRole('button', { name: 'Gửi yêu cầu', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(state.calls.find(call => call.path.endsWith('/requests'))?.body).toEqual({
+    type: 'CANCEL',
+    reason: 'Chuyển công tác xa không thể theo hết liệu trình.',
+    refundBankBin: '970436',
+    refundBankName: 'Vietcombank',
+    refundAccountNumber: '0011001234567',
+    refundAccountName: 'NGUYEN VAN A',
+  });
+  await expect(page.getByText('Tài khoản ngân hàng nhận hoàn tiền')).toBeVisible();
+  await expect(page.getByText('0011001234567')).toBeVisible();
+  await expect(page.getByAltText('Mã VietQR hoàn tiền')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('ADMIN sees VietQR code and bank details on awaiting refund and inside confirmation dialog', async ({ page }) => {
+  const { state, pageErrors } = await fixture(page, 'ADMIN');
+  state.course.status = 'CANCELLED';
+  state.course.requests = [{
+    id: 81, type: 'CANCEL', status: 'AWAITING_REFUND', reason: 'Chuyển công tác xa.',
+    refundAmount: 1200000, refundReference: null,
+    refundBankBin: '970436', refundBankName: 'Vietcombank',
+    refundAccountNumber: '0011001234567', refundAccountName: 'NGUYEN VAN A',
+  }];
+  await page.route('https://img.vietqr.io/**', route => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="132" height="132"/>' }));
+  await page.goto('/#/admin/treatments');
+  await page.getByRole('button', { name: 'Mở hồ sơ & tiến độ' }).click();
+  const qrImg = page.getByAltText('Mã VietQR hoàn tiền').first();
+  await expect(qrImg).toBeVisible();
+  await expect(qrImg).toHaveAttribute('src', /img\.vietqr\.io\/image\/970436-0011001234567-compact\.jpg\?amount=1200000/);
+  await page.getByRole('button', { name: 'Xác nhận đã hoàn tiền', exact: true }).click();
+  const refundDialog = page.getByRole('dialog');
+  await expect(refundDialog.getByAltText('Mã VietQR hoàn tiền')).toBeVisible();
+  await expect(refundDialog).toContainText('0011001234567');
+  await refundDialog.getByLabel('Mã chứng từ hoàn tiền').fill('VQR-REAL-001');
+  await refundDialog.getByLabel('Lý do', { exact: true }).fill('Đã quét VietQR hoàn tiền cho khách.');
+  await refundDialog.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+  await expect(refundDialog).not.toBeVisible();
+  expect(state.calls.find(call => call.path.endsWith('/refund-confirmation'))?.body).toEqual({ amount: 1200000, reference: 'VQR-REAL-001', reason: 'Đã quét VietQR hoàn tiền cho khách.' });
+  await expect(page.getByText('Số tiền hoàn theo quyết định:', { exact: false })).toContainText('VQR-REAL-001');
+  expect(pageErrors).toEqual([]);
+});
+
 test('ADMIN confirms a negative revision refund without cancelling the active course', async ({ page }) => {
   const { state, pageErrors } = await fixture(page, 'ADMIN');
   state.course.status = 'ACTIVE';

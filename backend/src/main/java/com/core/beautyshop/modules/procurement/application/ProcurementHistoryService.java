@@ -116,7 +116,12 @@ public class ProcurementHistoryService {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isFalse(root.get("isDeleted")));
             if (kind != null && !kind.isBlank()) {
-                predicates.add(cb.equal(root.get("kind"), kind.trim().toUpperCase(Locale.ROOT)));
+                String normalizedKind = kind.trim().toUpperCase(Locale.ROOT);
+                if ("CASHFLOW".equals(normalizedKind)) {
+                    predicates.add(root.get("kind").in("PAYMENT", "SUPPLIER_REFUND"));
+                } else {
+                    predicates.add(cb.equal(root.get("kind"), normalizedKind));
+                }
             }
             if (purchaseOrderId != null) {
                 predicates.add(cb.equal(root.get("purchaseOrderId"), purchaseOrderId));
@@ -128,7 +133,7 @@ public class ProcurementHistoryService {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));
             }
             if (to != null) {
-                predicates.add(cb.lessThan(root.get("createdAt"), to));
+                predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), to));
             }
             if (keyword != null && !keyword.isBlank()) {
                 String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
@@ -208,7 +213,7 @@ public class ProcurementHistoryService {
                     predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from));
                 }
                 if (to != null) {
-                    predicates.add(cb.lessThan(root.get("createdAt"), to));
+                    predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), to));
                 }
                 if (keyword != null && !keyword.isBlank()) {
                     String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
@@ -269,7 +274,7 @@ public class ProcurementHistoryService {
                 predicates.add(cb.greaterThanOrEqualTo(dateExpr, from));
             }
             if (to != null) {
-                predicates.add(cb.lessThan(dateExpr, to));
+                predicates.add(cb.lessThanOrEqualTo(dateExpr, to));
             }
             if (keyword != null && !keyword.isBlank()) {
                 String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";

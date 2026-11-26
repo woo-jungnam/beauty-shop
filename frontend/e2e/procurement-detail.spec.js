@@ -115,3 +115,77 @@ test('closing a loading detail discards its response when another order is opene
   await expect(dialog.getByText('Biến thể #99', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Serum kiểm thử', { exact: true })).toHaveCount(0);
 });
+
+test('Lịch sử nhập hàng filters KPI cards, CASHFLOW, payableOnly, net received qty, and PO lookup cleanly', async ({ page }) => {
+  await page.addInitScript(user => {
+    localStorage.setItem('beautyshop_admin_token', 'isolated-test-token');
+    localStorage.setItem('beautyshop_admin_user', JSON.stringify(user));
+  }, admin);
+  const queries = [];
+  const receivedOrder = {
+    ...order,
+    id: 12,
+    orderNumber: 'PO-20261126-NET1',
+    status: 'RECEIVED',
+    totalQuantity: 10,
+    receivedQuantity: 10,
+    returnedQuantity: 2,
+    receivedAmount: 800000,
+    paidAmount: 300000,
+    totalAmount: 1000000,
+  };
+  await page.route('**/actuator/health', route => route.fulfill({ json: { status: 'UP' } }));
+  await page.route('**/api/v1/**', async route => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    queries.push(`${path}${url.search}`);
+    let data = [];
+    if (path === '/api/v1/auth/profile') data = admin;
+    else if (path === '/api/v1/admin/procurement/suppliers') data = { content: [{ id: 1, code: 'NCC1', name: 'Nhà cung cấp A', active: true }], totalPages: 1 };
+    else if (path === '/api/v1/admin/warehouses') data = [{ id: 2, name: 'Kho A' }];
+    else if (path === '/api/v1/admin/procurement/history/summary') {
+      data = {
+        receiptCount: 1, totalReceiptAmount: 1000000,
+        supplierReturnCount: 1, totalReturnAmount: 200000,
+        totalPaymentAmount: 300000, totalRefundAmount: 0, netPaidAmount: 300000,
+        receivedOrdersCount: 1, receivedOrdersValue: 800000, outstandingPayableAmount: 500000,
+      };
+    } else if (path === '/api/v1/admin/procurement/movements') {
+      data = {
+        content: [{
+          id: 50, purchaseOrderId: 12, orderNumber: 'PO-20261126-NET1', orderStatus: 'RECEIVED',
+          supplierName: 'Nhà cung cấp A', warehouseId: 2, kind: 'RECEIPT', reference: 'RCV-PO-20261126-NET1',
+          amount: 1000000, reason: 'Nhập kho trực tiếp theo phiếu mua PO-20261126-NET1',
+          createdAt: '2026-11-26T03:00:00Z', totalQuantity: 10, lines: [{ itemId: 91, variantId: 12, productName: 'Serum kiểm thử', sku: '000123', quantity: 10, unitCost: 100000, lineAmount: 1000000 }],
+        }],
+        page: 0, totalPages: 1, totalElements: 1,
+      };
+    } else if (path === ordersPath) {
+      data = { content: [receivedOrder], page: 0, totalPages: 1, totalElements: 1 };
+    } else if (path === `${ordersPath}/12`) {
+      data = receivedOrder;
+    } else if (path === `${ordersPath}/12/financials`) {
+      data = { receivedValue: 800000, paidAmount: 300000, dueAmount: 500000, movements: [] };
+    }
+    await route.fulfill({ json: { status: 200, success: true, data } });
+  });
+
+  await page.goto('/#/admin/procurement?tab=history');
+  await expect(page.getByText('RCV-PO-20261126-NET1')).toBeVisible();
+
+  // Clicking Card 3 ("Thanh toán NCC (ròng)") queries kind=CASHFLOW
+  await page.getByText('Thanh toán NCC (ròng)').click();
+  await expect.poll(() => queries.some(q => q.includes('/movements?') && q.includes('kind=CASHFLOW'))).toBe(true);
+
+  // Clicking Card 4 ("Công nợ NCC còn lại") switches to orders tab with payableOnly=true and shows net 8 / 10
+  await page.getByText('Công nợ NCC còn lại').click();
+  await expect.poll(() => queries.some(q => q.includes('/orders?') && q.includes('payableOnly=true'))).toBe(true);
+  await expect(page.getByText('Nhận 10 · Trả 2')).toBeVisible();
+  await expect(page.getByText('500.000 ₫').first()).toBeVisible();
+
+  // Expanding operations panel supports looking up PO by orderNumber string
+  await page.getByText('Nhận từng đợt, trả nhà cung cấp và công nợ').click();
+  await page.getByLabel('Tra phiếu mua theo mã PO hoặc ID').fill('PO-20261126-NET1');
+  await page.getByRole('button', { name: 'Mở phiếu mua', exact: true }).click();
+  await expect(page.getByText('Giá trị đã nhận ròng:')).toBeVisible();
+});

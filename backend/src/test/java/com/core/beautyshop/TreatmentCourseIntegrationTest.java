@@ -373,6 +373,36 @@ class TreatmentCourseIntegrationTest extends SpaWorkflowTestSupport {
         assertEquals(TicketStatus.REVOKED, tickets.findById(f.course().ticketId()).orElseThrow().getStatus());
     }
 
+    @Test void cancellationWithRefundBankDetailsPersistsAndValidatesThroughRefundConfirmation() {
+        CourseFixture f = courseFixture(); assignAndIntake(f);
+        assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> treatments.request(
+                f.course().id(), new RequestCommand("EXTEND", "Bank info disallowed for extension", 7, "970422", "MBBank", "0123456789", "NGUYEN VAN A"))));
+        assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> treatments.request(
+                f.course().id(), new RequestCommand("CANCEL", "Incomplete bank details", null, "970422", "MBBank", null, "NGUYEN VAN A"))));
+        assertThrows(BusinessException.class, () -> as(f.base().customer(), () -> treatments.request(
+                f.course().id(), new RequestCommand("CANCEL", "Invalid BIN", null, "BADBIN", "MBBank", "0123456789", "NGUYEN VAN A"))));
+
+        CourseView requested = as(f.base().customer(), () -> treatments.request(
+                f.course().id(), new RequestCommand("CANCEL", "Cannot continue", null, "970436", "Vietcombank", "0011001234567", "NGUYEN VAN A")));
+        RequestView reqView = requested.requests().getFirst();
+        assertEquals("970436", reqView.refundBankBin());
+        assertEquals("Vietcombank", reqView.refundBankName());
+        assertEquals("0011001234567", reqView.refundAccountNumber());
+        assertEquals("NGUYEN VAN A", reqView.refundAccountName());
+
+        CourseView approved = as(f.base().admin(), () -> treatments.reviewRequest(f.course().id(), reqView.id(), new DecisionCommand(1, "Approved refund"), true));
+        assertEquals("AWAITING_REFUND", approved.requests().getFirst().status());
+        assertEquals("0011001234567", approved.requests().getFirst().refundAccountNumber());
+
+        String reference = "VQR-REF-" + UUID.randomUUID();
+        CourseView refunded = as(f.base().admin(), () -> treatments.confirmRefund(
+                f.course().id(), reqView.id(), new RefundCommand(BigDecimal.valueOf(1000), reference, "Transferred via VietQR")));
+        assertEquals("REFUNDED", refunded.status());
+        assertEquals("REFUNDED", refunded.requests().getFirst().status());
+        assertEquals("970436", refunded.requests().getFirst().refundBankBin());
+        assertEquals(reference, refunded.requests().getFirst().refundReference());
+    }
+
     @Test void paidAdjustmentIssuesNoIndependentUsableRightsAndAppliesOnlyAcceptedRevision() {
         CourseFixture f = courseFixture(); assignAndIntake(f);
         CourseView proposed = as(f.responsible(), () -> treatments.proposeChange(f.course().id(), new ChangeCommand(1, "Add a third visit", plan(f.template().serviceId(), f.base().serviceId(), BigDecimal.valueOf(1500), 3))));

@@ -76,9 +76,10 @@ public class AdminProcurementController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false, defaultValue = "false") boolean useReceivedDate,
+            @RequestParam(required = false, defaultValue = "false") boolean payableOnly,
             @ParameterObject Pageable pageable) {
         return ApiResponse.success(PageResponse.of(
-                service.orders(keyword, status, statuses, supplierId, warehouseId, from, to, useReceivedDate, pageable)));
+                service.orders(keyword, status, statuses, supplierId, warehouseId, from, to, useReceivedDate, payableOnly, pageable)));
     }
 
     @Operation(summary = "Xem chi tiết phiếu mua hàng theo ID")
@@ -107,7 +108,7 @@ public class AdminProcurementController {
         return ApiResponse.success(service.approve(id));
     }
 
-    @Operation(summary = "Nhận toàn bộ hàng APPROVED→RECEIVED", description = "Không có body. Cộng phần quantity−receivedQuantity của mọi dòng vào lô trong cùng transaction, ghi ledger PURCHASE_ORDER và cập nhật receivedQuantity. Chưa hỗ trợ nhập một phần hoặc chọn lượng/hạn tại lúc nhận. Gọi lại khi RECEIVED bị từ chối và không nhập thêm.")
+    @Operation(summary = "Nhận toàn bộ hàng còn lại APPROVED/PARTIALLY_RECEIVED→RECEIVED", description = "Không có body. Cộng phần quantity−receivedQuantity của mọi dòng vào lô trong cùng transaction, ghi ledger PURCHASE_ORDER, cập nhật receivedQuantity và tạo chứng từ RECEIPT trong nhật ký nhập hàng.")
     @PutMapping("/orders/{id}/receive")
     public ApiResponse<ProcurementService.PurchaseOrderView> receive(@PathVariable Long id) {
         return ApiResponse.success(service.receive(id));
@@ -123,7 +124,7 @@ public class AdminProcurementController {
     @GetMapping("/movements")
     public ApiResponse<PageResponse<ProcurementHistoryService.ProcurementMovementHistoryView>> movements(
             @RequestParam(required = false) String keyword,
-            @Parameter(description = "RECEIPT, SUPPLIER_RETURN, PAYMENT, SUPPLIER_REFUND") @RequestParam(required = false) String kind,
+            @Parameter(description = "RECEIPT, SUPPLIER_RETURN, PAYMENT, SUPPLIER_REFUND hoặc CASHFLOW") @RequestParam(required = false) String kind,
             @RequestParam(required = false) Long supplierId,
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) Long purchaseOrderId,

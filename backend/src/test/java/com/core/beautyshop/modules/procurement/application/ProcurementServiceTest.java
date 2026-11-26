@@ -18,6 +18,8 @@ class ProcurementServiceTest {
     @Mock PurchaseOrderRepository orders;
     @Mock InventoryAdminFacade inventory;
     @Mock com.core.beautyshop.modules.catalog.api.CatalogFacade catalog;
+    @Mock ProcurementMovementRepository movements;
+    @Spy com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
     @InjectMocks ProcurementService service;
 
     @Test
@@ -90,6 +92,7 @@ class ProcurementServiceTest {
         assertEquals(PurchaseOrder.Status.RECEIVED, result.status());
         assertEquals(2, item.getReceivedQuantity());
         verify(inventory).receive(eq(3L), eq(4L), eq(2), eq(new BigDecimal("100000")), eq("LOT"), any(), eq("PURCHASE_ORDER"), eq("PO-1"));
+        verify(movements).saveAndFlush(argThat(m -> "RECEIPT".equals(m.getKind()) && new BigDecimal("200000").compareTo(m.getAmount()) == 0));
         assertThrows(com.core.beautyshop.shared.exception.BusinessException.class, () -> service.receive(1L));
     }
 
